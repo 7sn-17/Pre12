@@ -15,8 +15,6 @@
   <script src="theme-init.js"></script>
   
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="المنصة الطبية">
   <meta name="mobile-web-app-capable" content="yes">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-512.png">
@@ -24,13 +22,12 @@
   <style>
     :root {
       --bg-main: #06110d;
-      --bg-card: rgba(16, 34, 27, 0.75);
+      --bg-card: #102a22;
       --border-card: rgba(16, 185, 129, 0.22);
       --accent-emerald: #10b981;
       --accent-light: #34d399;
       --accent-dark: #059669;
       --accent-glow: rgba(16, 185, 129, 0.3);
-      --accent-glow-strong: rgba(16, 185, 129, 0.5);
       --text-primary: #f0fdf4;
       --text-secondary: #94a3b8;
       --text-muted: #64748b;
@@ -38,8 +35,21 @@
       --warning: #f59e0b;
       --success: #10b981;
       --info: #3b82f6;
-      --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      --transition-smooth: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      --violet: #8b5cf6;
+      --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    [data-theme="light"] {
+      --bg-main: #f8fafb;
+      --bg-card: #ffffff;
+      --border-card: rgba(16, 185, 129, 0.3);
+      --accent-emerald: #059669;
+      --accent-light: #10b981;
+      --accent-dark: #047857;
+      --accent-glow: rgba(16, 185, 129, 0.2);
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
     }
 
     * {
@@ -50,14 +60,8 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    html, body { height: 100%; }
-
     body {
       background-color: var(--bg-main);
-      background-image: 
-        radial-gradient(circle at 50% 20%, rgba(16, 185, 129, 0.12) 0%, transparent 50%),
-        radial-gradient(circle at 80% 80%, rgba(5, 150, 105, 0.08) 0%, transparent 45%);
-      background-attachment: fixed;
       color: var(--text-primary);
       min-height: 100vh;
       display: flex;
@@ -65,52 +69,16 @@
       justify-content: center;
       align-items: center;
       padding: 24px 20px;
-      position: relative;
       overflow-x: hidden;
     }
 
-    /* خلفية حيّة */
-    .particles-bg {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-      overflow: hidden;
-    }
-
-    .particle {
-      position: absolute;
-      bottom: -20px;
-      width: 4px;
-      height: 4px;
-      border-radius: 50%;
-      background: var(--accent-light);
-      box-shadow: 0 0 8px var(--accent-emerald), 0 0 16px var(--accent-glow-strong);
-      opacity: 0;
-      animation: floatUp linear infinite;
-    }
-
-    @keyframes floatUp {
-      0% { opacity: 0; transform: translateY(0) translateX(0) scale(0.6); }
-      10% { opacity: 0.9; }
-      50% { opacity: 0.7; transform: translateY(-50vh) translateX(20px) scale(1); }
-      90% { opacity: 0.3; }
-      100% { opacity: 0; transform: translateY(-110vh) translateX(-20px) scale(0.4); }
-    }
-
-    .particle.size-sm { width: 2px; height: 2px; }
-    .particle.size-md { width: 4px; height: 4px; }
-    .particle.size-lg { width: 6px; height: 6px; }
-    .particle.color-alt { background: #6ee7b7; }
-    .particle.color-dim { background: #059669; }
-
     /* زر الإغلاق */
     .close-btn {
-      position: absolute;
-      top: 24px;
-      right: 24px;
-      width: 44px;
-      height: 44px;
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 42px;
+      height: 42px;
       border-radius: 14px;
       background: var(--bg-card);
       border: 1px solid var(--border-card);
@@ -120,16 +88,14 @@
       justify-content: center;
       cursor: pointer;
       text-decoration: none;
-      transition: all var(--transition-fast);
-      backdrop-filter: blur(12px);
-      z-index: 10;
+      transition: all var(--transition);
+      z-index: 100;
     }
 
     .close-btn:hover {
       border-color: var(--accent-emerald);
       color: var(--accent-light);
-      transform: translateY(-2px) rotate(90deg);
-      box-shadow: 0 4px 16px var(--accent-glow);
+      transform: rotate(90deg);
     }
 
     /* الحاوية */
@@ -147,7 +113,6 @@
       justify-content: center;
       gap: 10px;
       margin-bottom: 24px;
-      animation: slideDown 0.6s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .brand-icon {
@@ -161,32 +126,13 @@
       justify-content: center;
       color: var(--accent-light);
       box-shadow: 0 8px 24px var(--accent-glow);
-      position: relative;
-    }
-
-    .brand-icon::after {
-      content: '';
-      position: absolute;
-      inset: -4px;
-      border-radius: 20px;
-      border: 1px solid rgba(16, 185, 129, 0.2);
-      animation: pulse 3s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 0.5; transform: scale(1); }
-      50% { opacity: 1; transform: scale(1.05); }
-    }
-
-    @keyframes slideDown {
-      from { opacity: 0; transform: translateY(-20px); }
-      to { opacity: 1; transform: translateY(0); }
+      flex-shrink: 0;
     }
 
     .brand-text {
       font-size: 1.1rem;
       font-weight: 900;
-      background: linear-gradient(135deg, #ffffff, var(--accent-light));
+      background: linear-gradient(135deg, var(--text-primary), var(--accent-light));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -196,82 +142,57 @@
     .auth-card {
       background: var(--bg-card);
       border: 1px solid var(--border-card);
-      border-radius: 28px;
-      padding: 32px 28px;
-      backdrop-filter: blur(20px);
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(16, 185, 129, 0.05);
-      position: relative;
-      overflow: hidden;
-      animation: cardIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s backwards;
+      border-radius: 24px;
+      padding: 30px 26px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
     }
 
-    @keyframes cardIn {
-      from { opacity: 0; transform: translateY(20px) scale(0.98); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
+    /* الشاشات */
+    .view-section {
+      display: none;
     }
 
-    .auth-card::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      right: -30%;
-      width: 300px;
-      height: 300px;
-      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
-      pointer-events: none;
+    .view-section.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
     }
 
-    .auth-card > * { position: relative; z-index: 1; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
 
     /* العنوان */
     .auth-header {
       text-align: center;
-      margin-bottom: 28px;
+      margin-bottom: 22px;
     }
 
     .auth-title {
-      font-size: 1.75rem;
+      font-size: 1.55rem;
       font-weight: 900;
-      margin-bottom: 8px;
-      background: linear-gradient(135deg, #ffffff 0%, var(--accent-light) 100%);
+      margin-bottom: 6px;
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-light) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
 
     .auth-subtitle {
-      font-size: 0.9rem;
+      font-size: 0.86rem;
       color: var(--text-secondary);
       font-weight: 500;
       line-height: 1.5;
     }
 
-    /* الأقسام */
-    .view-section {
-      width: 100%;
-    }
-
-    .view-section.hidden { display: none !important; }
-
-    .view-section.fade-in {
-      animation: viewFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    @keyframes viewFadeIn {
-      from { opacity: 0; transform: translateX(-12px); }
-      to { opacity: 1; transform: translateX(0); }
-    }
-
     /* النموذج */
     .auth-form {
-      width: 100%;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 14px;
     }
 
     .input-group {
-      position: relative;
       display: flex;
       flex-direction: column;
       gap: 6px;
@@ -285,56 +206,54 @@
 
     .input-field {
       width: 100%;
-      padding: 14px 48px 14px 48px;
-      border-radius: 16px;
-      background: rgba(6, 17, 13, 0.6);
+      padding: 14px 46px 14px 46px;
+      border-radius: 14px;
+      background: rgba(6, 17, 13, 0.55);
       border: 1px solid var(--border-card);
       color: var(--text-primary);
       font-size: 0.95rem;
       outline: none;
-      transition: all var(--transition-fast);
+      transition: all var(--transition);
       font-family: inherit;
+    }
+
+    [data-theme="light"] .input-field {
+      background: rgba(241, 245, 249, 0.8);
     }
 
     .input-field::placeholder { color: var(--text-muted); }
 
     .input-field:focus {
       border-color: var(--accent-emerald);
-      box-shadow: 0 0 0 4px var(--accent-glow);
-      background: rgba(16, 34, 27, 0.9);
+      box-shadow: 0 0 0 3px var(--accent-glow);
     }
 
     .input-field.error {
       border-color: var(--danger);
-      box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15);
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
     }
 
     .input-icon-right {
       position: absolute;
-      right: 16px;
+      right: 15px;
       color: var(--text-muted);
       pointer-events: none;
       display: flex;
-      align-items: center;
     }
-
-    .input-field:focus ~ .input-icon-right { color: var(--accent-light); }
 
     .input-icon-left {
       position: absolute;
-      left: 14px;
+      left: 12px;
       color: var(--text-muted);
       cursor: pointer;
       display: flex;
-      align-items: center;
-      padding: 4px;
+      padding: 6px;
       border-radius: 8px;
-      transition: all var(--transition-fast);
+      transition: all var(--transition);
     }
 
     .input-icon-left:hover {
       color: var(--accent-light);
-      background: rgba(16, 185, 129, 0.1);
     }
 
     .error-message {
@@ -343,16 +262,9 @@
       font-weight: 600;
       padding-right: 4px;
       display: none;
-      animation: shakeError 0.3s ease;
     }
 
     .error-message.visible { display: block; }
-
-    @keyframes shakeError {
-      0%, 100% { transform: translateX(0); }
-      25% { transform: translateX(-4px); }
-      75% { transform: translateX(4px); }
-    }
 
     /* قوة كلمة المرور */
     .password-strength {
@@ -370,8 +282,8 @@
       flex: 1;
       height: 4px;
       border-radius: 4px;
-      background: rgba(255, 255, 255, 0.08);
-      transition: background var(--transition-fast);
+      background: rgba(128, 128, 128, 0.2);
+      transition: background var(--transition);
     }
 
     .strength-bar.weak { background: var(--danger); }
@@ -388,13 +300,12 @@
     .strength-label.medium { color: var(--warning); }
     .strength-label.strong { color: var(--success); }
 
-    /* الخيارات الإضافية */
+    /* خيارات */
     .form-extras {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      margin-top: -4px;
     }
 
     .checkbox-wrapper {
@@ -418,8 +329,12 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all var(--transition-fast);
+      transition: all var(--transition);
       flex-shrink: 0;
+    }
+
+    [data-theme="light"] .checkbox-custom {
+      background: rgba(241, 245, 249, 0.9);
     }
 
     .checkbox-custom i {
@@ -428,13 +343,12 @@
       color: white;
       opacity: 0;
       transform: scale(0.5);
-      transition: all var(--transition-fast);
+      transition: all var(--transition);
     }
 
     .checkbox-wrapper input:checked + .checkbox-custom {
       background: var(--accent-emerald);
       border-color: var(--accent-emerald);
-      box-shadow: 0 0 12px var(--accent-glow);
     }
 
     .checkbox-wrapper input:checked + .checkbox-custom i {
@@ -446,8 +360,6 @@
       font-size: 0.85rem;
       color: var(--accent-light);
       font-weight: 700;
-      text-decoration: none;
-      transition: color var(--transition-fast);
       background: transparent;
       border: none;
       cursor: pointer;
@@ -455,10 +367,15 @@
       display: flex;
       align-items: center;
       gap: 4px;
+      transition: all var(--transition);
     }
 
-    .forgot-link:hover { color: #ffffff; text-decoration: underline; }
-    .forgot-link:disabled { opacity: 0.5; cursor: not-allowed; }
+    .forgot-link:hover { text-decoration: underline; }
+
+    .forgot-link:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
 
     .forgot-link .spin {
       width: 12px;
@@ -472,43 +389,28 @@
     /* زر الإرسال */
     .submit-btn {
       width: 100%;
-      padding: 15px;
-      border-radius: 16px;
+      padding: 14px;
+      border-radius: 14px;
       background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
       border: none;
       color: #ffffff;
       font-weight: 800;
-      font-size: 1rem;
+      font-size: 0.98rem;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 10px;
-      margin-top: 8px;
-      box-shadow: 0 8px 24px var(--accent-glow);
-      transition: all var(--transition-fast);
+      margin-top: 6px;
+      box-shadow: 0 6px 20px var(--accent-glow);
+      transition: all var(--transition);
       font-family: inherit;
-      position: relative;
-      overflow: hidden;
     }
-
-    .submit-btn::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-      transform: translateX(-100%);
-      transition: transform 0.6s ease;
-    }
-
-    .submit-btn:hover::before { transform: translateX(100%); }
 
     .submit-btn:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 32px var(--accent-glow-strong);
+      transform: translateY(-1px);
+      box-shadow: 0 10px 28px var(--accent-glow);
     }
-
-    .submit-btn:active:not(:disabled) { transform: translateY(0) scale(0.98); }
 
     .submit-btn:disabled { opacity: 0.7; cursor: not-allowed; }
 
@@ -529,13 +431,32 @@
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* رسالة النجاح */
+    .success-banner {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid var(--accent-emerald);
+      border-radius: 14px;
+      padding: 13px 16px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      color: var(--accent-light);
+      font-size: 0.86rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    .success-banner.visible { display: flex; }
+    .success-banner i { flex-shrink: 0; width: 18px; height: 18px; }
+
     /* التبديل */
     .toggle-box {
-      margin-top: 24px;
+      margin-top: 22px;
       font-size: 0.9rem;
       color: var(--text-secondary);
       text-align: center;
-      padding-top: 20px;
+      padding-top: 18px;
       border-top: 1px solid var(--border-card);
     }
 
@@ -544,108 +465,63 @@
       font-weight: 800;
       cursor: pointer;
       margin-right: 6px;
-      text-decoration: none;
-      transition: color var(--transition-fast);
-      position: relative;
+      transition: all var(--transition);
     }
 
-    .toggle-link::after {
-      content: '';
-      position: absolute;
-      bottom: -2px;
-      right: 0;
-      width: 0;
-      height: 2px;
-      background: var(--accent-light);
-      transition: width var(--transition-fast);
-    }
+    .toggle-link:hover { text-decoration: underline; }
 
-    .toggle-link:hover::after { width: 100%; }
-    .toggle-link:hover { color: #ffffff; }
-
-    /* رسالة النجاح */
-    .success-banner {
-      background: rgba(16, 185, 129, 0.15);
-      border: 1px solid var(--accent-emerald);
-      border-radius: 14px;
-      padding: 14px 18px;
-      display: none;
-      align-items: center;
-      gap: 10px;
-      color: var(--accent-light);
-      font-size: 0.88rem;
-      font-weight: 600;
-      margin-bottom: 16px;
-      animation: fadeIn 0.3s ease;
-    }
-
-    .success-banner.visible { display: flex; }
-    .success-banner i { flex-shrink: 0; width: 18px; height: 18px; }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* شاشة التحقق من البريد */
+    /* ========== شاشة التحقق ========== */
     .verify-view {
       text-align: center;
-      padding: 4px 0;
     }
 
     .verify-icon-wrapper {
-      position: relative;
-      width: 110px;
-      height: 110px;
-      margin: 0 auto 24px;
+      width: 96px;
+      height: 96px;
+      margin: 0 auto 20px;
       display: flex;
       align-items: center;
       justify-content: center;
+      position: relative;
     }
 
     .verify-icon-wrapper::before {
       content: '';
       position: absolute;
       inset: 0;
-      border-radius: 34px;
-      background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.15));
-      border: 2px solid rgba(59, 130, 246, 0.5);
-      animation: pulseBlue 3s ease-in-out infinite;
-    }
-
-    @keyframes pulseBlue {
-      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
-      50% { transform: scale(1.03); box-shadow: 0 0 0 12px rgba(59, 130, 246, 0); }
+      border-radius: 30px;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.18), rgba(37, 99, 235, 0.12));
+      border: 2px solid rgba(59, 130, 246, 0.45);
     }
 
     .verify-icon {
       position: relative;
       z-index: 1;
-      width: 70px;
-      height: 70px;
-      border-radius: 24px;
+      width: 66px;
+      height: 66px;
+      border-radius: 22px;
       background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2));
       display: flex;
       align-items: center;
       justify-content: center;
       color: #93c5fd;
-      box-shadow: 0 8px 32px rgba(59, 130, 246, 0.35);
+      box-shadow: 0 8px 32px rgba(59, 130, 246, 0.3);
     }
 
-    .verify-icon i { width: 38px; height: 38px; }
+    .verify-icon i { width: 34px; height: 34px; }
 
     .verify-title {
-      font-size: 1.5rem;
+      font-size: 1.4rem;
       font-weight: 900;
       color: var(--text-primary);
       margin-bottom: 10px;
     }
 
     .verify-subtitle {
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       color: var(--text-secondary);
       line-height: 1.7;
-      margin-bottom: 24px;
+      margin-bottom: 22px;
     }
 
     /* صندوق البريد */
@@ -653,17 +529,20 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 14px 16px;
-      background: rgba(6, 17, 13, 0.6);
+      padding: 12px 14px;
+      background: rgba(6, 17, 13, 0.55);
       border: 1px solid var(--border-card);
       border-radius: 14px;
-      margin-bottom: 20px;
-      position: relative;
+      margin-bottom: 18px;
+    }
+
+    [data-theme="light"] .email-display {
+      background: rgba(241, 245, 249, 0.7);
     }
 
     .email-display-text {
       flex: 1;
-      font-size: 0.92rem;
+      font-size: 0.9rem;
       font-weight: 700;
       color: var(--text-primary);
       text-align: right;
@@ -684,14 +563,13 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: all var(--transition-fast);
+      transition: all var(--transition);
       flex-shrink: 0;
       font-family: inherit;
     }
 
     .email-copy-btn:hover {
       background: rgba(16, 185, 129, 0.25);
-      transform: scale(1.05);
     }
 
     .email-copy-btn.copied {
@@ -706,53 +584,56 @@
       text-align: right;
       background: rgba(6, 17, 13, 0.4);
       border: 1px solid var(--border-card);
-      border-radius: 16px;
-      padding: 16px 18px;
-      margin-bottom: 20px;
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 18px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
+    }
+
+    [data-theme="light"] .steps-list {
+      background: rgba(241, 245, 249, 0.5);
     }
 
     .step-item {
       display: flex;
       align-items: flex-start;
-      gap: 12px;
-      font-size: 0.85rem;
+      gap: 10px;
+      font-size: 0.83rem;
       color: var(--text-secondary);
       line-height: 1.6;
     }
 
     .step-number {
-      width: 26px;
-      height: 26px;
+      width: 24px;
+      height: 24px;
       border-radius: 8px;
       background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
       color: white;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       font-weight: 900;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      box-shadow: 0 4px 12px var(--accent-glow);
     }
 
-    .step-text { padding-top: 3px; }
+    .step-text { padding-top: 2px; }
 
-    /* أزرار التحقق */
+    /* الأزرار */
     .verify-actions {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
     }
 
     .action-btn {
-      padding: 13px 14px;
+      padding: 12px 14px;
       border-radius: 14px;
       border: 1px solid var(--border-card);
-      background: rgba(6, 17, 13, 0.6);
+      background: rgba(6, 17, 13, 0.55);
       color: var(--text-primary);
       font-family: inherit;
       font-size: 0.85rem;
@@ -762,15 +643,18 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
-      transition: all var(--transition-fast);
+      transition: all var(--transition);
       text-decoration: none;
+    }
+
+    [data-theme="light"] .action-btn {
+      background: rgba(241, 245, 249, 0.9);
     }
 
     .action-btn:hover {
       background: rgba(16, 185, 129, 0.1);
       border-color: var(--accent-emerald);
       color: var(--accent-light);
-      transform: translateY(-2px);
     }
 
     .action-btn.primary {
@@ -781,14 +665,14 @@
     }
 
     .action-btn.primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 24px var(--accent-glow-strong);
       color: white;
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px var(--accent-glow);
     }
 
     .action-btn i { width: 16px; height: 16px; }
 
-    /* زر إعادة الإرسال */
+    /* إعادة الإرسال */
     .resend-section {
       text-align: center;
       padding-top: 16px;
@@ -796,7 +680,7 @@
     }
 
     .resend-text {
-      font-size: 0.82rem;
+      font-size: 0.8rem;
       color: var(--text-muted);
       margin-bottom: 10px;
     }
@@ -811,15 +695,14 @@
       font-size: 0.82rem;
       font-weight: 700;
       cursor: pointer;
-      transition: all var(--transition-fast);
       display: inline-flex;
       align-items: center;
       gap: 8px;
+      transition: all var(--transition);
     }
 
     .resend-btn:hover:not(:disabled) {
       background: rgba(59, 130, 246, 0.2);
-      transform: translateY(-1px);
     }
 
     .resend-btn:disabled {
@@ -829,14 +712,14 @@
 
     .resend-btn i { width: 14px; height: 14px; }
 
-    /* تحذير أسفل */
+    /* تحذير */
     .warning-box {
-      margin-top: 18px;
+      margin-top: 16px;
       padding: 12px 14px;
       background: rgba(245, 158, 11, 0.1);
       border: 1px solid rgba(245, 158, 11, 0.35);
       border-radius: 12px;
-      font-size: 0.78rem;
+      font-size: 0.76rem;
       color: #fbbf24;
       display: flex;
       align-items: flex-start;
@@ -864,19 +747,24 @@
       border-radius: 14px;
       font-size: 0.88rem;
       font-weight: 700;
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 0 20px var(--accent-glow);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
       z-index: 9999;
       opacity: 0;
-      transition: all var(--transition-smooth);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(16px);
+      visibility: hidden;
+      transition: all var(--transition);
       display: flex;
       align-items: center;
       gap: 10px;
       max-width: calc(100vw - 40px);
+      pointer-events: none;
     }
 
-    .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.visible {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(0);
+    }
+
     .toast.error { background: rgba(239, 68, 68, 0.98); }
     .toast.info { background: rgba(59, 130, 246, 0.98); }
     .toast i { flex-shrink: 0; width: 18px; height: 18px; }
@@ -885,69 +773,25 @@
     @media (max-width: 480px) {
       body { padding: 16px 14px; }
       .close-btn { top: 16px; right: 16px; width: 40px; height: 40px; }
-      .auth-card { padding: 26px 20px; border-radius: 24px; }
-      .auth-title { font-size: 1.5rem; }
-      .auth-subtitle { font-size: 0.85rem; }
+      .auth-card { padding: 24px 20px; border-radius: 20px; }
+      .auth-title { font-size: 1.35rem; }
       .brand-icon { width: 46px; height: 46px; }
-      .brand-text { font-size: 1rem; }
-      .verify-icon-wrapper { width: 96px; height: 96px; }
-      .verify-icon { width: 62px; height: 62px; }
-      .verify-icon i { width: 32px; height: 32px; }
-      .verify-title { font-size: 1.3rem; }
-    }
-
-    /* الوضع النهاري */
-    [data-theme="light"] {
-      --bg-main: #f8fafb;
-      --bg-card: rgba(255, 255, 255, 0.85);
-      --bg-card-hover: rgba(255, 255, 255, 0.95);
-      --bg-solid: #ffffff;
-      --bg-elevated: #f1f5f9;
-      --border-card: rgba(16, 185, 129, 0.25);
-      --border-card-hover: rgba(16, 185, 129, 0.6);
-      --accent-emerald: #059669;
-      --accent-light: #10b981;
-      --accent-dark: #047857;
-      --accent-glow: rgba(16, 185, 129, 0.2);
-      --accent-glow-strong: rgba(16, 185, 129, 0.35);
-      --text-primary: #0f172a;
-      --text-secondary: #475569;
-      --text-muted: #94a3b8;
-    }
-
-    [data-theme="light"] body {
-      background-color: var(--bg-main) !important;
-      background-image: 
-        radial-gradient(circle at 10% 10%, rgba(16, 185, 129, 0.06) 0%, transparent 40%),
-        radial-gradient(circle at 90% 80%, rgba(5, 150, 105, 0.04) 0%, transparent 40%) !important;
-      color: var(--text-primary);
-    }
-
-    [data-theme="light"] .input-field {
-      background: rgba(255, 255, 255, 0.9);
-      color: var(--text-primary);
-    }
-
-    [data-theme="light"] .email-display,
-    [data-theme="light"] .steps-list,
-    [data-theme="light"] .action-btn {
-      background: rgba(255, 255, 255, 0.7);
+      .verify-icon-wrapper { width: 86px; height: 86px; }
+      .verify-icon { width: 58px; height: 58px; }
+      .verify-icon i { width: 30px; height: 30px; }
+      .verify-title { font-size: 1.2rem; }
+      .verify-actions { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
 
-  <!-- الخلفية الحيّة -->
-  <div class="particles-bg" id="particlesBg"></div>
-
-  <!-- زر الإغلاق -->
-  <a href="index.html" class="close-btn" title="إغلاق" aria-label="إغلاق">
+  <a href="index.html" class="close-btn" aria-label="إغلاق">
     <i data-lucide="x" style="width: 20px; height: 20px;"></i>
   </a>
 
   <div class="auth-container">
 
-    <!-- شعار -->
     <div class="brand-badge">
       <div class="brand-icon">
         <i data-lucide="stethoscope" style="width: 26px; height: 26px;"></i>
@@ -958,7 +802,7 @@
     <div class="auth-card">
 
       <!-- ========== تسجيل الدخول ========== -->
-      <div id="loginView" class="view-section fade-in">
+      <div id="loginView" class="view-section active">
         <div class="auth-header">
           <h1 class="auth-title">تسجيل الدخول</h1>
           <p class="auth-subtitle">أهلاً بك مجدداً! ادخل حسابك للمتابعة</p>
@@ -980,7 +824,6 @@
                 placeholder="البريد الإلكتروني" 
                 autocomplete="email"
                 inputmode="email"
-                required
               >
               <span class="input-icon-right"><i data-lucide="mail" style="width: 18px; height: 18px;"></i></span>
             </div>
@@ -995,10 +838,9 @@
                 class="input-field" 
                 placeholder="كلمة المرور" 
                 autocomplete="current-password"
-                required
               >
               <span class="input-icon-right"><i data-lucide="lock" style="width: 18px; height: 18px;"></i></span>
-              <span class="input-icon-left" onclick="togglePasswordVisibility('loginPassword', this)">
+              <span class="input-icon-left" onclick="togglePassword('loginPassword', this)">
                 <i data-lucide="eye" style="width: 18px; height: 18px;"></i>
               </span>
             </div>
@@ -1028,12 +870,12 @@
 
         <div class="toggle-box">
           <span>ليس لديك حساب؟</span>
-          <a class="toggle-link" onclick="switchTab('register')">سجل الآن</a>
+          <a class="toggle-link" onclick="showView('register')">سجل الآن</a>
         </div>
       </div>
 
       <!-- ========== إنشاء حساب ========== -->
-      <div id="registerView" class="view-section hidden">
+      <div id="registerView" class="view-section">
         <div class="auth-header">
           <h1 class="auth-title">حساب جديد</h1>
           <p class="auth-subtitle">أنشئ حسابك للوصول لجميع الملفات</p>
@@ -1049,7 +891,6 @@
                 class="input-field" 
                 placeholder="الاسم الكامل" 
                 autocomplete="name"
-                required
               >
               <span class="input-icon-right"><i data-lucide="user" style="width: 18px; height: 18px;"></i></span>
             </div>
@@ -1065,7 +906,6 @@
                 placeholder="البريد الإلكتروني" 
                 autocomplete="email"
                 inputmode="email"
-                required
               >
               <span class="input-icon-right"><i data-lucide="mail" style="width: 18px; height: 18px;"></i></span>
             </div>
@@ -1080,11 +920,10 @@
                 class="input-field" 
                 placeholder="كلمة المرور" 
                 autocomplete="new-password"
-                required
                 oninput="checkPasswordStrength(this.value)"
               >
               <span class="input-icon-right"><i data-lucide="lock" style="width: 18px; height: 18px;"></i></span>
-              <span class="input-icon-left" onclick="togglePasswordVisibility('registerPassword', this)">
+              <span class="input-icon-left" onclick="togglePassword('registerPassword', this)">
                 <i data-lucide="eye" style="width: 18px; height: 18px;"></i>
               </span>
             </div>
@@ -1108,7 +947,6 @@
                 class="input-field" 
                 placeholder="تأكيد كلمة المرور" 
                 autocomplete="new-password"
-                required
               >
               <span class="input-icon-right"><i data-lucide="shield-check" style="width: 18px; height: 18px;"></i></span>
             </div>
@@ -1124,12 +962,12 @@
 
         <div class="toggle-box">
           <span>لديك حساب بالفعل؟</span>
-          <a class="toggle-link" onclick="switchTab('login')">سجل الدخول</a>
+          <a class="toggle-link" onclick="showView('login')">سجل الدخول</a>
         </div>
       </div>
 
       <!-- ========== شاشة التحقق من البريد ========== -->
-      <div id="verifyView" class="view-section hidden">
+      <div id="verifyView" class="view-section">
         <div class="verify-view">
           
           <div class="verify-icon-wrapper">
@@ -1144,7 +982,6 @@
             افتح الرسالة واضغط على الرابط لتفعيل حسابك.
           </p>
 
-          <!-- عرض البريد -->
           <div class="email-display">
             <span class="email-display-text" id="verifyEmailText">user@example.com</span>
             <button class="email-copy-btn" id="copyEmailBtn" onclick="copyEmail()" title="نسخ البريد">
@@ -1152,11 +989,10 @@
             </button>
           </div>
 
-          <!-- الخطوات -->
           <div class="steps-list">
             <div class="step-item">
               <span class="step-number">1</span>
-              <span class="step-text">افتح تطبيق البريد الإلكتروني</span>
+              <span class="step-text">افتح تطبيق البريد الإلكتروني على جوالك</span>
             </div>
             <div class="step-item">
               <span class="step-number">2</span>
@@ -1164,15 +1000,14 @@
             </div>
             <div class="step-item">
               <span class="step-number">3</span>
-              <span class="step-text">اضغط على زر "تأكيد البريد الإلكتروني"</span>
+              <span class="step-text">اضغط على رابط التأكيد لتفعيل حسابك</span>
             </div>
           </div>
 
-          <!-- الأزرار -->
           <div class="verify-actions">
-            <a href="https://mail.google.com" target="_blank" class="action-btn primary">
+            <a href="https://mail.google.com" target="_blank" rel="noopener" class="action-btn primary">
               <i data-lucide="mail"></i>
-              <span>فتح Gmail</span>
+              <span>فتح البريد</span>
             </a>
             <button class="action-btn" onclick="editEmail()">
               <i data-lucide="pencil"></i>
@@ -1180,7 +1015,6 @@
             </button>
           </div>
 
-          <!-- إعادة الإرسال -->
           <div class="resend-section">
             <div class="resend-text">لم يصلك البريد؟</div>
             <button class="resend-btn" id="resendBtn" onclick="handleResend()">
@@ -1189,7 +1023,6 @@
             </button>
           </div>
 
-          <!-- تحذير -->
           <div class="warning-box">
             <i data-lucide="alert-triangle"></i>
             <span>إذا كان البريد الذي أدخلته خاطئاً، لن تتمكن من تأكيد حسابك. اضغط "تعديل البريد" لتصحيحه.</span>
@@ -1201,7 +1034,6 @@
     </div>
   </div>
 
-  <!-- سكربتات Supabase -->
   <script src="supabase-config.js"></script>
   <script src="auth.js"></script>
   
@@ -1213,93 +1045,83 @@
     // ============================================
     const state = {
       pendingEmail: '',
-      resendCooldown: null,
-      isResending: false
+      pendingName: '',
+      pendingPassword: '',
+      resendInterval: null,
+      isResending: false,
+      isSubmitting: false
     };
-
-    // ============================================
-    // الخلفية الحيّة
-    // ============================================
-    function createParticles() {
-      const container = document.getElementById('particlesBg');
-      const count = window.innerWidth < 640 ? 20 : 35;
-      
-      for (let i = 0; i < count; i++) {
-        const p = document.createElement('div');
-        p.className = 'particle';
-        
-        const sizes = ['size-sm', 'size-md', 'size-lg'];
-        p.classList.add(sizes[Math.floor(Math.random() * sizes.length)]);
-        
-        if (Math.random() < 0.2) p.classList.add('color-alt');
-        else if (Math.random() < 0.3) p.classList.add('color-dim');
-        
-        p.style.left = Math.random() * 100 + '%';
-        const duration = 8 + Math.random() * 12;
-        p.style.animationDuration = duration + 's';
-        p.style.animationDelay = Math.random() * duration + 's';
-        
-        container.appendChild(p);
-      }
-    }
-    createParticles();
 
     // ============================================
     // التشغيل الأولي
     // ============================================
     async function init() {
-      const isLoggedIn = await redirectIfLoggedIn();
-      if (isLoggedIn) return;
+      try {
+        const isLoggedIn = await redirectIfLoggedIn();
+        if (isLoggedIn) return;
 
-      const savedEmail = localStorage.getItem('remembered_email');
-      if (savedEmail) {
-        document.getElementById('loginEmail').value = savedEmail;
-        document.getElementById('rememberMe').checked = true;
+        const savedEmail = localStorage.getItem('remembered_email');
+        if (savedEmail) {
+          document.getElementById('loginEmail').value = savedEmail;
+          document.getElementById('rememberMe').checked = true;
+        }
+
+        // إذا عاد من صفحة confirm.html بدون تأكيد
+        if (sessionStorage.getItem('needs_verification')) {
+          const email = sessionStorage.getItem('pending_email');
+          if (email) {
+            state.pendingEmail = email;
+            sessionStorage.removeItem('needs_verification');
+            showVerifyScreen(email);
+          }
+        }
+      } catch (err) {
+        console.error('Init error:', err);
       }
     }
     init();
 
     // ============================================
-    // التبديل بين الأقسام
+    // إدارة الشاشات
     // ============================================
-    function switchTab(tab) {
-      const views = {
-        login: document.getElementById('loginView'),
-        register: document.getElementById('registerView'),
-        verify: document.getElementById('verifyView')
-      };
+    function showView(viewName) {
+      // إخفاء كل الشاشات
+      document.querySelectorAll('.view-section').forEach(v => {
+        v.classList.remove('active');
+      });
 
-      Object.values(views).forEach(v => v.classList.add('hidden'));
-
-      const target = views[tab];
-      if (!target) return;
-
-      target.classList.remove('hidden', 'fade-in');
-      void target.offsetWidth;
-      target.classList.add('fade-in');
+      // إظهار الشاشة المطلوبة
+      const target = document.getElementById(viewName + 'View');
+      if (target) {
+        target.classList.add('active');
+      }
 
       // إخفاء رسالة النجاح عند التبديل
-      document.getElementById('successBanner').classList.remove('visible');
+      const banner = document.getElementById('successBanner');
+      if (banner) banner.classList.remove('visible');
 
       // إيقاف cooldown عند مغادرة شاشة التحقق
-      if (tab !== 'verify' && state.resendCooldown) {
-        clearInterval(state.resendCooldown);
-        state.resendCooldown = null;
+      if (viewName !== 'verify' && state.resendInterval) {
+        clearInterval(state.resendInterval);
+        state.resendInterval = null;
       }
 
       lucide.createIcons();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     // ============================================
     // إظهار/إخفاء كلمة المرور
     // ============================================
-    function togglePasswordVisibility(inputId, iconEl) {
+    function togglePassword(inputId, iconEl) {
       const input = document.getElementById(inputId);
+      if (!input) return;
+
       const isPassword = input.type === 'password';
       input.type = isPassword ? 'text' : 'password';
-      
-      iconEl.innerHTML = isPassword 
-        ? '<i data-lucide="eye-off" style="width: 18px; height: 18px;"></i>' 
+
+      iconEl.innerHTML = isPassword
+        ? '<i data-lucide="eye-off" style="width: 18px; height: 18px;"></i>'
         : '<i data-lucide="eye" style="width: 18px; height: 18px;"></i>';
       lucide.createIcons();
     }
@@ -1334,7 +1156,7 @@
 
       let level = 1;
       let text = 'ضعيفة';
-      
+
       if (strength <= 2) { level = 1; text = 'ضعيفة'; }
       else if (strength === 3) { level = 2; text = 'متوسطة'; }
       else if (strength === 4) { level = 3; text = 'جيدة'; }
@@ -1360,7 +1182,7 @@
       const field = document.getElementById(fieldId);
       const error = document.getElementById(errorId);
       if (!field || !error) return;
-      
+
       if (show) {
         field.classList.add('error');
         error.classList.add('visible');
@@ -1370,6 +1192,7 @@
       }
     }
 
+    // تنظيف الأخطاء تلقائياً عند الكتابة
     ['loginEmail', 'loginPassword', 'registerName', 'registerEmail', 'registerPassword', 'registerConfirm'].forEach(id => {
       const el = document.getElementById(id);
       if (el) {
@@ -1384,38 +1207,43 @@
     // ============================================
     // Toast
     // ============================================
+    let toastTimeout;
     function showToast(message, type = 'success') {
       const existing = document.querySelector('.toast');
       if (existing) existing.remove();
-      
+      clearTimeout(toastTimeout);
+
       const toast = document.createElement('div');
       toast.className = 'toast' + (type === 'error' ? ' error' : type === 'info' ? ' info' : '');
-      
+
       const icon = type === 'error' ? 'alert-circle' : type === 'info' ? 'info' : 'check-circle-2';
       toast.innerHTML = `
         <i data-lucide="${icon}" style="width: 18px; height: 18px; flex-shrink: 0;"></i>
         <span>${message}</span>
       `;
-      
+
       document.body.appendChild(toast);
       lucide.createIcons();
-      
+
       requestAnimationFrame(() => toast.classList.add('visible'));
-      
-      setTimeout(() => {
+
+      toastTimeout = setTimeout(() => {
         toast.classList.remove('visible');
-        setTimeout(() => toast.remove(), 350);
+        setTimeout(() => toast.remove(), 300);
       }, 3000);
     }
 
     // ============================================
-    // عرض رسالة نجاح
+    // عرض رسالة النجاح
     // ============================================
     function showSuccess(message) {
       const banner = document.getElementById('successBanner');
-      document.getElementById('successMessage').textContent = message;
-      banner.classList.add('visible');
-      lucide.createIcons();
+      const text = document.getElementById('successMessage');
+      if (banner && text) {
+        text.textContent = message;
+        banner.classList.add('visible');
+        lucide.createIcons();
+      }
     }
 
     // ============================================
@@ -1424,12 +1252,14 @@
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
 
+      if (state.isSubmitting) return;
+
       const email = document.getElementById('loginEmail').value.trim();
       const password = document.getElementById('loginPassword').value;
       const remember = document.getElementById('rememberMe').checked;
 
       let hasError = false;
-      
+
       if (!isValidEmailFormat(email)) {
         showError('loginEmail', 'loginEmailError');
         hasError = true;
@@ -1438,9 +1268,10 @@
         showError('loginPassword', 'loginPasswordError');
         hasError = true;
       }
-      
+
       if (hasError) return;
 
+      state.isSubmitting = true;
       const btn = document.getElementById('loginBtn');
       btn.classList.add('loading');
       btn.disabled = true;
@@ -1455,23 +1286,38 @@
         }
 
         showToast('تم تسجيل الدخول بنجاح');
-        
+
         setTimeout(() => {
           const redirectTo = getRedirectAfterLogin();
           window.location.href = redirectTo;
-        }, 800);
+        }, 700);
       } else {
         btn.classList.remove('loading');
         btn.disabled = false;
-        showToast(result.error, 'error');
+        state.isSubmitting = false;
+
+        // معالجة خاصة: البريد غير مؤكد
+        if (result.error && result.error.includes('تأكيد')) {
+          showError('loginEmail', 'loginEmailError');
+          state.pendingEmail = email;
+          showToast(result.error, 'error');
+
+          setTimeout(() => {
+            showVerifyScreen(email);
+          }, 1500);
+        } else {
+          showToast(result.error, 'error');
+        }
       }
     });
 
     // ============================================
-    // إنشاء حساب — النسخة القوية
+    // إنشاء حساب
     // ============================================
     document.getElementById('registerForm').addEventListener('submit', async (e) => {
       e.preventDefault();
+
+      if (state.isSubmitting) return;
 
       const name = document.getElementById('registerName').value.trim();
       const email = document.getElementById('registerEmail').value.trim();
@@ -1479,7 +1325,7 @@
       const confirm = document.getElementById('registerConfirm').value;
 
       let hasError = false;
-      
+
       if (name.length < 3) {
         showError('registerName', 'registerNameError');
         hasError = true;
@@ -1496,9 +1342,10 @@
         showError('registerConfirm', 'registerConfirmError');
         hasError = true;
       }
-      
+
       if (hasError) return;
 
+      state.isSubmitting = true;
       const btn = document.getElementById('registerBtn');
       btn.classList.add('loading');
       btn.disabled = true;
@@ -1506,27 +1353,30 @@
       const result = await signUp(email, password, name);
 
       if (result.success) {
-        // حفظ البريد للتحقق
+        // حفظ البيانات للاستخدام لاحقاً
         state.pendingEmail = result.email || email;
-        
+        state.pendingName = name;
+
+        // حفظ في sessionStorage (للعودة من confirm.html)
+        sessionStorage.setItem('pending_email', state.pendingEmail);
+
         if (result.session) {
           // حالة نادرة: Confirm Email مطفي
           showToast('تم إنشاء الحساب بنجاح');
           setTimeout(() => {
             window.location.href = 'index.html';
-          }, 800);
+          }, 700);
         } else {
-          // الحالة الطبيعية: يحتاج تأكيد
+          // الحالة الطبيعية: يحتاج تأكيد البريد
           showToast('تم إنشاء حسابك — تحقق من بريدك');
-          
-          // الانتقال لشاشة التحقق
           setTimeout(() => {
             showVerifyScreen(state.pendingEmail);
-          }, 600);
+          }, 500);
         }
       } else {
         btn.classList.remove('loading');
         btn.disabled = false;
+        state.isSubmitting = false;
         showToast(result.error, 'error');
       }
     });
@@ -1536,57 +1386,128 @@
     // ============================================
     function showVerifyScreen(email) {
       state.pendingEmail = email;
-      document.getElementById('verifyEmailText').textContent = email;
-      
-      switchTab('verify');
-      
+      state.isSubmitting = false;
+
+      const emailEl = document.getElementById('verifyEmailText');
+      if (emailEl) emailEl.textContent = email;
+
       // إعادة تعيين زر إعادة الإرسال
       resetResendButton();
+
+      // الانتقال للشاشة
+      showView('verify');
+
+      // تنظيف النموذج
+      document.getElementById('registerForm').reset();
+      document.getElementById('registerPassword').value = '';
+      document.getElementById('registerConfirm').value = '';
+      document.getElementById('passwordStrength').classList.remove('visible');
     }
 
     // ============================================
     // نسخ البريد
     // ============================================
     async function copyEmail() {
+      if (!state.pendingEmail) return;
+
       try {
-        await navigator.clipboard.writeText(state.pendingEmail);
-        
+        // محاولة Clipboard API الحديثة
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(state.pendingEmail);
+        } else {
+          // fallback للمتصفحات القديمة
+          const textArea = document.createElement('textarea');
+          textArea.value = state.pendingEmail;
+          textArea.style.position = 'fixed';
+          textArea.style.opacity = '0';
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+        }
+
         const btn = document.getElementById('copyEmailBtn');
-        btn.classList.add('copied');
-        btn.innerHTML = '<i data-lucide="check" style="width: 16px; height: 16px;"></i>';
-        lucide.createIcons();
-        
-        showToast('تم نسخ البريد');
-        
-        setTimeout(() => {
-          btn.classList.remove('copied');
-          btn.innerHTML = '<i data-lucide="copy" style="width: 16px; height: 16px;"></i>';
+        if (btn) {
+          btn.classList.add('copied');
+          btn.innerHTML = '<i data-lucide="check" style="width: 16px; height: 16px;"></i>';
           lucide.createIcons();
-        }, 2000);
+
+          setTimeout(() => {
+            btn.classList.remove('copied');
+            btn.innerHTML = '<i data-lucide="copy" style="width: 16px; height: 16px;"></i>';
+            lucide.createIcons();
+          }, 2000);
+        }
+
+        showToast('تم نسخ البريد');
       } catch (err) {
         console.error('Copy error:', err);
-        showToast('تعذّر النسخ', 'error');
+        showToast('تعذّر النسخ — انسخه يدوياً', 'error');
       }
     }
 
     // ============================================
-    // تعديل البريد
+    // تعديل البريد — يعيد تعيين النموذج بالكامل
     // ============================================
     function editEmail() {
-      if (state.resendCooldown) {
-        clearInterval(state.resendCooldown);
-        state.resendCooldown = null;
+      // إيقاف أي cooldown
+      if (state.resendInterval) {
+        clearInterval(state.resendInterval);
+        state.resendInterval = null;
       }
-      
-      // العودة للنموذج مع البريد محفوظاً
-      document.getElementById('registerEmail').value = state.pendingEmail;
-      document.getElementById('registerName').value = '';
-      document.getElementById('registerPassword').value = '';
-      document.getElementById('registerConfirm').value = '';
-      
-      switchTab('register');
-      document.getElementById('registerEmail').focus();
-      document.getElementById('registerEmail').select();
+
+      // إعادة تعيين حالة الإرسال
+      state.isSubmitting = false;
+
+      // إعادة تعيين النموذج
+      const registerForm = document.getElementById('registerForm');
+      if (registerForm) registerForm.reset();
+
+      // حذف قوة كلمة المرور
+      const strengthEl = document.getElementById('passwordStrength');
+      if (strengthEl) strengthEl.classList.remove('visible');
+
+      // حذف رسائل الخطأ
+      document.querySelectorAll('.error-message').forEach(el => {
+        el.classList.remove('visible');
+      });
+      document.querySelectorAll('.input-field').forEach(el => {
+        el.classList.remove('error');
+      });
+
+      // إعادة تعيين الأزرار (مهم! لحل مشكلة الزر العالق)
+      const registerBtn = document.getElementById('registerBtn');
+      if (registerBtn) {
+        registerBtn.classList.remove('loading');
+        registerBtn.disabled = false;
+        registerBtn.innerHTML = `
+          <span class="btn-loader"></span>
+          <span class="btn-text">إنشاء الحساب</span>
+          <i data-lucide="user-plus" class="btn-icon" style="width: 20px; height: 20px;"></i>
+        `;
+      }
+
+      // تعبئة البريد السابق لسهولة التعديل
+      const emailInput = document.getElementById('registerEmail');
+      if (emailInput && state.pendingEmail) {
+        emailInput.value = state.pendingEmail;
+      }
+
+      // حذف بيانات الجلسة
+      sessionStorage.removeItem('pending_email');
+      sessionStorage.removeItem('needs_verification');
+
+      // الانتقال للشاشة
+      showView('register');
+
+      // التركيز على البريد
+      setTimeout(() => {
+        const emailEl = document.getElementById('registerEmail');
+        if (emailEl) {
+          emailEl.focus();
+          emailEl.select();
+        }
+      }, 200);
     }
 
     // ============================================
@@ -1594,12 +1515,13 @@
     // ============================================
     async function handleResend() {
       if (state.isResending) return;
+
       if (!state.pendingEmail) {
         showToast('لا يوجد بريد لإعادة الإرسال', 'error');
         return;
       }
 
-      // فحص Rate Limiter
+      // فحص Rate Limiter (60 ثانية)
       const check = RateLimiter.canSend('resend_confirmation', 60000);
       if (!check.allowed) {
         showToast(`انتظر ${check.remaining} ثانية`, 'info');
@@ -1609,9 +1531,9 @@
       state.isResending = true;
       const btn = document.getElementById('resendBtn');
       const btnText = document.getElementById('resendBtnText');
-      
-      btn.disabled = true;
-      btnText.textContent = 'جاري الإرسال...';
+
+      if (btn) btn.disabled = true;
+      if (btnText) btnText.textContent = 'جاري الإرسال...';
 
       const result = await resendConfirmation(state.pendingEmail);
 
@@ -1621,10 +1543,10 @@
         startCooldown(60);
       } else {
         showToast(result.error, 'error');
-        btn.disabled = false;
-        btnText.textContent = 'إعادة الإرسال';
+        if (btn) btn.disabled = false;
+        if (btnText) btnText.textContent = 'إعادة الإرسال';
       }
-      
+
       state.isResending = false;
     }
 
@@ -1634,18 +1556,20 @@
     function startCooldown(seconds) {
       const btn = document.getElementById('resendBtn');
       const btnText = document.getElementById('resendBtnText');
-      
+
+      if (!btn || !btnText) return;
+
       let remaining = seconds;
       btn.disabled = true;
       btnText.textContent = `إعادة الإرسال (${remaining} ث)`;
 
-      if (state.resendCooldown) clearInterval(state.resendCooldown);
+      if (state.resendInterval) clearInterval(state.resendInterval);
 
-      state.resendCooldown = setInterval(() => {
+      state.resendInterval = setInterval(() => {
         remaining--;
         if (remaining <= 0) {
-          clearInterval(state.resendCooldown);
-          state.resendCooldown = null;
+          clearInterval(state.resendInterval);
+          state.resendInterval = null;
           resetResendButton();
         } else {
           btnText.textContent = `إعادة الإرسال (${remaining} ث)`;
@@ -1656,23 +1580,23 @@
     function resetResendButton() {
       const btn = document.getElementById('resendBtn');
       const btnText = document.getElementById('resendBtnText');
-      
-      if (state.resendCooldown) {
-        clearInterval(state.resendCooldown);
-        state.resendCooldown = null;
+
+      if (state.resendInterval) {
+        clearInterval(state.resendInterval);
+        state.resendInterval = null;
       }
-      
-      btn.disabled = false;
-      btnText.textContent = 'إعادة الإرسال';
+
+      if (btn) btn.disabled = false;
+      if (btnText) btnText.textContent = 'إعادة الإرسال';
     }
 
     // ============================================
-    // نسيت كلمة المرور — مع حالة تحميل
+    // نسيت كلمة المرور
     // ============================================
     async function handleForgotPassword() {
       const email = document.getElementById('loginEmail').value.trim();
       const btn = document.getElementById('forgotBtn');
-      
+
       // التحقق من البريد
       if (!email) {
         showError('loginEmail', 'loginEmailError');
@@ -1680,7 +1604,7 @@
         document.getElementById('loginEmail').focus();
         return;
       }
-      
+
       if (!isValidEmailFormat(email)) {
         showError('loginEmail', 'loginEmailError');
         showToast('البريد الإلكتروني غير صحيح', 'error');
@@ -1697,22 +1621,22 @@
       // حالة التحميل
       const originalHTML = btn.innerHTML;
       btn.disabled = true;
-      btn.style.opacity = '0.7';
       btn.innerHTML = `
         <span class="spin"></span>
         <span>جاري الإرسال...</span>
       `;
-      
+
       try {
         const result = await resetPassword(email);
-        
+
         if (result.success) {
           RateLimiter.record('forgot_password');
           showToast('تم إرسال رابط الاستعادة إلى بريدك');
           showSuccess('تحقق من بريدك الإلكتروني — ستجد رابط إعادة تعيين كلمة المرور');
-          
+
           setTimeout(() => {
-            document.getElementById('successBanner').classList.remove('visible');
+            const banner = document.getElementById('successBanner');
+            if (banner) banner.classList.remove('visible');
           }, 6000);
         } else {
           showToast(result.error, 'error');
@@ -1722,7 +1646,6 @@
         showToast('تعذّر إرسال الرابط — حاول لاحقاً', 'error');
       } finally {
         btn.disabled = false;
-        btn.style.opacity = '1';
         btn.innerHTML = originalHTML;
         lucide.createIcons();
       }
@@ -1737,17 +1660,23 @@
       }
     });
 
-    console.log('✅ login.html v2.0 loaded');
+    // ============================================
+    // تنظيف عند مغادرة الصفحة
+    // ============================================
+    window.addEventListener('beforeunload', () => {
+      if (state.resendInterval) {
+        clearInterval(state.resendInterval);
+      }
+    });
+
+    console.log('✅ login.html v3.0 loaded');
   </script>
-  
-  <!-- PWA Service Worker -->
+
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js')
-          .then(reg => {
-            console.log('✅ SW registered:', reg.scope);
-          })
+          .then(reg => console.log('✅ SW registered:', reg.scope))
           .catch(err => console.warn('⚠️ SW failed:', err));
       });
     }

@@ -7,6 +7,7 @@
   <title>تأكيد البريد - المنصة الطبية</title>
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -21,21 +22,33 @@
   <style>
     :root {
       --bg-main: #06110d;
-      --bg-card: rgba(16, 34, 27, 0.75);
+      --bg-card: #102a22;
       --border-card: rgba(16, 185, 129, 0.22);
       --accent-emerald: #10b981;
       --accent-light: #34d399;
       --accent-dark: #059669;
       --accent-glow: rgba(16, 185, 129, 0.3);
-      --accent-glow-strong: rgba(16, 185, 129, 0.5);
       --text-primary: #f0fdf4;
       --text-secondary: #94a3b8;
       --text-muted: #64748b;
       --danger: #ef4444;
       --warning: #f59e0b;
+      --success: #10b981;
       --info: #3b82f6;
-      --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      --transition-smooth: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    [data-theme="light"] {
+      --bg-main: #f8fafb;
+      --bg-card: #ffffff;
+      --border-card: rgba(16, 185, 129, 0.3);
+      --accent-emerald: #059669;
+      --accent-light: #10b981;
+      --accent-dark: #047857;
+      --accent-glow: rgba(16, 185, 129, 0.2);
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
     }
 
     * {
@@ -46,14 +59,8 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    html, body { height: 100%; }
-
     body {
       background-color: var(--bg-main);
-      background-image: 
-        radial-gradient(circle at 50% 20%, rgba(16, 185, 129, 0.12) 0%, transparent 50%),
-        radial-gradient(circle at 80% 80%, rgba(5, 150, 105, 0.08) 0%, transparent 45%);
-      background-attachment: fixed;
       color: var(--text-primary);
       min-height: 100vh;
       display: flex;
@@ -61,43 +68,10 @@
       justify-content: center;
       align-items: center;
       padding: 24px 20px;
-      position: relative;
       overflow-x: hidden;
     }
 
-    /* خلفية حيّة */
-    .particles-bg {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-      overflow: hidden;
-    }
-
-    .particle {
-      position: absolute;
-      bottom: -20px;
-      width: 4px;
-      height: 4px;
-      border-radius: 50%;
-      background: var(--accent-light);
-      box-shadow: 0 0 8px var(--accent-emerald), 0 0 16px var(--accent-glow-strong);
-      opacity: 0;
-      animation: floatUp linear infinite;
-    }
-
-    @keyframes floatUp {
-      0% { opacity: 0; transform: translateY(0) scale(0.6); }
-      10% { opacity: 0.9; }
-      50% { opacity: 0.7; transform: translateY(-50vh) scale(1); }
-      90% { opacity: 0.3; }
-      100% { opacity: 0; transform: translateY(-110vh) scale(0.4); }
-    }
-
-    .particle.size-sm { width: 2px; height: 2px; }
-    .particle.size-md { width: 4px; height: 4px; }
-    .particle.size-lg { width: 6px; height: 6px; }
-
+    /* الحاوية */
     .auth-container {
       width: 100%;
       max-width: 440px;
@@ -105,6 +79,7 @@
       z-index: 1;
     }
 
+    /* شعار */
     .brand-badge {
       display: flex;
       align-items: center;
@@ -124,77 +99,78 @@
       justify-content: center;
       color: var(--accent-light);
       box-shadow: 0 8px 24px var(--accent-glow);
+      flex-shrink: 0;
     }
 
     .brand-text {
       font-size: 1.1rem;
       font-weight: 900;
-      background: linear-gradient(135deg, #ffffff, var(--accent-light));
+      background: linear-gradient(135deg, var(--text-primary), var(--accent-light));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
 
+    /* البطاقة */
     .auth-card {
       background: var(--bg-card);
       border: 1px solid var(--border-card);
-      border-radius: 28px;
-      padding: 36px 28px;
-      backdrop-filter: blur(20px);
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
-      position: relative;
-      overflow: hidden;
-      animation: cardIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      border-radius: 24px;
+      padding: 36px 26px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
       text-align: center;
     }
 
-    @keyframes cardIn {
-      from { opacity: 0; transform: translateY(20px) scale(0.98); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
-    }
-
-    /* الحالات */
+    /* الشاشات */
     .state-view {
       display: none;
       flex-direction: column;
       align-items: center;
-      animation: viewFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+      width: 100%;
     }
 
-    .state-view.visible { display: flex; }
+    .state-view.active {
+      display: flex;
+      animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
 
-    @keyframes viewFadeIn {
-      from { opacity: 0; transform: translateY(10px); }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
     /* الأيقونة الكبيرة */
     .state-icon {
-      width: 100px;
-      height: 100px;
-      border-radius: 32px;
+      width: 96px;
+      height: 96px;
+      border-radius: 30px;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 24px;
+      margin-bottom: 22px;
       position: relative;
     }
 
-    .state-icon i { width: 48px; height: 48px; position: relative; z-index: 1; }
+    .state-icon i {
+      width: 46px;
+      height: 46px;
+      position: relative;
+      z-index: 1;
+    }
 
     .state-icon::after {
       content: '';
       position: absolute;
-      inset: -4px;
-      border-radius: 36px;
+      inset: -6px;
+      border-radius: 34px;
       border: 1px solid;
-      opacity: 0.4;
+      opacity: 0.35;
       animation: pulseRing 2.5s ease-in-out infinite;
     }
 
     @keyframes pulseRing {
-      0%, 100% { opacity: 0.4; transform: scale(1); }
-      50% { opacity: 0.8; transform: scale(1.06); }
+      0%, 100% { opacity: 0.35; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.04); }
     }
 
     /* حالة النجاح */
@@ -202,34 +178,44 @@
       background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.15));
       border: 2px solid var(--accent-emerald);
       color: var(--accent-light);
-      box-shadow: 0 12px 32px var(--accent-glow-strong);
+      box-shadow: 0 12px 32px var(--accent-glow);
     }
 
-    .state-icon.success::after { border-color: var(--accent-emerald); }
+    .state-icon.success::after {
+      border-color: var(--accent-emerald);
+    }
 
     /* حالة الخطأ */
     .state-icon.error {
       background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(185, 28, 28, 0.15));
       border: 2px solid var(--danger);
       color: #f87171;
-      box-shadow: 0 12px 32px rgba(239, 68, 68, 0.3);
+      box-shadow: 0 12px 32px rgba(239, 68, 68, 0.25);
     }
 
-    .state-icon.error::after { border-color: var(--danger); }
+    .state-icon.error::after {
+      border-color: var(--danger);
+    }
 
     /* حالة التحميل */
     .state-icon.loading {
       background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.15));
       border: 2px solid var(--info);
       color: #60a5fa;
-      box-shadow: 0 12px 32px rgba(59, 130, 246, 0.3);
+      box-shadow: 0 12px 32px rgba(59, 130, 246, 0.25);
     }
 
-    .state-icon.loading::after { border-color: var(--info); }
+    .state-icon.loading::after {
+      border-color: var(--info);
+    }
 
-    .state-icon.loading i { animation: spin 1.5s linear infinite; }
+    .state-icon.loading i {
+      animation: spin 1.5s linear infinite;
+    }
 
-    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
 
     /* العنوان والنص */
     .state-title {
@@ -237,17 +223,23 @@
       font-weight: 900;
       margin-bottom: 12px;
       color: var(--text-primary);
+      line-height: 1.3;
     }
 
     .state-text {
-      font-size: 0.92rem;
+      font-size: 0.9rem;
       color: var(--text-secondary);
       line-height: 1.75;
-      margin-bottom: 28px;
+      margin-bottom: 26px;
       max-width: 340px;
     }
 
-    /* زر الإجراء */
+    .state-text strong {
+      color: var(--accent-light);
+      font-weight: 700;
+    }
+
+    /* زر رئيسي */
     .action-btn {
       display: inline-flex;
       align-items: center;
@@ -264,35 +256,23 @@
       cursor: pointer;
       text-decoration: none;
       box-shadow: 0 8px 24px var(--accent-glow);
-      transition: all var(--transition-fast);
-      min-width: 200px;
+      transition: all var(--transition);
+      min-width: 220px;
     }
 
     .action-btn:hover {
       transform: translateY(-2px);
-      box-shadow: 0 12px 32px var(--accent-glow-strong);
+      box-shadow: 0 12px 32px var(--accent-glow);
     }
 
-    .action-btn i { width: 18px; height: 18px; }
-
-    /* العد التنازلي */
-    .countdown-box {
-      margin-top: 20px;
-      padding: 12px 18px;
-      background: rgba(6, 17, 13, 0.5);
-      border: 1px solid var(--border-card);
-      border-radius: 12px;
-      font-size: 0.82rem;
-      color: var(--text-secondary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
+    .action-btn:active {
+      transform: translateY(0) scale(0.98);
     }
 
-    .countdown-box i { width: 14px; height: 14px; color: var(--accent-light); }
-
-    .countdown-box.hidden { display: none; }
+    .action-btn i {
+      width: 18px;
+      height: 18px;
+    }
 
     /* زر ثانوي */
     .secondary-btn {
@@ -302,7 +282,7 @@
       gap: 8px;
       padding: 12px 22px;
       border-radius: 12px;
-      background: rgba(128, 128, 128, 0.1);
+      background: transparent;
       border: 1px solid var(--border-card);
       color: var(--text-secondary);
       font-family: inherit;
@@ -311,54 +291,112 @@
       cursor: pointer;
       text-decoration: none;
       margin-top: 12px;
-      transition: all var(--transition-fast);
+      transition: all var(--transition);
     }
 
     .secondary-btn:hover {
-      background: rgba(128, 128, 128, 0.2);
+      background: rgba(128, 128, 128, 0.1);
       color: var(--text-primary);
+      border-color: var(--accent-emerald);
     }
 
-    .secondary-btn i { width: 16px; height: 16px; }
+    .secondary-btn i {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* صندوق العد التنازلي */
+    .countdown-box {
+      margin-top: 18px;
+      padding: 11px 16px;
+      background: rgba(6, 17, 13, 0.5);
+      border: 1px solid var(--border-card);
+      border-radius: 12px;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+    }
+
+    [data-theme="light"] .countdown-box {
+      background: rgba(241, 245, 249, 0.6);
+    }
+
+    .countdown-box i {
+      width: 14px;
+      height: 14px;
+      color: var(--accent-light);
+    }
+
+    .countdown-box strong {
+      color: var(--accent-light);
+      font-weight: 900;
+      min-width: 14px;
+      display: inline-block;
+      text-align: center;
+    }
 
     /* معلومات إضافية */
     .info-text {
-      font-size: 0.82rem;
+      font-size: 0.78rem;
       color: var(--text-muted);
       margin-top: 20px;
       line-height: 1.6;
-      padding-top: 20px;
+      padding-top: 18px;
       border-top: 1px solid var(--border-card);
+      width: 100%;
     }
 
-    /* الوضع النهاري */
-    [data-theme="light"] {
-      --bg-main: #f8fafb;
-      --bg-card: rgba(255, 255, 255, 0.85);
-      --border-card: rgba(16, 185, 129, 0.25);
-      --accent-emerald: #059669;
-      --accent-light: #10b981;
-      --accent-dark: #047857;
-      --accent-glow: rgba(16, 185, 129, 0.2);
-      --text-primary: #0f172a;
-      --text-secondary: #475569;
-      --text-muted: #94a3b8;
+    .info-text a {
+      color: var(--accent-light);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .info-text a:hover {
+      text-decoration: underline;
+    }
+
+    /* تحذير */
+    .warning-inline {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 12px 14px;
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      border-radius: 12px;
+      font-size: 0.78rem;
+      color: #fbbf24;
+      line-height: 1.55;
+      text-align: right;
+      margin-bottom: 20px;
+      width: 100%;
+    }
+
+    .warning-inline i {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      margin-top: 2px;
     }
 
     /* تجاوب */
     @media (max-width: 480px) {
       body { padding: 16px 14px; }
-      .auth-card { padding: 30px 20px; border-radius: 24px; }
-      .state-icon { width: 88px; height: 88px; }
-      .state-icon i { width: 42px; height: 42px; }
+      .auth-card { padding: 30px 20px; border-radius: 20px; }
+      .state-icon { width: 84px; height: 84px; }
+      .state-icon i { width: 40px; height: 40px; }
       .state-title { font-size: 1.3rem; }
-      .state-text { font-size: 0.88rem; }
+      .state-text { font-size: 0.86rem; }
+      .action-btn { padding: 13px 24px; font-size: 0.9rem; min-width: 200px; }
     }
   </style>
 </head>
 <body>
-
-  <div class="particles-bg" id="particlesBg"></div>
 
   <div class="auth-container">
 
@@ -371,22 +409,24 @@
 
     <div class="auth-card">
 
-      <!-- حالة التحميل -->
-      <div id="loadingState" class="state-view visible">
+      <!-- ========== حالة التحميل ========== -->
+      <div id="loadingState" class="state-view active">
         <div class="state-icon loading">
           <i data-lucide="loader-2"></i>
         </div>
         <h1 class="state-title">جاري التحقق...</h1>
-        <p class="state-text">يتم التحقق من رابط التأكيد، لحظة من فضلك...</p>
+        <p class="state-text">
+          يتم التحقق من رابط التأكيد، لحظة من فضلك.
+        </p>
       </div>
 
-      <!-- حالة النجاح -->
+      <!-- ========== حالة النجاح ========== -->
       <div id="successState" class="state-view">
         <div class="state-icon success">
           <i data-lucide="check-circle-2"></i>
         </div>
-        <h1 class="state-title">🎉 تم تأكيد بريدك!</h1>
-        <p class="state-text">
+        <h1 class="state-title" id="successTitle">🎉 تم تأكيد بريدك!</h1>
+        <p class="state-text" id="successText">
           حسابك جاهز الآن للاستخدام.<br>
           سيتم تحويلك لصفحة تسجيل الدخول تلقائياً.
         </p>
@@ -396,18 +436,24 @@
           <span>تسجيل الدخول الآن</span>
         </a>
 
-        <div class="countdown-box" id="countdownBox">
+        <div class="countdown-box">
           <i data-lucide="timer"></i>
-          <span>تحويل تلقائي بعد <strong id="countdownNum">5</strong> ثوان...</span>
+          <span>تحويل تلقائي بعد <strong id="countdownNum">5</strong> ثوان</span>
         </div>
       </div>
 
-      <!-- حالة الخطأ -->
+      <!-- ========== حالة الخطأ ========== -->
       <div id="errorState" class="state-view">
         <div class="state-icon error">
           <i data-lucide="alert-triangle"></i>
         </div>
-        <h1 class="state-title">رابط غير صالح</h1>
+        <h1 class="state-title" id="errorTitle">رابط غير صالح</h1>
+        
+        <div class="warning-inline" id="errorWarning" style="display: none;">
+          <i data-lucide="info"></i>
+          <span id="errorWarningText"></span>
+        </div>
+
         <p class="state-text" id="errorText">
           الرابط الذي استخدمته منتهي الصلاحية أو غير صحيح.<br>
           يرجى طلب رابط جديد.
@@ -418,10 +464,14 @@
           <span>العودة لتسجيل الدخول</span>
         </a>
 
-        <a href="login.html#register" class="secondary-btn" onclick="tryResend(event)">
+        <a href="login.html#register" class="secondary-btn" onclick="goToRegister(event)">
           <i data-lucide="refresh-cw"></i>
           <span>طلب رابط جديد</span>
         </a>
+
+        <div class="info-text">
+          إذا كنت مسجلاً بالفعل، يمكنك <a href="login.html">تسجيل الدخول</a> مباشرة أو طلب <a href="#" onclick="goToResetPassword(event)">استعادة كلمة المرور</a>.
+        </div>
       </div>
 
     </div>
@@ -434,189 +484,402 @@
     lucide.createIcons();
 
     // ============================================
-    // الخلفية الحيّة
+    // إدارة الحالة
     // ============================================
-    function createParticles() {
-      const container = document.getElementById('particlesBg');
-      const count = window.innerWidth < 640 ? 18 : 30;
-      
-      for (let i = 0; i < count; i++) {
-        const p = document.createElement('div');
-        p.className = 'particle';
-        
-        const sizes = ['size-sm', 'size-md', 'size-lg'];
-        p.classList.add(sizes[Math.floor(Math.random() * sizes.length)]);
-        
-        p.style.left = Math.random() * 100 + '%';
-        const duration = 8 + Math.random() * 12;
-        p.style.animationDuration = duration + 's';
-        p.style.animationDelay = Math.random() * duration + 's';
-        
-        container.appendChild(p);
-      }
-    }
-    createParticles();
+    let countdownInterval = null;
+    const COUNTDOWN_SECONDS = 5;
 
     // ============================================
-    // عرض حالة
+    // عرض حالة معينة
     // ============================================
-    function showState(state, errorMessage) {
-      document.querySelectorAll('.state-view').forEach(v => v.classList.remove('visible'));
+    function showState(stateName) {
+      document.querySelectorAll('.state-view').forEach(v => {
+        v.classList.remove('active');
+      });
       
-      const target = document.getElementById(state + 'State');
-      if (target) target.classList.add('visible');
-      
-      if (state === 'error' && errorMessage) {
-        document.getElementById('errorText').innerHTML = errorMessage;
+      const target = document.getElementById(stateName + 'State');
+      if (target) {
+        target.classList.add('active');
       }
       
       lucide.createIcons();
     }
 
     // ============================================
-    // التحقق من الرابط
+    // عرض خطأ
     // ============================================
-    async function init() {
+    function showError(title, message, warning) {
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
+
+      const titleEl = document.getElementById('errorTitle');
+      const textEl = document.getElementById('errorText');
+      const warningEl = document.getElementById('errorWarning');
+      const warningTextEl = document.getElementById('errorWarningText');
+
+      if (titleEl) titleEl.textContent = title;
+      if (textEl) textEl.innerHTML = message;
+
+      if (warning && warningEl && warningTextEl) {
+        warningTextEl.textContent = warning;
+        warningEl.style.display = 'flex';
+      } else if (warningEl) {
+        warningEl.style.display = 'none';
+      }
+
+      showState('error');
+    }
+
+    // ============================================
+    // عرض نجاح مع عد تنازلي
+    // ============================================
+    function showSuccess(customTitle, customText, isResend) {
+      const titleEl = document.getElementById('successTitle');
+      const textEl = document.getElementById('successText');
+
+      if (customTitle && titleEl) titleEl.textContent = customTitle;
+      if (customText && textEl) textEl.innerHTML = customText;
+
+      showState('success');
+
+      // إذا كانت إعادة تعيين كلمة المرور، حوّل لصفحة أخرى
+      const redirectTarget = isResend ? 'login.html' : 'login.html';
+
+      // عد تنازلي
+      let remaining = COUNTDOWN_SECONDS;
+      const numEl = document.getElementById('countdownNum');
+
+      if (numEl) numEl.textContent = remaining;
+
+      if (countdownInterval) clearInterval(countdownInterval);
+
+      countdownInterval = setInterval(() => {
+        remaining--;
+        if (numEl) numEl.textContent = remaining;
+
+        if (remaining <= 0) {
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+          window.location.href = redirectTarget;
+        }
+      }, 1000);
+    }
+
+    // ============================================
+    // التحقق من الرابط عند فتح الصفحة
+    // ============================================
+    async function processConfirmation() {
       try {
-        // استخراج المعاملات
+        // استخراج كل المعاملات الممكنة
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const queryParams = new URLSearchParams(window.location.search);
-        
-        // الحصول على التوكن (يدعم الطرق المختلفة)
-        const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
-        const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
-        const tokenHash = hashParams.get('token_hash') || queryParams.get('token_hash');
-        const type = hashParams.get('type') || queryParams.get('type');
-        const error = hashParams.get('error') || queryParams.get('error');
-        const errorCode = hashParams.get('error_code') || queryParams.get('error_code');
-        const errorDescription = hashParams.get('error_description') || queryParams.get('error_description');
 
-        console.log('🔍 URL Parameters:');
+        // ترتيب البحث: hash أولاً ثم query
+        const get = (key) => hashParams.get(key) || queryParams.get(key);
+
+        const accessToken = get('access_token');
+        const refreshToken = get('refresh_token');
+        const tokenHash = get('token_hash');
+        const type = get('type');
+        const error = get('error');
+        const errorCode = get('error_code');
+        const errorDescription = get('error_description');
+
+        console.log('🔍 فحص الرابط:');
         console.log('  type:', type);
         console.log('  has access_token:', !!accessToken);
         console.log('  has token_hash:', !!tokenHash);
-        console.log('  has refresh_token:', !!refreshToken);
-        console.log('  error:', error);
+        console.log('  has error:', !!error);
 
-        // الحالة 1: يوجد خطأ في URL
+        // ═══════════════════════════════════════════
+        // الحالة 1: يوجد خطأ صريح في URL
+        // ═══════════════════════════════════════════
         if (error) {
-          console.error('❌ URL Error:', error, errorCode, errorDescription);
+          console.error('❌ URL Error:', { error, errorCode, errorDescription });
           handleUrlError(error, errorCode, errorDescription);
           return;
         }
 
-        // الحالة 2: token_hash موجود (الطريقة الحديثة)
+        // ═══════════════════════════════════════════
+        // الحالة 2: token_hash (الطريقة الحديثة)
+        // ═══════════════════════════════════════════
         if (tokenHash) {
-          console.log('✅ Using token_hash method');
-          const result = await verifyEmailOtp(tokenHash, type || 'email');
-          
-          if (result.success) {
-            handleSuccess();
-          } else {
-            showState('error', result.error || 'تعذّر التحقق من الرابط');
-          }
+          console.log('✅ استخدام token_hash');
+          await handleTokenHash(tokenHash, type);
           return;
         }
 
-        // الحالة 3: access_token موجود (الطريقة القديمة)
+        // ═══════════════════════════════════════════
+        // الحالة 3: access_token (الطريقة القديمة)
+        // ═══════════════════════════════════════════
         if (accessToken) {
-          console.log('✅ Using access_token method');
-          
-          const { data, error: sessionError } = await supabaseClient.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken || ''
-          });
-
-          if (sessionError) {
-            console.error('❌ Session error:', sessionError);
-            showState('error', 
-              'انتهت صلاحية الرابط أو تم استخدامه مسبقاً.<br>اطلب رابطاً جديداً من صفحة تسجيل الدخول.'
-            );
-            return;
-          }
-
-          console.log('✅ Session set:', data.user?.email);
-          handleSuccess();
+          console.log('✅ استخدام access_token');
+          await handleAccessToken(accessToken, refreshToken);
           return;
         }
 
-        // الحالة 4: لا يوجد أي شيء
-        console.warn('⚠️ No token in URL');
-        showState('error', 
-          'لم نتمكن من العثور على رابط التأكيد.<br>تأكد من فتح الرابط من البريد الإلكتروني.'
+        // ═══════════════════════════════════════════
+        // الحالة 4: لا يوجد أي توكن
+        // ═══════════════════════════════════════════
+        console.warn('⚠️ لا يوجد توكن في الرابط');
+        showError(
+          'رابط غير صالح',
+          'لم نتمكن من العثور على رابط التأكيد.<br>تأكد من فتح الرابط الصحيح من بريدك الإلكتروني.',
+          'إذا نسخت الرابط يدوياً، تأكد من نسخه كاملاً دون قطع.'
         );
 
       } catch (err) {
-        console.error('❌ Init error:', err);
-        showState('error', 'حدث خطأ غير متوقع أثناء التحقق من الرابط.');
+        console.error('❌ خطأ في processConfirmation:', err);
+        showError(
+          'حدث خطأ غير متوقع',
+          'واجهنا مشكلة أثناء التحقق من الرابط.<br>حاول مرة أخرى أو اطلب رابطاً جديداً.',
+          null
+        );
+      }
+    }
+
+    // ============================================
+    // معالجة token_hash
+    // ============================================
+    async function handleTokenHash(tokenHash, type) {
+      try {
+        // تحديد نوع التحقق
+        let verifyType = type || 'signup';
+        
+        // Supabase يقبل: signup, email, email_change, recovery, invite
+        const validTypes = ['signup', 'email', 'email_change', 'recovery', 'invite'];
+        if (!validTypes.includes(verifyType)) {
+          verifyType = 'signup';
+        }
+
+        console.log(`🔐 محاولة verifyOtp بنوع: ${verifyType}`);
+
+        const result = await verifyEmailOtp(tokenHash, verifyType);
+
+        if (result.success) {
+          console.log('✅ تم التحقق بنجاح:', result.user?.email);
+          
+          // حالة خاصة: إعادة تعيين كلمة المرور
+          if (verifyType === 'recovery') {
+            showSuccess(
+              '✅ رابط صالح!',
+              'تم التحقق من هويتك.<br>سيتم تحويلك لصفحة إعادة تعيين كلمة المرور.'
+            );
+            
+            // تأخير ثم التحويل
+            if (countdownInterval) clearInterval(countdownInterval);
+            countdownInterval = setInterval(() => {
+              window.location.href = 'reset-password.html';
+            }, 1000);
+            return;
+          }
+
+          // الحالة الطبيعية: تأكيد البريد
+          showSuccess(
+            '🎉 تم تأكيد بريدك!',
+            'حسابك جاهز الآن للاستخدام.<br>سيتم تحويلك لصفحة تسجيل الدخول تلقائياً.'
+          );
+        } else {
+          console.error('❌ فشل التحقق:', result.error);
+          
+          // تحليل نوع الخطأ
+          const errorMsg = result.error || '';
+          
+          if (errorMsg.includes('منتهي') || errorMsg.includes('expired')) {
+            showError(
+              'رابط منتهي الصلاحية',
+              'انتهت صلاحية رابط التأكيد.<br>اطلب رابطاً جديداً من صفحة تسجيل الدخول.',
+              'رابط التأكيد صالح لمدة ساعة واحدة فقط من إرساله.'
+            );
+          } else if (errorMsg.includes('مستخدم') || errorMsg.includes('already')) {
+            showError(
+              'تم التأكيد مسبقاً',
+              'بريدك الإلكتروني مؤكد بالفعل.<br>يمكنك تسجيل الدخول مباشرة.',
+              null
+            );
+          } else {
+            showError(
+              'تعذّر التحقق',
+              result.error || 'الرابط غير صحيح أو تم استخدامه مسبقاً.',
+              null
+            );
+          }
+        }
+      } catch (err) {
+        console.error('❌ handleTokenHash error:', err);
+        showError(
+          'حدث خطأ غير متوقع',
+          'واجهنا مشكلة أثناء التحقق.<br>حاول مرة أخرى لاحقاً.',
+          null
+        );
+      }
+    }
+
+    // ============================================
+    // معالجة access_token (الطريقة القديمة)
+    // ============================================
+    async function handleAccessToken(accessToken, refreshToken) {
+      try {
+        console.log('🔐 محاولة setSession');
+        
+        const { data, error } = await supabaseClient.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken || ''
+        });
+
+        if (error) {
+          console.error('❌ setSession error:', error);
+          
+          // تحليل الخطأ
+          const msg = (error.message || '').toLowerCase();
+          
+          if (msg.includes('expired')) {
+            showError(
+              'رابط منتهي الصلاحية',
+              'انتهت صلاحية رابط التأكيد.<br>اطلب رابطاً جديداً.',
+              null
+            );
+          } else if (msg.includes('invalid') || msg.includes('used')) {
+            showError(
+              'رابط مستخدم مسبقاً',
+              'تم استخدام هذا الرابط من قبل.<br>إذا كنت قد أكدت بريدك بالفعل، يمكنك تسجيل الدخول.',
+              null
+            );
+          } else {
+            showError(
+              'تعذّر التحقق',
+              'الرابط غير صحيح أو انتهت صلاحيته.<br>اطلب رابطاً جديداً من صفحة تسجيل الدخول.',
+              null
+            );
+          }
+          return;
+        }
+
+        console.log('✅ تم تعيين الجلسة:', data.user?.email);
+
+        // تحديد نوع العملية من معاملات URL
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const queryParams = new URLSearchParams(window.location.search);
+        const type = hashParams.get('type') || queryParams.get('type');
+
+        // حالة خاصة: إعادة تعيين كلمة المرور
+        if (type === 'recovery') {
+          showSuccess(
+            '✅ رابط صالح!',
+            'تم التحقق من هويتك.<br>سيتم تحويلك لصفحة إعادة تعيين كلمة المرور.'
+          );
+          
+          if (countdownInterval) clearInterval(countdownInterval);
+          setTimeout(() => {
+            window.location.href = 'reset-password.html';
+          }, 2000);
+          return;
+        }
+
+        // الحالة الطبيعية
+        showSuccess(
+          '🎉 تم تأكيد بريدك!',
+          'حسابك جاهز الآن للاستخدام.<br>سيتم تحويلك لصفحة تسجيل الدخول تلقائياً.'
+        );
+
+      } catch (err) {
+        console.error('❌ handleAccessToken error:', err);
+        showError(
+          'حدث خطأ غير متوقع',
+          'واجهنا مشكلة أثناء التحقق.<br>حاول مرة أخرى لاحقاً.',
+          null
+        );
       }
     }
 
     // ============================================
     // معالجة أخطاء URL
     // ============================================
-    function handleUrlError(error, code, description) {
-      let message = 'حدث خطأ في رابط التأكيد.';
+    function handleUrlError(error, errorCode, errorDescription) {
+      const desc = (errorDescription || '').toLowerCase();
+      const code = (errorCode || '').toLowerCase();
+      const errType = (error || '').toLowerCase();
 
-      // معالجة رموز الخطأ الشائعة
-      if (code === 'otp_expired' || description?.includes('expired')) {
-        message = 'انتهت صلاحية رابط التأكيد.<br>اطلب رابطاً جديداً من صفحة تسجيل الدخول.';
-      } else if (description?.includes('invalid')) {
-        message = 'رابط التأكيد غير صحيح أو تم استخدامه مسبقاً.';
-      } else if (description?.includes('already') || code === 'email_exists') {
-        message = 'تم تأكيد بريدك مسبقاً.<br>يمكنك تسجيل الدخول الآن.';
-        // تحويل لحالة النجاح إذا كان مؤكداً مسبقاً
-        setTimeout(() => handleSuccess(), 100);
+      // حالة 1: رابط منتهي
+      if (code === 'otp_expired' || desc.includes('expired') || errType === 'access_denied') {
+        showError(
+          'رابط منتهي الصلاحية',
+          'انتهت صلاحية رابط التأكيد.<br>اطلب رابطاً جديداً من صفحة تسجيل الدخول.',
+          'صلاحية رابط التأكيد: ساعة واحدة من لحظة الإرسال.'
+        );
         return;
       }
 
-      showState('error', message);
+      // حالة 2: تم استخدامه مسبقاً
+      if (desc.includes('already') || code === 'email_exists' || desc.includes('used')) {
+        showError(
+          'تم التأكيد مسبقاً',
+          'بريدك الإلكتروني مؤكد بالفعل.<br>يمكنك تسجيل الدخول مباشرة.',
+          null
+        );
+        return;
+      }
+
+      // حالة 3: رابط غير صحيح
+      if (desc.includes('invalid') || code === 'invalid_request') {
+        showError(
+          'رابط غير صحيح',
+          'الرابط الذي استخدمته غير صحيح.<br>تأكد من فتح الرابط الصحيح من البريد.',
+          null
+        );
+        return;
+      }
+
+      // حالة 4: خطأ عام
+      showError(
+        'تعذّر التأكيد',
+        errorDescription || 'حدث خطأ أثناء معالجة رابط التأكيد.',
+        null
+      );
     }
 
     // ============================================
-    // معالجة النجاح
+    // زر "طلب رابط جديد" → يذهب للتسجيل
     // ============================================
-    function handleSuccess() {
-      showState('success');
-      
-      // عد تنازلي للتحويل
-      let countdown = 5;
-      const numEl = document.getElementById('countdownNum');
-      
-      const interval = setInterval(() => {
-        countdown--;
-        if (numEl) numEl.textContent = countdown;
-        
-        if (countdown <= 0) {
-          clearInterval(interval);
-          window.location.href = 'login.html';
-        }
-      }, 1000);
-    }
-
-    // ============================================
-    // محاولة إعادة الإرسال من صفحة الخطأ
-    // ============================================
-    function tryResend(e) {
+    function goToRegister(e) {
       e.preventDefault();
-      // اذهب لصفحة التسجيل مع رسالة
-      sessionStorage.setItem('resend_hint', 'true');
+      // حفظ علامة للعودة
+      sessionStorage.setItem('needs_verification', 'true');
+      window.location.href = 'login.html';
+    }
+
+    // ============================================
+    // زر "استعادة كلمة المرور"
+    // ============================================
+    function goToResetPassword(e) {
+      e.preventDefault();
       window.location.href = 'login.html';
     }
 
     // ============================================
     // تشغيل
     // ============================================
-    init();
+    processConfirmation();
 
-    console.log('✅ confirm.html loaded');
+    // ============================================
+    // تنظيف عند مغادرة الصفحة
+    // ============================================
+    window.addEventListener('beforeunload', () => {
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+      }
+    });
+
+    console.log('✅ confirm.html v1.0 loaded');
   </script>
 
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js')
-          .then(() => console.log('✅ SW registered'))
+          .then(reg => console.log('✅ SW registered:', reg.scope))
           .catch(err => console.warn('⚠️ SW failed:', err));
       });
     }
