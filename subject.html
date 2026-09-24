@@ -1027,40 +1027,145 @@
       return new URLSearchParams(window.location.search).get('subject');
     }
 
-    async function loadSubject() {
-      const slug = getSubjectSlugFromURL();
+async function loadSubject() {
+  const slug = getSubjectSlugFromURL();
+  
+  if (!slug) {
+    showToast('يرجى اختيار مادة أولاً', 'info');
+    setTimeout(() => window.location.href = 'index.html', 1500);
+    return;
+  }
+
+  try {
+    // ⭐ 1. إذا offline — استخدم cache
+    if (!navigator.onLine) {
+      console.log('📴 Offline — using cache for:', slug);
       
-      if (!slug) {
-        showToast('يرجى اختيار مادة أولاً', 'info');
-        setTimeout(() => window.location.href = 'index.html', 1500);
+      const cachedSubject = getDataCache(`subject_${slug}`);
+      
+      if (!cachedSubject) {
+        showToast('هذه المادة غير محفوظة على جهازك', 'error');
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 1500);
         return;
       }
-
-      try {
-        const { data: subject, error } = await supabaseClient
-          .from('subjects')
-          .select('*')
-          .eq('slug', slug)
-          .single();
-        
-        if (error || !subject) throw new Error('المادة غير موجودة');
-        
-        state.subject = subject;
-        document.title = `${subject.name} - المنصة الطبية`;
-        document.getElementById('headerTitle').textContent = subject.name;
-        
-        renderBanner(subject);
-        
-        document.getElementById('searchWrapper').style.display = 'block';
-        document.getElementById('tabsWrapper').style.display = 'block';
-        
-        await loadFiles(subject.id);
-        
-      } catch (err) {
-        console.error('loadSubject error:', err);
-        showError('المادة غير موجودة', `لم نتمكن من العثور على المادة.`);
-      }
+      
+      state.subject = cachedSubject;
+      document.title = `${cachedSubject.name} - المنصة الطبية`;
+      document.getElementById('headerTitle').textContent = cachedSubject.name;
+      
+      renderBanner(cachedSubject);
+      
+      document.getElementById('searchWrapper').style.display = 'block';
+      document.getElementById('tabsWrapper').style.display = 'block';
+      
+      await loadFiles(cachedSubject.id);
+      return;
     }
+    
+    // ⭐ 2. متصل — جلب من Supabase
+    const { data: subject, error } = await supabaseClient
+      .from('subjects')
+      .select('*')
+      .eq('slug', slug)
+      .single();
+    
+    if (error || !subject) throw new Error('المادة غير موجودة');
+    
+    // ⭐ 3. خزّن المادة
+    saveDataCache(`subject_${slug}`, subject);
+    
+    state.subject = subject;
+    document.title = `${subject.name} - المنصة الطبية`;
+    document.getElementById('headerTitle').textContent = subject.name;
+    
+    renderBanner(subject);
+    
+    document.getElementById('searchWrapper').style.display = 'block';
+    document.getElementById('tabsWrapper').style.display = 'block';
+    
+    await loadFiles(subject.id);
+    
+  } catch (err) {
+    console.error('loadSubject error:', err);
+    
+    // حاول cache
+    const cachedSubject = getDataCache(`subject_${slug}`);
+    if (cachedSubject) {
+      state.subject = cachedSubject;
+      document.getElementById('headerTitle').textContent = cachedSubject.name;
+      renderBanner(cachedSubject);
+      document.getElementById('searchWrapper').style.display = 'block';
+      document.getElementById('tabsWrapper').style.display = 'block';
+      await loadFiles(cachedSubject.id);
+      return;
+    }
+    
+    showError('المادة غير موجودة', `لم نتمكن من العثور على المادة.`);
+  }
+}
+
+// ⭐ تعديل loadFiles لاستخدام cache
+async function loadFiles(subjectId) {
+  const slug = state.subject?.slug;
+  
+  try {
+    // offline
+    if (!navigator.onLine) {
+      const cached = getDataCache(`subject_files_${slug}`);
+      state.allFiles = cached || [];
+      
+      // تحقق من الملفات المحمّلة
+      const downloaded = await getAllDownloadedFiles();
+      state.downloadedIds = new Set(downloaded.map(f => f.id));
+      
+      document.getElementById('totalFilesCount').textContent = state.allFiles.length;
+      
+      renderTabs();
+      applyFilters();
+      return;
+    }
+    
+    // online — جلب من Supabase
+    const { data, error } = await supabaseClient
+      .from('files')
+      .select('*')
+      .eq('subject_id', subjectId)
+      .eq('is_published', true)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    state.allFiles = data || [];
+    
+    // ⭐ خزّن في cache بمفتاح فريد
+    saveDataCache(`subject_files_${slug}`, state.allFiles);
+    
+    const downloaded = await getAllDownloadedFiles();
+    state.downloadedIds = new Set(downloaded.map(f => f.id));
+    
+    document.getElementById('totalFilesCount').textContent = state.allFiles.length;
+    
+    renderTabs();
+    applyFilters();
+    
+  } catch (err) {
+    console.error('loadFiles error:', err);
+    
+    // حاول cache
+    const cached = getDataCache(`subject_files_${slug}`);
+    if (cached) {
+      state.allFiles = cached;
+      document.getElementById('totalFilesCount').textContent = cached.length;
+      renderTabs();
+      applyFilters();
+      return;
+    }
+    
+    showError('تعذّر تحميل الملفات', 'حدث خطأ.');
+  }
+}
 
     function renderBanner(subject) {
       const container = document.getElementById('bannerContainer');
@@ -1085,32 +1190,88 @@
     }
 
     async function loadFiles(subjectId) {
-      try {
-        const { data, error } = await supabaseClient
-          .from('files')
-          .select('*')
-          .eq('subject_id', subjectId)
-          .eq('is_published', true)
-          .order('created_at', { ascending: false });
-        
-        if (error) throw error;
-        
-        state.allFiles = data || [];
-        
-        // جلب قائمة الملفات المحمّلة
-        const downloaded = await getAllDownloadedFiles();
-        state.downloadedIds = new Set(downloaded.map(f => f.id));
-        
-        document.getElementById('totalFilesCount').textContent = state.allFiles.length;
-        
-        renderTabs();
-        applyFilters();
-        
-      } catch (err) {
-        console.error('loadFiles error:', err);
-        showError('تعذّر تحميل الملفات', 'حدث خطأ.');
-      }
+  const slug = state.subject?.slug;
+  
+  if (!slug) {
+    console.error('❌ No slug available');
+    return;
+  }
+  
+  console.log('📂 loadFiles called:', slug);
+  
+  try {
+    // ============================================
+    // ⭐ 1. OFFLINE — اقرأ من Cache
+    // ============================================
+    if (!navigator.onLine) {
+      console.log('📴 Offline — loading files from cache:', slug);
+      
+      const cached = getDataCache(`subject_files_${slug}`);
+      state.allFiles = cached || [];
+      
+      console.log(`📦 Cached files loaded: ${state.allFiles.length}`);
+      
+      // الملفات المحمّلة
+      const downloaded = await getAllDownloadedFiles();
+      state.downloadedIds = new Set(downloaded.map(f => f.id));
+      
+      // تحديث العدد
+      document.getElementById('totalFilesCount').textContent = state.allFiles.length;
+      
+      renderTabs();
+      applyFilters();
+      return;
     }
+    
+    // ============================================
+    // ⭐ 2. ONLINE — جلب من Supabase
+    // ============================================
+    console.log('🌐 Online — fetching files from Supabase');
+    
+    const { data, error } = await supabaseClient
+      .from('files')
+      .select('*')
+      .eq('subject_id', subjectId)
+      .eq('is_published', true)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    state.allFiles = data || [];
+    
+    // ============================================
+    // ⭐ 3. خزّن الملفات بمفتاح فريد ← الأهم!
+    // ============================================
+    saveDataCache(`subject_files_${slug}`, state.allFiles);
+    console.log(`💾 Files cached for "${slug}": ${state.allFiles.length} files`);
+    
+    // الملفات المحمّلة
+    const downloaded = await getAllDownloadedFiles();
+    state.downloadedIds = new Set(downloaded.map(f => f.id));
+    
+    // تحديث العدد
+    document.getElementById('totalFilesCount').textContent = state.allFiles.length;
+    
+    renderTabs();
+    applyFilters();
+    
+  } catch (err) {
+    console.error('❌ loadFiles error:', err);
+    
+    // ⭐ 4. حاول Cache عند الفشل
+    const cached = getDataCache(`subject_files_${slug}`);
+    if (cached) {
+      console.log('📦 Fallback to cache:', cached.length);
+      state.allFiles = cached;
+      document.getElementById('totalFilesCount').textContent = cached.length;
+      renderTabs();
+      applyFilters();
+      return;
+    }
+    
+    showError('تعذّر تحميل الملفات', 'حدث خطأ.');
+  }
+}
 
     function renderTabs() {
       const container = document.getElementById('tabsContainer');

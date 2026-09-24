@@ -1,15 +1,15 @@
 // ============================================
 // sw.js — Service Worker للمنصة الطبية
-// Version 1.2.0 — مع دعم كامل للعمل بدون إنترنت
+// Version 2.0.0 — Cache ذكي مع ملفات منفصلة
 // ============================================
 
-const CACHE_VERSION = 'v1.2.0';
-const CACHE_NAME = `medfav-${CACHE_VERSION}`;
+const CACHE_VERSION = 'v2.0.0';
+const STATIC_CACHE = `medfav-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `medfav-runtime-${CACHE_VERSION}`;
-const DATA_CACHE = `medfav-data-${CACHE_VERSION}`;
+const PDF_CACHE = `medfav-pdf-${CACHE_VERSION}`;
 
 // ============================================
-// الملفات التي تُخزّن فوراً عند التثبيت
+// الملفات الثابتة التي تُخزّن فوراً
 // ============================================
 const PRECACHE_URLS = [
   // الصفحات
@@ -52,12 +52,12 @@ const PRECACHE_URLS = [
 // 1. تثبيت SW
 // ============================================
 self.addEventListener('install', (event) => {
-  console.log('🔧 SW: Installing...');
+  console.log('🔧 SW: Installing v2.0.0...');
   
   event.waitUntil(
-    caches.open(CACHE_NAME)
+    caches.open(STATIC_CACHE)
       .then((cache) => {
-        console.log('📦 SW: Pre-caching files...');
+        console.log('📦 SW: Pre-caching static files...');
         
         return Promise.allSettled(
           PRECACHE_URLS.map(url => {
@@ -78,7 +78,7 @@ self.addEventListener('install', (event) => {
 // 2. تنشيط SW
 // ============================================
 self.addEventListener('activate', (event) => {
-  console.log('🔧 SW: Activating...');
+  console.log('🔧 SW: Activating v2.0.0...');
   
   event.waitUntil(
     caches.keys()
@@ -87,9 +87,9 @@ self.addEventListener('activate', (event) => {
           cacheNames
             .filter((name) => {
               return name.startsWith('medfav-') && 
-                     name !== CACHE_NAME && 
+                     name !== STATIC_CACHE && 
                      name !== RUNTIME_CACHE && 
-                     name !== DATA_CACHE;
+                     name !== PDF_CACHE;
             })
             .map((name) => {
               console.log('🗑️ SW: Removing old cache:', name);
@@ -113,10 +113,19 @@ self.addEventListener('fetch', (event) => {
 
   if (request.method !== 'GET') return;
   if (url.protocol === 'chrome-extension:') return;
+  if (url.protocol === 'chrome:') return;
 
-  // Supabase
+  // ============================================
+  // ⭐ Supabase — لا نتدخل أبداً
+  // نترك files.js يتعامل مع offline عبر localStorage
+  // فقط PDF نتدخل لتخزينه
+  // ============================================
   if (url.hostname.includes('supabase.co')) {
-    event.respondWith(handleSupabaseRequest(request));
+    // PDF من Storage — نخزّنه
+    if (url.pathname.includes('/storage/') || url.pathname.endsWith('.pdf')) {
+      event.respondWith(handlePDFRequest(request));
+    }
+    // غير ذلك — نتركه يمر مباشرة
     return;
   }
 
@@ -131,61 +140,43 @@ self.addEventListener('fetch', (event) => {
 });
 
 // ============================================
-// 4. استراتيجيات
+// 4. الاستراتيجيات
 // ============================================
 
 /**
- * ⭐ أهم تعديل: Supabase — Offline-First!
- * إذا لا يوجد إنترنت → Cache فوراً (بدون انتظار)
+ * PDF من Supabase Storage — Cache-First
+ * نخزّنها للأبد لأنها ثابتة
  */
-async function handleSupabaseRequest(request) {
-  // ⭐ 1. إذا لم يوجد إنترنت — استخدم الكاش فوراً
-  if (!navigator.onLine) {
-    const cachedResponse = await caches.match(request, { ignoreSearch: true });
-    if (cachedResponse) {
-      console.log('📦 SW: Offline — from cache');
-      return cachedResponse;
-    }
-    
-    // لا يوجد كاش — أرجع مصفوفة فارغة (بدل خطأ)
-    return new Response(
-      JSON.stringify([]),
-      {
-        status: 200,
-        headers: { 
-          'Content-Type': 'application/json',
-          'X-Offline': 'true'
-        }
-      }
-    );
-  }
-  
-  // ⭐ 2. متصل — حاول الشبكة
+async function handlePDFRequest(request) {
   try {
-    const networkResponse = await fetchWithTimeout(request, 5000);
-    
-    if (networkResponse && networkResponse.status === 200) {
-      const cache = await caches.open(DATA_CACHE);
-      cache.put(request, networkResponse.clone());
-      return networkResponse;
-    }
-    
-    throw new Error('Non-200 response');
-  } catch (err) {
-    // فشل — حاول الكاش
-    const cachedResponse = await caches.match(request, { ignoreSearch: true });
+    // 1. ابحث في كاش PDF
+    const cachedResponse = await caches.match(request);
     if (cachedResponse) {
-      console.log('📦 SW: Supabase fallback to cache');
+      console.log('📦 SW: PDF from cache');
       return cachedResponse;
     }
+
+    // 2. اجلب من الشبكة
+    const networkResponse = await fetch(request);
     
-    return new Response(
-      JSON.stringify([]),
-      {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', 'X-Offline': 'true' }
-      }
-    );
+    // 3. خزّن في كاش PDF
+    if (networkResponse && networkResponse.status === 200) {
+      const cache = await caches.open(PDF_CACHE);
+      cache.put(request, networkResponse.clone());
+    }
+    
+    return networkResponse;
+  } catch (err) {
+    console.warn('🌐 SW: PDF request failed');
+    
+    // حاول الكاش
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) return cachedResponse;
+    
+    return new Response('PDF غير متاح', { 
+      status: 404,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+    });
   }
 }
 
@@ -194,8 +185,17 @@ async function handleSupabaseRequest(request) {
  */
 async function handleLocalRequest(request) {
   try {
-    // ابحث في الكاش
-    let cachedResponse = await caches.match(request, { ignoreSearch: true });
+    // ابحث في الكاش (بدون تجاهل Query — لأن الصفحات قد تختلف)
+    let cachedResponse = await caches.match(request);
+    
+    if (cachedResponse) {
+      updateCacheInBackground(request);
+      return cachedResponse;
+    }
+    
+    // حاول بدون Query (مثل viewer.html?id=xxx)
+    const urlWithoutQuery = request.url.split('?')[0];
+    cachedResponse = await caches.match(urlWithoutQuery);
     
     if (cachedResponse) {
       updateCacheInBackground(request);
@@ -205,7 +205,7 @@ async function handleLocalRequest(request) {
     const networkResponse = await fetch(request);
     
     if (networkResponse && networkResponse.status === 200) {
-      const cache = await caches.open(CACHE_NAME);
+      const cache = await caches.open(STATIC_CACHE);
       cache.put(request, networkResponse.clone());
     }
     
@@ -215,7 +215,7 @@ async function handleLocalRequest(request) {
     
     // حاول بدون query
     const urlWithoutQuery = request.url.split('?')[0];
-    let cachedResponse = await caches.match(urlWithoutQuery, { ignoreSearch: true });
+    let cachedResponse = await caches.match(urlWithoutQuery);
     
     if (cachedResponse) return cachedResponse;
     
@@ -235,7 +235,7 @@ async function handleLocalRequest(request) {
  */
 async function handleExternalRequest(request) {
   try {
-    let cachedResponse = await caches.match(request, { ignoreSearch: true });
+    let cachedResponse = await caches.match(request);
     
     if (cachedResponse) {
       updateCacheInBackground(request);
@@ -251,7 +251,7 @@ async function handleExternalRequest(request) {
     
     return networkResponse;
   } catch (err) {
-    const cachedResponse = await caches.match(request, { ignoreSearch: true });
+    const cachedResponse = await caches.match(request);
     if (cachedResponse) return cachedResponse;
     throw err;
   }
@@ -282,7 +282,7 @@ function updateCacheInBackground(request) {
   fetch(request)
     .then((response) => {
       if (response && response.status === 200) {
-        caches.open(CACHE_NAME).then((cache) => {
+        caches.open(STATIC_CACHE).then((cache) => {
           cache.put(request, response);
         });
       }
@@ -299,6 +299,16 @@ self.addEventListener('message', (event) => {
   if (type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
+  
+  if (type === 'CLEAR_CACHE') {
+    caches.keys().then(names => {
+      return Promise.all(names.map(name => caches.delete(name)));
+    }).then(() => {
+      if (event.ports && event.ports[0]) {
+        event.ports[0].postMessage({ success: true });
+      }
+    });
+  }
 });
 
-console.log('✅ sw.js v1.2.0 loaded — offline ready');
+console.log('✅ sw.js v2.0.0 loaded — Supabase bypass enabled');

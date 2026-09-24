@@ -11,13 +11,11 @@
   
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
-<!-- PWA Meta Tags -->
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="المنصة الطبية">
-<meta name="mobile-web-app-capable" content="yes">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-512.png">
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.json">
+  
   <script>
     (function() {
       const theme = localStorage.getItem('medfav_theme') || 'dark';
@@ -31,6 +29,7 @@
       --bg-card: rgba(16, 34, 27, 0.65);
       --bg-card-hover: rgba(22, 48, 38, 0.9);
       --bg-solid: #0d221a;
+      --bg-elevated: #102a22;
       --border-card: rgba(16, 185, 129, 0.18);
       --border-card-hover: rgba(16, 185, 129, 0.5);
       --accent-emerald: #10b981;
@@ -45,7 +44,6 @@
       --warning: #f59e0b;
       --info: #3b82f6;
       --violet: #8b5cf6;
-      --pink: #ec4899;
       --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       --transition-smooth: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     }
@@ -55,19 +53,24 @@
       --bg-card: rgba(255, 255, 255, 0.85);
       --bg-card-hover: rgba(255, 255, 255, 0.95);
       --bg-solid: #ffffff;
+      --bg-elevated: #f1f5f9;
       --border-card: rgba(16, 185, 129, 0.25);
       --border-card-hover: rgba(16, 185, 129, 0.6);
       --accent-emerald: #059669;
       --accent-light: #10b981;
       --accent-dark: #047857;
-      --accent-glow: rgba(16, 185, 129, 0.2);
-      --accent-glow-strong: rgba(16, 185, 129, 0.35);
       --text-primary: #0f172a;
       --text-secondary: #475569;
       --text-muted: #94a3b8;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; }
+    * { 
+      box-sizing: border-box; 
+      margin: 0; 
+      padding: 0; 
+      font-family: 'Cairo', sans-serif; 
+      -webkit-tap-highlight-color: transparent; 
+    }
 
     body {
       background-color: var(--bg-main);
@@ -82,7 +85,44 @@
       transition: background-color var(--transition-smooth), color var(--transition-smooth);
     }
 
-    /* Header */
+    /* ============ Connection Banner ============ */
+    .connection-banner {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 8px 16px;
+      text-align: center;
+      font-size: 0.78rem;
+      font-weight: 800;
+      z-index: 9999;
+      transform: translateY(-100%);
+      transition: transform 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .connection-banner.visible {
+      transform: translateY(0);
+    }
+
+    .connection-banner.offline {
+      background: linear-gradient(135deg, #ef4444, #b91c1c);
+      color: white;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    }
+
+    .connection-banner.online {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    }
+
+    .connection-banner i { width: 14px; height: 14px; }
+
+    /* ============ Header ============ */
     header {
       position: sticky;
       top: 0;
@@ -113,7 +153,12 @@
       flex-shrink: 0;
     }
 
-    .nav-btn:hover { border-color: var(--accent-emerald); color: var(--accent-light); transform: translateY(-1px); }
+    .nav-btn:hover { 
+      border-color: var(--accent-emerald); 
+      color: var(--accent-light); 
+      transform: translateY(-1px); 
+    }
+    
     .nav-btn i { width: 20px; height: 20px; }
 
     .header-title {
@@ -129,7 +174,7 @@
       margin: 0 auto;
     }
 
-    /* Tabs */
+    /* ============ Tabs ============ */
     .notes-tabs {
       display: flex;
       gap: 8px;
@@ -138,14 +183,12 @@
       background: var(--bg-card);
       border: 1px solid var(--border-card);
       border-radius: 16px;
-      box-shadow: 
-        0 2px 6px rgba(0, 0, 0, 0.08),
-        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(12px);
     }
 
     .notes-tab {
       flex: 1;
-      padding: 11px 14px;
+      padding: 12px 14px;
       border-radius: 12px;
       background: transparent;
       border: none;
@@ -159,6 +202,7 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
+      position: relative;
     }
 
     .notes-tab i { width: 16px; height: 16px; }
@@ -166,20 +210,12 @@
     .notes-tab.active {
       background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
       color: white;
-      box-shadow: 
-        0 4px 12px var(--accent-glow-strong),
-        0 1px 2px rgba(0, 0, 0, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    }
-
-    .notes-tab:not(.active):hover {
-      color: var(--text-primary);
-      background: rgba(128, 128, 128, 0.08);
+      box-shadow: 0 4px 12px var(--accent-glow-strong);
     }
 
     .notes-tab .tab-count {
       background: rgba(255, 255, 255, 0.15);
-      padding: 1px 8px;
+      padding: 2px 8px;
       border-radius: 8px;
       font-size: 0.7rem;
       font-weight: 800;
@@ -189,7 +225,28 @@
       background: rgba(255, 255, 255, 0.25);
     }
 
-    /* Search */
+    /* مؤشر المزامنة */
+    .sync-indicator {
+      position: absolute;
+      top: 6px;
+      left: 8px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #fbbf24;
+      box-shadow: 0 0 8px #fbbf24;
+      animation: syncPulse 1.5s ease-in-out infinite;
+      display: none;
+    }
+
+    .sync-indicator.visible { display: block; }
+
+    @keyframes syncPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.4); opacity: 0.6; }
+    }
+
+    /* ============ Search ============ */
     .search-wrapper {
       position: relative;
       margin-bottom: 16px;
@@ -206,16 +263,15 @@
       outline: none;
       font-family: inherit;
       transition: all var(--transition-fast);
-      box-shadow: 
-        0 2px 6px rgba(0, 0, 0, 0.06),
-        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(10px);
     }
 
     .search-input::placeholder { color: var(--text-muted); }
-
-    .search-input:focus {
-      border-color: var(--accent-emerald);
-      box-shadow: 0 0 0 4px var(--accent-glow);
+    
+    .search-input:focus { 
+      border-color: var(--accent-emerald); 
+      box-shadow: 0 0 0 4px var(--accent-glow); 
+      background: var(--bg-card-hover);
     }
 
     .search-wrapper .icon-right {
@@ -227,285 +283,296 @@
       width: 18px; height: 18px;
     }
 
-    /* Notes List */
+    /* ============ Notes List ============ */
     .notes-list {
       display: flex;
       flex-direction: column;
       gap: 12px;
     }
 
-/* ============================================ */
-/* Note Card - Improved */
-/* ============================================ */
-.note-card {
-  background: linear-gradient(135deg, 
-    rgba(16, 34, 27, 0.7), 
-    rgba(13, 34, 26, 0.55));
-  border: 1px solid var(--border-card);
-  border-radius: 20px;
-  padding: 18px;
-  position: relative;
-  overflow: hidden;
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  animation: cardIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
-  
-  box-shadow: 
-    0 1px 2px rgba(0, 0, 0, 0.06),
-    0 4px 12px rgba(0, 0, 0, 0.1),
-    0 12px 28px -8px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
-}
-
-[data-theme="light"] .note-card {
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.95), 
-    rgba(248, 250, 252, 0.85));
-  box-shadow: 
-    0 1px 2px rgba(0, 0, 0, 0.03),
-    0 4px 12px rgba(0, 0, 0, 0.05),
-    0 12px 28px -8px rgba(0, 0, 0, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
-}
-
-.note-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 4px;
-  height: 100%;
-  background: linear-gradient(180deg, 
-    var(--accent-emerald), 
-    var(--accent-dark));
-  opacity: 0.6;
-  transition: opacity 0.3s;
-}
-
-.note-card.private::before {
-  background: linear-gradient(180deg, #a78bfa, #7c3aed);
-}
-
-.note-card.shared::before {
-  background: linear-gradient(180deg, #60a5fa, #2563eb);
-}
-
-.note-card:hover {
-  background: linear-gradient(135deg, 
-    rgba(22, 48, 38, 0.85), 
-    rgba(16, 40, 32, 0.75));
-  border-color: var(--border-card-hover);
-  transform: translateY(-3px);
-  box-shadow: 
-    0 4px 8px rgba(0, 0, 0, 0.1),
-    0 12px 24px rgba(0, 0, 0, 0.15),
-    0 20px 40px -10px rgba(16, 185, 129, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-
-[data-theme="light"] .note-card:hover {
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 1), 
-    rgba(248, 250, 252, 0.95));
-}
-
-.note-card:hover::before {
-  opacity: 1;
-}
-
-/* Header */
-.note-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--border-card);
-}
-
-.note-header-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1;
-  min-width: 0;
-}
-
-.note-type-badge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  flex-shrink: 0;
-  border: 1px solid;
-}
-
-.note-type-badge i {
-  width: 20px;
-  height: 20px;
-}
-
-.note-type-badge.private {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(124, 58, 237, 0.12));
-  border-color: rgba(139, 92, 246, 0.4);
-  color: #a78bfa;
-}
-
-.note-type-badge.shared {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.12));
-  border-color: rgba(59, 130, 246, 0.4);
-  color: #60a5fa;
-}
-
-.note-title {
-  font-size: 1.02rem;
-  font-weight: 800;
-  color: var(--text-primary);
-  line-height: 1.4;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-.note-delete-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 11px;
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  color: #f87171;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: all var(--transition-fast);
-  font-family: inherit;
-  opacity: 0.7;
-}
-
-.note-delete-btn:hover {
-  background: rgba(239, 68, 68, 0.18);
-  border-color: var(--danger);
-  opacity: 1;
-  transform: scale(1.05);
-}
-
-.note-delete-btn i {
-  width: 16px;
-  height: 16px;
-}
-
-/* Content - الآن أوضح */
-.note-content {
-  font-size: 0.94rem;
-  color: var(--text-primary);
-  line-height: 1.85;
-  white-space: pre-wrap;
-  word-break: break-word;
-  margin-bottom: 16px;
-  opacity: 0.9;
-}
-
-/* Footer */
-.note-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding-top: 12px;
-  border-top: 1px solid var(--border-card);
-}
-
-.note-meta {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 0.74rem;
-  color: var(--text-muted);
-  font-weight: 600;
-  flex-wrap: wrap;
-}
-
-.note-meta-item {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.note-meta-item i {
-  width: 13px;
-  height: 13px;
-}
-
-/* Author */
-.note-author {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 10px 4px 4px;
-  border-radius: 20px;
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.25);
-}
-
-.note-author-avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 0.7rem;
-  font-weight: 800;
-  flex-shrink: 0;
-}
-
-.note-author-name {
-  font-size: 0.76rem;
-  color: var(--accent-light);
-  font-weight: 800;
-}
-
-    /* Shared badge */
-    .shared-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 0.62rem;
-      font-weight: 800;
-      padding: 2px 8px;
-      border-radius: 6px;
-      background: rgba(59, 130, 246, 0.15);
-      border: 1px solid rgba(59, 130, 246, 0.35);
-      color: #60a5fa;
+    /* ============ Note Card ============ */
+    .note-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 20px;
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+      transition: all var(--transition-smooth);
+      animation: cardIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+      backdrop-filter: blur(12px);
+      box-shadow: 
+        0 1px 2px rgba(0, 0, 0, 0.06),
+        0 4px 12px rgba(0, 0, 0, 0.1),
+        0 12px 28px -8px rgba(0, 0, 0, 0.2);
     }
 
-    .shared-badge i { width: 10px; height: 10px; }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
 
-    .private-badge {
-      display: inline-flex;
+    .note-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 4px;
+      height: 100%;
+      background: linear-gradient(180deg, var(--accent-emerald), var(--accent-dark));
+      opacity: 0.6;
+      transition: opacity 0.3s;
+    }
+
+    .note-card.private::before {
+      background: linear-gradient(180deg, #a78bfa, #7c3aed);
+    }
+
+    .note-card.shared::before {
+      background: linear-gradient(180deg, #60a5fa, #2563eb);
+    }
+
+    .note-card.pending::before {
+      background: linear-gradient(180deg, #fbbf24, #f59e0b);
+      animation: pulseBorder 2s infinite;
+    }
+
+    @keyframes pulseBorder {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
+    .note-card:hover {
+      border-color: var(--border-card-hover);
+      transform: translateY(-3px);
+      background: var(--bg-card-hover);
+      box-shadow: 
+        0 4px 8px rgba(0, 0, 0, 0.1),
+        0 12px 24px rgba(0, 0, 0, 0.15),
+        0 20px 40px -10px rgba(16, 185, 129, 0.25);
+    }
+
+    .note-card.removing {
+      opacity: 0;
+      transform: translateX(-30px) scale(0.95);
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.4, 0, 1, 1);
+    }
+
+    .note-header {
+      display: flex;
       align-items: center;
-      gap: 4px;
-      font-size: 0.62rem;
-      font-weight: 800;
-      padding: 2px 8px;
-      border-radius: 6px;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-card);
+    }
+
+    .note-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .note-type-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      flex-shrink: 0;
+      border: 1px solid;
+    }
+
+    .note-type-badge i { width: 20px; height: 20px; }
+
+    .note-type-badge.private {
       background: rgba(139, 92, 246, 0.15);
-      border: 1px solid rgba(139, 92, 246, 0.35);
+      border-color: rgba(139, 92, 246, 0.4);
       color: #a78bfa;
     }
 
-    .private-badge i { width: 10px; height: 10px; }
+    .note-type-badge.shared {
+      background: rgba(59, 130, 246, 0.15);
+      border-color: rgba(59, 130, 246, 0.4);
+      color: #60a5fa;
+    }
 
-    /* Empty */
+    .note-title {
+      font-size: 1.02rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1.4;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    /* ============ Delete Button ============ */
+    .note-delete-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 11px;
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      color: #f87171;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all var(--transition-fast);
+      font-family: inherit;
+      opacity: 0.7;
+      position: relative;
+      z-index: 2;
+    }
+
+    .note-delete-btn:hover {
+      background: rgba(239, 68, 68, 0.18);
+      border-color: var(--danger);
+      opacity: 1;
+      transform: scale(1.05);
+    }
+
+    .note-delete-btn i { width: 16px; height: 16px; }
+
+    /* ============ Delete Confirmation ============ */
+    .delete-confirm {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 12px;
+      margin-top: 12px;
+      animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .delete-confirm-text {
+      flex: 1;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #f87171;
+    }
+
+    .delete-confirm-btn {
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.75rem;
+      font-weight: 800;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all var(--transition-fast);
+    }
+
+    .delete-confirm-btn.yes {
+      background: var(--danger);
+      color: white;
+    }
+
+    .delete-confirm-btn.yes:hover {
+      background: #b91c1c;
+      transform: scale(1.05);
+    }
+
+    .delete-confirm-btn.no {
+      background: rgba(128, 128, 128, 0.15);
+      color: var(--text-primary);
+    }
+
+    .delete-confirm-btn.no:hover {
+      background: rgba(128, 128, 128, 0.25);
+    }
+
+    /* ============ Content ============ */
+    .note-content {
+      font-size: 0.94rem;
+      color: var(--text-primary);
+      line-height: 1.85;
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin-bottom: 16px;
+      opacity: 0.9;
+    }
+
+    .note-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-card);
+    }
+
+    .note-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.74rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      flex-wrap: wrap;
+    }
+
+    .note-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .note-meta-item i { width: 13px; height: 13px; }
+
+    .note-meta-item.pending {
+      color: #fbbf24;
+      font-weight: 800;
+    }
+
+    .note-author {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 10px 4px 4px;
+      border-radius: 20px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    .note-author-avatar {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .note-author-name {
+      font-size: 0.76rem;
+      color: var(--accent-light);
+      font-weight: 800;
+    }
+
+    /* ============ Empty ============ */
     .empty-state {
       text-align: center;
       padding: 60px 20px;
@@ -513,9 +580,15 @@
       flex-direction: column;
       align-items: center;
       gap: 14px;
+      animation: fadeIn 0.4s ease;
     }
 
     .empty-state.visible { display: flex; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
 
     .empty-icon {
       width: 80px; height: 80px;
@@ -531,7 +604,7 @@
     .empty-state h3 { font-size: 1rem; font-weight: 800; color: var(--text-primary); }
     .empty-state p { font-size: 0.82rem; color: var(--text-secondary); max-width: 280px; line-height: 1.6; }
 
-    /* FAB - Add Note */
+    /* ============ FAB ============ */
     .fab {
       position: fixed;
       bottom: 24px;
@@ -548,8 +621,7 @@
       box-shadow: 
         0 4px 8px rgba(0, 0, 0, 0.15),
         0 12px 24px rgba(16, 185, 129, 0.4),
-        0 20px 40px -8px rgba(16, 185, 129, 0.5),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        0 20px 40px -8px rgba(16, 185, 129, 0.5);
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       z-index: 500;
       font-family: inherit;
@@ -560,20 +632,18 @@
       box-shadow: 
         0 6px 12px rgba(0, 0, 0, 0.2),
         0 16px 32px rgba(16, 185, 129, 0.5),
-        0 24px 48px -8px rgba(16, 185, 129, 0.6),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        0 24px 48px -8px rgba(16, 185, 129, 0.6);
     }
 
-    .fab:active { transform: translateY(-2px) scale(0.95); }
     .fab i { width: 26px; height: 26px; }
 
-    /* Modal */
+    /* ============ Modal ============ */
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(3, 10, 8, 0.9);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      background: rgba(3, 10, 8, 0.92);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
       z-index: 3000;
       opacity: 0;
       pointer-events: none;
@@ -585,51 +655,120 @@
       overflow-y: auto;
     }
 
-    [data-theme="light"] .modal-overlay { background: rgba(248, 250, 251, 0.9); }
+    [data-theme="light"] .modal-overlay { background: rgba(248, 250, 251, 0.92); }
 
     .modal-overlay.active { opacity: 1; pointer-events: auto; }
 
     .modal-card {
-      background: var(--bg-solid);
+      background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-solid) 100%);
       border: 1px solid var(--border-card-hover);
-      border-radius: 24px;
-      padding: 24px;
-      max-width: 480px;
+      border-radius: 28px;
+      padding: 0;
+      max-width: 500px;
       width: 100%;
-      max-height: 90vh;
-      overflow-y: auto;
-      transform: scale(0.94) translateY(20px);
+      max-height: 92vh;
+      overflow: hidden;
+      transform: scale(0.9) translateY(30px);
       transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
       box-shadow: 
-        0 20px 60px rgba(0, 0, 0, 0.5),
-        0 40px 100px -20px rgba(16, 185, 129, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        0 20px 60px rgba(0, 0, 0, 0.6),
+        0 40px 100px -20px rgba(16, 185, 129, 0.3);
+      position: relative;
+      display: flex;
+      flex-direction: column;
     }
 
-    .modal-overlay.active .modal-card { transform: scale(1) translateY(0); }
+    [data-theme="light"] .modal-card {
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafb 100%);
+    }
+
+    .modal-overlay.active .modal-card { 
+      transform: scale(1) translateY(0); 
+    }
+
+    .modal-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, 
+        var(--accent-emerald), 
+        var(--accent-light), 
+        var(--accent-emerald));
+      background-size: 200% 100%;
+      animation: gradientShift 3s ease infinite;
+    }
+
+    @keyframes gradientShift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
 
     .modal-header {
+      padding: 24px 24px 16px;
       display: flex;
       justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      position: relative;
+    }
+
+    .modal-title-wrapper {
+      display: flex;
       align-items: center;
-      margin-bottom: 20px;
-      gap: 12px;
+      gap: 14px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .modal-title-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      flex-shrink: 0;
+      box-shadow: 
+        0 8px 20px var(--accent-glow-strong),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      animation: iconPop 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes iconPop {
+      from { transform: scale(0.5) rotate(-10deg); opacity: 0; }
+      to { transform: scale(1) rotate(0); opacity: 1; }
+    }
+
+    .modal-title-icon i { width: 26px; height: 26px; }
+
+    .modal-title-text {
+      min-width: 0;
+      flex: 1;
     }
 
     .modal-title {
-      font-size: 1.15rem;
+      font-size: 1.2rem;
       font-weight: 900;
       color: var(--text-primary);
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      line-height: 1.3;
+      margin-bottom: 2px;
     }
 
-    .modal-title i { color: var(--accent-light); width: 22px; height: 22px; }
+    .modal-subtitle {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      font-weight: 600;
+      line-height: 1.4;
+    }
 
     .modal-close {
-      width: 36px; height: 36px;
-      border-radius: 11px;
+      width: 38px; height: 38px;
+      border-radius: 12px;
       background: rgba(128, 128, 128, 0.08);
       border: 1px solid var(--border-card);
       color: var(--text-secondary);
@@ -637,66 +776,151 @@
       cursor: pointer;
       transition: all var(--transition-fast);
       font-family: inherit;
+      flex-shrink: 0;
     }
 
-    .modal-close:hover { background: rgba(239, 68, 68, 0.15); border-color: var(--danger); color: var(--danger); }
+    .modal-close:hover { 
+      background: rgba(239, 68, 68, 0.15); 
+      border-color: var(--danger); 
+      color: var(--danger);
+      transform: rotate(90deg);
+    }
+
     .modal-close i { width: 18px; height: 18px; }
 
-    .form-group { margin-bottom: 16px; }
+    .modal-body {
+      padding: 8px 24px 20px;
+      overflow-y: auto;
+      flex: 1;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border-card) transparent;
+    }
+
+    .modal-body::-webkit-scrollbar { width: 4px; }
+    .modal-body::-webkit-scrollbar-thumb { 
+      background: var(--border-card); 
+      border-radius: 2px;
+    }
+
+    .form-group { margin-bottom: 18px; }
 
     .form-label {
-      display: block;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       font-size: 0.82rem;
       font-weight: 700;
       color: var(--text-primary);
-      margin-bottom: 8px;
+      margin-bottom: 10px;
+    }
+
+    .form-label-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .form-label-left i {
+      width: 14px;
+      height: 14px;
+      color: var(--accent-light);
+    }
+
+    .form-label-hint {
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--text-muted);
     }
 
     .form-input, .form-textarea {
       width: 100%;
-      padding: 12px 14px;
-      border-radius: 12px;
-      background: var(--bg-card);
-      border: 1px solid var(--border-card);
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: rgba(6, 17, 13, 0.5);
+      border: 1.5px solid var(--border-card);
       color: var(--text-primary);
-      font-size: 0.9rem;
+      font-size: 0.92rem;
       outline: none;
       font-family: inherit;
       transition: all var(--transition-fast);
+      resize: none;
+    }
+
+    [data-theme="light"] .form-input,
+    [data-theme="light"] .form-textarea {
+      background: rgba(248, 250, 252, 0.8);
     }
 
     .form-input:focus, .form-textarea:focus {
       border-color: var(--accent-emerald);
       box-shadow: 0 0 0 4px var(--accent-glow);
+      background: rgba(6, 17, 13, 0.8);
+    }
+
+    [data-theme="light"] .form-input:focus,
+    [data-theme="light"] .form-textarea:focus {
+      background: #ffffff;
+    }
+
+    .form-input::placeholder, 
+    .form-textarea::placeholder { 
+      color: var(--text-muted); 
     }
 
     .form-textarea {
-      min-height: 130px;
-      resize: vertical;
-      line-height: 1.6;
+      min-height: 140px;
+      line-height: 1.7;
     }
 
-    /* Radio type selector */
+    /* عداد الأحرف */
+    .char-counter {
+      display: flex;
+      justify-content: flex-end;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      font-weight: 700;
+      margin-top: 4px;
+      transition: color var(--transition-fast);
+    }
+
+    .char-counter.warning { color: var(--warning); }
+    .char-counter.danger { color: var(--danger); }
+
+    /* اختيار النوع */
     .type-selector {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      gap: 12px;
     }
 
     .type-option {
-      padding: 14px 12px;
-      border-radius: 14px;
-      background: var(--bg-card);
+      padding: 16px 12px;
+      border-radius: 16px;
+      background: rgba(6, 17, 13, 0.4);
       border: 2px solid var(--border-card);
       cursor: pointer;
-      transition: all var(--transition-fast);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       font-family: inherit;
       text-align: center;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       position: relative;
+      overflow: hidden;
+    }
+
+    [data-theme="light"] .type-option {
+      background: rgba(248, 250, 252, 0.6);
+    }
+
+    .type-option::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, currentColor 0%, transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s;
     }
 
     .type-option:hover {
@@ -706,76 +930,184 @@
 
     .type-option.selected {
       border-color: var(--accent-emerald);
-      background: rgba(16, 185, 129, 0.1);
-      box-shadow: 0 4px 12px var(--accent-glow);
+      background: rgba(16, 185, 129, 0.08);
+      box-shadow: 0 6px 20px var(--accent-glow);
     }
 
     .type-option.selected[data-type="private"] {
       border-color: var(--violet);
-      background: rgba(139, 92, 246, 0.1);
-      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+      background: rgba(139, 92, 246, 0.08);
+      box-shadow: 0 6px 20px rgba(139, 92, 246, 0.25);
+    }
+
+    .type-option.selected[data-type="shared"] {
+      border-color: var(--info);
+      background: rgba(59, 130, 246, 0.08);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.25);
+    }
+
+    /* علامة الاختيار */
+    .type-option.selected::after {
+      content: '✓';
+      position: absolute;
+      top: 8px;
+      left: 10px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--accent-emerald);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: checkPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .type-option.selected[data-type="private"]::after {
+      background: var(--violet);
+    }
+
+    .type-option.selected[data-type="shared"]::after {
+      background: var(--info);
+    }
+
+    @keyframes checkPop {
+      from { transform: scale(0); }
+      to { transform: scale(1); }
     }
 
     .type-icon {
-      width: 36px; height: 36px;
-      border-radius: 11px;
+      width: 40px; height: 40px;
+      border-radius: 12px;
       display: flex; align-items: center; justify-content: center;
+      position: relative;
+      z-index: 1;
+      transition: transform 0.3s;
+    }
+
+    .type-option:hover .type-icon {
+      transform: scale(1.1) rotate(-5deg);
+    }
+
+    .type-option.selected .type-icon {
+      transform: scale(1.15);
     }
 
     .type-icon i { width: 20px; height: 20px; }
 
-    .type-label {
-      font-size: 0.78rem;
-      font-weight: 800;
-      color: var(--text-primary);
+    /* ✅ إصلاح: ألوان النص واضحة لكل نوع */
+    .type-label { 
+      font-size: 0.85rem; 
+      font-weight: 800; 
+      position: relative;
+      z-index: 1;
+      transition: color 0.25s ease;
     }
 
-    .type-desc {
-      font-size: 0.68rem;
-      color: var(--text-muted);
+    /* خاصة - بنفسجي واضح */
+    .type-option[data-type="private"] .type-label {
+      color: #a78bfa;
+    }
+
+    /* مشتركة - أزرق واضح */
+    .type-option[data-type="shared"] .type-label {
+      color: #60a5fa;
+    }
+
+    /* عند الاختيار تصبح أكثر إشراقاً */
+    .type-option.selected[data-type="private"] .type-label {
+      color: #c4b5fd;
+      text-shadow: 0 0 12px rgba(167, 139, 250, 0.5);
+    }
+
+    .type-option.selected[data-type="shared"] .type-label {
+      color: #93c5fd;
+      text-shadow: 0 0 12px rgba(96, 165, 250, 0.5);
+    }
+
+    /* في الوضع الفاتح - أغمق قليلاً ليكون واضحاً */
+    [data-theme="light"] .type-option[data-type="private"] .type-label {
+      color: #7c3aed;
+    }
+
+    [data-theme="light"] .type-option[data-type="shared"] .type-label {
+      color: #2563eb;
+    }
+
+    [data-theme="light"] .type-option.selected[data-type="private"] .type-label {
+      color: #6d28d9;
+    }
+
+    [data-theme="light"] .type-option.selected[data-type="shared"] .type-label {
+      color: #1d4ed8;
+    }
+    
+    .type-desc { 
+      font-size: 0.68rem; 
+      color: var(--text-muted); 
       font-weight: 600;
+      position: relative;
+      z-index: 1;
+      line-height: 1.3;
     }
 
-    /* Buttons */
+    /* أزرار المودال */
     .modal-actions {
+      padding: 16px 24px 20px;
       display: flex;
       gap: 10px;
-      margin-top: 20px;
+      background: rgba(6, 17, 13, 0.3);
+      border-top: 1px solid var(--border-card);
+      backdrop-filter: blur(10px);
+    }
+
+    [data-theme="light"] .modal-actions {
+      background: rgba(248, 250, 252, 0.5);
     }
 
     .btn {
       flex: 1;
-      padding: 13px;
+      padding: 14px;
       border-radius: 14px;
       border: 1px solid transparent;
       font-family: inherit;
-      font-size: 0.9rem;
+      font-size: 0.92rem;
       font-weight: 800;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      transition: all var(--transition-fast);
-      box-shadow: 
-        0 2px 4px rgba(0, 0, 0, 0.08),
-        0 4px 12px rgba(0, 0, 0, 0.1),
-        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
     }
 
-    .btn i { width: 17px; height: 17px; }
+    .btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+      transform: translateX(-100%);
+      transition: transform 0.6s;
+    }
+
+    .btn:hover::before { transform: translateX(100%); }
+
+    .btn i { width: 18px; height: 18px; position: relative; z-index: 1; }
+    .btn span { position: relative; z-index: 1; }
 
     .btn.primary {
       background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
       color: white;
+      box-shadow: 0 6px 16px var(--accent-glow-strong);
     }
 
-    .btn.primary:hover {
+    .btn.primary:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 
-        0 4px 8px rgba(0, 0, 0, 0.12),
-        0 8px 20px rgba(16, 185, 129, 0.4),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      box-shadow: 0 10px 24px var(--accent-glow-strong);
     }
 
     .btn.secondary {
@@ -789,13 +1121,13 @@
       color: var(--text-primary);
     }
 
-    .btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
+    .btn:disabled { 
+      opacity: 0.6; 
+      cursor: not-allowed; 
       transform: none !important;
     }
 
-    /* Toast */
+    /* ============ Toast ============ */
     .toast {
       position: fixed;
       top: 90px; left: 50%;
@@ -806,46 +1138,69 @@
       border-radius: 14px;
       font-size: 0.88rem;
       font-weight: 700;
-      box-shadow: 
-        0 12px 32px rgba(0, 0, 0, 0.5),
-        0 0 20px var(--accent-glow),
-        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
       z-index: 9999;
       opacity: 0;
-      transition: all var(--transition-smooth);
+      visibility: hidden;
+      transition: all 0.3s ease;
       border: 1px solid rgba(255, 255, 255, 0.15);
       backdrop-filter: blur(16px);
-      display: flex; align-items: center; gap: 10px;
+      display: flex; 
+      align-items: center; 
+      gap: 10px;
       max-width: calc(100vw - 40px);
       pointer-events: none;
     }
 
-    .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.visible { 
+      opacity: 1; 
+      visibility: visible;
+      transform: translateX(-50%) translateY(0); 
+    }
+    
     .toast.error { background: rgba(239, 68, 68, 0.98); }
     .toast.info { background: rgba(59, 130, 246, 0.98); }
 
     @keyframes spin { to { transform: rotate(360deg); } }
     .spin { animation: spin 1s linear infinite; }
 
-    /* Responsive */
+    /* ============ Responsive ============ */
     @media (max-width: 640px) {
       header { padding: 12px 16px; }
       .container { padding: 16px 14px; }
       .notes-tab { padding: 10px; font-size: 0.8rem; }
       .note-card { padding: 14px 16px; border-radius: 16px; }
-      .note-content { padding-right: 0; }
       .fab { bottom: 20px; left: 16px; width: 54px; height: 54px; }
       .fab i { width: 24px; height: 24px; }
-      .modal-card { padding: 20px; border-radius: 20px; }
-      .type-option { padding: 12px 8px; }
+      .modal-card { border-radius: 24px; max-height: 94vh; }
+      .modal-header { padding: 20px 18px 12px; }
+      .modal-body { padding: 8px 18px 16px; }
+      .modal-actions { padding: 14px 18px 18px; }
+      .modal-title-icon { width: 44px; height: 44px; }
+      .modal-title-icon i { width: 22px; height: 22px; }
+      .modal-title { font-size: 1.05rem; }
+      .type-option { padding: 14px 10px; }
+    }
+
+    @media (max-width: 380px) {
+      .type-selector { grid-template-columns: 1fr; }
     }
 
     @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+      *, *::before, *::after { 
+        animation-duration: 0.01ms !important; 
+        transition-duration: 0.01ms !important; 
+      }
     }
   </style>
 </head>
 <body>
+
+  <!-- شريط حالة الاتصال -->
+  <div class="connection-banner" id="connectionBanner">
+    <i data-lucide="wifi-off"></i>
+    <span id="connectionText">لا يوجد اتصال بالإنترنت</span>
+  </div>
 
   <header>
     <a href="index.html" class="nav-btn">
@@ -857,21 +1212,20 @@
 
   <div class="container">
 
-    <!-- Tabs -->
     <div class="notes-tabs">
       <button class="notes-tab active" data-tab="mine" onclick="switchNotesTab('mine')">
         <i data-lucide="lock"></i>
-        ملاحظاتي
+        <span>ملاحظاتي</span>
         <span class="tab-count" id="mineCount">0</span>
       </button>
       <button class="notes-tab" data-tab="shared" onclick="switchNotesTab('shared')">
+        <span class="sync-indicator" id="syncIndicator"></span>
         <i data-lucide="users"></i>
-        ملاحظات الزملاء
+        <span>ملاحظات الزملاء</span>
         <span class="tab-count" id="sharedCount">0</span>
       </button>
     </div>
 
-    <!-- Search -->
     <div class="search-wrapper">
       <input 
         type="text" 
@@ -883,90 +1237,117 @@
       <i data-lucide="search" class="icon-right"></i>
     </div>
 
-    <!-- Notes List -->
     <div class="notes-list" id="notesList"></div>
 
-    <!-- Empty State -->
     <div class="empty-state" id="notesEmpty">
       <div class="empty-icon"><i data-lucide="notebook-pen"></i></div>
       <h3 id="emptyTitle">لا توجد ملاحظات بعد</h3>
-      <p id="emptyMessage">ابدأ بإضافة ملاحظاتك الخاصة لتنظيم دراستك</p>
+      <p id="emptyMessage">ابدأ بإضافة ملاحظاتك الخاصة</p>
     </div>
 
   </div>
 
-  <!-- FAB -->
   <button class="fab" onclick="openAddModal()" title="إضافة ملاحظة">
     <i data-lucide="plus"></i>
   </button>
 
-  <!-- Add Note Modal -->
+  <!-- Modal -->
   <div class="modal-overlay" id="addModal" onclick="closeAddModalIfOutside(event)">
     <div class="modal-card" onclick="event.stopPropagation()">
+      
       <div class="modal-header">
-        <div class="modal-title">
-          <i data-lucide="notebook-pen"></i>
-          <span>ملاحظة جديدة</span>
+        <div class="modal-title-wrapper">
+          <div class="modal-title-icon">
+            <i data-lucide="notebook-pen"></i>
+          </div>
+          <div class="modal-title-text">
+            <div class="modal-title">ملاحظة جديدة</div>
+            <div class="modal-subtitle">وثّق أفكارك الدراسية</div>
+          </div>
         </div>
         <button class="modal-close" onclick="closeAddModal()">
           <i data-lucide="x"></i>
         </button>
       </div>
 
-      <div class="form-group">
-        <label class="form-label">العنوان</label>
-        <input 
-          type="text" 
-          id="noteTitle" 
-          class="form-input" 
-          placeholder="مثال: ملاحظات الفصل الأول"
-          maxlength="100"
-        >
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">المحتوى</label>
-        <textarea 
-          id="noteContent" 
-          class="form-textarea" 
-          placeholder="اكتب ملاحظتك هنا..."
-          maxlength="5000"
-        ></textarea>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">نوع الملاحظة</label>
-        <div class="type-selector">
-          <button type="button" class="type-option selected" data-type="private" onclick="selectNoteType('private')">
-            <div class="type-icon" style="background: rgba(139, 92, 246, 0.15); color: #a78bfa;">
-              <i data-lucide="lock"></i>
+      <div class="modal-body">
+        
+        <div class="form-group">
+          <label class="form-label" for="noteTitle">
+            <div class="form-label-left">
+              <i data-lucide="type"></i>
+              <span>العنوان</span>
             </div>
-            <div class="type-label">خاصة</div>
-            <div class="type-desc">أنت فقط</div>
-          </button>
-          <button type="button" class="type-option" data-type="shared" onclick="selectNoteType('shared')">
-            <div class="type-icon" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa;">
-              <i data-lucide="users"></i>
-            </div>
-            <div class="type-label">مشتركة</div>
-            <div class="type-desc">الجميع</div>
-          </button>
+            <span class="form-label-hint" id="titleCounter">0/100</span>
+          </label>
+          <input 
+            type="text" 
+            id="noteTitle" 
+            class="form-input" 
+            placeholder="مثال: ملخص الفصل الأول"
+            maxlength="100"
+            oninput="updateCounter('noteTitle', 'titleCounter', 100)"
+          >
         </div>
+
+        <div class="form-group">
+          <label class="form-label" for="noteContent">
+            <div class="form-label-left">
+              <i data-lucide="align-right"></i>
+              <span>المحتوى</span>
+            </div>
+            <span class="form-label-hint" id="contentCounter">0/5000</span>
+          </label>
+          <textarea 
+            id="noteContent" 
+            class="form-textarea" 
+            placeholder="اكتب ملاحظتك هنا..."
+            maxlength="5000"
+            oninput="updateCounter('noteContent', 'contentCounter', 5000)"
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">
+            <div class="form-label-left">
+              <i data-lucide="eye"></i>
+              <span>نوع الملاحظة</span>
+            </div>
+          </label>
+          <div class="type-selector">
+            <button type="button" class="type-option selected" data-type="private" onclick="selectNoteType('private')">
+              <div class="type-icon" style="background: rgba(139, 92, 246, 0.15); color: #a78bfa;">
+                <i data-lucide="lock"></i>
+              </div>
+              <div class="type-label">خاصة</div>
+              <div class="type-desc">أنت فقط — بدون إنترنت</div>
+            </button>
+            <button type="button" class="type-option" data-type="shared" onclick="selectNoteType('shared')">
+              <div class="type-icon" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa;">
+                <i data-lucide="users"></i>
+              </div>
+              <div class="type-label">مشتركة</div>
+              <div class="type-desc">الجميع — تحتاج إنترنت</div>
+            </button>
+          </div>
+        </div>
+
       </div>
 
       <div class="modal-actions">
+        <button class="btn secondary" onclick="closeAddModal()">
+          <i data-lucide="x"></i>
+          <span>إلغاء</span>
+        </button>
         <button class="btn primary" onclick="saveNote()" id="saveBtn">
           <i data-lucide="check"></i>
-          حفظ الملاحظة
-        </button>
-        <button class="btn secondary" onclick="closeAddModal()">
-          إلغاء
+          <span>حفظ الملاحظة</span>
         </button>
       </div>
+
     </div>
   </div>
 
-  <!-- Scripts -->
   <script src="supabase-config.js"></script>
   <script src="auth.js"></script>
 
@@ -974,89 +1355,196 @@
     lucide.createIcons();
 
     // ============================================
-    // الحالة
+    // State
     // ============================================
-    const notesState = {
+    const state = {
       currentUser: null,
       currentProfile: null,
       currentTab: 'mine',
       currentType: 'private',
       myNotes: [],
       sharedNotes: [],
-      filteredNotes: [],
-      searchQuery: ''
+      pendingNotes: [],
+      searchQuery: '',
+      deletingId: null,
+      isSaving: false,      // 🔒 منع الحفظ المزدوج
+      isSyncing: false      // 🔒 منع المزامنة المزدوجة
     };
+
+    // ============================================
+    // Storage Keys
+    // ============================================
+    const KEYS = {
+      MY_NOTES: 'medfav_my_notes_v3',
+      PENDING: 'medfav_pending_v3',
+      SHARED_CACHE: 'medfav_shared_cache_v3',
+      PROFILE_CACHE: 'medfav_profile_cache_v3'
+    };
+
+    // ============================================
+    // Storage Helpers
+    // ============================================
+    function saveToStorage(key, data) {
+      try {
+        localStorage.setItem(key, JSON.stringify(data));
+        return true;
+      } catch (err) {
+        console.error('saveToStorage error:', err);
+        // محاولة تنظيف المساحة
+        try {
+          if (err.name === 'QuotaExceededError') {
+            showToast('الذاكرة ممتلئة — احذف ملاحظات قديمة', 'error');
+          }
+        } catch (e) {}
+        return false;
+      }
+    }
+
+    function loadFromStorage(key, fallback = []) {
+      try {
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : fallback;
+      } catch (err) {
+        console.error('loadFromStorage error:', err);
+        return fallback;
+      }
+    }
 
     // ============================================
     // Toast
     // ============================================
+    let toastTimeout;
     function showToast(message, type = 'success') {
-      const existing = document.querySelector('.toast');
-      if (existing) existing.remove();
-      
-      const toast = document.createElement('div');
-      toast.className = 'toast' + (type === 'error' ? ' error' : type === 'info' ? ' info' : '');
-      
-      const icon = type === 'error' ? 'alert-circle' : type === 'info' ? 'info' : 'check-circle-2';
-      toast.innerHTML = `
-        <i data-lucide="${icon}" style="width: 18px; height: 18px; flex-shrink: 0;"></i>
-        <span>${message}</span>
-      `;
-      
-      document.body.appendChild(toast);
-      lucide.createIcons();
-      
-      requestAnimationFrame(() => toast.classList.add('visible'));
-      
-      setTimeout(() => {
-        toast.classList.remove('visible');
-        setTimeout(() => toast.remove(), 350);
-      }, 2600);
+      try {
+        const existing = document.querySelector('.toast');
+        if (existing) existing.remove();
+        
+        clearTimeout(toastTimeout);
+        
+        const toast = document.createElement('div');
+        toast.className = 'toast' + (type === 'error' ? ' error' : type === 'info' ? ' info' : '');
+        
+        const icon = type === 'error' ? 'alert-circle' : type === 'info' ? 'info' : 'check-circle-2';
+        toast.innerHTML = `
+          <i data-lucide="${icon}" style="width: 18px; height: 18px; flex-shrink: 0;"></i>
+          <span>${message}</span>
+        `;
+        
+        document.body.appendChild(toast);
+        lucide.createIcons();
+        
+        requestAnimationFrame(() => toast.classList.add('visible'));
+        
+        toastTimeout = setTimeout(() => {
+          toast.classList.remove('visible');
+          setTimeout(() => toast.remove(), 300);
+        }, 2000);
+      } catch (err) {
+        console.error('showToast error:', err);
+      }
     }
 
     // ============================================
-    // تحميل المستخدم
+    // Connection Banner
+    // ============================================
+    let bannerTimeout;
+    function showConnectionBanner(isOnline) {
+      const banner = document.getElementById('connectionBanner');
+      const text = document.getElementById('connectionText');
+      const icon = banner.querySelector('i');
+      
+      banner.classList.remove('offline', 'online');
+      
+      if (isOnline) {
+        banner.classList.add('online');
+        text.textContent = 'تم استعادة الاتصال ✓';
+        icon.setAttribute('data-lucide', 'wifi');
+      } else {
+        banner.classList.add('offline');
+        text.textContent = 'لا يوجد اتصال — الملاحظات الخاصة تعمل';
+        icon.setAttribute('data-lucide', 'wifi-off');
+      }
+      
+      banner.classList.add('visible');
+      lucide.createIcons();
+      
+      clearTimeout(bannerTimeout);
+      bannerTimeout = setTimeout(() => {
+        banner.classList.remove('visible');
+      }, 3500);
+    }
+
+    // ============================================
+    // Load User
     // ============================================
     async function loadUser() {
-      const session = await getSession();
+      const cachedProfile = loadFromStorage(KEYS.PROFILE_CACHE, null);
+      
+      let session = null;
+      try {
+        session = await getSession();
+      } catch (err) {
+        console.log('Session check failed:', err);
+      }
+      
       if (!session) {
+        // محاولة استخدام البروفايل المخزن (offline)
+        if (!navigator.onLine && cachedProfile) {
+          state.currentUser = { 
+            id: cachedProfile.id, 
+            email: cachedProfile.email 
+          };
+          state.currentProfile = cachedProfile;
+          return true;
+        }
+        
         window.location.href = 'login.html';
         return false;
       }
       
-      notesState.currentUser = session.user;
-      const profile = await getProfile(session.user.id);
-      notesState.currentProfile = profile;
+      state.currentUser = session.user;
+      
+      // استخدام الكاش فوراً لتجنب التأخير
+      if (cachedProfile && cachedProfile.id === session.user.id) {
+        state.currentProfile = cachedProfile;
+      }
+      
+      // تحديث البروفايل في الخلفية
+      if (navigator.onLine) {
+        try {
+          const profile = await getProfile(session.user.id);
+          if (profile) {
+            state.currentProfile = profile;
+            saveToStorage(KEYS.PROFILE_CACHE, profile);
+          }
+        } catch (err) {
+          console.log('Profile fetch failed, using cache');
+        }
+      }
       
       return true;
     }
 
     // ============================================
-    // تحميل ملاحظاتي
+    // Load Notes
     // ============================================
-    async function loadMyNotes() {
-      try {
-        const { data, error } = await supabaseClient
-          .from('notes')
-          .select('*')
-          .eq('user_id', notesState.currentUser.id)
-          .eq('is_shared', false)
-          .order('created_at', { ascending: false });
-        
-        if (error) throw error;
-        notesState.myNotes = data || [];
-        document.getElementById('mineCount').textContent = notesState.myNotes.length;
-        
-      } catch (err) {
-        console.error('loadMyNotes error:', err);
-        notesState.myNotes = [];
-      }
+    function loadMyNotes() {
+      state.myNotes = loadFromStorage(KEYS.MY_NOTES, []);
+      updateMineCount();
     }
 
-    // ============================================
-    // تحميل ملاحظات الزملاء (المشتركة)
-    // ============================================
     async function loadSharedNotes() {
+      // تحميل من الكاش أولاً (دائماً)
+      const cached = loadFromStorage(KEYS.SHARED_CACHE, []);
+      state.sharedNotes = cached;
+      updateSharedCount();
+      
+      // إذا لا يوجد إنترنت، توقف هنا
+      if (!navigator.onLine) {
+        return;
+      }
+      
+      // محاولة تحديث من السيرفر
       try {
         const { data, error } = await supabaseClient
           .from('notes')
@@ -1065,192 +1553,419 @@
           .order('created_at', { ascending: false });
         
         if (error) throw error;
-        notesState.sharedNotes = data || [];
-        document.getElementById('sharedCount').textContent = notesState.sharedNotes.length;
+        
+        state.sharedNotes = data || [];
+        saveToStorage(KEYS.SHARED_CACHE, state.sharedNotes);
+        updateSharedCount();
         
       } catch (err) {
         console.error('loadSharedNotes error:', err);
-        notesState.sharedNotes = [];
+        // الاحتفاظ بالكاش الحالي — لا نفرغ القائمة
+      }
+    }
+
+    function updateMineCount() {
+      const el = document.getElementById('mineCount');
+      if (el) el.textContent = state.myNotes.length;
+    }
+
+    function updateSharedCount() {
+      const total = state.sharedNotes.length + state.pendingNotes.length;
+      const el = document.getElementById('sharedCount');
+      if (el) el.textContent = total;
+      
+      const indicator = document.getElementById('syncIndicator');
+      if (indicator) {
+        indicator.classList.toggle('visible', state.pendingNotes.length > 0);
       }
     }
 
     // ============================================
-    // التبديل بين التبويبات
+    // Sync Pending — نسخة قوية
+    // ============================================
+    async function syncPending() {
+      // 🔒 حماية من المزامنة المزدوجة
+      if (state.isSyncing) return;
+      if (!navigator.onLine) return;
+      if (state.pendingNotes.length === 0) return;
+      
+      state.isSyncing = true;
+      
+      const snapshot = [...state.pendingNotes];
+      const failed = [];
+      let successCount = 0;
+      
+      for (const note of snapshot) {
+        let attempts = 0;
+        const maxAttempts = 3;
+        let success = false;
+        
+        while (attempts < maxAttempts && !success) {
+          try {
+            const { error } = await supabaseClient
+              .from('notes')
+              .insert({
+                user_id: note.user_id,
+                author_name: note.author_name,
+                title: note.title,
+                content: note.content,
+                is_shared: true
+              });
+            
+            if (error) throw error;
+            success = true;
+            successCount++;
+            
+          } catch (err) {
+            attempts++;
+            console.warn(`Sync attempt ${attempts}/${maxAttempts} failed:`, err);
+            
+            if (attempts < maxAttempts) {
+              // انتظار تصاعدي قبل إعادة المحاولة
+              await new Promise(r => setTimeout(r, 500 * attempts));
+            }
+          }
+        }
+        
+        if (!success) {
+          failed.push(note);
+        }
+      }
+      
+      // تحديث القائمة
+      state.pendingNotes = failed;
+      saveToStorage(KEYS.PENDING, state.pendingNotes);
+      
+      state.isSyncing = false;
+      
+      // إشعار المستخدم
+      if (successCount > 0 && failed.length === 0) {
+        showToast(`تمت مزامنة ${successCount} ملاحظة ✓`);
+      } else if (successCount > 0 && failed.length > 0) {
+        showToast(`تمت مزامنة ${successCount} — فشل ${failed.length}`, 'info');
+      } else if (failed.length > 0) {
+        showToast('تعذّرت المزامنة — ستتم تلقائياً', 'info');
+      }
+      
+      // تحديث العرض
+      await loadSharedNotes();
+      updateSharedCount();
+      
+      if (state.currentTab === 'shared') {
+        renderNotes();
+      }
+    }
+
+    // ============================================
+    // Switch Tabs
     // ============================================
     function switchNotesTab(tab) {
-      notesState.currentTab = tab;
+      state.currentTab = tab;
+      state.deletingId = null;
       
       document.querySelectorAll('.notes-tab').forEach(t => {
         t.classList.toggle('active', t.dataset.tab === tab);
       });
       
-      // مسح البحث عند التبديل
-      document.getElementById('notesSearch').value = '';
-      notesState.searchQuery = '';
+      const searchInput = document.getElementById('notesSearch');
+      if (searchInput) {
+        searchInput.value = '';
+        state.searchQuery = '';
+      }
       
       renderNotes();
     }
 
     // ============================================
-    // البحث
+    // Search
     // ============================================
     function handleSearch(query) {
-      notesState.searchQuery = query.toLowerCase().trim();
+      state.searchQuery = (query || '').toLowerCase().trim();
       renderNotes();
     }
 
     // ============================================
-    // عرض الملاحظات
+    // Render
     // ============================================
     function renderNotes() {
-      const list = document.getElementById('notesList');
-      const empty = document.getElementById('notesEmpty');
-      const emptyTitle = document.getElementById('emptyTitle');
-      const emptyMessage = document.getElementById('emptyMessage');
-      
-      let notes = notesState.currentTab === 'mine' 
-        ? notesState.myNotes 
-        : notesState.sharedNotes;
-      
-      // فلترة حسب البحث
-      if (notesState.searchQuery) {
-        notes = notes.filter(n => 
-          n.title.toLowerCase().includes(notesState.searchQuery) ||
-          n.content.toLowerCase().includes(notesState.searchQuery) ||
-          (n.author_name && n.author_name.toLowerCase().includes(notesState.searchQuery))
-        );
-      }
-      
-      list.innerHTML = '';
-      
-      if (notes.length === 0) {
-        empty.classList.add('visible');
+      try {
+        const list = document.getElementById('notesList');
+        const empty = document.getElementById('notesEmpty');
+        const emptyTitle = document.getElementById('emptyTitle');
+        const emptyMessage = document.getElementById('emptyMessage');
         
-        if (notesState.searchQuery) {
-          emptyTitle.textContent = 'لا توجد نتائج';
-          emptyMessage.textContent = 'لم نعثر على ملاحظات تطابق بحثك';
-          empty.querySelector('i').setAttribute('data-lucide', 'search-x');
-        } else if (notesState.currentTab === 'mine') {
-          emptyTitle.textContent = 'لا توجد ملاحظات';
-          emptyMessage.textContent = 'ابدأ بإضافة ملاحظاتك الخاصة لتنظيم دراستك';
-          empty.querySelector('i').setAttribute('data-lucide', 'notebook-pen');
-        } else {
-          emptyTitle.textContent = 'لا توجد ملاحظات مشتركة';
-          emptyMessage.textContent = 'عندما يشارك الزملاء ملاحظاتهم، ستظهر هنا';
-          empty.querySelector('i').setAttribute('data-lucide', 'users');
+        if (!list) return;
+        
+        let notes = state.currentTab === 'mine'
+          ? [...state.myNotes]
+          : [...state.pendingNotes, ...state.sharedNotes];
+        
+        if (state.searchQuery) {
+          notes = notes.filter(n => 
+            (n.title || '').toLowerCase().includes(state.searchQuery) ||
+            (n.content || '').toLowerCase().includes(state.searchQuery) ||
+            (n.author_name && n.author_name.toLowerCase().includes(state.searchQuery))
+          );
         }
+        
+        list.innerHTML = '';
+        
+        if (notes.length === 0) {
+          empty.classList.add('visible');
+          const iconEl = empty.querySelector('.empty-icon i');
+          
+          if (state.searchQuery) {
+            emptyTitle.textContent = 'لا توجد نتائج';
+            emptyMessage.textContent = 'لم نعثر على ملاحظات تطابق بحثك';
+            iconEl.setAttribute('data-lucide', 'search-x');
+          } else if (state.currentTab === 'mine') {
+            emptyTitle.textContent = 'لا توجد ملاحظات';
+            emptyMessage.textContent = 'ابدأ بإضافة ملاحظاتك الخاصة — تعمل بدون إنترنت';
+            iconEl.setAttribute('data-lucide', 'notebook-pen');
+          } else {
+            emptyTitle.textContent = 'لا توجد ملاحظات مشتركة';
+            emptyMessage.textContent = navigator.onLine 
+              ? 'عندما يشارك الزملاء ملاحظاتهم، ستظهر هنا'
+              : 'أنت غير متصل بالإنترنت حالياً';
+            iconEl.setAttribute('data-lucide', 'users');
+          }
+          lucide.createIcons();
+          return;
+        }
+        
+        empty.classList.remove('visible');
+        
+        notes.forEach((note, i) => {
+          list.appendChild(createNoteCard(note, i));
+        });
+        
         lucide.createIcons();
-        return;
+      } catch (err) {
+        console.error('renderNotes error:', err);
       }
+    }
+
+    // ============================================
+    // Create Card
+    // ============================================
+    function createNoteCard(note, index) {
+      const isMine = state.currentUser && note.user_id === state.currentUser.id;
+      const isPending = note._pending === true;
+      const canDelete = isMine || state.currentProfile?.role === 'admin';
+      const typeClass = note.is_shared ? 'shared' : 'private';
+      const isDeleting = state.deletingId === note.id;
       
-      empty.classList.remove('visible');
+      const card = document.createElement('div');
+      card.className = `note-card ${typeClass}` + (isPending ? ' pending' : '');
+      card.dataset.noteId = note.id;
+      card.style.animationDelay = (index * 0.04) + 's';
       
-      notes.forEach((note, i) => {
-        const card = createNoteCard(note, i);
-        list.appendChild(card);
-      });
+      const typeIcon = note.is_shared ? 'users' : 'lock';
+      const authorInitial = note.author_name ? note.author_name.charAt(0).toUpperCase() : '؟';
+      const authorName = note.is_shared ? escapeHtml(note.author_name || 'مجهول') : 'أنت';
       
+      const pendingHtml = isPending ? `
+        <div class="note-meta-item pending">
+          <i data-lucide="clock"></i>
+          <span>قيد المزامنة</span>
+        </div>
+      ` : '';
+      
+      const deleteHtml = isDeleting ? `
+        <div class="delete-confirm">
+          <span class="delete-confirm-text">حذف هذه الملاحظة؟</span>
+          <button class="delete-confirm-btn yes" onclick="confirmDelete('${note.id}')">
+            نعم
+          </button>
+          <button class="delete-confirm-btn no" onclick="cancelDelete()">
+            لا
+          </button>
+        </div>
+      ` : '';
+      
+      card.innerHTML = `
+        <div class="note-header">
+          <div class="note-header-left">
+            <div class="note-type-badge ${typeClass}">
+              <i data-lucide="${typeIcon}"></i>
+            </div>
+            <div class="note-title">${escapeHtml(note.title)}</div>
+          </div>
+          ${canDelete && !isDeleting ? `
+            <button class="note-delete-btn" onclick="requestDelete('${note.id}')" title="حذف">
+              <i data-lucide="trash-2"></i>
+            </button>
+          ` : ''}
+        </div>
+        
+        <div class="note-content">${escapeHtml(note.content)}</div>
+        
+        <div class="note-footer">
+          <div class="note-meta">
+            <div class="note-meta-item">
+              <i data-lucide="clock"></i>
+              <span>${formatDate(note.created_at)}</span>
+            </div>
+            ${pendingHtml}
+          </div>
+          
+          <div class="note-author">
+            <div class="note-author-avatar">${authorInitial}</div>
+            <span class="note-author-name">${authorName}</span>
+          </div>
+        </div>
+        
+        ${deleteHtml}
+      `;
+      
+      return card;
+    }
+
+    // ============================================
+    // Delete Flow
+    // ============================================
+    function requestDelete(noteId) {
+      state.deletingId = noteId;
+      renderNotes();
       lucide.createIcons();
     }
 
-// ============================================
-// إنشاء بطاقة ملاحظة
-// ============================================
-function createNoteCard(note, index) {
-  const isMine = note.user_id === notesState.currentUser.id;
-  const canDelete = isMine || notesState.currentProfile?.role === 'admin';
-  const typeClass = note.is_shared ? 'shared' : 'private';
-  
-  const card = document.createElement('div');
-  card.className = `note-card ${typeClass}`;
-  card.style.animationDelay = (index * 0.04) + 's';
-  
-  const typeIcon = note.is_shared ? 'users' : 'lock';
-  const authorInitial = note.author_name ? note.author_name.charAt(0).toUpperCase() : '؟';
-  const authorName = note.is_shared ? escapeHtml(note.author_name) : 'أنت';
-  
-  card.innerHTML = `
-    <div class="note-header">
-      <div class="note-header-left">
-        <div class="note-type-badge ${typeClass}">
-          <i data-lucide="${typeIcon}"></i>
-        </div>
-        <div class="note-title">${escapeHtml(note.title)}</div>
-      </div>
-      ${canDelete ? `
-        <button class="note-delete-btn" onclick="deleteNote('${note.id}')" title="حذف">
-          <i data-lucide="trash-2"></i>
-        </button>
-      ` : ''}
-    </div>
-    
-    <div class="note-content">${escapeHtml(note.content)}</div>
-    
-    <div class="note-footer">
-      <div class="note-meta">
-        <div class="note-meta-item">
-          <i data-lucide="clock"></i>
-          <span>${formatNoteDate(note.created_at)}</span>
-        </div>
-      </div>
+    function cancelDelete() {
+      state.deletingId = null;
+      renderNotes();
+      lucide.createIcons();
+    }
+
+    async function confirmDelete(noteId) {
+      const card = document.querySelector(`[data-note-id="${noteId}"]`);
       
-      <div class="note-author">
-        <div class="note-author-avatar">${authorInitial}</div>
-        <span class="note-author-name">${authorName}</span>
-      </div>
-    </div>
-  `;
-  
-  return card;
-}
+      if (card) {
+        card.classList.add('removing');
+        await new Promise(r => setTimeout(r, 300));
+      }
+      
+      try {
+        // خاصة (محلية)
+        if (noteId.startsWith('local_')) {
+          state.myNotes = state.myNotes.filter(n => n.id !== noteId);
+          saveToStorage(KEYS.MY_NOTES, state.myNotes);
+          updateMineCount();
+        }
+        // معلقة (بانتظار المزامنة)
+        else if (noteId.startsWith('pending_')) {
+          state.pendingNotes = state.pendingNotes.filter(n => n.id !== noteId);
+          saveToStorage(KEYS.PENDING, state.pendingNotes);
+          updateSharedCount();
+        }
+        // مشتركة — تحتاج إنترنت
+        else {
+          if (!navigator.onLine) {
+            showToast('حذف الملاحظات المشتركة يحتاج إنترنت', 'error');
+            state.deletingId = null;
+            renderNotes();
+            return;
+          }
+          
+          const { error } = await supabaseClient
+            .from('notes')
+            .delete()
+            .eq('id', noteId);
+          
+          if (error) throw error;
+          
+          state.sharedNotes = state.sharedNotes.filter(n => n.id !== noteId);
+          saveToStorage(KEYS.SHARED_CACHE, state.sharedNotes);
+          updateSharedCount();
+        }
+        
+        state.deletingId = null;
+        showToast('تم الحذف');
+        renderNotes();
+        
+      } catch (err) {
+        console.error('deleteNote error:', err);
+        showToast('تعذّر الحذف', 'error');
+        state.deletingId = null;
+        renderNotes();
+      }
+    }
 
     // ============================================
-    // Escape HTML
+    // Helpers
     // ============================================
     function escapeHtml(text) {
       if (!text) return '';
       const div = document.createElement('div');
-      div.textContent = text;
+      div.textContent = String(text);
       return div.innerHTML;
     }
 
-    // ============================================
-    // تنسيق التاريخ
-    // ============================================
-    function formatNoteDate(dateString) {
-      const date = new Date(dateString);
-      const now = new Date();
-      const diffMs = now - date;
-      const diffMins = Math.floor(diffMs / 60000);
-      const diffHours = Math.floor(diffMs / 3600000);
-      const diffDays = Math.floor(diffMs / 86400000);
-      
-      if (diffMins < 1) return 'الآن';
-      if (diffMins < 60) return `منذ ${diffMins} دقيقة`;
-      if (diffHours < 24) return `منذ ${diffHours} ساعة`;
-      if (diffDays < 7) return `منذ ${diffDays} يوم`;
-      
-      return date.toLocaleDateString('ar-EG', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
+    function formatDate(dateString) {
+      try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return '—';
+        
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+        
+        if (diffMins < 1) return 'الآن';
+        if (diffMins < 60) return `منذ ${diffMins} دقيقة`;
+        if (diffHours < 24) return `منذ ${diffHours} ساعة`;
+        if (diffDays < 7) return `منذ ${diffDays} يوم`;
+        
+        return date.toLocaleDateString('ar-EG', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      } catch {
+        return '—';
+      }
+    }
+
+    function updateCounter(inputId, counterId, max) {
+      try {
+        const input = document.getElementById(inputId);
+        const counter = document.getElementById(counterId);
+        if (!input || !counter) return;
+        
+        const length = input.value.length;
+        counter.textContent = `${length}/${max}`;
+        
+        if (length > max * 0.9) {
+          counter.style.color = 'var(--danger)';
+        } else if (length > max * 0.75) {
+          counter.style.color = 'var(--warning)';
+        } else {
+          counter.style.color = 'var(--text-muted)';
+        }
+      } catch (err) {
+        console.error('updateCounter error:', err);
+      }
     }
 
     // ============================================
-    // Modal - إضافة ملاحظة
+    // Modal
     // ============================================
     function openAddModal() {
       document.getElementById('noteTitle').value = '';
       document.getElementById('noteContent').value = '';
+      document.getElementById('titleCounter').textContent = '0/100';
+      document.getElementById('contentCounter').textContent = '0/5000';
+      document.getElementById('titleCounter').style.color = 'var(--text-muted)';
+      document.getElementById('contentCounter').style.color = 'var(--text-muted)';
+      
       selectNoteType('private');
       
       document.getElementById('addModal').classList.add('active');
       document.body.style.overflow = 'hidden';
       
       setTimeout(() => {
-        document.getElementById('noteTitle').focus();
-      }, 300);
+        try { document.getElementById('noteTitle').focus(); } catch {}
+      }, 350);
       
       lucide.createIcons();
     }
@@ -1258,6 +1973,7 @@ function createNoteCard(note, index) {
     function closeAddModal() {
       document.getElementById('addModal').classList.remove('active');
       document.body.style.overflow = '';
+      state.isSaving = false;
     }
 
     function closeAddModalIfOutside(event) {
@@ -1265,7 +1981,7 @@ function createNoteCard(note, index) {
     }
 
     function selectNoteType(type) {
-      notesState.currentType = type;
+      state.currentType = type;
       
       document.querySelectorAll('.type-option').forEach(opt => {
         opt.classList.toggle('selected', opt.dataset.type === type);
@@ -1275,150 +1991,245 @@ function createNoteCard(note, index) {
     }
 
     // ============================================
-    // حفظ الملاحظة
+    // Save Note — نسخة قوية
     // ============================================
     async function saveNote() {
+      // 🔒 منع الحفظ المزدوج
+      if (state.isSaving) return;
+      
       const title = document.getElementById('noteTitle').value.trim();
       const content = document.getElementById('noteContent').value.trim();
       
+      // التحقق من الإدخال
       if (!title) {
         showToast('العنوان مطلوب', 'error');
+        document.getElementById('noteTitle').focus();
         return;
       }
       
       if (!content) {
         showToast('المحتوى مطلوب', 'error');
+        document.getElementById('noteContent').focus();
         return;
       }
       
+      // التحقق من المستخدم
+      if (!state.currentUser || !state.currentUser.id) {
+        showToast('يجب تسجيل الدخول أولاً', 'error');
+        return;
+      }
+      
+      state.isSaving = true;
+      
       const saveBtn = document.getElementById('saveBtn');
+      const originalBtnHTML = saveBtn.innerHTML;
       saveBtn.disabled = true;
-      saveBtn.innerHTML = '<i data-lucide="loader-2" class="spin" style="width: 17px; height: 17px;"></i> جاري الحفظ...';
+      saveBtn.innerHTML = '<i data-lucide="loader-2" class="spin" style="width: 18px; height: 18px;"></i><span>جاري الحفظ...</span>';
       lucide.createIcons();
       
       try {
-        const displayName = notesState.currentProfile?.full_name 
-          || notesState.currentUser.email?.split('@')[0] 
+        const displayName = state.currentProfile?.full_name 
+          || state.currentUser.email?.split('@')[0] 
           || 'مستخدم';
         
-        const { error } = await supabaseClient
-          .from('notes')
-          .insert({
-            user_id: notesState.currentUser.id,
+        // ============ ملاحظة خاصة (offline دائماً) ============
+        if (state.currentType === 'private') {
+          const newNote = {
+            id: 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+            user_id: state.currentUser.id,
             author_name: displayName,
-            title: title,
-            content: content,
-            is_shared: notesState.currentType === 'shared'
-          });
+            title,
+            content,
+            is_shared: false,
+            created_at: new Date().toISOString()
+          };
+          
+          state.myNotes.unshift(newNote);
+          
+          const saved = saveToStorage(KEYS.MY_NOTES, state.myNotes);
+          if (!saved) {
+            // فشل الحفظ — ارجع
+            state.myNotes.shift();
+            throw new Error('فشل الحفظ في الذاكرة المحلية');
+          }
+          
+          updateMineCount();
+          
+          showToast('تم حفظ ملاحظتك ✓');
+          closeAddModal();
+          switchNotesTab('mine');
+          return;
+        }
         
-        if (error) throw error;
+        // ============ ملاحظة مشتركة ============
         
-        showToast(notesState.currentType === 'shared' 
-          ? 'تم حفظ الملاحظة ونشرها للزملاء' 
-          : 'تم حفظ ملاحظتك الخاصة');
+        // بدون إنترنت → حفظ في قائمة الانتظار
+        if (!navigator.onLine) {
+          const pendingNote = {
+            id: 'pending_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+            user_id: state.currentUser.id,
+            author_name: displayName,
+            title,
+            content,
+            is_shared: true,
+            created_at: new Date().toISOString(),
+            _pending: true
+          };
+          
+          state.pendingNotes.push(pendingNote);
+          saveToStorage(KEYS.PENDING, state.pendingNotes);
+          updateSharedCount();
+          
+          showToast('ستُزامن عند عودة الإنترنت ✓', 'info');
+          closeAddModal();
+          switchNotesTab('shared');
+          return;
+        }
         
-        closeAddModal();
+        // مع إنترنت → إرسال مباشر مع إعادة محاولة
+        let lastError = null;
+        let success = false;
         
-        // إعادة التحميل
-        await Promise.all([loadMyNotes(), loadSharedNotes()]);
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          try {
+            const { error } = await supabaseClient
+              .from('notes')
+              .insert({
+                user_id: state.currentUser.id,
+                author_name: displayName,
+                title,
+                content,
+                is_shared: true
+              });
+            
+            if (error) throw error;
+            success = true;
+            break;
+            
+          } catch (err) {
+            lastError = err;
+            console.warn(`Save attempt ${attempt} failed:`, err);
+            if (attempt < 2) {
+              await new Promise(r => setTimeout(r, 800));
+            }
+          }
+        }
         
-        // التبديل للتبويب المناسب
-        if (notesState.currentType === 'shared') {
+        if (success) {
+          showToast('تم نشر الملاحظة ✓');
+          closeAddModal();
+          await loadSharedNotes();
           switchNotesTab('shared');
         } else {
-          switchNotesTab('mine');
+          // فشل الاتصال → احفظ كـ pending
+          console.error('Save failed, falling back to pending:', lastError);
+          
+          const pendingNote = {
+            id: 'pending_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+            user_id: state.currentUser.id,
+            author_name: displayName,
+            title,
+            content,
+            is_shared: true,
+            created_at: new Date().toISOString(),
+            _pending: true
+          };
+          
+          state.pendingNotes.push(pendingNote);
+          saveToStorage(KEYS.PENDING, state.pendingNotes);
+          updateSharedCount();
+          
+          showToast('تعذّر النشر — ستُزامن تلقائياً', 'info');
+          closeAddModal();
+          switchNotesTab('shared');
         }
         
       } catch (err) {
         console.error('saveNote error:', err);
-        showToast('تعذّر حفظ الملاحظة: ' + err.message, 'error');
+        showToast(err.message || 'تعذّر الحفظ', 'error');
       } finally {
+        state.isSaving = false;
         saveBtn.disabled = false;
-        saveBtn.innerHTML = '<i data-lucide="check"></i> حفظ الملاحظة';
+        saveBtn.innerHTML = originalBtnHTML;
         lucide.createIcons();
       }
     }
 
     // ============================================
-    // حذف الملاحظة
+    // Events
     // ============================================
-    async function deleteNote(noteId) {
-      if (!confirm('هل أنت متأكد من حذف هذه الملاحظة؟\n\nلا يمكن التراجع.')) return;
-      
-      try {
-        const { error } = await supabaseClient
-          .from('notes')
-          .delete()
-          .eq('id', noteId);
-        
-        if (error) throw error;
-        
-        showToast('تم حذف الملاحظة');
-        
-        // إعادة التحميل
-        await Promise.all([loadMyNotes(), loadSharedNotes()]);
-        renderNotes();
-        
-      } catch (err) {
-        console.error('deleteNote error:', err);
-        showToast('تعذّر حذف الملاحظة', 'error');
-      }
-    }
+    window.addEventListener('online', () => {
+      showConnectionBanner(true);
+      // انتظار قصير ثم مزامنة
+      setTimeout(() => {
+        syncPending();
+      }, 500);
+    });
 
-    // ============================================
-    // ESC لإغلاق المودال
-    // ============================================
+    window.addEventListener('offline', () => {
+      showConnectionBanner(false);
+    });
+
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         const modal = document.getElementById('addModal');
         if (modal && modal.classList.contains('active')) {
           closeAddModal();
+        } else if (state.deletingId) {
+          cancelDelete();
         }
       }
     });
 
     // ============================================
-    // التشغيل الأولي
+    // Init
     // ============================================
     async function init() {
-      const ok = await loadUser();
-      if (!ok) return;
-      
-      await Promise.all([
-        loadMyNotes(),
-        loadSharedNotes()
-      ]);
-      
-      renderNotes();
-      
-      console.log('✅ notes.html loaded');
+      try {
+        // تحميل الملاحظات المعلقة
+        state.pendingNotes = loadFromStorage(KEYS.PENDING, []);
+        updateSharedCount();
+        
+        // تحميل المستخدم
+        const ok = await loadUser();
+        if (!ok) return;
+        
+        // تحميل الملاحظات
+        loadMyNotes();
+        await loadSharedNotes();
+        
+        // عرض
+        renderNotes();
+        
+        // مزامنة المعلقة إذا كان متصلاً
+        if (navigator.onLine && state.pendingNotes.length > 0) {
+          setTimeout(() => syncPending(), 1200);
+        }
+        
+        // فحص حالة الاتصال الأولية
+        if (!navigator.onLine) {
+          showConnectionBanner(false);
+        }
+        
+        console.log('✅ notes.html loaded');
+        
+      } catch (err) {
+        console.error('Init error:', err);
+        showToast('حدث خطأ في التحميل', 'error');
+      }
     }
 
     init();
   </script>
-<!-- PWA Service Worker -->
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js')
-        .then(reg => {
-          console.log('✅ SW registered:', reg.scope);
-          
-          // تحديث تلقائي عند وجود نسخة جديدة
-          reg.addEventListener('updatefound', () => {
-            const newWorker = reg.installing;
-            if (newWorker) {
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('🔄 New version available');
-                }
-              });
-            }
-          });
-        })
-        .catch(err => console.warn('⚠️ SW failed:', err));
-    });
-  }
-</script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(() => console.log('✅ SW registered'))
+          .catch(err => console.warn('⚠️ SW failed:', err));
+      });
+    }
+  </script>
 </body>
 </html>
