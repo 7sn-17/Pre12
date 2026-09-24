@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#06110d">
+  <title>غير متصل - المنصة الطبية</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="theme-init.js"></script>
+
+  <style>
+    :root {
+      --bg-main: #06110d;
+      --bg-card: rgba(16, 34, 27, 0.75);
+      --border-card: rgba(16, 185, 129, 0.22);
+      --accent-emerald: #10b981;
+      --accent-light: #34d399;
+      --accent-dark: #059669;
+      --accent-glow: rgba(16, 185, 129, 0.3);
+      --text-primary: #f0fdf4;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --warning: #f59e0b;
+      --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-smooth: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    [data-theme="light"] {
+      --bg-main: #f8fafb;
+      --bg-card: rgba(255, 255, 255, 0.9);
+      --border-card: rgba(16, 185, 129, 0.25);
+      --accent-emerald: #059669;
+      --accent-light: #10b981;
+      --accent-dark: #047857;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      background-color: var(--bg-main);
+      background-image: 
+        radial-gradient(circle at 50% 20%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(245, 158, 11, 0.05) 0%, transparent 45%);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 24px 20px;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* خلفية حيّة */
+    .particles-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .particle {
+      position: absolute;
+      bottom: -20px;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--accent-light);
+      box-shadow: 0 0 8px var(--accent-emerald);
+      opacity: 0;
+      animation: floatUp linear infinite;
+    }
+
+    @keyframes floatUp {
+      0% { opacity: 0; transform: translateY(0) scale(0.6); }
+      10% { opacity: 0.9; }
+      50% { opacity: 0.7; transform: translateY(-50vh) translateX(20px) scale(1); }
+      100% { opacity: 0; transform: translateY(-110vh) scale(0.4); }
+    }
+
+    /* الحاوية */
+    .container {
+      width: 100%;
+      max-width: 460px;
+      position: relative;
+      z-index: 1;
+      text-align: center;
+    }
+
+    /* الأيقونة */
+    .offline-icon {
+      width: 120px;
+      height: 120px;
+      border-radius: 36px;
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.15));
+      border: 2px solid rgba(245, 158, 11, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+      color: #fbbf24;
+      box-shadow: 0 12px 32px rgba(245, 158, 11, 0.25);
+      position: relative;
+      animation: iconPulse 3s ease-in-out infinite;
+    }
+
+    @keyframes iconPulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 12px 32px rgba(245, 158, 11, 0.25); }
+      50% { transform: scale(1.05); box-shadow: 0 16px 40px rgba(245, 158, 11, 0.4); }
+    }
+
+    .offline-icon svg {
+      width: 56px;
+      height: 56px;
+    }
+
+    /* العنوان */
+    .offline-title {
+      font-size: 1.75rem;
+      font-weight: 900;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+      line-height: 1.3;
+    }
+
+    .offline-subtitle {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      margin-bottom: 28px;
+      padding: 0 10px;
+    }
+
+    /* بطاقة المعلومات */
+    .info-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 20px;
+      padding: 22px;
+      margin-bottom: 20px;
+      backdrop-filter: blur(16px);
+      text-align: right;
+    }
+
+    .info-title {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .info-title svg {
+      width: 20px;
+      height: 20px;
+      color: var(--accent-light);
+    }
+
+    .info-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .info-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .info-item-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 9px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent-light);
+      flex-shrink: 0;
+    }
+
+    .info-item-icon svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* الأزرار */
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .action-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 15px 22px;
+      border-radius: 16px;
+      font-family: inherit;
+      font-size: 0.98rem;
+      font-weight: 800;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all var(--transition-fast);
+      border: none;
+    }
+
+    .action-btn svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .action-btn.primary {
+      background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+      color: white;
+      box-shadow: 0 8px 24px var(--accent-glow);
+    }
+
+    .action-btn.primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(16, 185, 129, 0.5);
+    }
+
+    .action-btn.secondary {
+      background: rgba(128, 128, 128, 0.08);
+      border: 1px solid var(--border-card);
+      color: var(--text-primary);
+    }
+
+    .action-btn.secondary:hover {
+      background: rgba(128, 128, 128, 0.15);
+      border-color: var(--accent-emerald);
+    }
+
+    /* مؤشر الحالة */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 12px;
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      color: #fbbf24;
+      font-size: 0.78rem;
+      font-weight: 800;
+      margin-bottom: 20px;
+    }
+
+    .status-badge svg {
+      width: 14px;
+      height: 14px;
+      animation: blink 2s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* Responsive */
+    @media (max-width: 400px) {
+      .offline-icon { width: 100px; height: 100px; border-radius: 30px; }
+      .offline-icon svg { width: 46px; height: 46px; }
+      .offline-title { font-size: 1.5rem; }
+      .offline-subtitle { font-size: 0.92rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="particles-bg" id="particlesBg"></div>
+
+  <div class="container">
+
+    <!-- الحالة -->
+    <div class="status-badge">
+      <i data-lucide="wifi-off"></i>
+      <span>غير متصل بالإنترنت</span>
+    </div>
+
+    <!-- الأيقونة -->
+    <div class="offline-icon">
+      <i data-lucide="cloud-off"></i>
+    </div>
+
+    <!-- العنوان -->
+    <h1 class="offline-title">لا يوجد اتصال</h1>
+    <p class="offline-subtitle">
+      يبدو أنك غير متصل بالإنترنت حالياً.<br>
+      لا تقلق — يمكنك الوصول إلى المحتوى المحمّل.
+    </p>
+
+    <!-- بطاقة المعلومات -->
+    <div class="info-card">
+      <div class="info-title">
+        <i data-lucide="check-circle-2"></i>
+        <span>متاح بدون إنترنت:</span>
+      </div>
+      <div class="info-list">
+        
+        <div class="info-item">
+          <div class="info-item-icon">
+            <i data-lucide="download"></i>
+          </div>
+          <span>الملفات المحمّلة على جهازك</span>
+        </div>
+        
+        <div class="info-item">
+          <div class="info-item-icon">
+            <i data-lucide="bookmark"></i>
+          </div>
+          <span>الملفات المحفوظة في المفضلة</span>
+        </div>
+        
+        <div class="info-item">
+          <div class="info-item-icon">
+            <i data-lucide="notebook-pen"></i>
+          </div>
+          <span>ملاحظاتك الشخصية</span>
+        </div>
+        
+        <div class="info-item">
+          <div class="info-item-icon">
+            <i data-lucide="target"></i>
+          </div>
+          <span>أهدافك الدراسية</span>
+        </div>
+        
+      </div>
+    </div>
+
+    <!-- الأزرار -->
+    <div class="actions">
+      <a href="index.html?tab=favorites" class="action-btn primary">
+        <i data-lucide="folder-open"></i>
+        <span>عرض ملفاتي</span>
+      </a>
+      
+      <button onclick="retryConnection()" class="action-btn secondary">
+        <i data-lucide="refresh-cw"></i>
+        <span>حاول الاتصال مجدداً</span>
+      </button>
+    </div>
+
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    // خلفية حيّة
+    function createParticles() {
+      const container = document.getElementById('particlesBg');
+      const count = 20;
+      
+      for (let i = 0; i < count; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.style.left = Math.random() * 100 + '%';
+        const duration = 8 + Math.random() * 12;
+        p.style.animationDuration = duration + 's';
+        p.style.animationDelay = Math.random() * duration + 's';
+        container.appendChild(p);
+      }
+    }
+    createParticles();
+
+    // إعادة المحاولة
+    function retryConnection() {
+      if (navigator.onLine) {
+        window.location.href = 'index.html';
+      } else {
+        // تأثير وميض على الأيقونة
+        const icon = document.querySelector('.offline-icon');
+        icon.style.animation = 'none';
+        setTimeout(() => {
+          icon.style.animation = 'iconPulse 3s ease-in-out infinite';
+        }, 50);
+      }
+    }
+
+    // مراقبة الاتصال
+    window.addEventListener('online', () => {
+      console.log('✅ متصل الآن');
+      setTimeout(() => {
+        window.location.href = 'index.html';
+      }, 500);
+    });
+
+    window.addEventListener('offline', () => {
+      console.log('⚠️ انقطع الاتصال');
+    });
+
+    // فحص أولي
+    if (navigator.onLine) {
+      setTimeout(() => {
+        window.location.href = 'index.html';
+      }, 1000);
+    }
+  </script>
+</body>
+</html>
