@@ -100,35 +100,6 @@
         radial-gradient(circle at 90% 80%, rgba(5, 150, 105, 0.04) 0%, transparent 40%);
     }
 
-    /* الخلفية الحيّة */
-    .particles-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-
-    .particle {
-      position: absolute;
-      bottom: -20px;
-      width: 4px;
-      height: 4px;
-      border-radius: 50%;
-      background: var(--accent-light);
-      box-shadow: 0 0 8px var(--accent-emerald), 0 0 16px var(--particle-glow);
-      opacity: 0;
-      animation: floatUp linear infinite;
-    }
-
-    @keyframes floatUp {
-      0% { opacity: 0; transform: translateY(0) translateX(0) scale(0.6); }
-      10% { opacity: 0.9; }
-      50% { opacity: 0.7; transform: translateY(-50vh) translateX(20px) scale(1); }
-      90% { opacity: 0.3; }
-      100% { opacity: 0; transform: translateY(-110vh) translateX(-20px) scale(0.4); }
-    }
-
-    .particle.size-sm { width: 2px; height: 2px; }
-    .particle.size-md { width: 4px; height: 4px; }
-    .particle.size-lg { width: 6px; height: 6px; }
-    .particle.color-alt { background: #6ee7b7; }
-    .particle.color-dim { background: #059669; }
-
     /* الهيدر */
     header {
       position: sticky;
@@ -2044,15 +2015,14 @@
       .floating-nav-wrapper { bottom: calc(20px + env(safe-area-inset-bottom)); }
     }
 
-    @media (prefers-reduced-motion: reduce) {
-      .particle { animation: none; opacity: 0.3; }
-      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
-    }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
   </style>
 </head>
 <body>
 
-  <div class="particles-bg" id="particlesBg"></div>
+
 
   <!-- الهيدر -->
   <header id="header">
@@ -2752,33 +2722,6 @@
 
     applyTheme(appState.theme);
 
-    // ============================================
-    // الخلفية الحيّة
-    // ============================================
-    function createParticles() {
-      const container = document.getElementById('particlesBg');
-      const count = window.innerWidth < 640 ? 20 : 35;
-      container.innerHTML = '';
-      
-      for (let i = 0; i < count; i++) {
-        const p = document.createElement('div');
-        p.className = 'particle';
-        
-        const sizes = ['size-sm', 'size-md', 'size-lg'];
-        p.classList.add(sizes[Math.floor(Math.random() * sizes.length)]);
-        
-        if (Math.random() < 0.2) p.classList.add('color-alt');
-        else if (Math.random() < 0.3) p.classList.add('color-dim');
-        
-        p.style.left = Math.random() * 100 + '%';
-        const duration = 8 + Math.random() * 12;
-        p.style.animationDuration = duration + 's';
-        p.style.animationDelay = Math.random() * duration + 's';
-        
-        container.appendChild(p);
-      }
-    }
-    createParticles();
 
     // ============================================
     // أدوات مساعدة
@@ -3864,19 +3807,6 @@ function showAbout() {
       document.getElementById('header').classList.toggle('scrolled', window.pageYOffset > 20);
     }, { passive: true });
 
-    // ============================================
-    // Resize
-    // ============================================
-    let resizeTimeout;
-    window.addEventListener('resize', () => {
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(() => {
-        const container = document.getElementById('particlesBg');
-        const currentCount = container.children.length;
-        const targetCount = window.innerWidth < 640 ? 20 : 35;
-        if (Math.abs(currentCount - targetCount) > 5) createParticles();
-      }, 300);
-    });
 
     // ============================================
     // اختصارات لوحة المفاتيح
