@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#06110d">
+  <title>حول التطبيق - المنصة الطبية</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome للأيقونات -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Lucide للأيقونات العامة -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <script src="theme-init.js"></script>
+
+  <style>
+    :root {
+      --bg-main: #06110d;
+      --bg-card: rgba(16, 34, 27, 0.65);
+      --bg-card-hover: rgba(22, 48, 38, 0.9);
+      --bg-solid: #0d221a;
+      --border-card: rgba(16, 185, 129, 0.18);
+      --border-card-hover: rgba(16, 185, 129, 0.5);
+      --accent-emerald: #10b981;
+      --accent-light: #34d399;
+      --accent-dark: #059669;
+      --accent-glow: rgba(16, 185, 129, 0.25);
+      --accent-glow-strong: rgba(16, 185, 129, 0.45);
+      --text-primary: #f0fdf4;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-smooth: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    [data-theme="light"] {
+      --bg-main: #f8fafb;
+      --bg-card: rgba(255, 255, 255, 0.85);
+      --bg-card-hover: rgba(255, 255, 255, 0.95);
+      --bg-solid: #ffffff;
+      --border-card: rgba(16, 185, 129, 0.25);
+      --border-card-hover: rgba(16, 185, 129, 0.6);
+      --accent-emerald: #059669;
+      --accent-light: #10b981;
+      --accent-dark: #047857;
+      --accent-glow: rgba(16, 185, 129, 0.2);
+      --accent-glow-strong: rgba(16, 185, 129, 0.35);
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      background-color: var(--bg-main);
+      background-image: 
+        radial-gradient(circle at 10% 10%, rgba(16, 185, 129, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(5, 150, 105, 0.06) 0%, transparent 40%);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding-bottom: 60px;
+      overflow-x: hidden;
+      transition: background-color var(--transition-smooth), color var(--transition-smooth);
+    }
+
+    /* الهيدر */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(6, 17, 13, 0.9);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border-card);
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    [data-theme="light"] header { background: rgba(248, 250, 251, 0.9); }
+
+    .nav-btn {
+      width: 42px; height: 42px;
+      border-radius: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      color: var(--text-primary);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all var(--transition-fast);
+      flex-shrink: 0;
+    }
+
+    .nav-btn:hover { border-color: var(--accent-emerald); color: var(--accent-light); transform: translateY(-1px); }
+    .nav-btn i { width: 20px; height: 20px; }
+
+    .header-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      flex: 1;
+      text-align: center;
+    }
+
+    .container {
+      padding: 20px;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    /* ============================================ */
+    /* Hero Section */
+    /* ============================================ */
+    .hero-section {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(6, 17, 13, 0.5));
+      border: 1px solid var(--border-card-hover);
+      border-radius: 28px;
+      padding: 32px 22px;
+      margin-bottom: 22px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      animation: heroIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    [data-theme="light"] .hero-section {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(255, 255, 255, 0.7));
+    }
+
+    @keyframes heroIn {
+      from { opacity: 0; transform: translateY(-15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero-section::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -30%;
+      width: 320px;
+      height: 320px;
+      background: radial-gradient(circle, var(--accent-glow-strong) 0%, transparent 70%);
+      pointer-events: none;
+      animation: rotateGlow 20s linear infinite;
+    }
+
+    @keyframes rotateGlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    .hero-section > * { position: relative; z-index: 1; }
+
+    .app-icon-large {
+      width: 96px;
+      height: 96px;
+      border-radius: 28px;
+      background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 18px;
+      color: white;
+      box-shadow: 
+        0 12px 32px var(--accent-glow-strong),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      position: relative;
+    }
+
+    .app-icon-large::after {
+      content: '';
+      position: absolute;
+      inset: -6px;
+      border-radius: 34px;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      animation: pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.5; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.05); }
+    }
+
+    .app-icon-large i { width: 48px; height: 48px; }
+
+    .app-name-large {
+      font-size: 1.6rem;
+      font-weight: 900;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, var(--text-primary), var(--accent-light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .app-tagline-large {
+      font-size: 0.92rem;
+      color: var(--accent-light);
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+
+    .version-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 12px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: var(--accent-light);
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+
+    .version-badge i { width: 14px; height: 14px; }
+
+    /* ============================================ */
+    /* Stats Row */
+    /* ============================================ */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 22px;
+    }
+
+    .stat-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 18px;
+      padding: 16px 10px;
+      text-align: center;
+      transition: all var(--transition-fast);
+      animation: cardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    }
+
+    .stat-item:nth-child(1) { animation-delay: 0.05s; }
+    .stat-item:nth-child(2) { animation-delay: 0.1s; }
+    .stat-item:nth-child(3) { animation-delay: 0.15s; }
+
+    .stat-item:hover {
+      border-color: var(--border-card-hover);
+      transform: translateY(-3px);
+    }
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .stat-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 8px;
+      border: 1px solid;
+    }
+
+    .stat-icon i { width: 20px; height: 20px; }
+
+    .stat-value {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: var(--accent-light);
+      line-height: 1;
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+
+    /* ============================================ */
+    /* Section */
+    /* ============================================ */
+    .section {
+      margin-bottom: 22px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      padding: 0 4px;
+    }
+
+    .section-header-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      border: 1px solid;
+    }
+
+    .section-header-icon i { width: 20px; height: 20px; }
+
+    .section-header-text {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+
+    /* Description */
+    .description-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 18px;
+      padding: 18px;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.85;
+      text-align: justify;
+      animation: cardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.2s backwards;
+    }
+
+    /* ============================================ */
+    /* Features Grid */
+    /* ============================================ */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 18px;
+      padding: 16px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      animation: cardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+      box-shadow: 
+        0 1px 2px rgba(0, 0, 0, 0.04),
+        0 4px 12px rgba(0, 0, 0, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    .feature-card:nth-child(1) { animation-delay: 0.25s; }
+    .feature-card:nth-child(2) { animation-delay: 0.3s; }
+    .feature-card:nth-child(3) { animation-delay: 0.35s; }
+    .feature-card:nth-child(4) { animation-delay: 0.4s; }
+    .feature-card:nth-child(5) { animation-delay: 0.45s; }
+    .feature-card:nth-child(6) { animation-delay: 0.5s; }
+
+    .feature-card:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-card-hover);
+      transform: translateY(-4px);
+      box-shadow: 
+        0 4px 8px rgba(0, 0, 0, 0.1),
+        0 12px 28px -8px rgba(0, 0, 0, 0.2),
+        0 0 20px var(--accent-glow);
+    }
+
+    .feature-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid;
+      box-shadow: 
+        0 2px 6px rgba(0, 0, 0, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    .feature-icon i { width: 22px; height: 22px; }
+
+    .feature-title {
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1.35;
+      margin-bottom: 4px;
+    }
+
+    .feature-desc {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      font-weight: 600;
+    }
+
+    /* ============================================ */
+    /* Developer Card */
+    /* ============================================ */
+    .developer-card {
+      background: linear-gradient(135deg, 
+        rgba(16, 185, 129, 0.15), 
+        rgba(6, 17, 13, 0.6));
+      border: 1px solid var(--border-card-hover);
+      border-radius: 22px;
+      padding: 22px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      position: relative;
+      overflow: hidden;
+      animation: cardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.55s backwards;
+    }
+
+    [data-theme="light"] .developer-card {
+      background: linear-gradient(135deg, 
+        rgba(16, 185, 129, 0.1), 
+        rgba(255, 255, 255, 0.7));
+    }
+
+    .developer-card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 240px;
+      height: 240px;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .developer-card > * { position: relative; z-index: 1; }
+
+    .developer-avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 2rem;
+      font-weight: 900;
+      flex-shrink: 0;
+      box-shadow: 
+        0 12px 32px var(--accent-glow-strong),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      position: relative;
+    }
+
+    .developer-avatar::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 26px;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      animation: pulse 3s ease-in-out infinite;
+    }
+
+    .developer-info { flex: 1; min-width: 0; }
+
+    .developer-name {
+      font-size: 1.15rem;
+      font-weight: 900;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .developer-role {
+      font-size: 0.82rem;
+      color: var(--accent-light);
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .developer-role i {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* ============================================ */
+    /* Contact Grid - مع Font Awesome */
+    /* ============================================ */
+    .contact-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .contact-btn {
+      aspect-ratio: 1;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      font-family: inherit;
+      text-decoration: none;
+      color: var(--text-secondary);
+      padding: 12px 6px;
+      animation: cardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+      box-shadow: 
+        0 1px 2px rgba(0, 0, 0, 0.04),
+        0 4px 12px rgba(0, 0, 0, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    .contact-btn:nth-child(1) { animation-delay: 0.6s; }
+    .contact-btn:nth-child(2) { animation-delay: 0.65s; }
+    .contact-btn:nth-child(3) { animation-delay: 0.7s; }
+    .contact-btn:nth-child(4) { animation-delay: 0.75s; }
+
+    .contact-btn i {
+      font-size: 28px;
+      transition: transform 0.3s ease;
+    }
+
+    .contact-btn:hover i {
+      transform: scale(1.15) rotate(-5deg);
+    }
+
+    .contact-btn span {
+      font-size: 0.68rem;
+      font-weight: 800;
+      margin-top: 4px;
+    }
+
+    .contact-btn.whatsapp {
+      color: #25d366;
+      border-color: rgba(37, 211, 102, 0.3);
+    }
+    .contact-btn.whatsapp:hover {
+      background: rgba(37, 211, 102, 0.15);
+      border-color: #25d366;
+      transform: translateY(-4px) scale(1.05);
+      box-shadow: 0 12px 28px rgba(37, 211, 102, 0.3);
+    }
+
+    .contact-btn.telegram {
+      color: #0088cc;
+      border-color: rgba(0, 136, 204, 0.3);
+    }
+    .contact-btn.telegram:hover {
+      background: rgba(0, 136, 204, 0.15);
+      border-color: #0088cc;
+      transform: translateY(-4px) scale(1.05);
+      box-shadow: 0 12px 28px rgba(0, 136, 204, 0.3);
+    }
+
+    .contact-btn.instagram {
+      color: #e1306c;
+      border-color: rgba(225, 48, 108, 0.3);
+    }
+    .contact-btn.instagram:hover {
+      background: rgba(225, 48, 108, 0.15);
+      border-color: #e1306c;
+      transform: translateY(-4px) scale(1.05);
+      box-shadow: 0 12px 28px rgba(225, 48, 108, 0.3);
+    }
+
+    .contact-btn.email {
+      color: #f87171;
+      border-color: rgba(248, 113, 113, 0.3);
+    }
+    .contact-btn.email:hover {
+      background: rgba(248, 113, 113, 0.15);
+      border-color: #f87171;
+      transform: translateY(-4px) scale(1.05);
+      box-shadow: 0 12px 28px rgba(248, 113, 113, 0.3);
+    }
+
+    /* ============================================ */
+    /* Footer */
+    /* ============================================ */
+    .footer {
+      text-align: center;
+      padding: 24px 20px;
+      margin-top: 20px;
+      border-top: 1px solid var(--border-card);
+    }
+
+    .footer-text {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .footer-text i {
+      width: 14px;
+      height: 14px;
+      color: var(--accent-emerald);
+    }
+
+    .footer-copyright {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-top: 10px;
+      opacity: 0.7;
+    }
+
+    /* ============================================ */
+    /* Responsive */
+    /* ============================================ */
+    @media (max-width: 640px) {
+      header { padding: 12px 16px; }
+      .container { padding: 16px 14px; }
+      .hero-section { padding: 26px 18px; border-radius: 24px; }
+      .app-icon-large { width: 84px; height: 84px; border-radius: 24px; }
+      .app-icon-large i { width: 42px; height: 42px; }
+      .app-name-large { font-size: 1.4rem; }
+      .developer-avatar { width: 64px; height: 64px; font-size: 1.7rem; }
+      .developer-name { font-size: 1.05rem; }
+      .feature-icon { width: 42px; height: 42px; }
+      .feature-icon i { width: 20px; height: 20px; }
+      .contact-btn i { font-size: 24px; }
+      .contact-btn span { font-size: 0.62rem; }
+    }
+
+    @media (max-width: 400px) {
+      .stats-row { gap: 8px; }
+      .stat-item { padding: 12px 6px; }
+      .stat-value { font-size: 1.2rem; }
+      .contact-grid { gap: 8px; }
+      .contact-btn i { font-size: 22px; }
+      .contact-btn span { font-size: 0.58rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a href="index.html" class="nav-btn">
+      <i data-lucide="arrow-right"></i>
+    </a>
+    <div class="header-title">حول التطبيق</div>
+    <div style="width: 42px;"></div>
+  </header>
+
+  <div class="container">
+
+    <!-- Hero Section -->
+    <div class="hero-section">
+      <div class="app-icon-large">
+        <i data-lucide="stethoscope"></i>
+      </div>
+      <div class="app-name-large">المنصة الطبية</div>
+      <div class="app-tagline-large">رفيقك في السنة التحضيرية</div>
+      <div class="version-badge">
+        <i data-lucide="git-branch"></i>
+        <span>الإصدار 1.3</span>
+      </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="stats-row">
+      <div class="stat-item">
+        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.35); color: #34d399;">
+          <i data-lucide="book-open"></i>
+        </div>
+        <span class="stat-value" id="statSubjects">—</span>
+        <div class="stat-label">مادة دراسية</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-icon" style="background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.35); color: #60a5fa;">
+          <i data-lucide="file-text"></i>
+        </div>
+        <span class="stat-value" id="statFiles">—</span>
+        <div class="stat-label">ملف متاح</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-icon" style="background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.35); color: #fbbf24;">
+          <i data-lucide="users"></i>
+        </div>
+        <span class="stat-value" id="statUsers">—</span>
+        <div class="stat-label">مستخدم</div>
+      </div>
+    </div>
+
+    <!-- About Section -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-header-icon" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.35); color: #34d399;">
+          <i data-lucide="info"></i>
+        </div>
+        <div class="section-header-text">عن التطبيق</div>
+      </div>
+      <div class="description-card">
+        منصة تعليمية متكاملة صُمِّمت خصيصاً لطلاب السنة التحضيرية الطبية، لتكون الرفيق الأمثل في رحلتهم الدراسية. تتيح لك الوصول إلى جميع الكتب والملخصات والمراجع، مع إمكانية تحميلها لاستخدامها في أي وقت حتى بدون إنترنت. كما توفّر أدوات ذكية لتنظيم الدراسة، مثل الملاحظات الشخصية والمشتركة، ومتابعة الأهداف اليومية والأسبوعية.
+      </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-header-icon" style="background: rgba(139, 92, 246, 0.15); border-color: rgba(139, 92, 246, 0.35); color: #a78bfa;">
+          <i data-lucide="sparkles"></i>
+        </div>
+        <div class="section-header-text">مميزات التطبيق</div>
+      </div>
+      
+      <div class="features-grid">
+
+        <div class="feature-card">
+          <div class="feature-icon" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.35); color: #34d399;">
+            <i data-lucide="library"></i>
+          </div>
+          <div>
+            <div class="feature-title">مكتبة شاملة</div>
+            <div class="feature-desc">5 مواد مع جميع الملفات والمراجع المتنوعة</div>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon" style="background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.35); color: #60a5fa;">
+            <i data-lucide="download-cloud"></i>
+          </div>
+          <div>
+            <div class="feature-title">تحميل بدون إنترنت</div>
+            <div class="feature-desc">احفظ الملفات في جهازك وافتحها في أي وقت</div>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon" style="background: rgba(236, 72, 153, 0.15); border-color: rgba(236, 72, 153, 0.35); color: #f472b6;">
+            <i data-lucide="notebook-pen"></i>
+          </div>
+          <div>
+            <div class="feature-title">ملاحظات ذكية</div>
+            <div class="feature-desc">خاصة أو مشتركة مع الزملاء للاستفادة</div>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon" style="background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.35); color: #fbbf24;">
+            <i data-lucide="target"></i>
+          </div>
+          <div>
+            <div class="feature-title">تتبع الأهداف</div>
+            <div class="feature-desc">حدد أهدافك وتابع إنجازها يومياً</div>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon" style="background: rgba(139, 92, 246, 0.15); border-color: rgba(139, 92, 246, 0.35); color: #a78bfa;">
+            <i data-lucide="search"></i>
+          </div>
+          <div>
+            <div class="feature-title">بحث فوري</div>
+            <div class="feature-desc">ابحث في جميع الملفات بسرعة فائقة</div>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon" style="background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.35); color: #f87171;">
+            <i data-lucide="moon"></i>
+          </div>
+          <div>
+            <div class="feature-title">وضع ليلي/نهاري</div>
+            <div class="feature-desc">مريح لعينيك في جميع الأوقات</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Developer Section -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-header-icon" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.35); color: #34d399;">
+          <i data-lucide="code-2"></i>
+        </div>
+        <div class="section-header-text">المطور</div>
+      </div>
+      
+      <div class="developer-card">
+        <div class="developer-avatar">ح</div>
+        <div class="developer-info">
+          <div class="developer-name">حسن المحمد</div>
+          <div class="developer-role">
+            <i data-lucide="graduation-cap"></i>
+            <span>طالب</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact Section - Font Awesome -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-header-icon" style="background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.35); color: #60a5fa;">
+          <i data-lucide="message-circle"></i>
+        </div>
+        <div class="section-header-text">تواصل معي</div>
+      </div>
+      
+      <div class="contact-grid">
+
+        <a href="https://wa.me/17862927607" 
+           target="_blank" 
+           rel="noopener noreferrer"
+           class="contact-btn whatsapp" 
+           title="واتساب">
+          <i class="fa-brands fa-whatsapp"></i>
+          <span>واتساب</span>
+        </a>
+
+        <a href="https://t.me/DOVx3" 
+           target="_blank" 
+           rel="noopener noreferrer"
+           class="contact-btn telegram" 
+           title="تلغرام">
+          <i class="fa-brands fa-telegram"></i>
+          <span>تلغرام</span>
+        </a>
+
+        <a href="https://instagram.com/7sn__08" 
+           target="_blank" 
+           rel="noopener noreferrer"
+           class="contact-btn instagram" 
+           title="إنستغرام">
+          <i class="fa-brands fa-instagram"></i>
+          <span>إنستغرام</span>
+        </a>
+
+        <a href="mailto:hasantaha5689@gmail.com" 
+           class="contact-btn email" 
+           title="البريد الإلكتروني">
+          <i class="fa-solid fa-envelope"></i>
+          <span>البريد</span>
+        </a>
+
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <div class="footer-text">
+        <i data-lucide="heart"></i>
+        <span>صُنع بحب لطلاب السنة التحضيرية</span>
+        <i data-lucide="heart"></i>
+      </div>
+      <div class="footer-copyright">
+        © 2026 المنصة الطبية — جميع الحقوق محفوظة
+      </div>
+    </div>
+
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<script src="files.js"></script>
+
+  <script>
+    lucide.createIcons();
+
+    // ============================================
+    // تحميل الإحصائيات
+    // ============================================
+    async function loadStats() {
+      try {
+        const { count: subjectsCount } = await supabaseClient
+          .from('subjects')
+          .select('*', { count: 'exact', head: true });
+        
+        const { count: filesCount } = await supabaseClient
+          .from('files')
+          .select('*', { count: 'exact', head: true })
+          .eq('is_published', true);
+        
+        const { count: usersCount } = await supabaseClient
+          .from('profiles')
+          .select('*', { count: 'exact', head: true });
+        
+        animateNumber('statSubjects', subjectsCount || 0);
+        animateNumber('statFiles', filesCount || 0);
+        animateNumber('statUsers', usersCount || 0);
+        
+      } catch (err) {
+        console.error('loadStats error:', err);
+        document.getElementById('statSubjects').textContent = '5';
+        document.getElementById('statFiles').textContent = '0';
+        document.getElementById('statUsers').textContent = '0';
+      }
+    }
+
+    function animateNumber(elementId, target) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      
+      const duration = 1000;
+      const start = performance.now();
+      
+      function update(now) {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        el.textContent = Math.floor(target * eased);
+        if (progress < 1) requestAnimationFrame(update);
+        else el.textContent = target;
+      }
+      
+      requestAnimationFrame(update);
+    }
+
+    loadStats();
+    
+    console.log('✅ about.html loaded');
+  </script>
+</body>
+</html>

@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#06110d">
+  <title>تسجيل الدخول - المنصة الطبية</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="theme-init.js"></script>
+  
+  <style>
+    :root {
+      --bg-main: #06110d;
+      --bg-card: rgba(16, 34, 27, 0.75);
+      --border-card: rgba(16, 185, 129, 0.22);
+      --accent-emerald: #10b981;
+      --accent-light: #34d399;
+      --accent-dark: #059669;
+      --accent-glow: rgba(16, 185, 129, 0.3);
+      --accent-glow-strong: rgba(16, 185, 129, 0.5);
+      --text-primary: #f0fdf4;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --success: #10b981;
+      --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-smooth: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Cairo', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      background-color: var(--bg-main);
+      background-image: 
+        radial-gradient(circle at 50% 20%, rgba(16, 185, 129, 0.12) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(5, 150, 105, 0.08) 0%, transparent 45%);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 24px 20px;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* خلفية حيّة */
+    .particles-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .particle {
+      position: absolute;
+      bottom: -20px;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--accent-light);
+      box-shadow: 0 0 8px var(--accent-emerald), 0 0 16px var(--accent-glow-strong);
+      opacity: 0;
+      animation: floatUp linear infinite;
+    }
+
+    @keyframes floatUp {
+      0% { opacity: 0; transform: translateY(0) translateX(0) scale(0.6); }
+      10% { opacity: 0.9; }
+      50% { opacity: 0.7; transform: translateY(-50vh) translateX(20px) scale(1); }
+      90% { opacity: 0.3; }
+      100% { opacity: 0; transform: translateY(-110vh) translateX(-20px) scale(0.4); }
+    }
+
+    .particle.size-sm { width: 2px; height: 2px; }
+    .particle.size-md { width: 4px; height: 4px; }
+    .particle.size-lg { width: 6px; height: 6px; }
+    .particle.color-alt { background: #6ee7b7; }
+    .particle.color-dim { background: #059669; }
+
+    /* زر الإغلاق */
+    .close-btn {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all var(--transition-fast);
+      backdrop-filter: blur(12px);
+      z-index: 10;
+    }
+
+    .close-btn:hover {
+      border-color: var(--accent-emerald);
+      color: var(--accent-light);
+      transform: translateY(-2px) rotate(90deg);
+      box-shadow: 0 4px 16px var(--accent-glow);
+    }
+
+    /* الحاوية */
+    .auth-container {
+      width: 100%;
+      max-width: 440px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* شعار */
+    .brand-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 24px;
+      animation: slideDown 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .brand-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.15));
+      border: 1px solid var(--accent-emerald);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent-light);
+      box-shadow: 0 8px 24px var(--accent-glow);
+      position: relative;
+    }
+
+    .brand-icon::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 20px;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      animation: pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.5; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.05); }
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .brand-text {
+      font-size: 1.1rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, #ffffff, var(--accent-light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* البطاقة */
+    .auth-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 28px;
+      padding: 32px 28px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(16, 185, 129, 0.05);
+      position: relative;
+      overflow: hidden;
+      animation: cardIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s backwards;
+    }
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(20px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .auth-card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -30%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .auth-card > * { position: relative; z-index: 1; }
+
+    /* العنوان */
+    .auth-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .auth-title {
+      font-size: 1.75rem;
+      font-weight: 900;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #ffffff 0%, var(--accent-light) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .auth-subtitle {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+      line-height: 1.5;
+    }
+
+    /* الأقسام */
+    .view-section {
+      width: 100%;
+    }
+
+    .view-section.hidden { display: none !important; }
+
+    .view-section.fade-in {
+      animation: viewFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes viewFadeIn {
+      from { opacity: 0; transform: translateX(-12px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    /* النموذج */
+    .auth-form {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .input-group {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 14px 48px 14px 48px;
+      border-radius: 16px;
+      background: rgba(6, 17, 13, 0.6);
+      border: 1px solid var(--border-card);
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      outline: none;
+      transition: all var(--transition-fast);
+      font-family: inherit;
+    }
+
+    .input-field::placeholder { color: var(--text-muted); }
+
+    .input-field:focus {
+      border-color: var(--accent-emerald);
+      box-shadow: 0 0 0 4px var(--accent-glow);
+      background: rgba(16, 34, 27, 0.9);
+    }
+
+    .input-field.error {
+      border-color: var(--danger);
+      box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15);
+    }
+
+    .input-icon-right {
+      position: absolute;
+      right: 16px;
+      color: var(--text-muted);
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-field:focus ~ .input-icon-right { color: var(--accent-light); }
+
+    .input-icon-left {
+      position: absolute;
+      left: 14px;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      padding: 4px;
+      border-radius: 8px;
+      transition: all var(--transition-fast);
+    }
+
+    .input-icon-left:hover {
+      color: var(--accent-light);
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    .error-message {
+      font-size: 0.75rem;
+      color: var(--danger);
+      font-weight: 600;
+      padding-right: 4px;
+      display: none;
+      animation: shakeError 0.3s ease;
+    }
+
+    .error-message.visible { display: block; }
+
+    @keyframes shakeError {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-4px); }
+      75% { transform: translateX(4px); }
+    }
+
+    /* قوة كلمة المرور */
+    .password-strength {
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 2px;
+    }
+
+    .password-strength.visible { display: flex; }
+
+    .strength-bars { display: flex; gap: 4px; }
+
+    .strength-bar {
+      flex: 1;
+      height: 4px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      transition: background var(--transition-fast);
+    }
+
+    .strength-bar.weak { background: var(--danger); }
+    .strength-bar.medium { background: var(--warning); }
+    .strength-bar.strong { background: var(--success); }
+
+    .strength-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .strength-label.weak { color: var(--danger); }
+    .strength-label.medium { color: var(--warning); }
+    .strength-label.strong { color: var(--success); }
+
+    /* الخيارات الإضافية */
+    .form-extras {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: -4px;
+    }
+
+    .checkbox-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .checkbox-wrapper input { display: none; }
+
+    .checkbox-custom {
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      border: 1.5px solid var(--border-card);
+      background: rgba(6, 17, 13, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition-fast);
+      flex-shrink: 0;
+    }
+
+    .checkbox-custom i {
+      width: 14px;
+      height: 14px;
+      color: white;
+      opacity: 0;
+      transform: scale(0.5);
+      transition: all var(--transition-fast);
+    }
+
+    .checkbox-wrapper input:checked + .checkbox-custom {
+      background: var(--accent-emerald);
+      border-color: var(--accent-emerald);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    .checkbox-wrapper input:checked + .checkbox-custom i {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .forgot-link {
+      font-size: 0.85rem;
+      color: var(--accent-light);
+      font-weight: 700;
+      text-decoration: none;
+      transition: color var(--transition-fast);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .forgot-link:hover { color: #ffffff; text-decoration: underline; }
+
+    .forgot-link .spin {
+      width: 12px;
+      height: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: var(--accent-light);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    /* زر الإرسال */
+    .submit-btn {
+      width: 100%;
+      padding: 15px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+      border: none;
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 8px;
+      box-shadow: 0 8px 24px var(--accent-glow);
+      transition: all var(--transition-fast);
+      font-family: inherit;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .submit-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transform: translateX(-100%);
+      transition: transform 0.6s ease;
+    }
+
+    .submit-btn:hover::before { transform: translateX(100%); }
+
+    .submit-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px var(--accent-glow-strong);
+    }
+
+    .submit-btn:active:not(:disabled) { transform: translateY(0) scale(0.98); }
+
+    .submit-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+
+    .submit-btn .btn-loader {
+      display: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .submit-btn.loading .btn-text,
+    .submit-btn.loading .btn-icon { display: none; }
+
+    .submit-btn.loading .btn-loader { display: block; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* التبديل */
+    .toggle-box {
+      margin-top: 24px;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      text-align: center;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-card);
+    }
+
+    .toggle-link {
+      color: var(--accent-light);
+      font-weight: 800;
+      cursor: pointer;
+      margin-right: 6px;
+      text-decoration: none;
+      transition: color var(--transition-fast);
+      position: relative;
+    }
+
+    .toggle-link::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      right: 0;
+      width: 0;
+      height: 2px;
+      background: var(--accent-light);
+      transition: width var(--transition-fast);
+    }
+
+    .toggle-link:hover::after { width: 100%; }
+    .toggle-link:hover { color: #ffffff; }
+
+    /* رسالة النجاح */
+    .success-banner {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid var(--accent-emerald);
+      border-radius: 14px;
+      padding: 14px 18px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      color: var(--accent-light);
+      font-size: 0.88rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .success-banner.visible { display: flex; }
+    .success-banner i { flex-shrink: 0; width: 18px; height: 18px; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: rgba(16, 185, 129, 0.98);
+      color: white;
+      padding: 13px 22px;
+      border-radius: 14px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 0 20px var(--accent-glow);
+      z-index: 9999;
+      opacity: 0;
+      transition: all var(--transition-smooth);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(16px);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: calc(100vw - 40px);
+    }
+
+    .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.error { background: rgba(239, 68, 68, 0.98); }
+    .toast.info { background: rgba(59, 130, 246, 0.98); }
+    .toast i { flex-shrink: 0; width: 18px; height: 18px; }
+
+    /* تجاوب */
+    @media (max-width: 480px) {
+      body { padding: 16px 14px; }
+      .close-btn { top: 16px; right: 16px; width: 40px; height: 40px; }
+      .auth-card { padding: 26px 20px; border-radius: 24px; }
+      .auth-title { font-size: 1.5rem; }
+      .auth-subtitle { font-size: 0.85rem; }
+      .brand-icon { width: 46px; height: 46px; }
+      .brand-text { font-size: 1rem; }
+    }
+
+    /* الوضع النهاري */
+    [data-theme="light"] {
+      --bg-main: #f8fafb;
+      --bg-card: rgba(255, 255, 255, 0.85);
+      --bg-card-hover: rgba(255, 255, 255, 0.95);
+      --bg-solid: #ffffff;
+      --bg-elevated: #f1f5f9;
+      --border-card: rgba(16, 185, 129, 0.25);
+      --border-card-hover: rgba(16, 185, 129, 0.6);
+      --accent-emerald: #059669;
+      --accent-light: #10b981;
+      --accent-dark: #047857;
+      --accent-glow: rgba(16, 185, 129, 0.2);
+      --accent-glow-strong: rgba(16, 185, 129, 0.35);
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+    }
+
+    [data-theme="light"] body {
+      background-color: var(--bg-main) !important;
+      background-image: 
+        radial-gradient(circle at 10% 10%, rgba(16, 185, 129, 0.06) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(5, 150, 105, 0.04) 0%, transparent 40%) !important;
+      color: var(--text-primary);
+    }
+
+    [data-theme="light"] .input-field {
+      background: rgba(255, 255, 255, 0.9);
+      color: var(--text-primary);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- الخلفية الحيّة -->
+  <div class="particles-bg" id="particlesBg"></div>
+
+  <!-- زر الإغلاق -->
+  <a href="index.html" class="close-btn" title="إغلاق" aria-label="إغلاق">
+    <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+  </a>
+
+  <div class="auth-container">
+
+    <!-- شعار -->
+    <div class="brand-badge">
+      <div class="brand-icon">
+        <i data-lucide="stethoscope" style="width: 26px; height: 26px;"></i>
+      </div>
+      <div class="brand-text">السنة التحضيرية</div>
+    </div>
+
+    <div class="auth-card">
+
+      <!-- ========== تسجيل الدخول ========== -->
+      <div id="loginView" class="view-section fade-in">
+        <div class="auth-header">
+          <h1 class="auth-title">تسجيل الدخول</h1>
+          <p class="auth-subtitle">أهلاً بك مجدداً! ادخل حسابك للمتابعة</p>
+        </div>
+
+        <div class="success-banner" id="successBanner">
+          <i data-lucide="check-circle-2"></i>
+          <span id="successMessage">تم بنجاح!</span>
+        </div>
+
+        <form class="auth-form" id="loginForm" novalidate>
+          
+          <div class="input-group">
+            <div class="input-wrapper">
+              <input 
+                type="email" 
+                id="loginEmail" 
+                class="input-field" 
+                placeholder="البريد الإلكتروني" 
+                autocomplete="email"
+                inputmode="email"
+                required
+              >
+              <span class="input-icon-right"><i data-lucide="mail" style="width: 18px; height: 18px;"></i></span>
+            </div>
+            <div class="error-message" id="loginEmailError">يرجى إدخال بريد إلكتروني صحيح</div>
+          </div>
+
+          <div class="input-group">
+            <div class="input-wrapper">
+              <input 
+                type="password" 
+                id="loginPassword" 
+                class="input-field" 
+                placeholder="كلمة المرور" 
+                autocomplete="current-password"
+                required
+              >
+              <span class="input-icon-right"><i data-lucide="lock" style="width: 18px; height: 18px;"></i></span>
+              <span class="input-icon-left" onclick="togglePasswordVisibility('loginPassword', this)">
+                <i data-lucide="eye" style="width: 18px; height: 18px;"></i>
+              </span>
+            </div>
+            <div class="error-message" id="loginPasswordError">كلمة المرور مطلوبة</div>
+          </div>
+
+          <div class="form-extras">
+            <label class="checkbox-wrapper">
+              <input type="checkbox" id="rememberMe">
+              <span class="checkbox-custom">
+                <i data-lucide="check" style="width: 14px; height: 14px;"></i>
+              </span>
+              <span>تذكرني</span>
+            </label>
+            <button type="button" class="forgot-link" id="forgotBtn" onclick="handleForgotPassword()">
+              <i data-lucide="key-round" style="width: 14px; height: 14px;"></i>
+              <span>نسيت كلمة المرور؟</span>
+            </button>
+          </div>
+
+          <button type="submit" class="submit-btn" id="loginBtn">
+            <span class="btn-loader"></span>
+            <span class="btn-text">تسجيل الدخول</span>
+            <i data-lucide="log-in" class="btn-icon" style="width: 20px; height: 20px;"></i>
+          </button>
+        </form>
+
+        <div class="toggle-box">
+          <span>ليس لديك حساب؟</span>
+          <a class="toggle-link" onclick="switchTab('register')">سجل الآن</a>
+        </div>
+      </div>
+
+      <!-- ========== إنشاء حساب ========== -->
+      <div id="registerView" class="view-section hidden">
+        <div class="auth-header">
+          <h1 class="auth-title">حساب جديد</h1>
+          <p class="auth-subtitle">أنشئ حسابك للوصول لجميع الملفات</p>
+        </div>
+
+        <form class="auth-form" id="registerForm" novalidate>
+          
+          <div class="input-group">
+            <div class="input-wrapper">
+              <input 
+                type="text" 
+                id="registerName" 
+                class="input-field" 
+                placeholder="الاسم الكامل" 
+                autocomplete="name"
+                required
+              >
+              <span class="input-icon-right"><i data-lucide="user" style="width: 18px; height: 18px;"></i></span>
+            </div>
+            <div class="error-message" id="registerNameError">الاسم مطلوب (3 أحرف على الأقل)</div>
+          </div>
+
+          <div class="input-group">
+            <div class="input-wrapper">
+              <input 
+                type="email" 
+                id="registerEmail" 
+                class="input-field" 
+                placeholder="البريد الإلكتروني" 
+                autocomplete="email"
+                inputmode="email"
+                required
+              >
+              <span class="input-icon-right"><i data-lucide="mail" style="width: 18px; height: 18px;"></i></span>
+            </div>
+            <div class="error-message" id="registerEmailError">يرجى إدخال بريد إلكتروني صحيح</div>
+          </div>
+
+          <div class="input-group">
+            <div class="input-wrapper">
+              <input 
+                type="password" 
+                id="registerPassword" 
+                class="input-field" 
+                placeholder="كلمة المرور" 
+                autocomplete="new-password"
+                required
+                oninput="checkPasswordStrength(this.value)"
+              >
+              <span class="input-icon-right"><i data-lucide="lock" style="width: 18px; height: 18px;"></i></span>
+              <span class="input-icon-left" onclick="togglePasswordVisibility('registerPassword', this)">
+                <i data-lucide="eye" style="width: 18px; height: 18px;"></i>
+              </span>
+            </div>
+            <div class="password-strength" id="passwordStrength">
+              <div class="strength-bars">
+                <div class="strength-bar" id="bar1"></div>
+                <div class="strength-bar" id="bar2"></div>
+                <div class="strength-bar" id="bar3"></div>
+                <div class="strength-bar" id="bar4"></div>
+              </div>
+              <span class="strength-label" id="strengthLabel">قوة كلمة المرور</span>
+            </div>
+            <div class="error-message" id="registerPasswordError">كلمة المرور قصيرة جداً (6 أحرف على الأقل)</div>
+          </div>
+
+          <div class="input-group">
+            <div class="input-wrapper">
+              <input 
+                type="password" 
+                id="registerConfirm" 
+                class="input-field" 
+                placeholder="تأكيد كلمة المرور" 
+                autocomplete="new-password"
+                required
+              >
+              <span class="input-icon-right"><i data-lucide="shield-check" style="width: 18px; height: 18px;"></i></span>
+            </div>
+            <div class="error-message" id="registerConfirmError">كلمتا المرور غير متطابقتين</div>
+          </div>
+
+          <button type="submit" class="submit-btn" id="registerBtn">
+            <span class="btn-loader"></span>
+            <span class="btn-text">إنشاء الحساب</span>
+            <i data-lucide="user-plus" class="btn-icon" style="width: 20px; height: 20px;"></i>
+          </button>
+        </form>
+
+        <div class="toggle-box">
+          <span>لديك حساب بالفعل؟</span>
+          <a class="toggle-link" onclick="switchTab('login')">سجل الدخول</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- سكربتات Supabase -->
+  <script src="supabase-config.js"></script>
+  <script src="auth.js"></script>
+  
+  <script>
+    lucide.createIcons();
+
+    // ============================================
+    // الخلفية الحيّة
+    // ============================================
+    function createParticles() {
+      const container = document.getElementById('particlesBg');
+      const count = window.innerWidth < 640 ? 20 : 35;
+      
+      for (let i = 0; i < count; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        
+        const sizes = ['size-sm', 'size-md', 'size-lg'];
+        p.classList.add(sizes[Math.floor(Math.random() * sizes.length)]);
+        
+        if (Math.random() < 0.2) p.classList.add('color-alt');
+        else if (Math.random() < 0.3) p.classList.add('color-dim');
+        
+        p.style.left = Math.random() * 100 + '%';
+        const duration = 8 + Math.random() * 12;
+        p.style.animationDuration = duration + 's';
+        p.style.animationDelay = Math.random() * duration + 's';
+        
+        container.appendChild(p);
+      }
+    }
+    createParticles();
+
+    // ============================================
+    // التشغيل الأولي
+    // ============================================
+    async function init() {
+      const isLoggedIn = await redirectIfLoggedIn();
+      if (isLoggedIn) return;
+
+      const savedEmail = localStorage.getItem('remembered_email');
+      if (savedEmail) {
+        document.getElementById('loginEmail').value = savedEmail;
+        document.getElementById('rememberMe').checked = true;
+      }
+    }
+    init();
+
+    // ============================================
+    // التبديل بين الأقسام
+    // ============================================
+    function switchTab(tab) {
+      const loginView = document.getElementById('loginView');
+      const registerView = document.getElementById('registerView');
+      const successBanner = document.getElementById('successBanner');
+
+      successBanner.classList.remove('visible');
+
+      if (tab === 'register') {
+        loginView.classList.add('hidden');
+        registerView.classList.remove('hidden', 'fade-in');
+        void registerView.offsetWidth;
+        registerView.classList.add('fade-in');
+      } else {
+        registerView.classList.add('hidden');
+        loginView.classList.remove('hidden', 'fade-in');
+        void loginView.offsetWidth;
+        loginView.classList.add('fade-in');
+      }
+
+      lucide.createIcons();
+    }
+
+    // ============================================
+    // إظهار/إخفاء كلمة المرور
+    // ============================================
+    function togglePasswordVisibility(inputId, iconEl) {
+      const input = document.getElementById(inputId);
+      const isPassword = input.type === 'password';
+      input.type = isPassword ? 'text' : 'password';
+      
+      iconEl.innerHTML = isPassword 
+        ? '<i data-lucide="eye-off" style="width: 18px; height: 18px;"></i>' 
+        : '<i data-lucide="eye" style="width: 18px; height: 18px;"></i>';
+      lucide.createIcons();
+    }
+
+    // ============================================
+    // التحقق من البريد
+    // ============================================
+    function isValidEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
+    // ============================================
+    // قوة كلمة المرور
+    // ============================================
+    function checkPasswordStrength(password) {
+      const wrapper = document.getElementById('passwordStrength');
+      const label = document.getElementById('strengthLabel');
+      const bars = [
+        document.getElementById('bar1'),
+        document.getElementById('bar2'),
+        document.getElementById('bar3'),
+        document.getElementById('bar4')
+      ];
+
+      if (!password) {
+        wrapper.classList.remove('visible');
+        bars.forEach(b => b.className = 'strength-bar');
+        return;
+      }
+
+      wrapper.classList.add('visible');
+
+      let strength = 0;
+      if (password.length >= 6) strength++;
+      if (password.length >= 10) strength++;
+      if (/[A-Z]/.test(password) && /[a-z]/.test(password)) strength++;
+      if (/\d/.test(password)) strength++;
+      if (/[^A-Za-z0-9]/.test(password)) strength++;
+
+      let level = 1;
+      let text = 'ضعيفة';
+      
+      if (strength <= 2) { level = 1; text = 'ضعيفة'; }
+      else if (strength === 3) { level = 2; text = 'متوسطة'; }
+      else if (strength === 4) { level = 3; text = 'جيدة'; }
+      else { level = 4; text = 'قوية'; }
+
+      bars.forEach((bar, i) => {
+        bar.className = 'strength-bar';
+        if (i < level) {
+          if (level <= 1) bar.classList.add('weak');
+          else if (level === 2) bar.classList.add('medium');
+          else bar.classList.add('strong');
+        }
+      });
+
+      label.textContent = 'قوة كلمة المرور: ' + text;
+      label.className = 'strength-label ' + (level <= 1 ? 'weak' : level === 2 ? 'medium' : 'strong');
+    }
+
+    // ============================================
+    // إظهار/إخفاء رسائل الخطأ
+    // ============================================
+    function showError(fieldId, errorId, show = true) {
+      const field = document.getElementById(fieldId);
+      const error = document.getElementById(errorId);
+      if (show) {
+        field.classList.add('error');
+        error.classList.add('visible');
+      } else {
+        field.classList.remove('error');
+        error.classList.remove('visible');
+      }
+    }
+
+    ['loginEmail', 'loginPassword', 'registerName', 'registerEmail', 'registerPassword', 'registerConfirm'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('input', () => {
+          el.classList.remove('error');
+          const errorEl = document.getElementById(id + 'Error');
+          if (errorEl) errorEl.classList.remove('visible');
+        });
+      }
+    });
+
+    // ============================================
+    // Toast — بدون إيموجي
+    // ============================================
+    function showToast(message, type = 'success') {
+      const existing = document.querySelector('.toast');
+      if (existing) existing.remove();
+      
+      const toast = document.createElement('div');
+      toast.className = 'toast' + (type === 'error' ? ' error' : type === 'info' ? ' info' : '');
+      
+      const icon = type === 'error' ? 'alert-circle' : type === 'info' ? 'info' : 'check-circle-2';
+      toast.innerHTML = `
+        <i data-lucide="${icon}" style="width: 18px; height: 18px; flex-shrink: 0;"></i>
+        <span>${message}</span>
+      `;
+      
+      document.body.appendChild(toast);
+      lucide.createIcons();
+      
+      requestAnimationFrame(() => toast.classList.add('visible'));
+      
+      setTimeout(() => {
+        toast.classList.remove('visible');
+        setTimeout(() => toast.remove(), 350);
+      }, 3000);
+    }
+
+    // ============================================
+    // عرض رسالة نجاح
+    // ============================================
+    function showSuccess(message) {
+      const banner = document.getElementById('successBanner');
+      document.getElementById('successMessage').textContent = message;
+      banner.classList.add('visible');
+      lucide.createIcons();
+    }
+
+    // ============================================
+    // تسجيل الدخول
+    // ============================================
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const remember = document.getElementById('rememberMe').checked;
+
+      let hasError = false;
+      
+      if (!isValidEmail(email)) {
+        showError('loginEmail', 'loginEmailError');
+        hasError = true;
+      }
+      if (password.length < 6) {
+        showError('loginPassword', 'loginPasswordError');
+        hasError = true;
+      }
+      
+      if (hasError) return;
+
+      const btn = document.getElementById('loginBtn');
+      btn.classList.add('loading');
+      btn.disabled = true;
+
+      const result = await signIn(email, password);
+
+      if (result.success) {
+        if (remember) {
+          localStorage.setItem('remembered_email', email);
+        } else {
+          localStorage.removeItem('remembered_email');
+        }
+
+        showToast('تم تسجيل الدخول بنجاح');
+        
+        setTimeout(() => {
+          const redirectTo = getRedirectAfterLogin();
+          window.location.href = redirectTo;
+        }, 800);
+      } else {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        showToast(result.error, 'error');
+      }
+    });
+
+    // ============================================
+    // إنشاء حساب
+    // ============================================
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const name = document.getElementById('registerName').value.trim();
+      const email = document.getElementById('registerEmail').value.trim();
+      const password = document.getElementById('registerPassword').value;
+      const confirm = document.getElementById('registerConfirm').value;
+
+      let hasError = false;
+      
+      if (name.length < 3) {
+        showError('registerName', 'registerNameError');
+        hasError = true;
+      }
+      if (!isValidEmail(email)) {
+        showError('registerEmail', 'registerEmailError');
+        hasError = true;
+      }
+      if (password.length < 6) {
+        showError('registerPassword', 'registerPasswordError');
+        hasError = true;
+      }
+      if (password !== confirm) {
+        showError('registerConfirm', 'registerConfirmError');
+        hasError = true;
+      }
+      
+      if (hasError) return;
+
+      const btn = document.getElementById('registerBtn');
+      btn.classList.add('loading');
+      btn.disabled = true;
+
+      const result = await signUp(email, password, name);
+
+      if (result.success) {
+        showToast('تم إنشاء الحساب بنجاح');
+        
+        if (result.session) {
+          setTimeout(() => {
+            window.location.href = 'index.html';
+          }, 800);
+        } else {
+          showSuccess('يرجى التحقق من بريدك الإلكتروني لتأكيد الحساب');
+          btn.classList.remove('loading');
+          btn.disabled = false;
+          setTimeout(() => switchTab('login'), 2500);
+        }
+      } else {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        showToast(result.error, 'error');
+      }
+    });
+
+    // ============================================
+    // نسيت كلمة المرور — مع حالة تحميل
+    // ============================================
+    async function handleForgotPassword() {
+      const email = document.getElementById('loginEmail').value.trim();
+      const btn = document.getElementById('forgotBtn');
+      
+      // التحقق من البريد
+      if (!email) {
+        showError('loginEmail', 'loginEmailError');
+        showToast('يرجى إدخال بريدك الإلكتروني أولاً', 'info');
+        document.getElementById('loginEmail').focus();
+        return;
+      }
+      
+      if (!isValidEmail(email)) {
+        showError('loginEmail', 'loginEmailError');
+        showToast('البريد الإلكتروني غير صحيح', 'error');
+        return;
+      }
+
+      // حالة التحميل
+      const originalHTML = btn.innerHTML;
+      btn.disabled = true;
+      btn.style.opacity = '0.7';
+      btn.innerHTML = `
+        <span class="spin"></span>
+        <span>جاري الإرسال...</span>
+      `;
+      
+      try {
+        const result = await resetPassword(email);
+        
+        if (result.success) {
+          showToast('تم إرسال رابط الاستعادة إلى بريدك');
+          showSuccess('تحقق من بريدك الإلكتروني — ستجد رابط إعادة تعيين كلمة المرور');
+          
+          // إخفاء رسالة النجاح بعد 5 ثوان
+          setTimeout(() => {
+            document.getElementById('successBanner').classList.remove('visible');
+          }, 5000);
+        } else {
+          showToast(result.error, 'error');
+        }
+      } catch (err) {
+        console.error('Forgot password error:', err);
+        showToast('تعذّر إرسال الرابط — حاول لاحقاً', 'error');
+      } finally {
+        // استعادة الزر
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.innerHTML = originalHTML;
+        lucide.createIcons();
+      }
+    }
+
+    // ============================================
+    // Escape للخروج
+    // ============================================
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        window.location.href = 'index.html';
+      }
+    });
+
+    console.log('✅ login.html loaded');
+  </script>
+</body>
+</html>

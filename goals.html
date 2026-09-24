@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#06110d">
+  <title>أهدافي - المنصة الطبية</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    (function() {
+      const theme = localStorage.getItem('medfav_theme') || 'dark';
+      if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    })();
+  </script>
+
+  <style>
+    :root {
+      --bg-main: #06110d;
+      --bg-card: rgba(16, 34, 27, 0.65);
+      --bg-card-hover: rgba(22, 48, 38, 0.9);
+      --bg-solid: #0d221a;
+      --border-card: rgba(16, 185, 129, 0.18);
+      --border-card-hover: rgba(16, 185, 129, 0.5);
+      --accent-emerald: #10b981;
+      --accent-light: #34d399;
+      --accent-dark: #059669;
+      --accent-glow: rgba(16, 185, 129, 0.25);
+      --accent-glow-strong: rgba(16, 185, 129, 0.45);
+      --text-primary: #f0fdf4;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --info: #3b82f6;
+      --pink: #ec4899;
+      --violet: #8b5cf6;
+      --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-smooth: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    [data-theme="light"] {
+      --bg-main: #f8fafb;
+      --bg-card: rgba(255, 255, 255, 0.85);
+      --bg-card-hover: rgba(255, 255, 255, 0.95);
+      --bg-solid: #ffffff;
+      --border-card: rgba(16, 185, 129, 0.25);
+      --border-card-hover: rgba(16, 185, 129, 0.6);
+      --accent-emerald: #059669;
+      --accent-light: #10b981;
+      --accent-dark: #047857;
+      --accent-glow: rgba(16, 185, 129, 0.2);
+      --accent-glow-strong: rgba(16, 185, 129, 0.35);
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      background-color: var(--bg-main);
+      background-image: 
+        radial-gradient(circle at 10% 10%, rgba(236, 72, 153, 0.06) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.05) 0%, transparent 40%);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding-bottom: 40px;
+      overflow-x: hidden;
+      transition: background-color var(--transition-smooth), color var(--transition-smooth);
+    }
+
+    /* Header */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(6, 17, 13, 0.9);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border-card);
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    [data-theme="light"] header { background: rgba(248, 250, 251, 0.9); }
+
+    .nav-btn {
+      width: 42px; height: 42px;
+      border-radius: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      color: var(--text-primary);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all var(--transition-fast);
+      flex-shrink: 0;
+    }
+
+    .nav-btn:hover { border-color: var(--accent-emerald); color: var(--accent-light); transform: translateY(-1px); }
+    .nav-btn i { width: 20px; height: 20px; }
+
+    .header-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      flex: 1;
+      text-align: center;
+    }
+
+    .container {
+      padding: 20px;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    /* Progress Stats */
+    .stats-card {
+      background: linear-gradient(135deg, rgba(236, 72, 153, 0.15), rgba(6, 17, 13, 0.5));
+      border: 1px solid rgba(236, 72, 153, 0.3);
+      border-radius: 22px;
+      padding: 22px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.15),
+        0 12px 28px -8px rgba(236, 72, 153, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      animation: heroIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    [data-theme="light"] .stats-card {
+      background: linear-gradient(135deg, rgba(236, 72, 153, 0.1), rgba(255, 255, 255, 0.7));
+    }
+
+    @keyframes heroIn {
+      from { opacity: 0; transform: translateY(-15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .stats-progress-circle {
+      width: 90px; height: 90px;
+      border-radius: 50%;
+      position: relative;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: conic-gradient(var(--pink) 0deg, rgba(255,255,255,0.1) 0deg);
+      transition: background 1s ease;
+    }
+
+    .stats-progress-circle::before {
+      content: '';
+      position: absolute;
+      inset: 6px;
+      border-radius: 50%;
+      background: var(--bg-solid);
+      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .stats-progress-text {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+    }
+
+    .stats-progress-number {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: var(--text-primary);
+      line-height: 1;
+    }
+
+    .stats-progress-label {
+      font-size: 0.62rem;
+      color: var(--text-muted);
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    .stats-content { flex: 1; min-width: 0; }
+
+    .stats-title {
+      font-size: 1.05rem;
+      font-weight: 900;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .stats-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* Section */
+    .section-title {
+      font-size: 1rem;
+      font-weight: 800;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title i { color: var(--accent-emerald); width: 20px; height: 20px; }
+
+    /* Goals List */
+    .goals-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+/* ============================================ */
+/* Goal Card - New Design */
+/* ============================================ */
+.goal-card {
+  background: linear-gradient(135deg, 
+    rgba(16, 34, 27, 0.7), 
+    rgba(13, 34, 26, 0.55));
+  border: 1px solid var(--border-card);
+  border-radius: 20px;
+  padding: 18px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: cardIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 4px 12px rgba(0, 0, 0, 0.1),
+    0 12px 28px -8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="light"] .goal-card {
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.95), 
+    rgba(248, 250, 252, 0.85));
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.03),
+    0 4px 12px rgba(0, 0, 0, 0.05),
+    0 12px 28px -8px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* شريط جانبي - رمادي للغير مكتمل، أخضر للمكتمل */
+.goal-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, #64748b, #475569);
+  opacity: 0.6;
+  transition: all 0.4s;
+}
+
+.goal-card.completed::before {
+  background: linear-gradient(180deg, var(--accent-emerald), var(--accent-dark));
+  opacity: 1;
+}
+
+.goal-card:hover {
+  background: linear-gradient(135deg, 
+    rgba(22, 48, 38, 0.85), 
+    rgba(16, 40, 32, 0.75));
+  border-color: var(--border-card-hover);
+  transform: translateY(-3px);
+  box-shadow: 
+    0 4px 8px rgba(0, 0, 0, 0.1),
+    0 12px 24px rgba(0, 0, 0, 0.15),
+    0 20px 40px -10px rgba(16, 185, 129, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="light"] .goal-card:hover {
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 1), 
+    rgba(248, 250, 252, 0.95));
+}
+
+.goal-card.completed {
+  opacity: 0.85;
+}
+
+.goal-card.completed:hover {
+  opacity: 1;
+}
+
+/* Layout */
+.goal-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding-left: 48px; /* مساحة لزر الحذف */
+  position: relative;
+  z-index: 1;
+}
+
+.goal-checkbox {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: transparent;
+  border: 2px dashed #64748b;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-top: 2px;
+  position: relative;
+  z-index: 2;
+}
+
+[data-theme="light"] .goal-checkbox {
+  border-color: #94a3b8;
+}
+
+.goal-checkbox:hover {
+  border-color: var(--accent-emerald);
+  border-style: solid;
+  background: rgba(16, 185, 129, 0.08);
+  transform: scale(1.08);
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+}
+
+/* علامة الصح - مخفية افتراضياً (تعمل مع SVG الذي يولّده Lucide) */
+.goal-checkbox svg,
+.goal-checkbox i {
+  display: none !important;
+  width: 18px;
+  height: 18px;
+  color: white;
+  stroke-width: 3;
+}
+
+/* تظهر فقط عند الإكمال */
+.goal-checkbox.checked {
+  background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+  border: 2px solid var(--accent-emerald);
+  border-style: solid;
+  box-shadow: 
+    0 4px 12px var(--accent-glow-strong),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.goal-checkbox.checked svg,
+.goal-checkbox.checked i {
+  display: block !important;
+}
+
+.goal-checkbox.checked:hover {
+  box-shadow: 
+    0 6px 16px var(--accent-glow-strong),
+    0 0 0 4px rgba(16, 185, 129, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* Content */
+.goal-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.goal-text {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.6;
+  margin-bottom: 10px;
+  word-break: break-word;
+  transition: all var(--transition-fast);
+  position: relative;
+  padding-right: 4px;
+}
+
+.goal-card.completed .goal-text {
+  color: var(--text-muted);
+  text-decoration: line-through;
+  text-decoration-color: var(--accent-emerald);
+  text-decoration-thickness: 2px;
+}
+
+/* Meta row */
+.goal-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.goal-meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 10px;
+  background: rgba(128, 128, 128, 0.08);
+  border: 1px solid var(--border-card);
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.goal-meta-chip i {
+  width: 12px;
+  height: 12px;
+  color: var(--text-muted);
+}
+
+.goal-meta-chip.deadline-soon {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+}
+
+.goal-meta-chip.deadline-soon i {
+  color: #fbbf24;
+}
+
+.goal-meta-chip.deadline-overdue {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #f87171;
+}
+
+.goal-meta-chip.deadline-overdue i {
+  color: #f87171;
+}
+
+/* Status badge */
+.goal-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  background: rgba(100, 116, 139, 0.15);
+  border: 1px solid rgba(100, 116, 139, 0.3);
+  color: #94a3b8;
+}
+
+.goal-status i {
+  width: 11px;
+  height: 11px;
+}
+
+.goal-status.completed {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: var(--accent-light);
+}
+
+/* Delete Button - أوضح وقابل للنقر */
+.goal-delete {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #f87171;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: inherit;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.goal-delete:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: var(--danger);
+  transform: scale(1.08);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.goal-delete:active {
+  transform: scale(0.95);
+}
+
+.goal-delete i {
+  width: 17px;
+  height: 17px;
+  pointer-events: none;
+}
+
+    /* Empty */
+    .empty-state {
+      text-align: center;
+      padding: 50px 20px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .empty-state.visible { display: flex; }
+
+    .empty-icon {
+      width: 80px; height: 80px;
+      border-radius: 24px;
+      background: rgba(236, 72, 153, 0.1);
+      border: 1px dashed rgba(236, 72, 153, 0.3);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--pink);
+    }
+
+    .empty-icon i { width: 36px; height: 36px; }
+
+    .empty-state h3 { font-size: 1rem; font-weight: 800; color: var(--text-primary); }
+    .empty-state p { font-size: 0.82rem; color: var(--text-secondary); max-width: 280px; line-height: 1.6; }
+
+    /* FAB */
+    .fab {
+      position: fixed;
+      bottom: 24px;
+      left: 24px;
+      width: 58px; height: 58px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, var(--pink), #be185d);
+      border: none;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 
+        0 4px 8px rgba(0, 0, 0, 0.15),
+        0 12px 24px rgba(236, 72, 153, 0.4),
+        0 20px 40px -8px rgba(236, 72, 153, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 500;
+      font-family: inherit;
+    }
+
+    .fab:hover {
+      transform: translateY(-4px) rotate(90deg);
+      box-shadow: 
+        0 6px 12px rgba(0, 0, 0, 0.2),
+        0 16px 32px rgba(236, 72, 153, 0.5),
+        0 24px 48px -8px rgba(236, 72, 153, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+
+    .fab:active { transform: translateY(-2px) scale(0.95); }
+    .fab i { width: 26px; height: 26px; }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 10, 8, 0.9);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      z-index: 3000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition-smooth);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    [data-theme="light"] .modal-overlay { background: rgba(248, 250, 251, 0.9); }
+
+    .modal-overlay.active { opacity: 1; pointer-events: auto; }
+
+    .modal-card {
+      background: var(--bg-solid);
+      border: 1px solid rgba(236, 72, 153, 0.4);
+      border-radius: 24px;
+      padding: 24px;
+      max-width: 480px;
+      width: 100%;
+      transform: scale(0.94) translateY(20px);
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 
+        0 20px 60px rgba(0, 0, 0, 0.5),
+        0 40px 100px -20px rgba(236, 72, 153, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .modal-overlay.active .modal-card { transform: scale(1) translateY(0); }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      gap: 12px;
+    }
+
+    .modal-title {
+      font-size: 1.15rem;
+      font-weight: 900;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .modal-title i { color: var(--pink); width: 22px; height: 22px; }
+
+    .modal-close {
+      width: 36px; height: 36px;
+      border-radius: 11px;
+      background: rgba(128, 128, 128, 0.08);
+      border: 1px solid var(--border-card);
+      color: var(--text-secondary);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      font-family: inherit;
+    }
+
+    .modal-close:hover { background: rgba(239, 68, 68, 0.15); border-color: var(--danger); color: var(--danger); }
+    .modal-close i { width: 18px; height: 18px; }
+
+    .form-group { margin-bottom: 16px; }
+
+    .form-label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .form-input, .form-textarea, .form-select {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      outline: none;
+      font-family: inherit;
+      transition: all var(--transition-fast);
+    }
+
+    .form-textarea {
+      min-height: 90px;
+      resize: vertical;
+      line-height: 1.6;
+    }
+
+    .form-input:focus, .form-textarea:focus, .form-select:focus {
+      border-color: var(--pink);
+      box-shadow: 0 0 0 4px rgba(236, 72, 153, 0.2);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 13px;
+      border-radius: 14px;
+      border: 1px solid transparent;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all var(--transition-fast);
+      box-shadow: 
+        0 2px 4px rgba(0, 0, 0, 0.08),
+        0 4px 12px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    }
+
+    .btn i { width: 17px; height: 17px; }
+
+    .btn.primary {
+      background: linear-gradient(135deg, var(--pink), #be185d);
+      color: white;
+    }
+
+    .btn.primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 
+        0 4px 8px rgba(0, 0, 0, 0.12),
+        0 8px 20px rgba(236, 72, 153, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+
+    .btn.secondary {
+      background: rgba(128, 128, 128, 0.08);
+      border-color: var(--border-card);
+      color: var(--text-secondary);
+    }
+
+    .btn.secondary:hover {
+      background: rgba(128, 128, 128, 0.15);
+      color: var(--text-primary);
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      top: 90px; left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: rgba(16, 185, 129, 0.98);
+      color: white;
+      padding: 13px 22px;
+      border-radius: 14px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      box-shadow: 
+        0 12px 32px rgba(0, 0, 0, 0.5),
+        0 0 20px var(--accent-glow),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      z-index: 9999;
+      opacity: 0;
+      transition: all var(--transition-smooth);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(16px);
+      display: flex; align-items: center; gap: 10px;
+      max-width: calc(100vw - 40px);
+      pointer-events: none;
+    }
+
+    .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.error { background: rgba(239, 68, 68, 0.98); }
+    .toast.info { background: rgba(59, 130, 246, 0.98); }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      header { padding: 12px 16px; }
+      .container { padding: 16px 14px; }
+      .stats-card { padding: 18px; border-radius: 20px; gap: 16px; }
+      .stats-progress-circle { width: 80px; height: 80px; }
+      .stats-progress-number { font-size: 1.25rem; }
+      .stats-title { font-size: 0.98rem; }
+      .goal-card { padding: 14px 16px; border-radius: 16px; gap: 12px; }
+      .fab { bottom: 20px; left: 16px; width: 54px; height: 54px; }
+      .fab i { width: 24px; height: 24px; }
+      .modal-card { padding: 20px; border-radius: 20px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a href="index.html" class="nav-btn">
+      <i data-lucide="arrow-right"></i>
+    </a>
+    <div class="header-title">أهدافي</div>
+    <div style="width: 42px;"></div>
+  </header>
+
+  <div class="container">
+
+    <!-- Progress Stats -->
+    <div class="stats-card">
+      <div class="stats-progress-circle" id="progressCircle">
+        <div class="stats-progress-text">
+          <div class="stats-progress-number" id="progressPercent">0%</div>
+          <div class="stats-progress-label">مكتمل</div>
+        </div>
+      </div>
+      <div class="stats-content">
+        <div class="stats-title">تقدمك في الأهداف</div>
+        <div class="stats-subtitle" id="statsSubtitle">لم تقم بإضافة أي هدف بعد</div>
+      </div>
+    </div>
+
+    <!-- Section -->
+    <div class="section-title">
+      <i data-lucide="list-checks"></i>
+      <span>قائمة الأهداف</span>
+    </div>
+
+    <!-- Goals List -->
+    <div class="goals-list" id="goalsList"></div>
+
+    <!-- Empty -->
+    <div class="empty-state" id="goalsEmpty">
+      <div class="empty-icon"><i data-lucide="target"></i></div>
+      <h3>لا توجد أهداف بعد</h3>
+      <p>حدد أهدافك الدراسية وتابع إنجازها يوماً بيوم</p>
+    </div>
+
+  </div>
+
+  <!-- FAB -->
+  <button class="fab" onclick="openAddModal()" title="إضافة هدف">
+    <i data-lucide="plus"></i>
+  </button>
+
+  <!-- Add Goal Modal -->
+  <div class="modal-overlay" id="addModal" onclick="closeAddModalIfOutside(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i data-lucide="target"></i>
+          <span>هدف جديد</span>
+        </div>
+        <button class="modal-close" onclick="closeAddModal()">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">الهدف</label>
+        <textarea 
+          id="goalText" 
+          class="form-textarea" 
+          placeholder="مثال: إنهاء مراجعة الفصل الأول من الفيزياء"
+          maxlength="300"
+        ></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">تاريخ الاستحقاق (اختياري)</label>
+        <input 
+          type="date" 
+          id="goalDeadline" 
+          class="form-input"
+        >
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn primary" onclick="saveGoal()" id="saveBtn">
+          <i data-lucide="check"></i>
+          حفظ الهدف
+        </button>
+        <button class="btn secondary" onclick="closeAddModal()">
+          إلغاء
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="supabase-config.js"></script>
+  <script src="auth.js"></script>
+
+  <script>
+    lucide.createIcons();
+
+    // ============================================
+    // الحالة
+    // ============================================
+    const goalsState = {
+      goals: []
+    };
+
+    const GOALS_KEY = 'medfav_goals';
+
+    // ============================================
+    // Toast
+    // ============================================
+    function showToast(message, type = 'success') {
+      const existing = document.querySelector('.toast');
+      if (existing) existing.remove();
+      
+      const toast = document.createElement('div');
+      toast.className = 'toast' + (type === 'error' ? ' error' : type === 'info' ? ' info' : '');
+      
+      const icon = type === 'error' ? 'alert-circle' : type === 'info' ? 'info' : 'check-circle-2';
+      toast.innerHTML = `
+        <i data-lucide="${icon}" style="width: 18px; height: 18px; flex-shrink: 0;"></i>
+        <span>${message}</span>
+      `;
+      
+      document.body.appendChild(toast);
+      lucide.createIcons();
+      
+      requestAnimationFrame(() => toast.classList.add('visible'));
+      
+      setTimeout(() => {
+        toast.classList.remove('visible');
+        setTimeout(() => toast.remove(), 350);
+      }, 2600);
+    }
+
+    // ============================================
+    // التحميل من localStorage
+    // ============================================
+    function loadGoals() {
+      try {
+        const data = localStorage.getItem(GOALS_KEY);
+        goalsState.goals = data ? JSON.parse(data) : [];
+      } catch (err) {
+        console.error('loadGoals error:', err);
+        goalsState.goals = [];
+      }
+      
+      renderGoals();
+      updateProgress();
+    }
+
+    // ============================================
+    // الحفظ في localStorage
+    // ============================================
+    function saveGoalsToStorage() {
+      try {
+        localStorage.setItem(GOALS_KEY, JSON.stringify(goalsState.goals));
+      } catch (err) {
+        console.error('saveGoals error:', err);
+      }
+    }
+
+    // ============================================
+    // عرض الأهداف
+    // ============================================
+    function renderGoals() {
+      const list = document.getElementById('goalsList');
+      const empty = document.getElementById('goalsEmpty');
+      
+      list.innerHTML = '';
+      
+      if (goalsState.goals.length === 0) {
+        empty.classList.add('visible');
+        return;
+      }
+      
+      empty.classList.remove('visible');
+      
+      // ترتيب: غير المكتملة أولاً، ثم المكتملة
+      const sorted = [...goalsState.goals].sort((a, b) => {
+        if (a.completed === b.completed) {
+          return new Date(b.created_at) - new Date(a.created_at);
+        }
+        return a.completed ? 1 : -1;
+      });
+      
+      sorted.forEach((goal, i) => {
+        const card = createGoalCard(goal, i);
+        list.appendChild(card);
+      });
+      
+      lucide.createIcons();
+    }
+
+// ============================================
+// إنشاء بطاقة هدف
+// ============================================
+function createGoalCard(goal, index) {
+  const card = document.createElement('div');
+  card.className = 'goal-card' + (goal.completed ? ' completed' : '');
+  card.style.animationDelay = (index * 0.04) + 's';
+  
+  // شريحة تاريخ الاستحقاق
+  let deadlineHtml = '';
+  if (goal.deadline) {
+    const deadlineInfo = getDeadlineInfo(goal.deadline);
+    deadlineHtml = `
+      <div class="goal-meta-chip ${deadlineInfo.className}">
+        <i data-lucide="calendar"></i>
+        <span>${deadlineInfo.text}</span>
+      </div>
+    `;
+  }
+  
+  // شارة الحالة
+  const statusHtml = goal.completed 
+    ? `<span class="goal-status completed">
+         <i data-lucide="check-circle-2"></i>
+         مكتمل
+       </span>`
+    : `<span class="goal-status">
+         <i data-lucide="circle-dashed"></i>
+         قيد الإنجاز
+       </span>`;
+  
+  card.innerHTML = `
+  <button type="button" class="goal-delete" onclick="event.stopPropagation(); deleteGoal('${goal.id}')" title="حذف">
+    <i data-lucide="trash-2"></i>
+  </button>
+    
+    <div class="goal-main">
+      <div class="goal-checkbox ${goal.completed ? 'checked' : ''}" 
+           onclick="toggleGoal('${goal.id}')"
+           title="${goal.completed ? 'إلغاء الإكمال' : 'تحديد كمكتمل'}">
+        <i data-lucide="check"></i>
+      </div>
+      <div class="goal-content">
+        <div class="goal-text">${escapeHtml(goal.text)}</div>
+        <div class="goal-meta">
+          ${statusHtml}
+          <div class="goal-meta-chip">
+            <i data-lucide="clock"></i>
+            <span>${formatGoalDate(goal.created_at)}</span>
+          </div>
+          ${deadlineHtml}
+        </div>
+      </div>
+    </div>
+  `;
+  
+  return card;
+}
+
+// ============================================
+// معلومات تاريخ الاستحقاق
+// ============================================
+function getDeadlineInfo(dateString) {
+  const date = new Date(dateString);
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  
+  const deadlineDate = new Date(date);
+  deadlineDate.setHours(0, 0, 0, 0);
+  
+  const diffMs = deadlineDate - now;
+  const diffDays = Math.ceil(diffMs / 86400000);
+  
+  if (diffDays < 0) {
+    return {
+      text: `متأخر ${Math.abs(diffDays)} يوم`,
+      className: 'deadline-overdue'
+    };
+  }
+  if (diffDays === 0) {
+    return { text: 'اليوم', className: 'deadline-soon' };
+  }
+  if (diffDays === 1) {
+    return { text: 'غداً', className: 'deadline-soon' };
+  }
+  if (diffDays <= 3) {
+    return { text: `بعد ${diffDays} أيام`, className: 'deadline-soon' };
+  }
+  if (diffDays <= 7) {
+    return { text: `بعد ${diffDays} أيام`, className: '' };
+  }
+  
+  return {
+    text: date.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' }),
+    className: ''
+  };
+}
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function formatGoalDate(dateString) {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+      
+      if (diffMins < 1) return 'الآن';
+      if (diffMins < 60) return `منذ ${diffMins} دقيقة`;
+      if (diffHours < 24) return `منذ ${diffHours} ساعة`;
+      if (diffDays < 7) return `منذ ${diffDays} يوم`;
+      
+      return date.toLocaleDateString('ar-EG', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+
+    function formatDeadline(dateString) {
+      const date = new Date(dateString);
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      
+      const deadlineDate = new Date(date);
+      deadlineDate.setHours(0, 0, 0, 0);
+      
+      const diffMs = deadlineDate - now;
+      const diffDays = Math.ceil(diffMs / 86400000);
+      
+      if (diffDays < 0) return `متأخر ${Math.abs(diffDays)} يوم`;
+      if (diffDays === 0) return 'اليوم';
+      if (diffDays === 1) return 'غداً';
+      if (diffDays < 7) return `بعد ${diffDays} أيام`;
+      
+      return date.toLocaleDateString('ar-EG', {
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+
+    // ============================================
+    // تحديث التقدم
+    // ============================================
+    function updateProgress() {
+      const total = goalsState.goals.length;
+      const completed = goalsState.goals.filter(g => g.completed).length;
+      const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
+      
+      // تحديث الدائرة
+      const circle = document.getElementById('progressCircle');
+      const degrees = (percent / 100) * 360;
+      circle.style.background = `conic-gradient(var(--pink) ${degrees}deg, rgba(255,255,255,0.1) ${degrees}deg)`;
+      
+      // تحديث النسبة
+      animateNumber('progressPercent', percent, '%');
+      
+      // تحديث النص
+      const subtitle = document.getElementById('statsSubtitle');
+      if (total === 0) {
+        subtitle.textContent = 'لم تقم بإضافة أي هدف بعد';
+      } else if (completed === total) {
+        subtitle.textContent = `أحسنت! أكملت جميع أهدافك (${total}/${total})`;
+      } else {
+        subtitle.textContent = `أكملت ${completed} من ${total} أهداف`;
+      }
+    }
+
+    function animateNumber(elementId, target, suffix = '') {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      
+      const duration = 800;
+      const start = performance.now();
+      const startValue = parseInt(el.textContent) || 0;
+      
+      function update(now) {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(startValue + (target - startValue) * eased);
+        el.textContent = current + suffix;
+        if (progress < 1) requestAnimationFrame(update);
+        else el.textContent = target + suffix;
+      }
+      
+      requestAnimationFrame(update);
+    }
+
+    // ============================================
+    // تبديل حالة الهدف
+    // ============================================
+    function toggleGoal(goalId) {
+      const goal = goalsState.goals.find(g => g.id === goalId);
+      if (!goal) return;
+      
+      goal.completed = !goal.completed;
+      saveGoalsToStorage();
+      renderGoals();
+      updateProgress();
+      
+      if (goal.completed) {
+        showToast('أحسنت! تم إكمال الهدف');
+      }
+    }
+
+    // ============================================
+    // حذف الهدف
+    // ============================================
+    function deleteGoal(goalId) {
+      if (!confirm('هل تريد حذف هذا الهدف؟')) return;
+      
+      goalsState.goals = goalsState.goals.filter(g => g.id !== goalId);
+      saveGoalsToStorage();
+      renderGoals();
+      updateProgress();
+      
+      showToast('تم حذف الهدف', 'info');
+    }
+
+    // ============================================
+    // Modal
+    // ============================================
+    function openAddModal() {
+      document.getElementById('goalText').value = '';
+      document.getElementById('goalDeadline').value = '';
+      
+      document.getElementById('addModal').classList.add('active');
+      document.body.style.overflow = 'hidden';
+      
+      setTimeout(() => {
+        document.getElementById('goalText').focus();
+      }, 300);
+      
+      lucide.createIcons();
+    }
+
+    function closeAddModal() {
+      document.getElementById('addModal').classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    function closeAddModalIfOutside(event) {
+      if (event.target.id === 'addModal') closeAddModal();
+    }
+
+    // ============================================
+    // حفظ الهدف
+    // ============================================
+    function saveGoal() {
+      const text = document.getElementById('goalText').value.trim();
+      const deadline = document.getElementById('goalDeadline').value;
+      
+      if (!text) {
+        showToast('نص الهدف مطلوب', 'error');
+        return;
+      }
+      
+      const newGoal = {
+        id: 'goal_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+        text: text,
+        deadline: deadline || null,
+        completed: false,
+        created_at: new Date().toISOString()
+      };
+      
+      goalsState.goals.push(newGoal);
+      saveGoalsToStorage();
+      
+      showToast('تم إضافة الهدف');
+      closeAddModal();
+      
+      renderGoals();
+      updateProgress();
+    }
+
+    // ============================================
+    // ESC
+    // ============================================
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const modal = document.getElementById('addModal');
+        if (modal && modal.classList.contains('active')) {
+          closeAddModal();
+        }
+      }
+    });
+
+    // ============================================
+    // التشغيل الأولي
+    // ============================================
+    async function init() {
+      // التحقق من تسجيل الدخول
+      const session = await getSession();
+      if (!session) {
+        window.location.href = 'login.html';
+        return;
+      }
+      
+      loadGoals();
+      
+      console.log('✅ goals.html loaded');
+    }
+
+    init();
+  </script>
+</body>
+</html>

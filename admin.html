@@ -1,0 +1,2070 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#06110d">
+  <title>لوحة التحكم - المنصة الطبية</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    (function() {
+      const theme = localStorage.getItem('medfav_theme') || 'dark';
+      if (theme === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
+
+  <style>
+    :root {
+      --bg-main: #06110d;
+      --bg-card: rgba(16, 34, 27, 0.65);
+      --bg-card-hover: rgba(22, 48, 38, 0.9);
+      --bg-solid: #0d221a;
+      --border-card: rgba(16, 185, 129, 0.18);
+      --border-card-hover: rgba(16, 185, 129, 0.5);
+      --accent-emerald: #10b981;
+      --accent-light: #34d399;
+      --accent-dark: #059669;
+      --accent-glow: rgba(16, 185, 129, 0.25);
+      --accent-glow-strong: rgba(16, 185, 129, 0.45);
+      --text-primary: #f0fdf4;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --info: #3b82f6;
+      --gold: #fbbf24;
+      --violet: #8b5cf6;
+      --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-smooth: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    [data-theme="light"] {
+      --bg-main: #f8fafb;
+      --bg-card: rgba(255, 255, 255, 0.85);
+      --bg-card-hover: rgba(255, 255, 255, 0.95);
+      --bg-solid: #ffffff;
+      --border-card: rgba(16, 185, 129, 0.25);
+      --border-card-hover: rgba(16, 185, 129, 0.6);
+      --accent-emerald: #059669;
+      --accent-light: #10b981;
+      --accent-dark: #047857;
+      --accent-glow: rgba(16, 185, 129, 0.2);
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      background-color: var(--bg-main);
+      background-image: 
+        radial-gradient(circle at 10% 10%, rgba(16, 185, 129, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(5, 150, 105, 0.06) 0%, transparent 40%);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding-bottom: 130px;
+      overflow-x: hidden;
+    }
+
+    /* ============ الهيدر ============ */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(6, 17, 13, 0.9);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border-card);
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    [data-theme="light"] header { background: rgba(248, 250, 251, 0.9); }
+
+    .header-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+
+    .nav-btn {
+      width: 42px; height: 42px;
+      border-radius: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      color: var(--text-primary);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all var(--transition-fast);
+      flex-shrink: 0;
+    }
+
+    .nav-btn:hover {
+      border-color: var(--accent-emerald);
+      color: var(--accent-light);
+      transform: translateY(-1px);
+    }
+
+    .nav-btn i { width: 20px; height: 20px; }
+
+    .admin-badge {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 14px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.1));
+      border: 1px solid rgba(251, 191, 36, 0.35);
+      color: var(--gold);
+      font-size: 0.85rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .admin-badge i { width: 16px; height: 16px; }
+
+    .header-actions { display: flex; gap: 6px; }
+
+    /* ============ الحاوية ============ */
+    .container { padding: 16px; max-width: 900px; margin: 0 auto; }
+
+    /* ============ التبويبات (Views) ============ */
+    .tab-view {
+      display: none;
+      animation: viewIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .tab-view.active { display: block; }
+
+    @keyframes viewIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ============ نظرة عامة ============ */
+    .section-header-title {
+      font-size: 1.2rem;
+      font-weight: 900;
+      margin-bottom: 14px;
+      display: flex; align-items: center; gap: 10px;
+      background: linear-gradient(135deg, var(--text-primary), var(--accent-light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .section-header-title i {
+      width: 22px; height: 22px;
+      color: var(--accent-emerald);
+      -webkit-text-fill-color: initial;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 14px;
+      padding: 14px 10px;
+      text-align: center;
+      transition: all var(--transition-fast);
+    }
+
+    .stat-card:hover {
+      border-color: var(--border-card-hover);
+      transform: translateY(-2px);
+    }
+
+    .stat-icon {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 6px;
+    }
+
+    .stat-icon i { width: 18px; height: 18px; }
+
+    .stat-number {
+      font-size: 1.3rem;
+      font-weight: 900;
+      color: var(--text-primary);
+      line-height: 1;
+      margin-bottom: 3px;
+    }
+
+    .stat-label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    /* ============ إحصائيات إضافية ============ */
+    .stats-details {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .stat-detail {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .stat-detail-icon {
+      width: 34px; height: 34px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .stat-detail-icon i { width: 16px; height: 16px; }
+
+    .stat-detail-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .stat-detail-value {
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .stat-detail-label {
+      font-size: 0.66rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    /* ============ شريط البحث والفلترة ============ */
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 180px;
+      position: relative;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 11px 40px 11px 14px;
+      border-radius: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      color: var(--text-primary);
+      font-size: 0.88rem;
+      outline: none;
+      font-family: inherit;
+      transition: all var(--transition-fast);
+    }
+
+    .search-box input::placeholder { color: var(--text-muted); }
+
+    .search-box input:focus {
+      border-color: var(--accent-emerald);
+      box-shadow: 0 0 0 4px var(--accent-glow);
+    }
+
+    .search-box .icon-search {
+      position: absolute;
+      right: 14px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+      width: 18px; height: 18px;
+    }
+
+    .filter-select {
+      padding: 11px 14px;
+      border-radius: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      color: var(--text-primary);
+      font-size: 0.85rem;
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+      min-width: 110px;
+    }
+
+    .filter-select:focus {
+      border-color: var(--accent-emerald);
+    }
+
+    /* ============ قوائم العناصر ============ */
+    .list-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .list-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: all var(--transition-fast);
+      animation: itemIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    }
+
+    @keyframes itemIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .list-item:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-card-hover);
+    }
+
+    .item-checkbox {
+      width: 22px; height: 22px;
+      border-radius: 6px;
+      border: 1.5px solid var(--border-card);
+      background: rgba(128, 128, 128, 0.05);
+      cursor: pointer;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition-fast);
+    }
+
+    .item-checkbox.checked {
+      background: var(--accent-emerald);
+      border-color: var(--accent-emerald);
+    }
+
+    .item-checkbox.checked::after {
+      content: '✓';
+      color: white;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .item-icon {
+      width: 42px; height: 42px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .item-icon i { width: 20px; height: 20px; }
+
+    .item-content { flex: 1; min-width: 0; }
+
+    .item-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .item-meta {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: wrap;
+      font-weight: 600;
+    }
+
+    .item-meta i { width: 11px; height: 11px; }
+
+    .item-meta .dot {
+      width: 3px; height: 3px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
+
+    .item-actions {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .item-action-btn {
+      width: 34px; height: 34px;
+      border-radius: 10px;
+      background: rgba(128, 128, 128, 0.08);
+      border: 1px solid var(--border-card);
+      color: var(--text-secondary);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all var(--transition-fast);
+    }
+
+    .item-action-btn i { width: 15px; height: 15px; }
+
+    .item-action-btn:hover {
+      border-color: var(--accent-emerald);
+      color: var(--accent-light);
+      background: rgba(16, 185, 129, 0.1);
+      transform: scale(1.05);
+    }
+
+    .item-action-btn.danger {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.25);
+      color: #f87171;
+    }
+
+    .item-action-btn.danger:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: var(--danger);
+      color: #f87171;
+    }
+
+    /* ============ Empty State ============ */
+    .empty-state {
+      text-align: center;
+      padding: 50px 20px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .empty-state.visible { display: flex; }
+
+    .empty-icon {
+      width: 72px; height: 72px;
+      border-radius: 22px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px dashed var(--border-card);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted);
+    }
+
+    .empty-icon i { width: 32px; height: 32px; }
+
+    .empty-state h3 { font-size: 0.95rem; color: var(--text-primary); font-weight: 700; }
+    .empty-state p { font-size: 0.8rem; color: var(--text-secondary); max-width: 300px; line-height: 1.5; }
+
+    /* ============ Loading ============ */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      z-index: 9999;
+      transition: opacity 0.3s ease;
+    }
+
+    .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+
+    .loader-ring {
+      width: 60px; height: 60px;
+      border-radius: 50%;
+      border: 3px solid var(--border-card);
+      border-top-color: var(--accent-emerald);
+      animation: spin 0.9s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ============ شريط الإجراءات الجماعية ============ */
+.bulk-bar {
+  position: fixed;
+  bottom: 110px;
+  left: 50%;
+  transform: translateX(-50%) translateY(200px);
+  background: var(--bg-solid);
+  border: 1px solid var(--accent-emerald);
+  border-radius: 16px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 30px var(--accent-glow);
+  z-index: 500;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  max-width: calc(100vw - 40px);
+}
+
+.bulk-bar.visible { transform: translateX(-50%) translateY(0); }
+    .bulk-info {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+
+    .bulk-info strong {
+      color: var(--accent-light);
+      font-size: 0.95rem;
+    }
+
+    .bulk-btn {
+      padding: 7px 14px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      font-family: inherit;
+      font-size: 0.78rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all var(--transition-fast);
+    }
+
+    .bulk-btn i { width: 13px; height: 13px; }
+
+    .bulk-btn.danger {
+      background: linear-gradient(135deg, var(--danger), #b91c1c);
+      color: white;
+    }
+
+    .bulk-btn.secondary {
+      background: rgba(128, 128, 128, 0.1);
+      border-color: var(--border-card);
+      color: var(--text-secondary);
+    }
+
+    /* ============ شريط التنقل السفلي الجديد ============ */
+    .admin-nav-wrapper {
+      position: fixed;
+      bottom: 20px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      z-index: 1000;
+      padding: 0 20px;
+      pointer-events: none;
+    }
+
+    .admin-nav {
+      pointer-events: auto;
+      background: rgba(8, 22, 17, 0.95);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      border-radius: 32px;
+      padding: 6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.8), 0 0 30px rgba(251, 191, 36, 0.15);
+      width: 100%;
+      max-width: 460px;
+      position: relative;
+    }
+
+    [data-theme="light"] .admin-nav {
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.15), 0 0 30px rgba(251, 191, 36, 0.1);
+    }
+
+    .admin-nav-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 9px 6px;
+      border-radius: 24px;
+      color: var(--text-secondary);
+      background: transparent;
+      border: none;
+      font-size: 0.65rem;
+      font-weight: 700;
+      gap: 3px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      font-family: inherit;
+      position: relative;
+    }
+
+    .admin-nav-btn i {
+      width: 19px;
+      height: 19px;
+      transition: transform 0.3s ease;
+    }
+
+    /* الزر الرئيسي - الأوسط البارز */
+    .admin-nav-btn.center {
+      flex: 0 0 auto;
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold), #d97706);
+      color: white;
+      margin-top: -28px;
+      box-shadow: 
+        0 8px 20px rgba(251, 191, 36, 0.5),
+        0 0 0 4px var(--bg-main),
+        0 0 0 5px rgba(251, 191, 36, 0.3);
+      border: none;
+      z-index: 2;
+    }
+
+    .admin-nav-btn.center i {
+      width: 26px;
+      height: 26px;
+    }
+
+    .admin-nav-btn.center:hover {
+      transform: translateY(-3px) scale(1.05);
+      box-shadow: 
+        0 12px 28px rgba(251, 191, 36, 0.7),
+        0 0 0 4px var(--bg-main),
+        0 0 0 5px rgba(251, 191, 36, 0.5);
+    }
+
+    .admin-nav-btn.center span {
+      position: absolute;
+      bottom: -22px;
+      white-space: nowrap;
+      color: var(--gold);
+      font-size: 0.65rem;
+    }
+
+    .admin-nav-btn.active:not(.center) {
+      color: #ffffff;
+      background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+      box-shadow: 0 4px 14px var(--accent-glow-strong);
+    }
+
+    .admin-nav-btn.active:not(.center) i {
+      transform: translateY(-1px) scale(1.1);
+    }
+
+    .admin-nav-btn:not(.active):not(.center):hover {
+      color: var(--text-primary);
+      background: rgba(128, 128, 128, 0.08);
+    }
+
+    /* ============ مودال ============ */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 10, 8, 0.9);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      z-index: 3000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition-smooth);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    [data-theme="light"] .modal-overlay { background: rgba(248, 250, 251, 0.9); }
+
+    .modal-overlay.active { opacity: 1; pointer-events: auto; }
+
+    .modal-card {
+      background: var(--bg-solid);
+      border: 1px solid var(--border-card-hover);
+      border-radius: 22px;
+      padding: 24px;
+      max-width: 480px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: scale(0.96);
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    }
+
+    .modal-overlay.active .modal-card { transform: scale(1); }
+
+    .modal-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .modal-title i { width: 22px; height: 22px; color: var(--accent-light); }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .form-input, .form-select, .form-textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      outline: none;
+      font-family: inherit;
+      transition: all var(--transition-fast);
+    }
+
+    .form-textarea { min-height: 80px; resize: vertical; }
+
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      border-color: var(--accent-emerald);
+      box-shadow: 0 0 0 4px var(--accent-glow);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all var(--transition-fast);
+    }
+
+    .btn i { width: 16px; height: 16px; }
+
+    .btn.primary {
+      background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+      color: white;
+      box-shadow: 0 6px 16px var(--accent-glow);
+    }
+
+    .btn.secondary {
+      background: rgba(128, 128, 128, 0.08);
+      border-color: var(--border-card);
+      color: var(--text-secondary);
+    }
+
+    /* ============ Toast ============ */
+    .toast {
+      position: fixed;
+      top: 90px; left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: rgba(16, 185, 129, 0.98);
+      color: white;
+      padding: 13px 22px;
+      border-radius: 14px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 0 20px var(--accent-glow);
+      z-index: 9999;
+      opacity: 0;
+      transition: all var(--transition-smooth);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(16px);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: calc(100vw - 40px);
+      pointer-events: none;
+    }
+
+    .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.error { background: rgba(239, 68, 68, 0.98); }
+    .toast.info { background: rgba(59, 130, 246, 0.98); }
+
+    /* ============ Responsive ============ */
+    @media (max-width: 640px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .stats-details { grid-template-columns: 1fr; }
+      .container { padding: 14px; }
+      .tab-item { padding: 9px 14px; font-size: 0.8rem; }
+      .admin-badge span { display: none; }
+      .admin-badge { padding: 8px 10px; }
+      .item-action-btn { width: 32px; height: 32px; }
+      .item-action-btn i { width: 14px; height: 14px; }
+    }
+
+    @media (max-width: 380px) {
+      .stat-card { padding: 10px 6px; }
+      .stat-number { font-size: 1.15rem; }
+      .admin-nav-btn.center { width: 56px; height: 56px; margin-top: -24px; }
+      .admin-nav-btn.center i { width: 22px; height: 22px; }
+    }
+
+    @supports (padding: env(safe-area-inset-bottom)) {
+      .admin-nav-wrapper { bottom: calc(20px + env(safe-area-inset-bottom)); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- شاشة التحميل -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loader-ring"></div>
+    <div style="color: var(--text-secondary); font-weight: 600; font-size: 0.9rem;">
+      جاري التحقق من الصلاحيات...
+    </div>
+  </div>
+
+  <!-- الهيدر -->
+  <header>
+    <div class="header-left">
+      <a href="index.html" class="nav-btn">
+        <i data-lucide="arrow-right"></i>
+      </a>
+      <div class="admin-badge">
+        <i data-lucide="crown"></i>
+        <span>لوحة التحكم</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="nav-btn" onclick="reloadAll()" title="تحديث">
+        <i data-lucide="refresh-cw"></i>
+      </button>
+      <button class="nav-btn" onclick="toggleTheme()" id="themeToggleBtn" title="تبديل الثيم">
+        <i data-lucide="sun"></i>
+      </button>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- ==================== نظرة عامة ==================== -->
+    <div id="overviewView" class="tab-view active">
+      <h2 class="section-header-title">
+        <i data-lucide="bar-chart-3"></i>
+        <span>نظرة عامة</span>
+      </h2>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); color: #34d399;">
+            <i data-lucide="file-text"></i>
+          </div>
+          <div class="stat-number" id="statFiles">0</div>
+          <div class="stat-label">ملف</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.35); color: #60a5fa;">
+            <i data-lucide="book-open"></i>
+          </div>
+          <div class="stat-number" id="statSubjects">0</div>
+          <div class="stat-label">مادة</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.35); color: #fbbf24;">
+            <i data-lucide="users"></i>
+          </div>
+          <div class="stat-number" id="statUsers">0</div>
+          <div class="stat-label">مستخدم</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.35); color: #a78bfa;">
+            <i data-lucide="trending-up"></i>
+          </div>
+          <div class="stat-number" id="statRecent">0</div>
+          <div class="stat-label">جديد (7 أيام)</div>
+        </div>
+      </div>
+
+      <div class="stats-details">
+        <div class="stat-detail">
+          <div class="stat-detail-icon" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399;">
+            <i data-lucide="download"></i>
+          </div>
+          <div class="stat-detail-content">
+            <div class="stat-detail-value" id="statDownloads">0</div>
+            <div class="stat-detail-label">إجمالي التحميلات</div>
+          </div>
+        </div>
+        <div class="stat-detail">
+          <div class="stat-detail-icon" style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa;">
+            <i data-lucide="eye"></i>
+          </div>
+          <div class="stat-detail-content">
+            <div class="stat-detail-value" id="statViews">0</div>
+            <div class="stat-detail-label">إجمالي المشاهدات</div>
+          </div>
+        </div>
+        <div class="stat-detail">
+          <div class="stat-detail-icon" style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); color: #fbbf24;">
+            <i data-lucide="hard-drive"></i>
+          </div>
+          <div class="stat-detail-content">
+            <div class="stat-detail-value" id="statTotalSize">0 MB</div>
+            <div class="stat-detail-label">إجمالي حجم الملفات</div>
+          </div>
+        </div>
+        <div class="stat-detail">
+          <div class="stat-detail-icon" style="background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.3); color: #a78bfa;">
+            <i data-lucide="star"></i>
+          </div>
+          <div class="stat-detail-content">
+            <div class="stat-detail-value" id="statTopSubject" style="font-size: 0.82rem;">—</div>
+            <div class="stat-detail-label">أكثر مادة بها ملفات</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== الملفات ==================== -->
+    <div id="filesView" class="tab-view">
+      <h2 class="section-header-title">
+        <i data-lucide="file-text"></i>
+        <span>الملفات (<span id="filesCountTitle">0</span>)</span>
+      </h2>
+
+      <div class="toolbar">
+        <div class="search-box">
+          <input type="text" id="fileSearch" placeholder="ابحث في الملفات..." oninput="filterFiles()">
+          <i data-lucide="search" class="icon-search"></i>
+        </div>
+        <select class="filter-select" id="fileSubjectFilter" onchange="filterFiles()">
+          <option value="">كل المواد</option>
+        </select>
+        <select class="filter-select" id="fileCategoryFilter" onchange="filterFiles()">
+          <option value="">كل التصنيفات</option>
+          <option value="book">كتب</option>
+          <option value="summary">ملخصات</option>
+          <option value="automation">أتمتة</option>
+          <option value="exam">دورات</option>
+        </select>
+        <select class="filter-select" id="fileSortFilter" onchange="filterFiles()">
+          <option value="date-desc">الأحدث</option>
+          <option value="date-asc">الأقدم</option>
+          <option value="size-desc">الأكبر</option>
+          <option value="size-asc">الأصغر</option>
+          <option value="downloads-desc">الأكثر تحميلاً</option>
+        </select>
+      </div>
+
+      <div class="list-container" id="filesList"></div>
+      <div class="empty-state" id="filesEmpty">
+        <div class="empty-icon"><i data-lucide="file-x"></i></div>
+        <h3>لا توجد ملفات</h3>
+        <p>لم يتم رفع أي ملفات بعد.</p>
+      </div>
+    </div>
+
+    <!-- ==================== المواد ==================== -->
+    <div id="subjectsView" class="tab-view">
+      <h2 class="section-header-title">
+        <i data-lucide="book-open"></i>
+        <span>المواد (<span id="subjectsCountTitle">0</span>)</span>
+      </h2>
+
+      <div class="list-container" id="subjectsList"></div>
+      <div class="empty-state" id="subjectsEmpty">
+        <div class="empty-icon"><i data-lucide="inbox"></i></div>
+        <h3>لا توجد مواد</h3>
+        <p>لم يتم إضافة مواد بعد.</p>
+      </div>
+    </div>
+
+    <!-- ==================== المستخدمون ==================== -->
+    <div id="usersView" class="tab-view">
+      <h2 class="section-header-title">
+        <i data-lucide="users"></i>
+        <span>المستخدمون (<span id="usersCountTitle">0</span>)</span>
+      </h2>
+
+      <div class="toolbar">
+        <div class="search-box">
+          <input type="text" id="userSearch" placeholder="ابحث في المستخدمين..." oninput="filterUsers()">
+          <i data-lucide="search" class="icon-search"></i>
+        </div>
+        <select class="filter-select" id="userRoleFilter" onchange="filterUsers()">
+          <option value="">كل الأدوار</option>
+          <option value="student">طلاب</option>
+          <option value="moderator">مراقبون</option>
+          <option value="admin">مشرفون</option>
+        </select>
+      </div>
+
+      <div class="list-container" id="usersList"></div>
+      <div class="empty-state" id="usersEmpty">
+        <div class="empty-icon"><i data-lucide="users"></i></div>
+        <h3>لا يوجد مستخدمون</h3>
+        <p>لم يسجل أي مستخدم بعد.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- شريط الإجراءات الجماعية -->
+  <div class="bulk-bar" id="bulkBar">
+    <div class="bulk-info">
+      <strong id="bulkCount">0</strong> محدد
+    </div>
+    <button class="bulk-btn danger" onclick="bulkDelete()">
+      <i data-lucide="trash-2"></i>
+      حذف
+    </button>
+    <button class="bulk-btn secondary" onclick="clearSelection()">
+      <i data-lucide="x"></i>
+      إلغاء
+    </button>
+  </div>
+
+  <!-- شريط التنقل السفلي -->
+  <div class="admin-nav-wrapper">
+    <nav class="admin-nav">
+      <button class="admin-nav-btn" data-view="files" onclick="switchView('files')">
+        <i data-lucide="file-text"></i>
+        <span>الملفات</span>
+      </button>
+      <button class="admin-nav-btn" data-view="subjects" onclick="switchView('subjects')">
+        <i data-lucide="book-open"></i>
+        <span>المواد</span>
+      </button>
+      
+      <!-- الزر الرئيسي في المنتصف -->
+      <button class="admin-nav-btn center active" data-view="overview" onclick="switchView('overview')">
+        <i data-lucide="crown"></i>
+      </button>
+      
+      <button class="admin-nav-btn" data-view="users" onclick="switchView('users')">
+        <i data-lucide="users"></i>
+        <span>المستخدمون</span>
+      </button>
+      <button class="admin-nav-btn" onclick="reloadAll()">
+        <i data-lucide="refresh-cw"></i>
+        <span>تحديث</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- مودال التعديل -->
+  <div class="modal-overlay" id="editModal" onclick="closeEditModalIfOutside(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-title">
+        <i data-lucide="pencil" id="editModalIcon"></i>
+        <span id="editModalTitle">تعديل</span>
+      </div>
+
+      <form id="editForm">
+        <div id="fileFields">
+          <div class="form-group">
+            <label class="form-label">العنوان</label>
+            <input type="text" id="editTitle" class="form-input" placeholder="عنوان الملف">
+          </div>
+          <div class="form-group">
+            <label class="form-label">الوصف</label>
+            <textarea id="editDescription" class="form-textarea" placeholder="وصف مختصر"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">التصنيف</label>
+            <select id="editCategory" class="form-select">
+              <option value="book">كتاب رسمي</option>
+              <option value="summary">ملخص دراسي</option>
+              <option value="automation">بنك أتمتة</option>
+              <option value="exam">أسئلة دورات</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="subjectFields" style="display: none;">
+          <div class="form-group">
+            <label class="form-label">اسم المادة</label>
+            <input type="text" id="editSubjectName" class="form-input" placeholder="اسم المادة">
+          </div>
+          <div class="form-group">
+            <label class="form-label">الوصف</label>
+            <textarea id="editSubjectDescription" class="form-textarea" placeholder="وصف المادة"></textarea>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="submit" class="btn primary">
+            <i data-lucide="check"></i>
+            حفظ
+          </button>
+          <button type="button" class="btn secondary" onclick="closeEditModal()">
+            إلغاء
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="supabase-config.js"></script>
+  <script src="auth.js"></script>
+  <script src="db.js"></script>
+  <script src="files.js"></script>
+
+  <script>
+    lucide.createIcons();
+
+    // ============================================
+    // دوال احتياطية (في حال لم تُحمَّل files.js)
+    // ============================================
+    if (typeof hexToRgba === 'undefined') {
+      window.hexToRgba = function(hex, alpha) {
+        if (!hex || hex[0] !== '#') return `rgba(16, 185, 129, ${alpha})`;
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      };
+    }
+
+    if (typeof formatFileSize === 'undefined') {
+      window.formatFileSize = function(bytes) {
+        if (!bytes) return '0 KB';
+        const mb = bytes / (1024 * 1024);
+        const kb = bytes / 1024;
+        if (mb >= 1) return mb.toFixed(2) + ' MB';
+        if (kb >= 1) return kb.toFixed(0) + ' KB';
+        return bytes + ' B';
+      };
+    }
+
+    if (typeof getCategoryInfo === 'undefined') {
+      const CATEGORY_MAP = {
+        book: { label: 'كتاب', icon: 'book-open', color: '#34d399' },
+        summary: { label: 'ملخص', icon: 'file-text', color: '#60a5fa' },
+        automation: { label: 'أتمتة', icon: 'check-circle-2', color: '#fbbf24' },
+        exam: { label: 'دورات', icon: 'graduation-cap', color: '#a78bfa' }
+      };
+      window.getCategoryInfo = function(category) {
+        return CATEGORY_MAP[category] || { label: 'ملف', icon: 'file', color: '#94a3b8' };
+      };
+    }
+
+    if (typeof getSession === 'undefined') {
+      window.getSession = async function() {
+        try {
+          const { data: { session }, error } = await supabaseClient.auth.getSession();
+          if (error) throw error;
+          return session;
+        } catch (err) {
+          console.error('getSession error:', err);
+          return null;
+        }
+      };
+    }
+
+    if (typeof getProfile === 'undefined') {
+      window.getProfile = async function(userId) {
+        try {
+          const { data, error } = await supabaseClient
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
+          if (error && error.code !== 'PGRST116') throw error;
+          return data;
+        } catch (err) {
+          console.error('getProfile error:', err);
+          return null;
+        }
+      };
+    }
+
+    // ============================================
+    // الحالة العامة
+    // ============================================
+    const adminState = {
+      currentUser: null,
+      currentProfile: null,
+      files: [],
+      filteredFiles: [],
+      subjects: [],
+      users: [],
+      filteredUsers: [],
+      currentView: 'overview',
+      editingItem: null,
+      editingType: null,
+      selectedFiles: new Set()
+    };
+
+    // ============================================
+    // نظام الثيمات
+    // ============================================
+    function applyTheme(theme) {
+      localStorage.setItem('medfav_theme', theme);
+      
+      if (theme === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+      }
+      
+      const themeBtn = document.getElementById('themeToggleBtn');
+      if (themeBtn) {
+        themeBtn.innerHTML = theme === 'light' 
+          ? '<i data-lucide="moon"></i>'
+          : '<i data-lucide="sun"></i>';
+      }
+      
+      const metaTheme = document.querySelector('meta[name="theme-color"]');
+      if (metaTheme) {
+        metaTheme.setAttribute('content', theme === 'light' ? '#f8fafb' : '#06110d');
+      }
+      
+      lucide.createIcons();
+    }
+
+    function toggleTheme() {
+      const current = localStorage.getItem('medfav_theme') || 'dark';
+      applyTheme(current === 'dark' ? 'light' : 'dark');
+    }
+
+    applyTheme(localStorage.getItem('medfav_theme') || 'dark');
+
+    // ============================================
+    // Toast
+    // ============================================
+    function showToast(message, type = 'success') {
+      const existing = document.querySelector('.toast');
+      if (existing) existing.remove();
+      
+      const toast = document.createElement('div');
+      toast.className = 'toast' + (type === 'error' ? ' error' : type === 'info' ? ' info' : '');
+      
+      const icon = type === 'error' ? 'alert-circle' : type === 'info' ? 'info' : 'check-circle-2';
+      toast.innerHTML = `
+        <i data-lucide="${icon}" style="width: 18px; height: 18px; flex-shrink: 0;"></i>
+        <span>${message}</span>
+      `;
+      
+      document.body.appendChild(toast);
+      lucide.createIcons();
+      
+      requestAnimationFrame(() => toast.classList.add('visible'));
+      
+      setTimeout(() => {
+        toast.classList.remove('visible');
+        setTimeout(() => toast.remove(), 350);
+      }, 2800);
+    }
+
+    // ============================================
+    // فحص الصلاحيات
+    // ============================================
+    async function checkAdminAccess() {
+      try {
+        const session = await getSession();
+        
+        if (!session) {
+          window.location.href = 'login.html';
+          return false;
+        }
+        
+        adminState.currentUser = session.user;
+        
+        const profile = await getProfile(session.user.id);
+        adminState.currentProfile = profile;
+        
+        if (profile?.role !== 'admin') {
+          showToast('هذه الصفحة للمشرفين فقط', 'error');
+          setTimeout(() => window.location.href = 'index.html', 1500);
+          return false;
+        }
+        
+        return true;
+      } catch (err) {
+        console.error('checkAdminAccess error:', err);
+        showToast('تعذّر التحقق من الصلاحيات', 'error');
+        setTimeout(() => window.location.href = 'index.html', 1500);
+        return false;
+      }
+    }
+
+    // ============================================
+    // تحميل الإحصائيات
+    // ============================================
+    async function loadStats() {
+      try {
+        const { data: allFiles, error: filesError } = await supabaseClient
+          .from('files')
+          .select('file_size, downloads, views, subject_id')
+          .eq('is_published', true);
+        
+        if (filesError) throw filesError;
+        
+        const filesCount = allFiles?.length || 0;
+        const totalDownloads = allFiles?.reduce((sum, f) => sum + (f.downloads || 0), 0) || 0;
+        const totalViews = allFiles?.reduce((sum, f) => sum + (f.views || 0), 0) || 0;
+        const totalSize = allFiles?.reduce((sum, f) => sum + (f.file_size || 0), 0) || 0;
+        
+        const { count: subjectsCount } = await supabaseClient
+          .from('subjects')
+          .select('*', { count: 'exact', head: true });
+        
+        const { count: usersCount } = await supabaseClient
+          .from('profiles')
+          .select('*', { count: 'exact', head: true });
+        
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        
+        const { count: recentCount } = await supabaseClient
+          .from('files')
+          .select('*', { count: 'exact', head: true })
+          .eq('is_published', true)
+          .gte('created_at', oneWeekAgo.toISOString());
+        
+        const subjectCounts = {};
+        allFiles?.forEach(f => {
+          if (f.subject_id) {
+            subjectCounts[f.subject_id] = (subjectCounts[f.subject_id] || 0) + 1;
+          }
+        });
+        
+        const topSubjectId = Object.entries(subjectCounts)
+          .sort((a, b) => b[1] - a[1])[0]?.[0];
+        
+        let topSubjectName = '—';
+        if (topSubjectId) {
+          const { data: sub } = await supabaseClient
+            .from('subjects')
+            .select('name')
+            .eq('id', topSubjectId)
+            .single();
+          if (sub) topSubjectName = sub.name;
+        }
+        
+        animateNumber('statFiles', filesCount);
+        animateNumber('statSubjects', subjectsCount || 0);
+        animateNumber('statUsers', usersCount || 0);
+        animateNumber('statRecent', recentCount || 0);
+        animateNumber('statDownloads', totalDownloads);
+        animateNumber('statViews', totalViews);
+        
+        document.getElementById('statTotalSize').textContent = formatFileSize(totalSize);
+        document.getElementById('statTopSubject').textContent = topSubjectName;
+        
+      } catch (err) {
+        console.error('loadStats error:', err);
+      }
+    }
+
+    function animateNumber(elementId, target) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      
+      const duration = 800;
+      const start = performance.now();
+      
+      function update(now) {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        el.textContent = Math.floor(target * eased).toLocaleString('ar-EG');
+        if (progress < 1) requestAnimationFrame(update);
+        else el.textContent = target.toLocaleString('ar-EG');
+      }
+      
+      requestAnimationFrame(update);
+    }
+
+    // ============================================
+    // تحميل الملفات
+    // ============================================
+    async function loadFiles() {
+      try {
+        const { data, error } = await supabaseClient
+          .from('files')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        const { data: subjectsData } = await supabaseClient
+          .from('subjects')
+          .select('id, name, slug, icon, color');
+        
+        const subjectMap = {};
+        subjectsData?.forEach(s => { subjectMap[s.id] = s; });
+        
+        adminState.files = (data || []).map(f => ({
+          ...f,
+          subject: subjectMap[f.subject_id] || null
+        }));
+        
+        adminState.filteredFiles = [...adminState.files];
+        
+        updateSubjectFilter();
+        renderFiles();
+        
+        document.getElementById('filesCountTitle').textContent = adminState.files.length;
+        
+      } catch (err) {
+        console.error('loadFiles error:', err);
+        showToast('تعذّر تحميل الملفات: ' + err.message, 'error');
+      }
+    }
+
+    function updateSubjectFilter() {
+      const select = document.getElementById('fileSubjectFilter');
+      select.innerHTML = '<option value="">كل المواد</option>';
+      
+      adminState.subjects.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = s.name;
+        select.appendChild(opt);
+      });
+    }
+
+    function filterFiles() {
+      const search = document.getElementById('fileSearch').value.toLowerCase().trim();
+      const subjectFilter = document.getElementById('fileSubjectFilter').value;
+      const categoryFilter = document.getElementById('fileCategoryFilter').value;
+      const sort = document.getElementById('fileSortFilter').value;
+      
+      let filtered = [...adminState.files];
+      
+      if (search) {
+        filtered = filtered.filter(f => 
+          f.title.toLowerCase().includes(search) ||
+          (f.description && f.description.toLowerCase().includes(search))
+        );
+      }
+      
+      if (subjectFilter) {
+        filtered = filtered.filter(f => f.subject_id === subjectFilter);
+      }
+      
+      if (categoryFilter) {
+        filtered = filtered.filter(f => f.category === categoryFilter);
+      }
+      
+      filtered.sort((a, b) => {
+        switch (sort) {
+          case 'date-asc': return new Date(a.created_at) - new Date(b.created_at);
+          case 'size-desc': return (b.file_size || 0) - (a.file_size || 0);
+          case 'size-asc': return (a.file_size || 0) - (b.file_size || 0);
+          case 'downloads-desc': return (b.downloads || 0) - (a.downloads || 0);
+          default: return new Date(b.created_at) - new Date(a.created_at);
+        }
+      });
+      
+      adminState.filteredFiles = filtered;
+      renderFiles();
+    }
+
+    function renderFiles() {
+      const list = document.getElementById('filesList');
+      const empty = document.getElementById('filesEmpty');
+      
+      list.innerHTML = '';
+      
+      if (adminState.filteredFiles.length === 0) {
+        empty.classList.add('visible');
+        return;
+      }
+      
+      empty.classList.remove('visible');
+      
+      adminState.filteredFiles.forEach((file, i) => {
+        const catInfo = getCategoryInfo(file.category);
+        const iconBg = hexToRgba(catInfo.color, 0.15);
+        const iconBorder = hexToRgba(catInfo.color, 0.35);
+        const isSelected = adminState.selectedFiles.has(file.id);
+        
+        const item = document.createElement('div');
+        item.className = 'list-item';
+        item.style.animationDelay = (i * 0.02) + 's';
+        
+        item.innerHTML = `
+          <div class="item-checkbox ${isSelected ? 'checked' : ''}" 
+               onclick="toggleFileSelection('${file.id}', this)"></div>
+          <div class="item-icon" style="background: ${iconBg}; border: 1px solid ${iconBorder}; color: ${catInfo.color};">
+            <i data-lucide="${catInfo.icon}"></i>
+          </div>
+          <div class="item-content">
+            <div class="item-title">${file.title}</div>
+            <div class="item-meta">
+              <i data-lucide="book-open"></i>
+              <span>${file.subject?.name || 'غير محدد'}</span>
+              <span class="dot"></span>
+              <span>${catInfo.label}</span>
+              <span class="dot"></span>
+              <span>${formatFileSize(file.file_size)}</span>
+            </div>
+          </div>
+          <div class="item-actions">
+            <button class="item-action-btn" onclick="previewFile('${file.file_url}')" title="معاينة">
+              <i data-lucide="eye"></i>
+            </button>
+            <button class="item-action-btn" onclick="editFile('${file.id}')" title="تعديل">
+              <i data-lucide="pencil"></i>
+            </button>
+            <button class="item-action-btn danger" onclick="deleteFile('${file.id}')" title="حذف">
+              <i data-lucide="trash-2"></i>
+            </button>
+          </div>
+        `;
+        
+        list.appendChild(item);
+      });
+      
+      lucide.createIcons();
+    }
+
+    function toggleFileSelection(fileId, el) {
+      if (adminState.selectedFiles.has(fileId)) {
+        adminState.selectedFiles.delete(fileId);
+        el.classList.remove('checked');
+      } else {
+        adminState.selectedFiles.add(fileId);
+        el.classList.add('checked');
+      }
+      
+      updateBulkBar();
+    }
+
+    function updateBulkBar() {
+      const count = adminState.selectedFiles.size;
+      const bar = document.getElementById('bulkBar');
+      document.getElementById('bulkCount').textContent = count;
+      
+      bar.classList.toggle('visible', count > 0);
+    }
+
+    function clearSelection() {
+      adminState.selectedFiles.clear();
+      document.querySelectorAll('.item-checkbox').forEach(el => el.classList.remove('checked'));
+      updateBulkBar();
+    }
+
+    async function bulkDelete() {
+      const count = adminState.selectedFiles.size;
+      if (count === 0) return;
+      
+      if (!confirm(`هل أنت متأكد من حذف ${count} ملف؟\n\nلا يمكن التراجع!`)) return;
+      
+      showToast('جاري الحذف...', 'info');
+      
+      let successCount = 0;
+      let failCount = 0;
+      
+      for (const fileId of adminState.selectedFiles) {
+        const file = adminState.files.find(f => f.id === fileId);
+        if (!file) continue;
+        
+        try {
+          if (file.file_path) {
+            await supabaseClient.storage.from('files').remove([file.file_path]);
+          }
+          
+          const { error } = await supabaseClient
+            .from('files')
+            .delete()
+            .eq('id', fileId);
+          
+          if (error) throw error;
+          successCount++;
+        } catch (err) {
+          console.error('Bulk delete error:', err);
+          failCount++;
+        }
+      }
+      
+      clearSelection();
+      await loadFiles();
+      await loadStats();
+      
+      if (failCount === 0) {
+        showToast(`تم حذف ${successCount} ملف بنجاح`);
+      } else {
+        showToast(`تم حذف ${successCount}، فشل ${failCount}`, 'error');
+      }
+    }
+
+    // ============================================
+    // تحميل المواد
+    // ============================================
+    async function loadSubjects() {
+      try {
+        const { data, error } = await supabaseClient
+          .from('subjects')
+          .select('*');
+        
+        if (error) throw error;
+        
+        adminState.subjects = (data || []).sort((a, b) => 
+          (a.sort_order || 0) - (b.sort_order || 0)
+        );
+        
+        renderSubjects();
+        updateSubjectFilter();
+        
+        document.getElementById('subjectsCountTitle').textContent = adminState.subjects.length;
+        
+      } catch (err) {
+        console.error('loadSubjects error:', err);
+        showToast('تعذّر تحميل المواد: ' + err.message, 'error');
+      }
+    }
+
+    function renderSubjects() {
+      const list = document.getElementById('subjectsList');
+      const empty = document.getElementById('subjectsEmpty');
+      
+      list.innerHTML = '';
+      
+      if (adminState.subjects.length === 0) {
+        empty.classList.add('visible');
+        return;
+      }
+      
+      empty.classList.remove('visible');
+      
+      adminState.subjects.forEach((sub, i) => {
+        const colorHex = getSubjectColorHex(sub.color);
+        const iconBg = hexToRgba(colorHex, 0.15);
+        const iconBorder = hexToRgba(colorHex, 0.35);
+        const filesCount = adminState.files.filter(f => f.subject_id === sub.id).length;
+        
+        const item = document.createElement('div');
+        item.className = 'list-item';
+        item.style.animationDelay = (i * 0.03) + 's';
+        
+        item.innerHTML = `
+          <div class="item-icon" style="background: ${iconBg}; border: 1px solid ${iconBorder}; color: ${colorHex};">
+            <i data-lucide="${sub.icon || 'book-open'}"></i>
+          </div>
+          <div class="item-content">
+            <div class="item-title">${sub.name}</div>
+            <div class="item-meta">
+              <i data-lucide="hash"></i>
+              <span>${sub.slug}</span>
+              <span class="dot"></span>
+              <i data-lucide="file-text"></i>
+              <span>${filesCount} ملف</span>
+            </div>
+          </div>
+          <div class="item-actions">
+            <button class="item-action-btn" onclick="editSubject('${sub.id}')" title="تعديل">
+              <i data-lucide="pencil"></i>
+            </button>
+          </div>
+        `;
+        
+        list.appendChild(item);
+      });
+      
+      lucide.createIcons();
+    }
+
+    function getSubjectColorHex(colorName) {
+      const map = {
+        physics: '#34d399', chemistry: '#fbbf24', biology: '#60a5fa',
+        history: '#a78bfa', english: '#f472b6', default: '#34d399'
+      };
+      return map[colorName] || map.default;
+    }
+
+    // ============================================
+    // تحميل المستخدمين
+    // ============================================
+    async function loadUsers() {
+      try {
+        const { data, error } = await supabaseClient
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        adminState.users = data || [];
+        adminState.filteredUsers = [...adminState.users];
+        
+        renderUsers();
+        
+        document.getElementById('usersCountTitle').textContent = adminState.users.length;
+        
+      } catch (err) {
+        console.error('loadUsers error:', err);
+        showToast('تعذّر تحميل المستخدمين', 'error');
+      }
+    }
+
+    function filterUsers() {
+      const search = document.getElementById('userSearch').value.toLowerCase().trim();
+      const roleFilter = document.getElementById('userRoleFilter').value;
+      
+      let filtered = [...adminState.users];
+      
+      if (search) {
+        filtered = filtered.filter(u => 
+          (u.full_name && u.full_name.toLowerCase().includes(search)) ||
+          (u.email && u.email.toLowerCase().includes(search))
+        );
+      }
+      
+      if (roleFilter) {
+        filtered = filtered.filter(u => u.role === roleFilter);
+      }
+      
+      adminState.filteredUsers = filtered;
+      renderUsers();
+    }
+
+    function renderUsers() {
+      const list = document.getElementById('usersList');
+      const empty = document.getElementById('usersEmpty');
+      
+      list.innerHTML = '';
+      
+      if (adminState.filteredUsers.length === 0) {
+        empty.classList.add('visible');
+        return;
+      }
+      
+      empty.classList.remove('visible');
+      
+      adminState.filteredUsers.forEach((user, i) => {
+        const roleLabel = user.role === 'admin' ? 'مشرف' : user.role === 'moderator' ? 'مراقب' : 'طالب';
+        const roleColor = user.role === 'admin' ? '#fbbf24' : user.role === 'moderator' ? '#60a5fa' : '#34d399';
+        const displayName = user.full_name || user.email?.split('@')[0] || 'مستخدم';
+        const isMe = user.id === adminState.currentUser.id;
+        
+        const item = document.createElement('div');
+        item.className = 'list-item';
+        item.style.animationDelay = (i * 0.03) + 's';
+        
+        item.innerHTML = `
+          <div class="item-icon" style="background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark)); color: white; font-weight: 900; font-size: 1.05rem;">
+            ${displayName.charAt(0).toUpperCase()}
+          </div>
+          <div class="item-content">
+            <div class="item-title">
+              ${displayName}
+              ${isMe ? '<span style="color: var(--accent-light); font-size: 0.68rem; margin-right: 6px;">(أنت)</span>' : ''}
+            </div>
+            <div class="item-meta">
+              <i data-lucide="mail"></i>
+              <span>${user.email || 'غير محدد'}</span>
+              <span class="dot"></span>
+              <span style="color: ${roleColor}; font-weight: 700;">${roleLabel}</span>
+            </div>
+          </div>
+          <div class="item-actions">
+            <button class="item-action-btn" onclick="editUserRole('${user.id}')" title="تغيير الدور" ${isMe ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}>
+              <i data-lucide="shield"></i>
+            </button>
+          </div>
+        `;
+        
+        list.appendChild(item);
+      });
+      
+      lucide.createIcons();
+    }
+
+    // ============================================
+    // معاينة / تعديل / حذف
+    // ============================================
+    function previewFile(url) {
+      window.open(url, '_blank');
+    }
+
+    function editFile(fileId) {
+      const file = adminState.files.find(f => f.id === fileId);
+      if (!file) return;
+      
+      adminState.editingItem = file;
+      adminState.editingType = 'file';
+      
+      document.getElementById('editModalTitle').textContent = 'تعديل الملف';
+      document.getElementById('fileFields').style.display = 'block';
+      document.getElementById('subjectFields').style.display = 'none';
+      
+      document.getElementById('editTitle').value = file.title || '';
+      document.getElementById('editDescription').value = file.description || '';
+      document.getElementById('editCategory').value = file.category || 'summary';
+      
+      document.getElementById('editModal').classList.add('active');
+      document.body.style.overflow = 'hidden';
+      
+      lucide.createIcons();
+    }
+
+    function editSubject(subjectId) {
+      const subject = adminState.subjects.find(s => s.id === subjectId);
+      if (!subject) return;
+      
+      adminState.editingItem = subject;
+      adminState.editingType = 'subject';
+      
+      document.getElementById('editModalTitle').textContent = 'تعديل المادة';
+      document.getElementById('fileFields').style.display = 'none';
+      document.getElementById('subjectFields').style.display = 'block';
+      
+      document.getElementById('editSubjectName').value = subject.name || '';
+      document.getElementById('editSubjectDescription').value = subject.description || '';
+      
+      document.getElementById('editModal').classList.add('active');
+      document.body.style.overflow = 'hidden';
+      
+      lucide.createIcons();
+    }
+
+    async function editUserRole(userId) {
+      const user = adminState.users.find(u => u.id === userId);
+      if (!user) return;
+      
+      if (user.id === adminState.currentUser.id) {
+        showToast('لا يمكنك تغيير دورك الخاص', 'error');
+        return;
+      }
+      
+      const roles = ['student', 'moderator', 'admin'];
+      const roleLabels = { student: 'طالب', moderator: 'مراقب', admin: 'مشرف' };
+      
+      const currentIdx = roles.indexOf(user.role || 'student');
+      const nextIdx = (currentIdx + 1) % roles.length;
+      const newRole = roles[nextIdx];
+      
+      if (!confirm(`تغيير دور "${user.full_name || user.email}" إلى "${roleLabels[newRole]}"؟`)) return;
+      
+      try {
+        const { error } = await supabaseClient
+          .from('profiles')
+          .update({ role: newRole })
+          .eq('id', userId);
+        
+        if (error) throw error;
+        
+        showToast(`تم تغيير الدور إلى "${roleLabels[newRole]}"`);
+        await loadUsers();
+      } catch (err) {
+        console.error('editUserRole error:', err);
+        showToast('تعذّر تحديث الدور', 'error');
+      }
+    }
+
+    document.getElementById('editForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      if (!adminState.editingItem || !adminState.editingType) return;
+      
+      try {
+        if (adminState.editingType === 'file') {
+          const title = document.getElementById('editTitle').value.trim();
+          const description = document.getElementById('editDescription').value.trim();
+          const category = document.getElementById('editCategory').value;
+          
+          if (!title) {
+            showToast('العنوان مطلوب', 'error');
+            return;
+          }
+          
+          const { error } = await supabaseClient
+            .from('files')
+            .update({
+              title,
+              description: description || null,
+              category,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', adminState.editingItem.id);
+          
+          if (error) throw error;
+          
+          showToast('تم تحديث الملف بنجاح');
+          await loadFiles();
+          
+        } else if (adminState.editingType === 'subject') {
+          const name = document.getElementById('editSubjectName').value.trim();
+          const description = document.getElementById('editSubjectDescription').value.trim();
+          
+          if (!name) {
+            showToast('اسم المادة مطلوب', 'error');
+            return;
+          }
+          
+          const { error } = await supabaseClient
+            .from('subjects')
+            .update({ name, description: description || null })
+            .eq('id', adminState.editingItem.id);
+          
+          if (error) throw error;
+          
+          showToast('تم تحديث المادة بنجاح');
+          await loadSubjects();
+        }
+        
+        closeEditModal();
+        
+      } catch (err) {
+        console.error('save edit error:', err);
+        showToast('تعذّر حفظ التعديلات: ' + err.message, 'error');
+      }
+    });
+
+    function closeEditModal() {
+      document.getElementById('editModal').classList.remove('active');
+      document.body.style.overflow = '';
+      adminState.editingItem = null;
+      adminState.editingType = null;
+    }
+
+    function closeEditModalIfOutside(event) {
+      if (event.target.id === 'editModal') closeEditModal();
+    }
+
+    async function deleteFile(fileId) {
+      const file = adminState.files.find(f => f.id === fileId);
+      if (!file) return;
+      
+      if (!confirm(`هل أنت متأكد من حذف "${file.title}"؟\n\nلا يمكن التراجع!`)) return;
+      
+      showToast('جاري الحذف...', 'info');
+      
+      try {
+        if (file.file_path) {
+          const { error: storageError } = await supabaseClient.storage
+            .from('files')
+            .remove([file.file_path]);
+          
+          if (storageError) console.warn('Storage delete warning:', storageError);
+        }
+        
+        const { error: dbError } = await supabaseClient
+          .from('files')
+          .delete()
+          .eq('id', fileId);
+        
+        if (dbError) throw dbError;
+        
+        showToast('تم حذف الملف بنجاح');
+        await loadFiles();
+        await loadStats();
+        
+      } catch (err) {
+        console.error('deleteFile error:', err);
+        showToast('تعذّر حذف الملف: ' + err.message, 'error');
+      }
+    }
+
+    // ============================================
+    // تبديل التبويبات
+    // ============================================
+    function switchView(viewName) {
+      adminState.currentView = viewName;
+      
+      // إخفاء كل الأقسام
+      document.querySelectorAll('.tab-view').forEach(v => v.classList.remove('active'));
+      
+      // إظهار القسم المطلوب
+      const target = document.getElementById(viewName + 'View');
+      if (target) target.classList.add('active');
+      
+      // تحديث الأزرار
+      document.querySelectorAll('.admin-nav-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.view === viewName);
+      });
+      
+      lucide.createIcons();
+      
+      // تحميل بيانات القسم عند الحاجة
+      if (viewName === 'users' && adminState.users.length === 0) {
+        loadUsers();
+      }
+      
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ============================================
+    // إعادة تحميل الكل
+    // ============================================
+    async function reloadAll() {
+      showToast('جاري التحديث...', 'info');
+      await Promise.all([
+        loadStats(),
+        loadFiles(),
+        loadSubjects()
+      ]);
+      showToast('تم التحديث');
+    }
+
+    // ============================================
+    // التشغيل الأولي
+    // ============================================
+    async function init() {
+      const isAdmin = await checkAdminAccess();
+      if (!isAdmin) return;
+      
+      document.getElementById('loadingOverlay').classList.add('hidden');
+      
+      await Promise.all([
+        loadStats(),
+        loadSubjects(),
+        loadFiles()
+      ]);
+      
+      console.log('✅ Admin panel loaded');
+    }
+
+    init();
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const modal = document.getElementById('editModal');
+        if (modal && modal.classList.contains('active')) {
+          closeEditModal();
+        }
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#06110d">
+  <title>الملاحظات - المنصة الطبية</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    (function() {
+      const theme = localStorage.getItem('medfav_theme') || 'dark';
+      if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    })();
+  </script>
+
+  <style>
+    :root {
+      --bg-main: #06110d;
+      --bg-card: rgba(16, 34, 27, 0.65);
+      --bg-card-hover: rgba(22, 48, 38, 0.9);
+      --bg-solid: #0d221a;
+      --border-card: rgba(16, 185, 129, 0.18);
+      --border-card-hover: rgba(16, 185, 129, 0.5);
+      --accent-emerald: #10b981;
+      --accent-light: #34d399;
+      --accent-dark: #059669;
+      --accent-glow: rgba(16, 185, 129, 0.25);
+      --accent-glow-strong: rgba(16, 185, 129, 0.45);
+      --text-primary: #f0fdf4;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --info: #3b82f6;
+      --violet: #8b5cf6;
+      --pink: #ec4899;
+      --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-smooth: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    [data-theme="light"] {
+      --bg-main: #f8fafb;
+      --bg-card: rgba(255, 255, 255, 0.85);
+      --bg-card-hover: rgba(255, 255, 255, 0.95);
+      --bg-solid: #ffffff;
+      --border-card: rgba(16, 185, 129, 0.25);
+      --border-card-hover: rgba(16, 185, 129, 0.6);
+      --accent-emerald: #059669;
+      --accent-light: #10b981;
+      --accent-dark: #047857;
+      --accent-glow: rgba(16, 185, 129, 0.2);
+      --accent-glow-strong: rgba(16, 185, 129, 0.35);
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      background-color: var(--bg-main);
+      background-image: 
+        radial-gradient(circle at 10% 10%, rgba(16, 185, 129, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(5, 150, 105, 0.06) 0%, transparent 40%);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding-bottom: 40px;
+      overflow-x: hidden;
+      transition: background-color var(--transition-smooth), color var(--transition-smooth);
+    }
+
+    /* Header */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(6, 17, 13, 0.9);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border-card);
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    [data-theme="light"] header { background: rgba(248, 250, 251, 0.9); }
+
+    .nav-btn {
+      width: 42px; height: 42px;
+      border-radius: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      color: var(--text-primary);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all var(--transition-fast);
+      flex-shrink: 0;
+    }
+
+    .nav-btn:hover { border-color: var(--accent-emerald); color: var(--accent-light); transform: translateY(-1px); }
+    .nav-btn i { width: 20px; height: 20px; }
+
+    .header-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      flex: 1;
+      text-align: center;
+    }
+
+    .container {
+      padding: 20px;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    /* Tabs */
+    .notes-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      padding: 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 16px;
+      box-shadow: 
+        0 2px 6px rgba(0, 0, 0, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    .notes-tab {
+      flex: 1;
+      padding: 11px 14px;
+      border-radius: 12px;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .notes-tab i { width: 16px; height: 16px; }
+
+    .notes-tab.active {
+      background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+      color: white;
+      box-shadow: 
+        0 4px 12px var(--accent-glow-strong),
+        0 1px 2px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+
+    .notes-tab:not(.active):hover {
+      color: var(--text-primary);
+      background: rgba(128, 128, 128, 0.08);
+    }
+
+    .notes-tab .tab-count {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 1px 8px;
+      border-radius: 8px;
+      font-size: 0.7rem;
+      font-weight: 800;
+    }
+
+    .notes-tab.active .tab-count {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    /* Search */
+    .search-wrapper {
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 13px 46px 13px 46px;
+      border-radius: 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      outline: none;
+      font-family: inherit;
+      transition: all var(--transition-fast);
+      box-shadow: 
+        0 2px 6px rgba(0, 0, 0, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    .search-input::placeholder { color: var(--text-muted); }
+
+    .search-input:focus {
+      border-color: var(--accent-emerald);
+      box-shadow: 0 0 0 4px var(--accent-glow);
+    }
+
+    .search-wrapper .icon-right {
+      position: absolute;
+      right: 15px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+      width: 18px; height: 18px;
+    }
+
+    /* Notes List */
+    .notes-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+/* ============================================ */
+/* Note Card - Improved */
+/* ============================================ */
+.note-card {
+  background: linear-gradient(135deg, 
+    rgba(16, 34, 27, 0.7), 
+    rgba(13, 34, 26, 0.55));
+  border: 1px solid var(--border-card);
+  border-radius: 20px;
+  padding: 18px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: cardIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 4px 12px rgba(0, 0, 0, 0.1),
+    0 12px 28px -8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="light"] .note-card {
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.95), 
+    rgba(248, 250, 252, 0.85));
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.03),
+    0 4px 12px rgba(0, 0, 0, 0.05),
+    0 12px 28px -8px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.note-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, 
+    var(--accent-emerald), 
+    var(--accent-dark));
+  opacity: 0.6;
+  transition: opacity 0.3s;
+}
+
+.note-card.private::before {
+  background: linear-gradient(180deg, #a78bfa, #7c3aed);
+}
+
+.note-card.shared::before {
+  background: linear-gradient(180deg, #60a5fa, #2563eb);
+}
+
+.note-card:hover {
+  background: linear-gradient(135deg, 
+    rgba(22, 48, 38, 0.85), 
+    rgba(16, 40, 32, 0.75));
+  border-color: var(--border-card-hover);
+  transform: translateY(-3px);
+  box-shadow: 
+    0 4px 8px rgba(0, 0, 0, 0.1),
+    0 12px 24px rgba(0, 0, 0, 0.15),
+    0 20px 40px -10px rgba(16, 185, 129, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="light"] .note-card:hover {
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 1), 
+    rgba(248, 250, 252, 0.95));
+}
+
+.note-card:hover::before {
+  opacity: 1;
+}
+
+/* Header */
+.note-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-card);
+}
+
+.note-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.note-type-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  border: 1px solid;
+}
+
+.note-type-badge i {
+  width: 20px;
+  height: 20px;
+}
+
+.note-type-badge.private {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(124, 58, 237, 0.12));
+  border-color: rgba(139, 92, 246, 0.4);
+  color: #a78bfa;
+}
+
+.note-type-badge.shared {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.12));
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #60a5fa;
+}
+
+.note-title {
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.note-delete-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+  opacity: 0.7;
+}
+
+.note-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: var(--danger);
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.note-delete-btn i {
+  width: 16px;
+  height: 16px;
+}
+
+/* Content - الآن أوضح */
+.note-content {
+  font-size: 0.94rem;
+  color: var(--text-primary);
+  line-height: 1.85;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-bottom: 16px;
+  opacity: 0.9;
+}
+
+/* Footer */
+.note-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-card);
+}
+
+.note-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  flex-wrap: wrap;
+}
+
+.note-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.note-meta-item i {
+  width: 13px;
+  height: 13px;
+}
+
+/* Author */
+.note-author {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  border-radius: 20px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.note-author-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.note-author-name {
+  font-size: 0.76rem;
+  color: var(--accent-light);
+  font-weight: 800;
+}
+
+    /* Shared badge */
+    .shared-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.62rem;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      color: #60a5fa;
+    }
+
+    .shared-badge i { width: 10px; height: 10px; }
+
+    .private-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.62rem;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: rgba(139, 92, 246, 0.15);
+      border: 1px solid rgba(139, 92, 246, 0.35);
+      color: #a78bfa;
+    }
+
+    .private-badge i { width: 10px; height: 10px; }
+
+    /* Empty */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .empty-state.visible { display: flex; }
+
+    .empty-icon {
+      width: 80px; height: 80px;
+      border-radius: 24px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px dashed var(--border-card);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted);
+    }
+
+    .empty-icon i { width: 36px; height: 36px; }
+
+    .empty-state h3 { font-size: 1rem; font-weight: 800; color: var(--text-primary); }
+    .empty-state p { font-size: 0.82rem; color: var(--text-secondary); max-width: 280px; line-height: 1.6; }
+
+    /* FAB - Add Note */
+    .fab {
+      position: fixed;
+      bottom: 24px;
+      left: 24px;
+      width: 58px; height: 58px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+      border: none;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 
+        0 4px 8px rgba(0, 0, 0, 0.15),
+        0 12px 24px rgba(16, 185, 129, 0.4),
+        0 20px 40px -8px rgba(16, 185, 129, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 500;
+      font-family: inherit;
+    }
+
+    .fab:hover {
+      transform: translateY(-4px) rotate(90deg);
+      box-shadow: 
+        0 6px 12px rgba(0, 0, 0, 0.2),
+        0 16px 32px rgba(16, 185, 129, 0.5),
+        0 24px 48px -8px rgba(16, 185, 129, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+
+    .fab:active { transform: translateY(-2px) scale(0.95); }
+    .fab i { width: 26px; height: 26px; }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 10, 8, 0.9);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      z-index: 3000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition-smooth);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    [data-theme="light"] .modal-overlay { background: rgba(248, 250, 251, 0.9); }
+
+    .modal-overlay.active { opacity: 1; pointer-events: auto; }
+
+    .modal-card {
+      background: var(--bg-solid);
+      border: 1px solid var(--border-card-hover);
+      border-radius: 24px;
+      padding: 24px;
+      max-width: 480px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: scale(0.94) translateY(20px);
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 
+        0 20px 60px rgba(0, 0, 0, 0.5),
+        0 40px 100px -20px rgba(16, 185, 129, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .modal-overlay.active .modal-card { transform: scale(1) translateY(0); }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      gap: 12px;
+    }
+
+    .modal-title {
+      font-size: 1.15rem;
+      font-weight: 900;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .modal-title i { color: var(--accent-light); width: 22px; height: 22px; }
+
+    .modal-close {
+      width: 36px; height: 36px;
+      border-radius: 11px;
+      background: rgba(128, 128, 128, 0.08);
+      border: 1px solid var(--border-card);
+      color: var(--text-secondary);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      font-family: inherit;
+    }
+
+    .modal-close:hover { background: rgba(239, 68, 68, 0.15); border-color: var(--danger); color: var(--danger); }
+    .modal-close i { width: 18px; height: 18px; }
+
+    .form-group { margin-bottom: 16px; }
+
+    .form-label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .form-input, .form-textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      outline: none;
+      font-family: inherit;
+      transition: all var(--transition-fast);
+    }
+
+    .form-input:focus, .form-textarea:focus {
+      border-color: var(--accent-emerald);
+      box-shadow: 0 0 0 4px var(--accent-glow);
+    }
+
+    .form-textarea {
+      min-height: 130px;
+      resize: vertical;
+      line-height: 1.6;
+    }
+
+    /* Radio type selector */
+    .type-selector {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .type-option {
+      padding: 14px 12px;
+      border-radius: 14px;
+      background: var(--bg-card);
+      border: 2px solid var(--border-card);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      font-family: inherit;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      position: relative;
+    }
+
+    .type-option:hover {
+      border-color: var(--border-card-hover);
+      transform: translateY(-2px);
+    }
+
+    .type-option.selected {
+      border-color: var(--accent-emerald);
+      background: rgba(16, 185, 129, 0.1);
+      box-shadow: 0 4px 12px var(--accent-glow);
+    }
+
+    .type-option.selected[data-type="private"] {
+      border-color: var(--violet);
+      background: rgba(139, 92, 246, 0.1);
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+    }
+
+    .type-icon {
+      width: 36px; height: 36px;
+      border-radius: 11px;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .type-icon i { width: 20px; height: 20px; }
+
+    .type-label {
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+
+    .type-desc {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    /* Buttons */
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 13px;
+      border-radius: 14px;
+      border: 1px solid transparent;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all var(--transition-fast);
+      box-shadow: 
+        0 2px 4px rgba(0, 0, 0, 0.08),
+        0 4px 12px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    }
+
+    .btn i { width: 17px; height: 17px; }
+
+    .btn.primary {
+      background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+      color: white;
+    }
+
+    .btn.primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 
+        0 4px 8px rgba(0, 0, 0, 0.12),
+        0 8px 20px rgba(16, 185, 129, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+
+    .btn.secondary {
+      background: rgba(128, 128, 128, 0.08);
+      border-color: var(--border-card);
+      color: var(--text-secondary);
+    }
+
+    .btn.secondary:hover {
+      background: rgba(128, 128, 128, 0.15);
+      color: var(--text-primary);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      top: 90px; left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: rgba(16, 185, 129, 0.98);
+      color: white;
+      padding: 13px 22px;
+      border-radius: 14px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      box-shadow: 
+        0 12px 32px rgba(0, 0, 0, 0.5),
+        0 0 20px var(--accent-glow),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      z-index: 9999;
+      opacity: 0;
+      transition: all var(--transition-smooth);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(16px);
+      display: flex; align-items: center; gap: 10px;
+      max-width: calc(100vw - 40px);
+      pointer-events: none;
+    }
+
+    .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.error { background: rgba(239, 68, 68, 0.98); }
+    .toast.info { background: rgba(59, 130, 246, 0.98); }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin { animation: spin 1s linear infinite; }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      header { padding: 12px 16px; }
+      .container { padding: 16px 14px; }
+      .notes-tab { padding: 10px; font-size: 0.8rem; }
+      .note-card { padding: 14px 16px; border-radius: 16px; }
+      .note-content { padding-right: 0; }
+      .fab { bottom: 20px; left: 16px; width: 54px; height: 54px; }
+      .fab i { width: 24px; height: 24px; }
+      .modal-card { padding: 20px; border-radius: 20px; }
+      .type-option { padding: 12px 8px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a href="index.html" class="nav-btn">
+      <i data-lucide="arrow-right"></i>
+    </a>
+    <div class="header-title">الملاحظات</div>
+    <div style="width: 42px;"></div>
+  </header>
+
+  <div class="container">
+
+    <!-- Tabs -->
+    <div class="notes-tabs">
+      <button class="notes-tab active" data-tab="mine" onclick="switchNotesTab('mine')">
+        <i data-lucide="lock"></i>
+        ملاحظاتي
+        <span class="tab-count" id="mineCount">0</span>
+      </button>
+      <button class="notes-tab" data-tab="shared" onclick="switchNotesTab('shared')">
+        <i data-lucide="users"></i>
+        ملاحظات الزملاء
+        <span class="tab-count" id="sharedCount">0</span>
+      </button>
+    </div>
+
+    <!-- Search -->
+    <div class="search-wrapper">
+      <input 
+        type="text" 
+        id="notesSearch"
+        class="search-input" 
+        placeholder="ابحث في الملاحظات..."
+        oninput="handleSearch(this.value)"
+      >
+      <i data-lucide="search" class="icon-right"></i>
+    </div>
+
+    <!-- Notes List -->
+    <div class="notes-list" id="notesList"></div>
+
+    <!-- Empty State -->
+    <div class="empty-state" id="notesEmpty">
+      <div class="empty-icon"><i data-lucide="notebook-pen"></i></div>
+      <h3 id="emptyTitle">لا توجد ملاحظات بعد</h3>
+      <p id="emptyMessage">ابدأ بإضافة ملاحظاتك الخاصة لتنظيم دراستك</p>
+    </div>
+
+  </div>
+
+  <!-- FAB -->
+  <button class="fab" onclick="openAddModal()" title="إضافة ملاحظة">
+    <i data-lucide="plus"></i>
+  </button>
+
+  <!-- Add Note Modal -->
+  <div class="modal-overlay" id="addModal" onclick="closeAddModalIfOutside(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i data-lucide="notebook-pen"></i>
+          <span>ملاحظة جديدة</span>
+        </div>
+        <button class="modal-close" onclick="closeAddModal()">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">العنوان</label>
+        <input 
+          type="text" 
+          id="noteTitle" 
+          class="form-input" 
+          placeholder="مثال: ملاحظات الفصل الأول"
+          maxlength="100"
+        >
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">المحتوى</label>
+        <textarea 
+          id="noteContent" 
+          class="form-textarea" 
+          placeholder="اكتب ملاحظتك هنا..."
+          maxlength="5000"
+        ></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">نوع الملاحظة</label>
+        <div class="type-selector">
+          <button type="button" class="type-option selected" data-type="private" onclick="selectNoteType('private')">
+            <div class="type-icon" style="background: rgba(139, 92, 246, 0.15); color: #a78bfa;">
+              <i data-lucide="lock"></i>
+            </div>
+            <div class="type-label">خاصة</div>
+            <div class="type-desc">أنت فقط</div>
+          </button>
+          <button type="button" class="type-option" data-type="shared" onclick="selectNoteType('shared')">
+            <div class="type-icon" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa;">
+              <i data-lucide="users"></i>
+            </div>
+            <div class="type-label">مشتركة</div>
+            <div class="type-desc">الجميع</div>
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn primary" onclick="saveNote()" id="saveBtn">
+          <i data-lucide="check"></i>
+          حفظ الملاحظة
+        </button>
+        <button class="btn secondary" onclick="closeAddModal()">
+          إلغاء
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="supabase-config.js"></script>
+  <script src="auth.js"></script>
+
+  <script>
+    lucide.createIcons();
+
+    // ============================================
+    // الحالة
+    // ============================================
+    const notesState = {
+      currentUser: null,
+      currentProfile: null,
+      currentTab: 'mine',
+      currentType: 'private',
+      myNotes: [],
+      sharedNotes: [],
+      filteredNotes: [],
+      searchQuery: ''
+    };
+
+    // ============================================
+    // Toast
+    // ============================================
+    function showToast(message, type = 'success') {
+      const existing = document.querySelector('.toast');
+      if (existing) existing.remove();
+      
+      const toast = document.createElement('div');
+      toast.className = 'toast' + (type === 'error' ? ' error' : type === 'info' ? ' info' : '');
+      
+      const icon = type === 'error' ? 'alert-circle' : type === 'info' ? 'info' : 'check-circle-2';
+      toast.innerHTML = `
+        <i data-lucide="${icon}" style="width: 18px; height: 18px; flex-shrink: 0;"></i>
+        <span>${message}</span>
+      `;
+      
+      document.body.appendChild(toast);
+      lucide.createIcons();
+      
+      requestAnimationFrame(() => toast.classList.add('visible'));
+      
+      setTimeout(() => {
+        toast.classList.remove('visible');
+        setTimeout(() => toast.remove(), 350);
+      }, 2600);
+    }
+
+    // ============================================
+    // تحميل المستخدم
+    // ============================================
+    async function loadUser() {
+      const session = await getSession();
+      if (!session) {
+        window.location.href = 'login.html';
+        return false;
+      }
+      
+      notesState.currentUser = session.user;
+      const profile = await getProfile(session.user.id);
+      notesState.currentProfile = profile;
+      
+      return true;
+    }
+
+    // ============================================
+    // تحميل ملاحظاتي
+    // ============================================
+    async function loadMyNotes() {
+      try {
+        const { data, error } = await supabaseClient
+          .from('notes')
+          .select('*')
+          .eq('user_id', notesState.currentUser.id)
+          .eq('is_shared', false)
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        notesState.myNotes = data || [];
+        document.getElementById('mineCount').textContent = notesState.myNotes.length;
+        
+      } catch (err) {
+        console.error('loadMyNotes error:', err);
+        notesState.myNotes = [];
+      }
+    }
+
+    // ============================================
+    // تحميل ملاحظات الزملاء (المشتركة)
+    // ============================================
+    async function loadSharedNotes() {
+      try {
+        const { data, error } = await supabaseClient
+          .from('notes')
+          .select('*')
+          .eq('is_shared', true)
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        notesState.sharedNotes = data || [];
+        document.getElementById('sharedCount').textContent = notesState.sharedNotes.length;
+        
+      } catch (err) {
+        console.error('loadSharedNotes error:', err);
+        notesState.sharedNotes = [];
+      }
+    }
+
+    // ============================================
+    // التبديل بين التبويبات
+    // ============================================
+    function switchNotesTab(tab) {
+      notesState.currentTab = tab;
+      
+      document.querySelectorAll('.notes-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.tab === tab);
+      });
+      
+      // مسح البحث عند التبديل
+      document.getElementById('notesSearch').value = '';
+      notesState.searchQuery = '';
+      
+      renderNotes();
+    }
+
+    // ============================================
+    // البحث
+    // ============================================
+    function handleSearch(query) {
+      notesState.searchQuery = query.toLowerCase().trim();
+      renderNotes();
+    }
+
+    // ============================================
+    // عرض الملاحظات
+    // ============================================
+    function renderNotes() {
+      const list = document.getElementById('notesList');
+      const empty = document.getElementById('notesEmpty');
+      const emptyTitle = document.getElementById('emptyTitle');
+      const emptyMessage = document.getElementById('emptyMessage');
+      
+      let notes = notesState.currentTab === 'mine' 
+        ? notesState.myNotes 
+        : notesState.sharedNotes;
+      
+      // فلترة حسب البحث
+      if (notesState.searchQuery) {
+        notes = notes.filter(n => 
+          n.title.toLowerCase().includes(notesState.searchQuery) ||
+          n.content.toLowerCase().includes(notesState.searchQuery) ||
+          (n.author_name && n.author_name.toLowerCase().includes(notesState.searchQuery))
+        );
+      }
+      
+      list.innerHTML = '';
+      
+      if (notes.length === 0) {
+        empty.classList.add('visible');
+        
+        if (notesState.searchQuery) {
+          emptyTitle.textContent = 'لا توجد نتائج';
+          emptyMessage.textContent = 'لم نعثر على ملاحظات تطابق بحثك';
+          empty.querySelector('i').setAttribute('data-lucide', 'search-x');
+        } else if (notesState.currentTab === 'mine') {
+          emptyTitle.textContent = 'لا توجد ملاحظات';
+          emptyMessage.textContent = 'ابدأ بإضافة ملاحظاتك الخاصة لتنظيم دراستك';
+          empty.querySelector('i').setAttribute('data-lucide', 'notebook-pen');
+        } else {
+          emptyTitle.textContent = 'لا توجد ملاحظات مشتركة';
+          emptyMessage.textContent = 'عندما يشارك الزملاء ملاحظاتهم، ستظهر هنا';
+          empty.querySelector('i').setAttribute('data-lucide', 'users');
+        }
+        lucide.createIcons();
+        return;
+      }
+      
+      empty.classList.remove('visible');
+      
+      notes.forEach((note, i) => {
+        const card = createNoteCard(note, i);
+        list.appendChild(card);
+      });
+      
+      lucide.createIcons();
+    }
+
+// ============================================
+// إنشاء بطاقة ملاحظة
+// ============================================
+function createNoteCard(note, index) {
+  const isMine = note.user_id === notesState.currentUser.id;
+  const canDelete = isMine || notesState.currentProfile?.role === 'admin';
+  const typeClass = note.is_shared ? 'shared' : 'private';
+  
+  const card = document.createElement('div');
+  card.className = `note-card ${typeClass}`;
+  card.style.animationDelay = (index * 0.04) + 's';
+  
+  const typeIcon = note.is_shared ? 'users' : 'lock';
+  const authorInitial = note.author_name ? note.author_name.charAt(0).toUpperCase() : '؟';
+  const authorName = note.is_shared ? escapeHtml(note.author_name) : 'أنت';
+  
+  card.innerHTML = `
+    <div class="note-header">
+      <div class="note-header-left">
+        <div class="note-type-badge ${typeClass}">
+          <i data-lucide="${typeIcon}"></i>
+        </div>
+        <div class="note-title">${escapeHtml(note.title)}</div>
+      </div>
+      ${canDelete ? `
+        <button class="note-delete-btn" onclick="deleteNote('${note.id}')" title="حذف">
+          <i data-lucide="trash-2"></i>
+        </button>
+      ` : ''}
+    </div>
+    
+    <div class="note-content">${escapeHtml(note.content)}</div>
+    
+    <div class="note-footer">
+      <div class="note-meta">
+        <div class="note-meta-item">
+          <i data-lucide="clock"></i>
+          <span>${formatNoteDate(note.created_at)}</span>
+        </div>
+      </div>
+      
+      <div class="note-author">
+        <div class="note-author-avatar">${authorInitial}</div>
+        <span class="note-author-name">${authorName}</span>
+      </div>
+    </div>
+  `;
+  
+  return card;
+}
+
+    // ============================================
+    // Escape HTML
+    // ============================================
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ============================================
+    // تنسيق التاريخ
+    // ============================================
+    function formatNoteDate(dateString) {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+      
+      if (diffMins < 1) return 'الآن';
+      if (diffMins < 60) return `منذ ${diffMins} دقيقة`;
+      if (diffHours < 24) return `منذ ${diffHours} ساعة`;
+      if (diffDays < 7) return `منذ ${diffDays} يوم`;
+      
+      return date.toLocaleDateString('ar-EG', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+
+    // ============================================
+    // Modal - إضافة ملاحظة
+    // ============================================
+    function openAddModal() {
+      document.getElementById('noteTitle').value = '';
+      document.getElementById('noteContent').value = '';
+      selectNoteType('private');
+      
+      document.getElementById('addModal').classList.add('active');
+      document.body.style.overflow = 'hidden';
+      
+      setTimeout(() => {
+        document.getElementById('noteTitle').focus();
+      }, 300);
+      
+      lucide.createIcons();
+    }
+
+    function closeAddModal() {
+      document.getElementById('addModal').classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    function closeAddModalIfOutside(event) {
+      if (event.target.id === 'addModal') closeAddModal();
+    }
+
+    function selectNoteType(type) {
+      notesState.currentType = type;
+      
+      document.querySelectorAll('.type-option').forEach(opt => {
+        opt.classList.toggle('selected', opt.dataset.type === type);
+      });
+      
+      lucide.createIcons();
+    }
+
+    // ============================================
+    // حفظ الملاحظة
+    // ============================================
+    async function saveNote() {
+      const title = document.getElementById('noteTitle').value.trim();
+      const content = document.getElementById('noteContent').value.trim();
+      
+      if (!title) {
+        showToast('العنوان مطلوب', 'error');
+        return;
+      }
+      
+      if (!content) {
+        showToast('المحتوى مطلوب', 'error');
+        return;
+      }
+      
+      const saveBtn = document.getElementById('saveBtn');
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<i data-lucide="loader-2" class="spin" style="width: 17px; height: 17px;"></i> جاري الحفظ...';
+      lucide.createIcons();
+      
+      try {
+        const displayName = notesState.currentProfile?.full_name 
+          || notesState.currentUser.email?.split('@')[0] 
+          || 'مستخدم';
+        
+        const { error } = await supabaseClient
+          .from('notes')
+          .insert({
+            user_id: notesState.currentUser.id,
+            author_name: displayName,
+            title: title,
+            content: content,
+            is_shared: notesState.currentType === 'shared'
+          });
+        
+        if (error) throw error;
+        
+        showToast(notesState.currentType === 'shared' 
+          ? 'تم حفظ الملاحظة ونشرها للزملاء' 
+          : 'تم حفظ ملاحظتك الخاصة');
+        
+        closeAddModal();
+        
+        // إعادة التحميل
+        await Promise.all([loadMyNotes(), loadSharedNotes()]);
+        
+        // التبديل للتبويب المناسب
+        if (notesState.currentType === 'shared') {
+          switchNotesTab('shared');
+        } else {
+          switchNotesTab('mine');
+        }
+        
+      } catch (err) {
+        console.error('saveNote error:', err);
+        showToast('تعذّر حفظ الملاحظة: ' + err.message, 'error');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i data-lucide="check"></i> حفظ الملاحظة';
+        lucide.createIcons();
+      }
+    }
+
+    // ============================================
+    // حذف الملاحظة
+    // ============================================
+    async function deleteNote(noteId) {
+      if (!confirm('هل أنت متأكد من حذف هذه الملاحظة؟\n\nلا يمكن التراجع.')) return;
+      
+      try {
+        const { error } = await supabaseClient
+          .from('notes')
+          .delete()
+          .eq('id', noteId);
+        
+        if (error) throw error;
+        
+        showToast('تم حذف الملاحظة');
+        
+        // إعادة التحميل
+        await Promise.all([loadMyNotes(), loadSharedNotes()]);
+        renderNotes();
+        
+      } catch (err) {
+        console.error('deleteNote error:', err);
+        showToast('تعذّر حذف الملاحظة', 'error');
+      }
+    }
+
+    // ============================================
+    // ESC لإغلاق المودال
+    // ============================================
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const modal = document.getElementById('addModal');
+        if (modal && modal.classList.contains('active')) {
+          closeAddModal();
+        }
+      }
+    });
+
+    // ============================================
+    // التشغيل الأولي
+    // ============================================
+    async function init() {
+      const ok = await loadUser();
+      if (!ok) return;
+      
+      await Promise.all([
+        loadMyNotes(),
+        loadSharedNotes()
+      ]);
+      
+      renderNotes();
+      
+      console.log('✅ notes.html loaded');
+    }
+
+    init();
+  </script>
+</body>
+</html>
