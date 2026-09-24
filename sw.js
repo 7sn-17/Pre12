@@ -1,9 +1,9 @@
 // ============================================
 // sw.js — Service Worker للمنصة الطبية
-// Version 2.0.0 — Cache ذكي مع ملفات منفصلة
+// Version 2.1.0 — Cache ذكي مع ملفات منفصلة
 // ============================================
 
-const CACHE_VERSION = 'v2.0.0';
+const CACHE_VERSION = 'v2.1.0';
 const STATIC_CACHE = `medfav-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `medfav-runtime-${CACHE_VERSION}`;
 const PDF_CACHE = `medfav-pdf-${CACHE_VERSION}`;
@@ -16,7 +16,8 @@ const PRECACHE_URLS = [
   '/',
   '/index.html',
   '/login.html',
-  '/subject.html',
+ './confirm.html',
+ '/subject.html',
   '/viewer.html',
   '/upload.html',
   '/notes.html',

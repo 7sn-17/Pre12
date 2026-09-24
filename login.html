@@ -13,13 +13,14 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="theme-init.js"></script>
-  <!-- PWA Meta Tags -->
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="المنصة الطبية">
-<meta name="mobile-web-app-capable" content="yes">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-512.png">
+  
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="المنصة الطبية">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-512.png">
+  
   <style>
     :root {
       --bg-main: #06110d;
@@ -36,6 +37,7 @@
       --danger: #ef4444;
       --warning: #f59e0b;
       --success: #10b981;
+      --info: #3b82f6;
       --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       --transition-smooth: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     }
@@ -456,6 +458,7 @@
     }
 
     .forgot-link:hover { color: #ffffff; text-decoration: underline; }
+    .forgot-link:disabled { opacity: 0.5; cursor: not-allowed; }
 
     .forgot-link .spin {
       width: 12px;
@@ -584,6 +587,271 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
+    /* شاشة التحقق من البريد */
+    .verify-view {
+      text-align: center;
+      padding: 4px 0;
+    }
+
+    .verify-icon-wrapper {
+      position: relative;
+      width: 110px;
+      height: 110px;
+      margin: 0 auto 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .verify-icon-wrapper::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 34px;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.15));
+      border: 2px solid rgba(59, 130, 246, 0.5);
+      animation: pulseBlue 3s ease-in-out infinite;
+    }
+
+    @keyframes pulseBlue {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+      50% { transform: scale(1.03); box-shadow: 0 0 0 12px rgba(59, 130, 246, 0); }
+    }
+
+    .verify-icon {
+      position: relative;
+      z-index: 1;
+      width: 70px;
+      height: 70px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #93c5fd;
+      box-shadow: 0 8px 32px rgba(59, 130, 246, 0.35);
+    }
+
+    .verify-icon i { width: 38px; height: 38px; }
+
+    .verify-title {
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: var(--text-primary);
+      margin-bottom: 10px;
+    }
+
+    .verify-subtitle {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      margin-bottom: 24px;
+    }
+
+    /* صندوق البريد */
+    .email-display {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+      background: rgba(6, 17, 13, 0.6);
+      border: 1px solid var(--border-card);
+      border-radius: 14px;
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .email-display-text {
+      flex: 1;
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      text-align: right;
+      direction: ltr;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .email-copy-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: var(--accent-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      flex-shrink: 0;
+      font-family: inherit;
+    }
+
+    .email-copy-btn:hover {
+      background: rgba(16, 185, 129, 0.25);
+      transform: scale(1.05);
+    }
+
+    .email-copy-btn.copied {
+      background: var(--accent-emerald);
+      color: white;
+    }
+
+    .email-copy-btn i { width: 16px; height: 16px; }
+
+    /* الخطوات */
+    .steps-list {
+      text-align: right;
+      background: rgba(6, 17, 13, 0.4);
+      border: 1px solid var(--border-card);
+      border-radius: 16px;
+      padding: 16px 18px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .step-number {
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px var(--accent-glow);
+    }
+
+    .step-text { padding-top: 3px; }
+
+    /* أزرار التحقق */
+    .verify-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .action-btn {
+      padding: 13px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border-card);
+      background: rgba(6, 17, 13, 0.6);
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all var(--transition-fast);
+      text-decoration: none;
+    }
+
+    .action-btn:hover {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: var(--accent-emerald);
+      color: var(--accent-light);
+      transform: translateY(-2px);
+    }
+
+    .action-btn.primary {
+      background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+      border-color: transparent;
+      color: white;
+      box-shadow: 0 6px 16px var(--accent-glow);
+    }
+
+    .action-btn.primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px var(--accent-glow-strong);
+      color: white;
+    }
+
+    .action-btn i { width: 16px; height: 16px; }
+
+    /* زر إعادة الإرسال */
+    .resend-section {
+      text-align: center;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-card);
+    }
+
+    .resend-text {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .resend-btn {
+      padding: 10px 20px;
+      border-radius: 12px;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #60a5fa;
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .resend-btn:hover:not(:disabled) {
+      background: rgba(59, 130, 246, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .resend-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .resend-btn i { width: 14px; height: 14px; }
+
+    /* تحذير أسفل */
+    .warning-box {
+      margin-top: 18px;
+      padding: 12px 14px;
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      border-radius: 12px;
+      font-size: 0.78rem;
+      color: #fbbf24;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      line-height: 1.55;
+      text-align: right;
+    }
+
+    .warning-box i {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
     /* Toast */
     .toast {
       position: fixed;
@@ -622,6 +890,10 @@
       .auth-subtitle { font-size: 0.85rem; }
       .brand-icon { width: 46px; height: 46px; }
       .brand-text { font-size: 1rem; }
+      .verify-icon-wrapper { width: 96px; height: 96px; }
+      .verify-icon { width: 62px; height: 62px; }
+      .verify-icon i { width: 32px; height: 32px; }
+      .verify-title { font-size: 1.3rem; }
     }
 
     /* الوضع النهاري */
@@ -654,6 +926,12 @@
     [data-theme="light"] .input-field {
       background: rgba(255, 255, 255, 0.9);
       color: var(--text-primary);
+    }
+
+    [data-theme="light"] .email-display,
+    [data-theme="light"] .steps-list,
+    [data-theme="light"] .action-btn {
+      background: rgba(255, 255, 255, 0.7);
     }
   </style>
 </head>
@@ -850,6 +1128,76 @@
         </div>
       </div>
 
+      <!-- ========== شاشة التحقق من البريد ========== -->
+      <div id="verifyView" class="view-section hidden">
+        <div class="verify-view">
+          
+          <div class="verify-icon-wrapper">
+            <div class="verify-icon">
+              <i data-lucide="mail-check"></i>
+            </div>
+          </div>
+
+          <h1 class="verify-title">تحقق من بريدك الإلكتروني</h1>
+          <p class="verify-subtitle">
+            أرسلنا رابط التأكيد إلى بريدك.<br>
+            افتح الرسالة واضغط على الرابط لتفعيل حسابك.
+          </p>
+
+          <!-- عرض البريد -->
+          <div class="email-display">
+            <span class="email-display-text" id="verifyEmailText">user@example.com</span>
+            <button class="email-copy-btn" id="copyEmailBtn" onclick="copyEmail()" title="نسخ البريد">
+              <i data-lucide="copy"></i>
+            </button>
+          </div>
+
+          <!-- الخطوات -->
+          <div class="steps-list">
+            <div class="step-item">
+              <span class="step-number">1</span>
+              <span class="step-text">افتح تطبيق البريد الإلكتروني</span>
+            </div>
+            <div class="step-item">
+              <span class="step-number">2</span>
+              <span class="step-text">ابحث عن رسالة من "المنصة الطبية"</span>
+            </div>
+            <div class="step-item">
+              <span class="step-number">3</span>
+              <span class="step-text">اضغط على زر "تأكيد البريد الإلكتروني"</span>
+            </div>
+          </div>
+
+          <!-- الأزرار -->
+          <div class="verify-actions">
+            <a href="https://mail.google.com" target="_blank" class="action-btn primary">
+              <i data-lucide="mail"></i>
+              <span>فتح Gmail</span>
+            </a>
+            <button class="action-btn" onclick="editEmail()">
+              <i data-lucide="pencil"></i>
+              <span>تعديل البريد</span>
+            </button>
+          </div>
+
+          <!-- إعادة الإرسال -->
+          <div class="resend-section">
+            <div class="resend-text">لم يصلك البريد؟</div>
+            <button class="resend-btn" id="resendBtn" onclick="handleResend()">
+              <i data-lucide="refresh-cw"></i>
+              <span id="resendBtnText">إعادة الإرسال</span>
+            </button>
+          </div>
+
+          <!-- تحذير -->
+          <div class="warning-box">
+            <i data-lucide="alert-triangle"></i>
+            <span>إذا كان البريد الذي أدخلته خاطئاً، لن تتمكن من تأكيد حسابك. اضغط "تعديل البريد" لتصحيحه.</span>
+          </div>
+
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -859,6 +1207,15 @@
   
   <script>
     lucide.createIcons();
+
+    // ============================================
+    // الحالة العامة
+    // ============================================
+    const state = {
+      pendingEmail: '',
+      resendCooldown: null,
+      isResending: false
+    };
 
     // ============================================
     // الخلفية الحيّة
@@ -906,22 +1263,28 @@
     // التبديل بين الأقسام
     // ============================================
     function switchTab(tab) {
-      const loginView = document.getElementById('loginView');
-      const registerView = document.getElementById('registerView');
-      const successBanner = document.getElementById('successBanner');
+      const views = {
+        login: document.getElementById('loginView'),
+        register: document.getElementById('registerView'),
+        verify: document.getElementById('verifyView')
+      };
 
-      successBanner.classList.remove('visible');
+      Object.values(views).forEach(v => v.classList.add('hidden'));
 
-      if (tab === 'register') {
-        loginView.classList.add('hidden');
-        registerView.classList.remove('hidden', 'fade-in');
-        void registerView.offsetWidth;
-        registerView.classList.add('fade-in');
-      } else {
-        registerView.classList.add('hidden');
-        loginView.classList.remove('hidden', 'fade-in');
-        void loginView.offsetWidth;
-        loginView.classList.add('fade-in');
+      const target = views[tab];
+      if (!target) return;
+
+      target.classList.remove('hidden', 'fade-in');
+      void target.offsetWidth;
+      target.classList.add('fade-in');
+
+      // إخفاء رسالة النجاح عند التبديل
+      document.getElementById('successBanner').classList.remove('visible');
+
+      // إيقاف cooldown عند مغادرة شاشة التحقق
+      if (tab !== 'verify' && state.resendCooldown) {
+        clearInterval(state.resendCooldown);
+        state.resendCooldown = null;
       }
 
       lucide.createIcons();
@@ -939,13 +1302,6 @@
         ? '<i data-lucide="eye-off" style="width: 18px; height: 18px;"></i>' 
         : '<i data-lucide="eye" style="width: 18px; height: 18px;"></i>';
       lucide.createIcons();
-    }
-
-    // ============================================
-    // التحقق من البريد
-    // ============================================
-    function isValidEmail(email) {
-      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     }
 
     // ============================================
@@ -1003,6 +1359,8 @@
     function showError(fieldId, errorId, show = true) {
       const field = document.getElementById(fieldId);
       const error = document.getElementById(errorId);
+      if (!field || !error) return;
+      
       if (show) {
         field.classList.add('error');
         error.classList.add('visible');
@@ -1024,7 +1382,7 @@
     });
 
     // ============================================
-    // Toast — بدون إيموجي
+    // Toast
     // ============================================
     function showToast(message, type = 'success') {
       const existing = document.querySelector('.toast');
@@ -1072,7 +1430,7 @@
 
       let hasError = false;
       
-      if (!isValidEmail(email)) {
+      if (!isValidEmailFormat(email)) {
         showError('loginEmail', 'loginEmailError');
         hasError = true;
       }
@@ -1110,7 +1468,7 @@
     });
 
     // ============================================
-    // إنشاء حساب
+    // إنشاء حساب — النسخة القوية
     // ============================================
     document.getElementById('registerForm').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -1126,7 +1484,7 @@
         showError('registerName', 'registerNameError');
         hasError = true;
       }
-      if (!isValidEmail(email)) {
+      if (!isValidEmailFormat(email)) {
         showError('registerEmail', 'registerEmailError');
         hasError = true;
       }
@@ -1148,17 +1506,23 @@
       const result = await signUp(email, password, name);
 
       if (result.success) {
-        showToast('تم إنشاء الحساب بنجاح');
+        // حفظ البريد للتحقق
+        state.pendingEmail = result.email || email;
         
         if (result.session) {
+          // حالة نادرة: Confirm Email مطفي
+          showToast('تم إنشاء الحساب بنجاح');
           setTimeout(() => {
             window.location.href = 'index.html';
           }, 800);
         } else {
-          showSuccess('يرجى التحقق من بريدك الإلكتروني لتأكيد الحساب');
-          btn.classList.remove('loading');
-          btn.disabled = false;
-          setTimeout(() => switchTab('login'), 2500);
+          // الحالة الطبيعية: يحتاج تأكيد
+          showToast('تم إنشاء حسابك — تحقق من بريدك');
+          
+          // الانتقال لشاشة التحقق
+          setTimeout(() => {
+            showVerifyScreen(state.pendingEmail);
+          }, 600);
         }
       } else {
         btn.classList.remove('loading');
@@ -1166,6 +1530,141 @@
         showToast(result.error, 'error');
       }
     });
+
+    // ============================================
+    // شاشة التحقق من البريد
+    // ============================================
+    function showVerifyScreen(email) {
+      state.pendingEmail = email;
+      document.getElementById('verifyEmailText').textContent = email;
+      
+      switchTab('verify');
+      
+      // إعادة تعيين زر إعادة الإرسال
+      resetResendButton();
+    }
+
+    // ============================================
+    // نسخ البريد
+    // ============================================
+    async function copyEmail() {
+      try {
+        await navigator.clipboard.writeText(state.pendingEmail);
+        
+        const btn = document.getElementById('copyEmailBtn');
+        btn.classList.add('copied');
+        btn.innerHTML = '<i data-lucide="check" style="width: 16px; height: 16px;"></i>';
+        lucide.createIcons();
+        
+        showToast('تم نسخ البريد');
+        
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.innerHTML = '<i data-lucide="copy" style="width: 16px; height: 16px;"></i>';
+          lucide.createIcons();
+        }, 2000);
+      } catch (err) {
+        console.error('Copy error:', err);
+        showToast('تعذّر النسخ', 'error');
+      }
+    }
+
+    // ============================================
+    // تعديل البريد
+    // ============================================
+    function editEmail() {
+      if (state.resendCooldown) {
+        clearInterval(state.resendCooldown);
+        state.resendCooldown = null;
+      }
+      
+      // العودة للنموذج مع البريد محفوظاً
+      document.getElementById('registerEmail').value = state.pendingEmail;
+      document.getElementById('registerName').value = '';
+      document.getElementById('registerPassword').value = '';
+      document.getElementById('registerConfirm').value = '';
+      
+      switchTab('register');
+      document.getElementById('registerEmail').focus();
+      document.getElementById('registerEmail').select();
+    }
+
+    // ============================================
+    // إعادة إرسال رابط التأكيد
+    // ============================================
+    async function handleResend() {
+      if (state.isResending) return;
+      if (!state.pendingEmail) {
+        showToast('لا يوجد بريد لإعادة الإرسال', 'error');
+        return;
+      }
+
+      // فحص Rate Limiter
+      const check = RateLimiter.canSend('resend_confirmation', 60000);
+      if (!check.allowed) {
+        showToast(`انتظر ${check.remaining} ثانية`, 'info');
+        return;
+      }
+
+      state.isResending = true;
+      const btn = document.getElementById('resendBtn');
+      const btnText = document.getElementById('resendBtnText');
+      
+      btn.disabled = true;
+      btnText.textContent = 'جاري الإرسال...';
+
+      const result = await resendConfirmation(state.pendingEmail);
+
+      if (result.success) {
+        RateLimiter.record('resend_confirmation');
+        showToast('تم إعادة إرسال الرابط');
+        startCooldown(60);
+      } else {
+        showToast(result.error, 'error');
+        btn.disabled = false;
+        btnText.textContent = 'إعادة الإرسال';
+      }
+      
+      state.isResending = false;
+    }
+
+    // ============================================
+    // مؤقت الانتظار
+    // ============================================
+    function startCooldown(seconds) {
+      const btn = document.getElementById('resendBtn');
+      const btnText = document.getElementById('resendBtnText');
+      
+      let remaining = seconds;
+      btn.disabled = true;
+      btnText.textContent = `إعادة الإرسال (${remaining} ث)`;
+
+      if (state.resendCooldown) clearInterval(state.resendCooldown);
+
+      state.resendCooldown = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) {
+          clearInterval(state.resendCooldown);
+          state.resendCooldown = null;
+          resetResendButton();
+        } else {
+          btnText.textContent = `إعادة الإرسال (${remaining} ث)`;
+        }
+      }, 1000);
+    }
+
+    function resetResendButton() {
+      const btn = document.getElementById('resendBtn');
+      const btnText = document.getElementById('resendBtnText');
+      
+      if (state.resendCooldown) {
+        clearInterval(state.resendCooldown);
+        state.resendCooldown = null;
+      }
+      
+      btn.disabled = false;
+      btnText.textContent = 'إعادة الإرسال';
+    }
 
     // ============================================
     // نسيت كلمة المرور — مع حالة تحميل
@@ -1182,9 +1681,16 @@
         return;
       }
       
-      if (!isValidEmail(email)) {
+      if (!isValidEmailFormat(email)) {
         showError('loginEmail', 'loginEmailError');
         showToast('البريد الإلكتروني غير صحيح', 'error');
+        return;
+      }
+
+      // فحص Rate Limiter (60 ثانية)
+      const check = RateLimiter.canSend('forgot_password', 60000);
+      if (!check.allowed) {
+        showToast(`انتظر ${check.remaining} ثانية قبل المحاولة مرة أخرى`, 'info');
         return;
       }
 
@@ -1201,13 +1707,13 @@
         const result = await resetPassword(email);
         
         if (result.success) {
+          RateLimiter.record('forgot_password');
           showToast('تم إرسال رابط الاستعادة إلى بريدك');
           showSuccess('تحقق من بريدك الإلكتروني — ستجد رابط إعادة تعيين كلمة المرور');
           
-          // إخفاء رسالة النجاح بعد 5 ثوان
           setTimeout(() => {
             document.getElementById('successBanner').classList.remove('visible');
-          }, 5000);
+          }, 6000);
         } else {
           showToast(result.error, 'error');
         }
@@ -1215,7 +1721,6 @@
         console.error('Forgot password error:', err);
         showToast('تعذّر إرسال الرابط — حاول لاحقاً', 'error');
       } finally {
-        // استعادة الزر
         btn.disabled = false;
         btn.style.opacity = '1';
         btn.innerHTML = originalHTML;
@@ -1232,31 +1737,20 @@
       }
     });
 
-    console.log('✅ login.html loaded');
+    console.log('✅ login.html v2.0 loaded');
   </script>
-<!-- PWA Service Worker -->
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js')
-        .then(reg => {
-          console.log('✅ SW registered:', reg.scope);
-          
-          // تحديث تلقائي عند وجود نسخة جديدة
-          reg.addEventListener('updatefound', () => {
-            const newWorker = reg.installing;
-            if (newWorker) {
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('🔄 New version available');
-                }
-              });
-            }
-          });
-        })
-        .catch(err => console.warn('⚠️ SW failed:', err));
-    });
-  }
-</script>
+  
+  <!-- PWA Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => {
+            console.log('✅ SW registered:', reg.scope);
+          })
+          .catch(err => console.warn('⚠️ SW failed:', err));
+      });
+    }
+  </script>
 </body>
 </html>
