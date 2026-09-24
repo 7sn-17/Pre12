@@ -1,9 +1,9 @@
 // ============================================
 // sw.js — Service Worker للمنصة الطبية
-// يعمل بدون إنترنت + تخزين ذكي + مزامنة
+// Version 1.2.0 — مع دعم كامل للعمل بدون إنترنت
 // ============================================
 
-const CACHE_VERSION = 'v1.0.0';
+const CACHE_VERSION = 'v1.2.0';
 const CACHE_NAME = `medfav-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `medfav-runtime-${CACHE_VERSION}`;
 const DATA_CACHE = `medfav-data-${CACHE_VERSION}`;
@@ -12,7 +12,7 @@ const DATA_CACHE = `medfav-data-${CACHE_VERSION}`;
 // الملفات التي تُخزّن فوراً عند التثبيت
 // ============================================
 const PRECACHE_URLS = [
-  // الصفحات الرئيسية
+  // الصفحات
   '/',
   '/index.html',
   '/login.html',
@@ -33,20 +33,23 @@ const PRECACHE_URLS = [
   '/files.js',
   '/supabase-config.js',
   '/theme-init.js',
+  '/pwa.js',
   
-  // ملفات manifest و الأيقونات
+  // manifest والأيقونات
   '/manifest.json',
   '/icon-512.png',
   
-  // مصادر خارجية أساسية
+  // مصادر خارجية
   'https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap',
   'https://unpkg.com/lucide@latest',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css'
+  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css',
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
 ];
 
 // ============================================
-// 1. تثبيت Service Worker
+// 1. تثبيت SW
 // ============================================
 self.addEventListener('install', (event) => {
   console.log('🔧 SW: Installing...');
@@ -56,7 +59,6 @@ self.addEventListener('install', (event) => {
       .then((cache) => {
         console.log('📦 SW: Pre-caching files...');
         
-        // نحاول تخزين كل ملف على حدة (لا نوقف العملية إذا فشل ملف واحد)
         return Promise.allSettled(
           PRECACHE_URLS.map(url => {
             return cache.add(url).catch(err => {
@@ -66,18 +68,14 @@ self.addEventListener('install', (event) => {
         );
       })
       .then(() => {
-        console.log('✅ SW: Installed successfully');
-        // تفعيل SW الجديد فوراً (بدون انتظار إغلاق الصفحات)
+        console.log('✅ SW: Installed');
         return self.skipWaiting();
-      })
-      .catch((err) => {
-        console.error('❌ SW: Install failed:', err);
       })
   );
 });
 
 // ============================================
-// 2. تنشيط Service Worker
+// 2. تنشيط SW
 // ============================================
 self.addEventListener('activate', (event) => {
   console.log('🔧 SW: Activating...');
@@ -85,7 +83,6 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
       .then((cacheNames) => {
-        // احذف الكاشات القديمة
         return Promise.all(
           cacheNames
             .filter((name) => {
@@ -102,87 +99,111 @@ self.addEventListener('activate', (event) => {
       })
       .then(() => {
         console.log('✅ SW: Activated');
-        // السيطرة على كل الصفحات المفتوحة
         return self.clients.claim();
       })
   );
 });
 
 // ============================================
-// 3. اعتراض الطلبات (Fetch)
+// 3. اعتراض الطلبات
 // ============================================
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // ============================================
-  // تجاهل الطلبات غير المدعومة
-  // ============================================
-  if (request.method !== 'GET') {
-    return;
-  }
+  if (request.method !== 'GET') return;
+  if (url.protocol === 'chrome-extension:') return;
 
-  // تجاهل طلبات Chrome extensions
-  if (url.protocol === 'chrome-extension:') {
-    return;
-  }
-
-  // ============================================
-  // استراتيجية خاصة لطلبات Supabase
-  // Network-First مع Timeout
-  // ============================================
+  // Supabase
   if (url.hostname.includes('supabase.co')) {
     event.respondWith(handleSupabaseRequest(request));
     return;
   }
 
-  // ============================================
-  // استراتيجية خاصة لملفات PDF من Supabase Storage
-  // Cache-First (لأنها ثابتة)
-  // ============================================
-  if (url.hostname.includes('supabase.co') && 
-      (url.pathname.includes('/storage/') || url.pathname.endsWith('.pdf'))) {
-    event.respondWith(handlePDFRequest(request));
-    return;
-  }
-
-  // ============================================
-  // استراتيجية للملفات المحلية (Cache-First)
-  // ============================================
+  // ملفات محلية
   if (url.origin === self.location.origin) {
     event.respondWith(handleLocalRequest(request));
     return;
   }
 
-  // ============================================
-  // استراتيجية للملفات الخارجية (CDN, Fonts)
-  // Cache-First مع Background Update
-  // ============================================
+  // ملفات خارجية
   event.respondWith(handleExternalRequest(request));
 });
 
 // ============================================
-// 4. استراتيجيات المعالجة
+// 4. استراتيجيات
 // ============================================
 
 /**
- * معالجة الطلبات المحلية (Cache-First)
- * مثالي: index.html, auth.js, إلخ
+ * ⭐ أهم تعديل: Supabase — Offline-First!
+ * إذا لا يوجد إنترنت → Cache فوراً (بدون انتظار)
+ */
+async function handleSupabaseRequest(request) {
+  // ⭐ 1. إذا لم يوجد إنترنت — استخدم الكاش فوراً
+  if (!navigator.onLine) {
+    const cachedResponse = await caches.match(request, { ignoreSearch: true });
+    if (cachedResponse) {
+      console.log('📦 SW: Offline — from cache');
+      return cachedResponse;
+    }
+    
+    // لا يوجد كاش — أرجع مصفوفة فارغة (بدل خطأ)
+    return new Response(
+      JSON.stringify([]),
+      {
+        status: 200,
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Offline': 'true'
+        }
+      }
+    );
+  }
+  
+  // ⭐ 2. متصل — حاول الشبكة
+  try {
+    const networkResponse = await fetchWithTimeout(request, 5000);
+    
+    if (networkResponse && networkResponse.status === 200) {
+      const cache = await caches.open(DATA_CACHE);
+      cache.put(request, networkResponse.clone());
+      return networkResponse;
+    }
+    
+    throw new Error('Non-200 response');
+  } catch (err) {
+    // فشل — حاول الكاش
+    const cachedResponse = await caches.match(request, { ignoreSearch: true });
+    if (cachedResponse) {
+      console.log('📦 SW: Supabase fallback to cache');
+      return cachedResponse;
+    }
+    
+    return new Response(
+      JSON.stringify([]),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', 'X-Offline': 'true' }
+      }
+    );
+  }
+}
+
+/**
+ * الملفات المحلية
  */
 async function handleLocalRequest(request) {
   try {
-    // 1. ابحث في الكاش أولاً
-    const cachedResponse = await caches.match(request);
+    // ابحث في الكاش
+    let cachedResponse = await caches.match(request, { ignoreSearch: true });
+    
     if (cachedResponse) {
-      // حدّث في الخلفية (Stale-While-Revalidate)
       updateCacheInBackground(request);
       return cachedResponse;
     }
 
-    // 2. اجلب من الشبكة
     const networkResponse = await fetch(request);
     
-    // 3. خزّن في الكاش
     if (networkResponse && networkResponse.status === 200) {
       const cache = await caches.open(CACHE_NAME);
       cache.put(request, networkResponse.clone());
@@ -190,14 +211,18 @@ async function handleLocalRequest(request) {
     
     return networkResponse;
   } catch (err) {
-    console.warn('🌐 SW: Local request failed:', request.url);
+    console.warn('🌐 SW: Local failed:', request.url);
     
-    // فشل الاتصال — حاول الكاش
-    const cachedResponse = await caches.match(request);
+    // حاول بدون query
+    const urlWithoutQuery = request.url.split('?')[0];
+    let cachedResponse = await caches.match(urlWithoutQuery, { ignoreSearch: true });
+    
     if (cachedResponse) return cachedResponse;
     
-    // إذا كانت صفحة HTML — اعرض صفحة offline
+    // حاول index.html
     if (request.headers.get('accept')?.includes('text/html')) {
+      const index = await caches.match('/index.html');
+      if (index) return index;
       return caches.match('/offline.html');
     }
     
@@ -206,94 +231,19 @@ async function handleLocalRequest(request) {
 }
 
 /**
- * معالجة طلبات Supabase (Network-First with Timeout)
- * مهم: لأن البيانات قد تتغير
- */
-async function handleSupabaseRequest(request) {
-  try {
-    // 1. حاول الشبكة أولاً (مع timeout 5 ثوان)
-    const networkResponse = await fetchWithTimeout(request, 5000);
-    
-    if (networkResponse && networkResponse.status === 200) {
-      // خزّن الاستجابة في كاش البيانات
-      const cache = await caches.open(DATA_CACHE);
-      cache.put(request, networkResponse.clone());
-    }
-    
-    return networkResponse;
-  } catch (err) {
-    console.warn('🌐 SW: Supabase request failed, trying cache:', request.url);
-    
-    // 2. الشبكة فشلت — استخدم الكاش
-    const cachedResponse = await caches.match(request);
-    if (cachedResponse) {
-      console.log('📦 SW: Serving from cache:', request.url);
-      return cachedResponse;
-    }
-    
-    // 3. لا يوجد كاش — أرجع استجابة فارغة (بدل الخطأ)
-    return new Response(
-      JSON.stringify({ 
-        error: 'offline', 
-        message: 'لا يوجد اتصال بالإنترنت' 
-      }),
-      {
-        status: 503,
-        statusText: 'Offline',
-        headers: { 'Content-Type': 'application/json' }
-      }
-    );
-  }
-}
-
-/**
- * معالجة ملفات PDF (Cache-First)
- * لأنها ثابتة — نخزنها للأبد
- */
-async function handlePDFRequest(request) {
-  try {
-    // 1. ابحث في كل الكاشات
-    const cachedResponse = await caches.match(request);
-    if (cachedResponse) {
-      console.log('📦 SW: PDF from cache');
-      return cachedResponse;
-    }
-
-    // 2. اجلب من الشبكة
-    const networkResponse = await fetch(request);
-    
-    // 3. خزّن في كاش البيانات
-    if (networkResponse && networkResponse.status === 200) {
-      const cache = await caches.open(DATA_CACHE);
-      cache.put(request, networkResponse.clone());
-    }
-    
-    return networkResponse;
-  } catch (err) {
-    console.warn('🌐 SW: PDF request failed');
-    throw err;
-  }
-}
-
-/**
- * معالجة الملفات الخارجية (CDN, Fonts)
- * Cache-First مع Background Update
+ * الملفات الخارجية
  */
 async function handleExternalRequest(request) {
   try {
-    // 1. ابحث في الكاش
-    const cachedResponse = await caches.match(request);
+    let cachedResponse = await caches.match(request, { ignoreSearch: true });
     
     if (cachedResponse) {
-      // حدّث في الخلفية
       updateCacheInBackground(request);
       return cachedResponse;
     }
 
-    // 2. اجلب من الشبكة
     const networkResponse = await fetch(request);
     
-    // 3. خزّن في كاش Runtime
     if (networkResponse && networkResponse.status === 200) {
       const cache = await caches.open(RUNTIME_CACHE);
       cache.put(request, networkResponse.clone());
@@ -301,23 +251,15 @@ async function handleExternalRequest(request) {
     
     return networkResponse;
   } catch (err) {
-    console.warn('🌐 SW: External request failed:', request.url);
-    
-    // حاول الكاش
-    const cachedResponse = await caches.match(request);
+    const cachedResponse = await caches.match(request, { ignoreSearch: true });
     if (cachedResponse) return cachedResponse;
-    
     throw err;
   }
 }
 
 // ============================================
-// 5. دوال مساعدة
+// 5. Helpers
 // ============================================
-
-/**
- * Fetch مع Timeout
- */
 function fetchWithTimeout(request, timeout) {
   return new Promise((resolve, reject) => {
     const timeoutId = setTimeout(() => {
@@ -336,9 +278,6 @@ function fetchWithTimeout(request, timeout) {
   });
 }
 
-/**
- * تحديث الكاش في الخلفية (بدون انتظار)
- */
 function updateCacheInBackground(request) {
   fetch(request)
     .then((response) => {
@@ -348,78 +287,18 @@ function updateCacheInBackground(request) {
         });
       }
     })
-    .catch(() => {
-      // تجاهل الأخطاء
-    });
+    .catch(() => {});
 }
 
 // ============================================
-// 6. مزامنة في الخلفية (Background Sync)
-// ============================================
-self.addEventListener('sync', (event) => {
-  console.log('🔄 SW: Background sync triggered:', event.tag);
-  
-  if (event.tag === 'sync-favorites') {
-    event.waitUntil(syncFavorites());
-  }
-});
-
-async function syncFavorites() {
-  try {
-    // سيتم استدعاؤها لاحقاً عند إضافة ميزة المزامنة
-    console.log('🔄 SW: Syncing favorites...');
-  } catch (err) {
-    console.error('❌ SW: Sync failed:', err);
-  }
-}
-
-// ============================================
-// 7. رسائل من الصفحات الرئيسية
+// 6. الرسائل
 // ============================================
 self.addEventListener('message', (event) => {
-  const { type, data } = event.data || {};
+  const { type } = event.data || {};
   
-  switch (type) {
-    case 'SKIP_WAITING':
-      self.skipWaiting();
-      break;
-      
-    case 'CLEAR_CACHE':
-      clearAllCaches().then(() => {
-        event.ports[0]?.postMessage({ success: true });
-      });
-      break;
-      
-    case 'CACHE_URLS':
-      cacheUrls(data?.urls || []).then(() => {
-        event.ports[0]?.postMessage({ success: true });
-      });
-      break;
-      
-    default:
-      console.log('📩 SW: Unknown message:', type);
+  if (type === 'SKIP_WAITING') {
+    self.skipWaiting();
   }
 });
 
-async function clearAllCaches() {
-  const cacheNames = await caches.keys();
-  return Promise.all(
-    cacheNames.map(name => caches.delete(name))
-  );
-}
-
-async function cacheUrls(urls) {
-  const cache = await caches.open(RUNTIME_CACHE);
-  return Promise.allSettled(
-    urls.map(url => cache.add(url).catch(() => {}))
-  );
-}
-
-// ============================================
-// 8. تحديث فوري عند وجود نسخة جديدة
-// ============================================
-self.addEventListener('activate', () => {
-  console.log('🎉 SW: Ready for offline!');
-});
-
-console.log('✅ sw.js loaded');
+console.log('✅ sw.js v1.2.0 loaded — offline ready');

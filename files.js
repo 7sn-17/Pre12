@@ -1,11 +1,53 @@
 // ============================================
 // files.js — مكتبة جلب الملفات والمواد
+// Version 1.1.0 — مع Cache للعمل بدون إنترنت
 // ============================================
 
 // ============================================
-// 1. جلب جميع المواد
+// Cache Helper — يستخدم localStorage
+// ============================================
+const DATA_CACHE_PREFIX = 'medfav_data_';
+
+function saveDataCache(key, data) {
+  try {
+    localStorage.setItem(
+      DATA_CACHE_PREFIX + key,
+      JSON.stringify({ data, time: Date.now() })
+    );
+  } catch (err) {
+    console.warn('saveDataCache error:', err);
+  }
+}
+
+function getDataCache(key) {
+  try {
+    const cached = localStorage.getItem(DATA_CACHE_PREFIX + key);
+    if (!cached) return null;
+    const parsed = JSON.parse(cached);
+    return parsed.data;
+  } catch (err) {
+    return null;
+  }
+}
+
+function isOnline() {
+  return navigator.onLine;
+}
+
+// ============================================
+// 1. جلب جميع المواد — مع Cache
 // ============================================
 async function fetchSubjects() {
+  // ⭐ 1. إذا لا يوجد إنترنت — اقرأ من Cache فوراً
+  if (!isOnline()) {
+    const cached = getDataCache('subjects');
+    if (cached) {
+      console.log('📦 Subjects from cache (offline)');
+      return cached;
+    }
+    return [];
+  }
+  
   try {
     const { data, error } = await supabaseClient
       .from('subjects')
@@ -13,10 +55,18 @@ async function fetchSubjects() {
       .order('sort_order', { ascending: true });
     
     if (error) throw error;
+    
+    // ⭐ 2. خزّن في Cache
+    if (data && data.length > 0) {
+      saveDataCache('subjects', data);
+    }
+    
     return data || [];
   } catch (err) {
-    console.error('fetchSubjects error:', err);
-    return [];
+    console.warn('fetchSubjects error:', err.message);
+    
+    // ⭐ 3. فشل — اقرأ من Cache
+    return getDataCache('subjects') || [];
   }
 }
 
@@ -24,8 +74,15 @@ async function fetchSubjects() {
 // 2. جلب ملفات مادة محددة
 // ============================================
 async function fetchFilesBySubject(subjectSlug) {
+  const cacheKey = `subject_files_${subjectSlug}`;
+  
+  if (!isOnline()) {
+    const cached = getDataCache(cacheKey);
+    if (cached) return cached;
+    return [];
+  }
+  
   try {
-    // أولاً: احصل على id المادة
     const { data: subject, error: subError } = await supabaseClient
       .from('subjects')
       .select('id')
@@ -34,7 +91,6 @@ async function fetchFilesBySubject(subjectSlug) {
     
     if (subError) throw subError;
     
-    // ثم: احصل على ملفاتها
     const { data: files, error: filesError } = await supabaseClient
       .from('files')
       .select('*')
@@ -43,17 +99,33 @@ async function fetchFilesBySubject(subjectSlug) {
       .order('created_at', { ascending: false });
     
     if (filesError) throw filesError;
+    
+    if (files && files.length > 0) {
+      saveDataCache(cacheKey, files);
+    }
+    
     return files || [];
   } catch (err) {
-    console.error('fetchFilesBySubject error:', err);
-    return [];
+    console.warn('fetchFilesBySubject error:', err.message);
+    return getDataCache(cacheKey) || [];
   }
 }
 
 // ============================================
-// 3. جلب جميع الملفات (لأحدث الملفات)
+// 3. جلب أحدث الملفات
 // ============================================
 async function fetchRecentFiles(limit = 10) {
+  const cacheKey = `recent_files_${limit}`;
+  
+  if (!isOnline()) {
+    const cached = getDataCache(cacheKey);
+    if (cached) {
+      console.log('📦 Recent files from cache');
+      return cached;
+    }
+    return [];
+  }
+  
   try {
     const { data, error } = await supabaseClient
       .from('files')
@@ -71,30 +143,37 @@ async function fetchRecentFiles(limit = 10) {
       .limit(limit);
     
     if (error) throw error;
+    
+    if (data && data.length > 0) {
+      saveDataCache(cacheKey, data);
+    }
+    
     return data || [];
   } catch (err) {
-    console.error('fetchRecentFiles error:', err);
-    return [];
+    console.warn('fetchRecentFiles error:', err.message);
+    return getDataCache(cacheKey) || [];
   }
 }
 
 // ============================================
-// 4. جلب إحصائيات عامة
+// 4. جلب الإحصائيات
 // ============================================
 async function fetchStats() {
+  if (!isOnline()) {
+    const cached = getDataCache('stats');
+    return cached || { subjects: 0, files: 0, recent: 0 };
+  }
+  
   try {
-    // عدد المواد
     const { count: subjectsCount } = await supabaseClient
       .from('subjects')
       .select('*', { count: 'exact', head: true });
     
-    // عدد الملفات
     const { count: filesCount } = await supabaseClient
       .from('files')
       .select('*', { count: 'exact', head: true })
       .eq('is_published', true);
     
-    // ملفات هذا الأسبوع
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     
@@ -104,21 +183,30 @@ async function fetchStats() {
       .eq('is_published', true)
       .gte('created_at', oneWeekAgo.toISOString());
     
-    return {
+    const stats = {
       subjects: subjectsCount || 0,
       files: filesCount || 0,
       recent: recentCount || 0
     };
+    
+    saveDataCache('stats', stats);
+    return stats;
   } catch (err) {
-    console.error('fetchStats error:', err);
-    return { subjects: 0, files: 0, recent: 0 };
+    console.warn('fetchStats error:', err.message);
+    return getDataCache('stats') || { subjects: 0, files: 0, recent: 0 };
   }
 }
 
 // ============================================
-// 5. جلب ملف واحد بالـ ID
+// 5. جلب ملف واحد
 // ============================================
 async function fetchFileById(fileId) {
+  const cacheKey = `file_${fileId}`;
+  
+  if (!isOnline()) {
+    return getDataCache(cacheKey) || null;
+  }
+  
   try {
     const { data, error } = await supabaseClient
       .from('files')
@@ -135,49 +223,53 @@ async function fetchFileById(fileId) {
       .single();
     
     if (error) throw error;
+    
+    if (data) {
+      saveDataCache(cacheKey, data);
+    }
+    
     return data;
   } catch (err) {
-    console.error('fetchFileById error:', err);
-    return null;
+    console.warn('fetchFileById error:', err.message);
+    return getDataCache(cacheKey) || null;
   }
 }
 
 // ============================================
-// 6. زيادة عداد التحميلات
+// 6. زيادة العدادات (لا تعمل offline)
 // ============================================
 async function incrementFileDownloads(fileId) {
+  if (!isOnline()) return false;
+  
   try {
     const { error } = await supabaseClient.rpc('increment_downloads', {
       file_uuid: fileId
     });
-    
     if (error) throw error;
     return true;
   } catch (err) {
-    console.error('incrementDownloads error:', err);
+    console.warn('incrementDownloads error:', err.message);
     return false;
   }
 }
 
-// ============================================
-// 7. زيادة عداد المشاهدات
-// ============================================
 async function incrementFileViews(fileId) {
+  if (!isOnline()) return false;
+  
   try {
     const { error } = await supabaseClient.rpc('increment_views', {
       file_uuid: fileId
     });
-    
     if (error) throw error;
     return true;
   } catch (err) {
-    console.error('incrementViews error:', err);
+    console.warn('incrementViews error:', err.message);
     return false;
   }
 }
 
 // ============================================
-// 8. تنسيق حجم الملف
+// 7. تنسيق حجم الملف
 // ============================================
 function formatFileSize(bytes) {
   if (!bytes) return '0 KB';
@@ -190,7 +282,7 @@ function formatFileSize(bytes) {
 }
 
 // ============================================
-// 9. تنسيق التاريخ بالعربية
+// 8. تنسيق التاريخ
 // ============================================
 function formatDate(dateString) {
   const date = new Date(dateString);
@@ -214,7 +306,7 @@ function formatDate(dateString) {
 }
 
 // ============================================
-// 10. معلومات التصنيف
+// 9. معلومات التصنيف
 // ============================================
 const CATEGORY_INFO = {
   all: { label: 'الكل', icon: 'layers', color: '#34d399' },
@@ -233,7 +325,7 @@ function getCategoryInfo(category) {
 }
 
 // ============================================
-// 11. بناء رابط viewer
+// 10. بناء رابط viewer
 // ============================================
 function buildViewerUrl(file) {
   const params = new URLSearchParams({
@@ -250,7 +342,7 @@ function buildViewerUrl(file) {
 }
 
 // ============================================
-// 12. المفضلة — موحدة (باستخدام IndexedDB)
+// 11. المفضلة
 // ============================================
 async function toggleFileFavorite(file, subjectName = '', subjectSlug = '') {
   const isFav = await isFavorite(file.id);
@@ -278,4 +370,15 @@ async function isFileFavorite(fileId) {
   return await isFavorite(fileId);
 }
 
-console.log('✅ files.js loaded');
+// ============================================
+// 12. مراقبة الاتصال
+// ============================================
+window.addEventListener('online', () => {
+  console.log('🟢 Back online');
+});
+
+window.addEventListener('offline', () => {
+  console.log('🔴 Offline');
+});
+
+console.log('✅ files.js v1.1.0 loaded — offline ready');

@@ -450,20 +450,32 @@
       return true;
     }
 
-    // تحميل الملف — من IndexedDB أو الشبكة
-    async function loadPDF() {
-      try {
-        let pdfSource = state.file.file_url;
-        
-        // 1. البحث في IndexedDB أولاً
-        const cached = await getDownloadedFile(state.file.id);
-        if (cached && cached.blob) {
-          state.blobUrl = URL.createObjectURL(cached.blob);
-          pdfSource = state.blobUrl;
-        } else {
-          // جلب من الشبكة
-          document.getElementById('loadingSub').textContent = 'يتم الجلب من الشبكة';
-        }
+// تحميل الملف — من IndexedDB أو الشبكة
+async function loadPDF() {
+  try {
+    let pdfSource = null;
+    
+    // ⭐ 1. البحث في IndexedDB أولاً (الأهم!)
+    const cached = await getDownloadedFile(state.file.id);
+    
+    if (cached && cached.blob) {
+      console.log('✅ Found in IndexedDB — offline ready!');
+      state.blobUrl = URL.createObjectURL(cached.blob);
+      pdfSource = state.blobUrl;
+      document.getElementById('loadingSub').textContent = 'من الذاكرة المحلية';
+    } else {
+      // ⭐ 2. لم يوجد — تحقق من الإنترنت
+      if (!navigator.onLine) {
+        showError(
+          'الملف غير محمّل',
+          'هذا الملف غير محفوظ على جهازك. اتصل بالإنترنت وحمّله أولاً.'
+        );
+        return;
+      }
+      
+      document.getElementById('loadingSub').textContent = 'يتم الجلب من الشبكة';
+      pdfSource = state.file.file_url;
+    }
         
         // 2. تحميل PDF
         const loadingTask = pdfjsLib.getDocument({
