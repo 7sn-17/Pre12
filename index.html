@@ -1591,6 +1591,286 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .spin { animation: spin 1s linear infinite; }
 
+/* ============================================ */
+/* Install Banner (يظهر عند أول زيارة) */
+/* ============================================ */
+.install-banner {
+  position: fixed;
+  bottom: 110px;
+  left: 50%;
+  transform: translateX(-50%) translateY(200px);
+  background: linear-gradient(135deg, var(--bg-elevated), var(--bg-solid));
+  border: 1px solid var(--accent-emerald);
+  border-radius: 20px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.5),
+    0 0 40px var(--accent-glow);
+  z-index: 5000;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  max-width: calc(100vw - 40px);
+  width: 420px;
+}
+
+.install-banner.visible {
+  transform: translateX(-50%) translateY(0);
+}
+
+.install-banner-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+  box-shadow: 0 6px 16px var(--accent-glow);
+}
+
+.install-banner-icon i {
+  width: 22px;
+  height: 22px;
+}
+
+.install-banner-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.install-banner-title {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 3px;
+  line-height: 1.3;
+}
+
+.install-banner-desc {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.install-banner-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.install-banner-btn {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: none;
+  font-family: inherit;
+  font-size: 0.76rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.install-banner-btn i {
+  width: 13px;
+  height: 13px;
+}
+
+.install-banner-btn.primary {
+  background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+  color: white;
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+.install-banner-btn.primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px var(--accent-glow-strong);
+}
+
+.install-banner-btn.secondary {
+  background: transparent;
+  border: 1px solid var(--border-card);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  padding: 6px 10px;
+}
+
+.install-banner-btn.secondary:hover {
+  background: rgba(128, 128, 128, 0.1);
+  color: var(--text-primary);
+}
+
+.install-banner-close {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: rgba(128, 128, 128, 0.1);
+  border: none;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all var(--transition-fast);
+}
+
+.install-banner-close:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--danger);
+}
+
+.install-banner-close i {
+  width: 14px;
+  height: 14px;
+}
+
+/* iOS Install Modal */
+.ios-install-steps {
+  background: rgba(6, 17, 13, 0.5);
+  border: 1px solid var(--border-card);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+[data-theme="light"] .ios-install-steps {
+  background: rgba(241, 245, 249, 0.6);
+}
+
+.ios-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  font-weight: 600;
+}
+
+.ios-step-number {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ios-step-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #60a5fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ios-step-icon i {
+  width: 13px;
+  height: 13px;
+}
+
+/* زر التثبيت في الإعدادات */
+.settings-item.install-item {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.05));
+  border-color: rgba(16, 185, 129, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.settings-item.install-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.15), transparent);
+  animation: installShine 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes installShine {
+  0% { left: -100%; }
+  50%, 100% { left: 100%; }
+}
+
+.settings-item.install-item .settings-icon {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.15));
+  border-color: rgba(16, 185, 129, 0.5);
+  color: var(--accent-light);
+  box-shadow: 0 4px 14px var(--accent-glow);
+}
+
+.settings-item.install-item .settings-text h4 {
+  background: linear-gradient(135deg, var(--text-primary), var(--accent-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.settings-item.install-item.installed {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.3);
+  cursor: default;
+}
+
+.settings-item.install-item.installed::before {
+  animation: none;
+  background: none;
+}
+
+/* Responsive للـ Install Banner */
+@media (max-width: 480px) {
+  .install-banner {
+    width: calc(100vw - 24px);
+    padding: 12px 14px;
+    bottom: 100px;
+  }
+  .install-banner-icon {
+    width: 42px;
+    height: 42px;
+  }
+  .install-banner-icon i {
+    width: 18px;
+    height: 18px;
+  }
+  .install-banner-title {
+    font-size: 0.82rem;
+  }
+  .install-banner-desc {
+    font-size: 0.68rem;
+  }
+  .install-banner-btn {
+    padding: 7px 10px;
+    font-size: 0.7rem;
+  }
+}
+
     /* ============================================ */
     /* Auth Required Modal */
     /* ============================================ */
@@ -2151,8 +2431,22 @@
       <div id="userCard" style="display: none; margin-bottom: 16px;"></div>
 
       <div class="settings-list" id="settingsList">
-        
-        <a href="login.html" class="settings-item" id="settingsAuthItem">
+  
+  <!-- ⭐ زر تثبيت التطبيق — أول بطاقة -->
+  <button class="settings-item install-item" id="installAppBtn" onclick="handleInstallClick()" style="display: none;">
+    <div class="settings-item-left">
+      <div class="settings-icon">
+        <i data-lucide="download"></i>
+      </div>
+      <div class="settings-text">
+        <h4 id="installBtnTitle">تثبيت التطبيق</h4>
+        <p id="installBtnDesc">احصل على التطبيق على شاشتك الرئيسية</p>
+      </div>
+    </div>
+    <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
+  </button>
+
+  <a href="login.html" class="settings-item" id="settingsAuthItem">
           <div class="settings-item-left">
             <div class="settings-icon"><i data-lucide="log-in"></i></div>
             <div class="settings-text">
@@ -2303,6 +2597,50 @@
       </div>
     </div>
   </div>
+
+<!-- مودال: تثبيت iOS -->
+<div class="auth-required-overlay" id="iosInstallModal" onclick="closeIosInstallModal()">
+  <div class="auth-required-card" onclick="event.stopPropagation()">
+    <div class="auth-required-icon" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.15)); border-color: #3b82f6; color: #93c5fd;">
+      <i data-lucide="smartphone" style="width: 32px; height: 32px;"></i>
+    </div>
+    <div class="auth-required-title">تثبيت التطبيق على iPhone</div>
+    <div class="auth-required-message">
+      لتحصل على تجربة تطبيق كاملة، اتبع هذه الخطوات:
+    </div>
+    
+    <div class="ios-install-steps">
+      <div class="ios-step">
+        <div class="ios-step-number">1</div>
+        <div>اضغط على زر <strong style="color: var(--accent-light);">المشاركة</strong> أسفل الشاشة</div>
+        <div class="ios-step-icon">
+          <i data-lucide="share"></i>
+        </div>
+      </div>
+      <div class="ios-step">
+        <div class="ios-step-number">2</div>
+        <div>اختر <strong style="color: var(--accent-light);">"إضافة إلى الشاشة الرئيسية"</strong></div>
+        <div class="ios-step-icon">
+          <i data-lucide="plus-square"></i>
+        </div>
+      </div>
+      <div class="ios-step">
+        <div class="ios-step-number">3</div>
+        <div>اضغط <strong style="color: var(--accent-light);">"إضافة"</strong> أعلى الشاشة</div>
+        <div class="ios-step-icon">
+          <i data-lucide="check"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="auth-required-actions">
+      <button class="auth-required-btn primary" onclick="closeIosInstallModal()">
+        <i data-lucide="check" style="width: 16px; height: 16px;"></i>
+        فهمت
+      </button>
+    </div>
+  </div>
+</div>
 
   <!-- مودال: تحتاج حساب -->
   <div class="auth-required-overlay" id="authRequiredModal" onclick="closeAuthRequiredModal()">
@@ -3706,6 +4044,315 @@ function showAbout() {
     console.log('🔴 انقطع الاتصال');
     showOfflineBanner();
   });
+  
+  // ============================================
+// 5. نظام التثبيت (Install Prompt)
+// ============================================
+
+let deferredInstallPrompt = null;
+let isInstalled = false;
+let installBannerShown = false;
+
+// كشف iOS
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
+// كشف الوضع المثبت (Standalone)
+function isStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches 
+    || window.navigator.standalone === true;
+}
+
+// ============================================
+// التقاط حدث "قابل للتثبيت" من Chrome
+// ============================================
+window.addEventListener('beforeinstallprompt', (e) => {
+  console.log('📱 التطبيق قابل للتثبيت');
+  
+  // منع النافذة التلقائية
+  e.preventDefault();
+  
+  // حفظ الحدث للاستخدام لاحقاً
+  deferredInstallPrompt = e;
+  
+  // إظهار زر التثبيت في الإعدادات
+  showInstallButtonInSettings();
+  
+  // إظهار Banner تلقائي (إذا لم يُعرض سابقاً ولم يُرفض)
+  setTimeout(() => {
+    showInstallBannerIfNeeded();
+  }, 3000);
+});
+
+// ============================================
+// بعد التثبيت بنجاح
+// ============================================
+window.addEventListener('appinstalled', () => {
+  console.log('✅ تم تثبيت التطبيق');
+  isInstalled = true;
+  deferredInstallPrompt = null;
+  
+  // إخفاء Banner
+  hideInstallBanner();
+  
+  // تحديث زر الإعدادات
+  updateInstallButtonAsInstalled();
+  
+  // إظهار رسالة نجاح
+  if (typeof showToast === 'function') {
+    showToast('تم تثبيت التطبيق بنجاح', 'success');
+  }
+  
+  // حفظ في localStorage
+  localStorage.setItem('medfav_app_installed', 'true');
+  localStorage.removeItem('medfav_install_banner_dismissed');
+});
+
+// ============================================
+// إظهار زر التثبيت في الإعدادات
+// ============================================
+function showInstallButtonInSettings() {
+  const btn = document.getElementById('installAppBtn');
+  if (!btn) return;
+  
+  // لا تظهر إذا كان التطبيق مثبتاً
+  if (isInstalled || isStandalone()) return;
+  
+  // أظهر الزر
+  btn.style.display = 'flex';
+  
+  // إذا كان iOS، غيّر النص
+  if (isIOS()) {
+    document.getElementById('installBtnDesc').textContent = 
+      'اتبع الخطوات لإضافته على شاشتك';
+  }
+  
+  if (window.lucide) lucide.createIcons();
+}
+
+// ============================================
+// تحديث الزر كـ "مثبّت"
+// ============================================
+function updateInstallButtonAsInstalled() {
+  const btn = document.getElementById('installAppBtn');
+  if (!btn) return;
+  
+  btn.classList.add('installed');
+  btn.onclick = null;
+  
+  document.getElementById('installBtnTitle').textContent = 'التطبيق مثبت';
+  document.getElementById('installBtnDesc').textContent = 'أنت تستخدم التطبيق المثبت';
+  
+  // تغيير الأيقونة
+  const iconWrapper = btn.querySelector('.settings-icon');
+  if (iconWrapper) {
+    iconWrapper.innerHTML = '<i data-lucide="check-circle-2"></i>';
+    iconWrapper.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(5, 150, 105, 0.2))';
+  }
+  
+  // تغيير السهم إلى علامة صح
+  const arrow = btn.querySelector('.settings-arrow');
+  if (arrow) {
+    arrow.outerHTML = '<i data-lucide="check" style="width: 18px; height: 18px; color: var(--accent-light);"></i>';
+  }
+  
+  if (window.lucide) lucide.createIcons();
+}
+
+// ============================================
+// معالجة الضغط على زر التثبيت
+// ============================================
+async function handleInstallClick() {
+  // iOS
+  if (isIOS()) {
+    openIosInstallModal();
+    return;
+  }
+  
+  // Android / Desktop
+  if (!deferredInstallPrompt) {
+    if (typeof showToast === 'function') {
+      showToast('التثبيت غير متاح الآن — جرّب من قائمة المتصفح', 'info');
+    }
+    return;
+  }
+  
+  // عرض نافذة التثبيت
+  deferredInstallPrompt.prompt();
+  
+  // انتظار رد المستخدم
+  const { outcome } = await deferredInstallPrompt.userChoice;
+  console.log('نتيجة التثبيت:', outcome);
+  
+  if (outcome === 'accepted') {
+    if (typeof showToast === 'function') {
+      showToast('جاري تثبيت التطبيق...', 'info');
+    }
+  } else if (outcome === 'dismissed') {
+    if (typeof showToast === 'function') {
+      showToast('تم إلغاء التثبيت', 'info');
+    }
+  }
+  
+  // إعادة تعيين
+  deferredInstallPrompt = null;
+  hideInstallBanner();
+}
+
+// ============================================
+// إظهار Banner التثبيت التلقائي
+// ============================================
+function showInstallBannerIfNeeded() {
+  // لا تعرض إذا:
+  // 1. التطبيق مثبت
+  // 2. المستخدم رفض سابقاً
+  // 3. Banner معروض بالفعل
+  if (isInstalled || isStandalone()) return;
+  if (installBannerShown) return;
+  
+  const dismissed = localStorage.getItem('medfav_install_banner_dismissed');
+  const dismissCount = parseInt(localStorage.getItem('medfav_install_dismiss_count') || '0');
+  
+  // إذا رفض 3 مرات، لا تعرض مرة أخرى
+  if (dismissCount >= 3) return;
+  
+  // إذا رفض مؤخراً (خلال 7 أيام)
+  if (dismissed) {
+    const dismissedAt = parseInt(dismissed);
+    const daysSince = (Date.now() - dismissedAt) / (1000 * 60 * 60 * 24);
+    if (daysSince < 7) return;
+  }
+  
+  // إظهار Banner
+  showInstallBanner();
+}
+
+function showInstallBanner() {
+  if (installBannerShown) return;
+  if (document.getElementById('installBanner')) return;
+  
+  installBannerShown = true;
+  
+  const banner = document.createElement('div');
+  banner.className = 'install-banner';
+  banner.id = 'installBanner';
+  
+  banner.innerHTML = `
+    <button class="install-banner-close" onclick="dismissInstallBanner()" title="إغلاق">
+      <i data-lucide="x"></i>
+    </button>
+    
+    <div class="install-banner-icon">
+      <i data-lucide="smartphone"></i>
+    </div>
+    
+    <div class="install-banner-content">
+      <div class="install-banner-title">ثبّت التطبيق الآن</div>
+      <div class="install-banner-desc">وصول أسرع + عمل بدون إنترنت</div>
+    </div>
+    
+    <div class="install-banner-actions">
+      <button class="install-banner-btn primary" onclick="handleInstallClick()">
+        <i data-lucide="download"></i>
+        <span>تثبيت</span>
+      </button>
+      <button class="install-banner-btn secondary" onclick="dismissInstallBanner()">
+        لاحقاً
+      </button>
+    </div>
+  `;
+  
+  document.body.appendChild(banner);
+  if (window.lucide) lucide.createIcons();
+  
+  // إظهار بحركة
+  requestAnimationFrame(() => {
+    setTimeout(() => banner.classList.add('visible'), 100);
+  });
+  
+  // إخفاء تلقائي بعد 15 ثانية
+  setTimeout(() => {
+    if (banner.parentNode && banner.classList.contains('visible')) {
+      // لا تخفيه إذا تفاعل المستخدم معه
+      if (!banner.dataset.interacted) {
+        hideInstallBanner();
+      }
+    }
+  }, 15000);
+}
+
+function hideInstallBanner() {
+  const banner = document.getElementById('installBanner');
+  if (!banner) return;
+  
+  banner.classList.remove('visible');
+  setTimeout(() => {
+    if (banner.parentNode) banner.remove();
+    installBannerShown = false;
+  }, 500);
+}
+
+function dismissInstallBanner() {
+  // زيادة عدد مرات الرفض
+  const count = parseInt(localStorage.getItem('medfav_install_dismiss_count') || '0');
+  localStorage.setItem('medfav_install_dismiss_count', (count + 1).toString());
+  localStorage.setItem('medfav_install_banner_dismissed', Date.now().toString());
+  
+  hideInstallBanner();
+}
+
+// ============================================
+// Modal iOS
+// ============================================
+function openIosInstallModal() {
+  const modal = document.getElementById('iosInstallModal');
+  if (!modal) return;
+  modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+  if (window.lucide) lucide.createIcons();
+}
+
+function closeIosInstallModal() {
+  const modal = document.getElementById('iosInstallModal');
+  if (!modal) return;
+  modal.classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+// ============================================
+// التشغيل الأولي لنظام التثبيت
+// ============================================
+function initInstallSystem() {
+  // إذا مثبت مسبقاً
+  if (isStandalone() || localStorage.getItem('medfav_app_installed') === 'true') {
+    isInstalled = true;
+    updateInstallButtonAsInstalled();
+    return;
+  }
+  
+  // كشف iOS
+  if (isIOS() && !isStandalone()) {
+    // أظهر زر التثبيت في الإعدادات
+    setTimeout(() => {
+      showInstallButtonInSettings();
+      
+      // أظهر Banner تلقائياً
+      setTimeout(() => showInstallBannerIfNeeded(), 5000);
+    }, 1500);
+    return;
+  }
+  
+  // Android/Desktop: ننتظر beforeinstallprompt
+  // (سيتم استدعاء showInstallButtonInSettings عند وصول الحدث)
+}
+
+// تشغيل النظام
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initInstallSystem);
+} else {
+  initInstallSystem();
+}
   
   // ============================================
   // 4. اختبار سريع
