@@ -712,6 +712,80 @@
 
     .resend-btn i { width: 14px; height: 14px; }
 
+/* ⚠️ تحذير Spam */
+.spam-alert {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  text-align: right;
+}
+
+.spam-alert-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #f87171;
+  font-weight: 800;
+  font-size: 0.88rem;
+  margin-bottom: 8px;
+}
+
+.spam-alert-header i {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.spam-alert-text {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+  margin: 0;
+}
+
+.spam-alert-text strong {
+  color: #f87171;
+  font-weight: 800;
+}
+
+
+.action-btn.spam-btn:hover {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: #f59e0b;
+  color: #fbbf24;
+}
+
+
+.tip-box i {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #60a5fa;
+}
+
+.tip-box-content {
+  flex: 1;
+}
+
+.tip-box-content strong {
+  color: #93c5fd;
+  font-weight: 800;
+}
+
+.tip-box-content span[dir="ltr"] {
+  direction: ltr;
+  display: inline-block;
+  font-weight: 700;
+  color: #bfdbfe;
+  background: rgba(59, 130, 246, 0.15);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: 'Cairo', monospace;
+  font-size: 0.74rem;
+}
     /* تحذير */
     .warning-box {
       margin-top: 16px;
@@ -967,72 +1041,89 @@
       </div>
 
       <!-- ========== شاشة التحقق من البريد ========== -->
-      <div id="verifyView" class="view-section">
-        <div class="verify-view">
-          
-          <div class="verify-icon-wrapper">
-            <div class="verify-icon">
-              <i data-lucide="mail-check"></i>
-            </div>
-          </div>
-
-          <h1 class="verify-title">تحقق من بريدك الإلكتروني</h1>
-          <p class="verify-subtitle">
-            أرسلنا رابط التأكيد إلى بريدك.<br>
-            افتح الرسالة واضغط على الرابط لتفعيل حسابك.
-          </p>
-
-          <div class="email-display">
-            <span class="email-display-text" id="verifyEmailText">user@example.com</span>
-            <button class="email-copy-btn" id="copyEmailBtn" onclick="copyEmail()" title="نسخ البريد">
-              <i data-lucide="copy"></i>
-            </button>
-          </div>
-
-          <div class="steps-list">
-            <div class="step-item">
-              <span class="step-number">1</span>
-              <span class="step-text">افتح تطبيق البريد الإلكتروني على جوالك</span>
-            </div>
-            <div class="step-item">
-              <span class="step-number">2</span>
-              <span class="step-text">ابحث عن رسالة من "المنصة الطبية"</span>
-            </div>
-            <div class="step-item">
-              <span class="step-number">3</span>
-              <span class="step-text">اضغط على رابط التأكيد لتفعيل حسابك</span>
-            </div>
-          </div>
-
-          <div class="verify-actions">
-            <a href="https://mail.google.com" target="_blank" rel="noopener" class="action-btn primary">
-              <i data-lucide="mail"></i>
-              <span>فتح البريد</span>
-            </a>
-            <button class="action-btn" onclick="editEmail()">
-              <i data-lucide="pencil"></i>
-              <span>تعديل البريد</span>
-            </button>
-          </div>
-
-          <div class="resend-section">
-            <div class="resend-text">لم يصلك البريد؟</div>
-            <button class="resend-btn" id="resendBtn" onclick="handleResend()">
-              <i data-lucide="refresh-cw"></i>
-              <span id="resendBtnText">إعادة الإرسال</span>
-            </button>
-          </div>
-
-          <div class="warning-box">
-            <i data-lucide="alert-triangle"></i>
-            <span>إذا كان البريد الذي أدخلته خاطئاً، لن تتمكن من تأكيد حسابك. اضغط "تعديل البريد" لتصحيحه.</span>
-          </div>
-
-        </div>
+<div id="verifyView" class="view-section">
+  <div class="verify-view">
+    
+    <div class="verify-icon-wrapper">
+      <div class="verify-icon">
+        <i data-lucide="mail-check"></i>
       </div>
-
     </div>
+
+    <h1 class="verify-title">تحقق من بريدك الإلكتروني</h1>
+    <p class="verify-subtitle">
+      أرسلنا رابط التأكيد إلى بريدك.<br>
+      افتح الرسالة واضغط على الرابط لتفعيل حسابك.
+    </p>
+
+    <div class="email-display">
+      <span class="email-display-text" id="verifyEmailText">user@example.com</span>
+      <button class="email-copy-btn" id="copyEmailBtn" onclick="copyEmail()" title="نسخ البريد">
+        <i data-lucide="copy"></i>
+      </button>
+    </div>
+
+    <!-- ⚠️ تحذير Spam — جديد -->
+    <div class="spam-alert">
+      <div class="spam-alert-header">
+        <i data-lucide="alert-circle"></i>
+        <span>تنبيه مهم</span>
+      </div>
+      <p class="spam-alert-text">
+        إذا لم تجد الرسالة في <strong>البريد الوارد</strong>،
+        افحص مجلد <strong>الرسائل المزعجة (Spam)</strong>.
+        في معظم الحالات، ستجدها هناك.
+      </p>
+    </div>
+
+    <!-- الخطوات — محدّثة -->
+    <div class="steps-list">
+      <div class="step-item">
+        <span class="step-number">1</span>
+        <span class="step-text">افتح تطبيق البريد الإلكتروني على جوالك</span>
+      </div>
+      <div class="step-item">
+        <span class="step-number">2</span>
+        <span class="step-text">ابحث عن رسالة من "المنصة الطبية" في <strong>البريد الوارد</strong></span>
+      </div>
+      <div class="step-item">
+        <span class="step-number">3</span>
+        <span class="step-text">إذا لم تجدها، افحص مجلد <strong>الرسائل المزعجة (Spam)</strong></span>
+      </div>
+      <div class="step-item">
+        <span class="step-number">4</span>
+        <span class="step-text">اضغط على رابط التأكيد لتفعيل حسابك</span>
+      </div>
+    </div>
+
+<!-- الأزرار -->
+<div class="verify-actions">
+  <a href="https://mail.google.com/mail/u/0/#inbox" target="_blank" rel="noopener" class="action-btn primary">
+    <i data-lucide="inbox"></i>
+    <span>فتح البريد</span>
+  </a>
+  <button class="action-btn" onclick="editEmail()">
+    <i data-lucide="pencil"></i>
+    <span>تعديل البريد</span>
+  </button>
+</div>
+
+<div class="resend-section">
+  <div class="resend-text">لم يصلك البريد؟</div>
+  <button class="resend-btn" id="resendBtn" onclick="handleResend()">
+    <i data-lucide="refresh-cw"></i>
+    <span id="resendBtnText">إعادة الإرسال</span>
+  </button>
+</div>
+
+<!-- تحذير البريد الخاطئ -->
+<div class="warning-box">
+  <i data-lucide="alert-triangle"></i>
+  <span>إذا كان البريد الذي أدخلته خاطئاً، لن تتمكن من تأكيد حسابك. اضغط "تعديل البريد" لتصحيحه.</span>
+</div>
+
   </div>
+</div>
 
   <script src="supabase-config.js"></script>
   <script src="auth.js"></script>
