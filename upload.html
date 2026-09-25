@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="theme-init.js"></script>
@@ -690,7 +690,7 @@ header {
   <!-- التبويبات -->
   <div class="tabs">
     <button class="tab-btn active" data-tab="upload">
-      <i data-lucide="upload-cloud"></i>
+      <i class="fa-solid fa-cloud-arrow-up"></i>
       رفع ملف PDF
     </button>
     <button class="tab-btn" data-tab="link">
@@ -738,7 +738,9 @@ header {
         <label class="form-label"><i data-lucide="paperclip"></i> الملف (PDF) <span class="req">*</span></label>
         <div class="dropzone" id="dropzone">
           <input type="file" id="fileInput" accept=".pdf,application/pdf">
-          <div class="dropzone-icon"><i data-lucide="upload-cloud"></i></div>
+<div class="dropzone-icon">
+    <i class="fa-solid fa-cloud-arrow-up" style="font-size: 32px; color: #10b981;"></i>
+</div>
           <div class="dropzone-title">اسحب الملف هنا أو انقر للاختيار</div>
           <div class="dropzone-sub">PDF بحد أقصى 50 MB</div>
         </div>
