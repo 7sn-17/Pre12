@@ -2935,23 +2935,46 @@ function loadLastActivity() {
 }
       
       
-    function openLastActivity() {
-      const activity = getLastActivity();
-      if (!activity) return;
-      
-      const params = new URLSearchParams({
-        id: activity.id,
-        file: activity.title,
-        subject: activity.subject,
-        size: formatFileSize(activity.file_size),
-        url: activity.file_url,
-        path: activity.file_path,
-        category: activity.category,
-        created: activity.created_at
-      });
-      
-      window.location.href = `viewer.html?${params.toString()}`;
+function openLastActivity() {
+  const activity = getLastActivity();
+  if (!activity) return;
+
+  // ⭐ زيادة العداد
+  incrementFileViews(activity.id).catch(() => {});
+
+  // ⭐ رابط خارجي → تبويب جديد
+  if (activity.source === 'link') {
+    const url = activity.external_url || activity.file_url;
+    if (!url) {
+      showToast('لا يوجد رابط لهذا الملف', 'error');
+      return;
     }
+    window.open(url, '_blank', 'noopener,noreferrer');
+    return;
+  }
+
+  // ⭐ PDF مرفوع → viewer
+  const typeInfo = detectFileType(activity);
+  if (typeInfo.viewer) {
+    const params = new URLSearchParams({
+      id: activity.id,
+      file: activity.title,
+      subject: activity.subject || '',
+      size: formatFileSize(activity.file_size),
+      url: activity.file_url,
+      path: activity.file_path || '',
+      category: activity.category,
+      created: activity.created_at
+    });
+    window.location.href = `viewer.html?${params.toString()}`;
+    return;
+  }
+
+  // ⭐ أنواع أخرى → تبويب جديد
+  if (activity.file_url) {
+    window.open(activity.file_url, '_blank', 'noopener,noreferrer');
+  }
+}
 
     // ============================================
     // هل تعلم — نصيحة عشوائية

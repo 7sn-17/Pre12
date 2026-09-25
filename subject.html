@@ -1547,6 +1547,13 @@ async function downloadFile(fileId) {
       created_at: file.created_at
     });
 
+}, (percent, received, total) => {
+  // ✅ عرض التقدم في الزر
+  if (btn) {
+    btn.innerHTML = `<span>${percent}%</span>`;
+  }
+});
+
     if (!result.success) throw new Error(result.error);
 
     incrementFileDownloads(file.id).catch(() => {});
