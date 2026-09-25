@@ -4,14 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
-<title>إضافة محتوى - المنصة الطبية</title>
+<title>إضافة محتوى — المنصة الطبية</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://unpkg.com/lucide@latest"></script>
 <script src="theme-init.js"></script>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -56,13 +55,11 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-html { scroll-behavior: smooth; }
-
 body {
   background-color: var(--bg-main);
   color: var(--text-primary);
   min-height: 100vh;
-  padding-bottom: 60px;
+  padding-bottom: 40px;
   overflow-x: hidden;
   transition: background 0.3s;
 }
@@ -73,7 +70,7 @@ body {
     radial-gradient(circle at 90% 80%, rgba(5, 150, 105, 0.04) 0%, transparent 40%);
 }
 
-/* الهيدر */
+/* ═══ الهيدر ═══ */
 header {
   padding: 14px 18px;
   display: flex;
@@ -88,9 +85,7 @@ header {
   background: rgba(6, 17, 13, 0.85);
 }
 
-[data-theme="light"] header {
-  background: rgba(248, 250, 251, 0.92);
-}
+[data-theme="light"] header { background: rgba(248, 250, 251, 0.92); }
 
 .nav-btn {
   width: 42px;
@@ -105,6 +100,7 @@ header {
   cursor: pointer;
   text-decoration: none;
   transition: all var(--t);
+  font-size: 1rem;
 }
 
 .nav-btn:hover {
@@ -112,19 +108,16 @@ header {
   color: var(--accent-light);
 }
 
-.header-title {
-  font-size: 1.05rem;
-  font-weight: 800;
-}
+.header-title { font-size: 1.05rem; font-weight: 800; }
 
-/* الحاوية */
+/* ═══ الحاوية ═══ */
 .container {
   max-width: 720px;
   margin: 0 auto;
-  padding: 24px 16px;
+  padding: 22px 16px;
 }
 
-/* التبويبات */
+/* ═══ التبويبات ═══ */
 .tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -154,7 +147,7 @@ header {
   transition: all var(--t);
 }
 
-.tab-btn svg { width: 18px; height: 18px; }
+.tab-btn i { font-size: 0.95rem; }
 
 .tab-btn.active {
   background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
@@ -167,7 +160,7 @@ header {
   background: rgba(16, 185, 129, 0.08);
 }
 
-/* اللوحات */
+/* ═══ اللوحات ═══ */
 .tab-panel { display: none; animation: fadeIn 0.3s; }
 .tab-panel.active { display: block; }
 
@@ -176,12 +169,12 @@ header {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* بطاقة النموذج */
+/* ═══ بطاقة النموذج ═══ */
 .form-card {
   background: var(--bg-card);
   border: 1px solid var(--border-card);
   border-radius: 22px;
-  padding: 26px 22px;
+  padding: 24px 20px;
   backdrop-filter: blur(16px);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
   display: flex;
@@ -203,8 +196,8 @@ header {
   gap: 7px;
 }
 
-.form-label svg { width: 16px; height: 16px; color: var(--accent-light); }
-.form-label .req { color: var(--danger); }
+.form-label i { color: var(--accent-light); font-size: 0.85rem; width: 16px; }
+.form-label .req { color: var(--danger); font-size: 1rem; line-height: 1; }
 
 .form-input {
   width: 100%;
@@ -226,7 +219,7 @@ header {
   box-shadow: 0 0 0 4px var(--accent-glow);
 }
 
-/* المواد */
+/* ═══ المواد ═══ */
 .subjects-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -234,7 +227,7 @@ header {
 }
 
 .subject-card {
-  padding: 13px;
+  padding: 12px;
   border-radius: 13px;
   background: var(--bg-elevated);
   border: 1.5px solid var(--border-card);
@@ -250,8 +243,10 @@ header {
   text-align: right;
 }
 
-.subject-card svg { width: 17px; height: 17px; flex-shrink: 0; }
+.subject-card i { font-size: 0.9rem; flex-shrink: 0; color: var(--text-muted); }
 .subject-card:hover { border-color: var(--accent-emerald); color: var(--text-primary); }
+.subject-card:hover i { color: var(--accent-light); }
+
 .subject-card.active {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.15));
   border-color: var(--accent-emerald);
@@ -259,7 +254,9 @@ header {
   box-shadow: 0 6px 20px var(--accent-glow);
 }
 
-/* التصنيفات */
+.subject-card.active i { color: var(--accent-light); }
+
+/* ═══ التصنيفات ═══ */
 .categories-row {
   display: flex;
   flex-wrap: wrap;
@@ -283,8 +280,9 @@ header {
   white-space: nowrap;
 }
 
-.chip svg { width: 15px; height: 15px; }
+.chip i { font-size: 0.82rem; }
 .chip:hover { border-color: var(--accent-emerald); color: var(--text-primary); }
+
 .chip.active {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.15));
   border-color: var(--accent-emerald);
@@ -292,7 +290,7 @@ header {
   box-shadow: 0 6px 20px var(--accent-glow);
 }
 
-/* Dropzone */
+/* ═══ Dropzone ═══ */
 .dropzone {
   border: 2px dashed var(--accent-emerald);
   border-radius: 18px;
@@ -311,6 +309,7 @@ header {
 .dropzone:hover, .dropzone.dragover {
   border-style: solid;
   background: rgba(16, 185, 129, 0.08);
+  transform: scale(1.005);
 }
 
 .dropzone input[type="file"] {
@@ -329,21 +328,13 @@ header {
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 1.6rem;
 }
 
-.dropzone-icon svg { width: 28px; height: 28px; }
+.dropzone-title { font-size: 0.95rem; font-weight: 700; }
+.dropzone-sub { font-size: 0.78rem; color: var(--text-muted); }
 
-.dropzone-title {
-  font-size: 0.95rem;
-  font-weight: 700;
-}
-
-.dropzone-sub {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-}
-
-/* معاينة الملف */
+/* ═══ معاينة الملف ═══ */
 .file-preview {
   display: none;
   align-items: center;
@@ -375,9 +366,8 @@ header {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  font-size: 1rem;
 }
-
-.file-preview-icon svg { width: 18px; height: 18px; }
 
 .file-preview-name {
   font-size: 0.88rem;
@@ -387,10 +377,7 @@ header {
   text-overflow: ellipsis;
 }
 
-.file-preview-size {
-  font-size: 0.74rem;
-  color: var(--text-secondary);
-}
+.file-preview-size { font-size: 0.74rem; color: var(--text-secondary); }
 
 .remove-btn {
   background: transparent;
@@ -400,18 +387,14 @@ header {
   padding: 8px;
   border-radius: 10px;
   display: flex;
+  font-size: 0.95rem;
 }
 
 .remove-btn:hover { background: rgba(239, 68, 68, 0.15); }
 
-/* حقل الرابط */
-.link-input-wrap {
-  position: relative;
-}
-
-.link-input-wrap .form-input {
-  padding-inline-start: 42px;
-}
+/* ═══ حقل الرابط ═══ */
+.link-input-wrap { position: relative; }
+.link-input-wrap .form-input { padding-inline-start: 42px; }
 
 .link-input-icon {
   position: absolute;
@@ -420,51 +403,79 @@ header {
   transform: translateY(-50%);
   color: var(--accent-light);
   pointer-events: none;
+  font-size: 0.95rem;
 }
 
-.link-input-icon svg { width: 18px; height: 18px; }
-
-/* عرض كشف المضيف */
+/* ═══ شارة المضيف ═══ */
 .host-badge {
   display: none;
   align-items: center;
-  gap: 8px;
-  padding: 10px 13px;
-  background: rgba(16, 185, 129, 0.08);
+  gap: 11px;
+  padding: 11px 13px;
+  background: rgba(16, 185, 129, 0.06);
   border: 1px solid var(--border-card);
-  border-radius: 12px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--text-primary);
+  border-radius: 13px;
+  animation: slideIn 0.3s ease;
 }
 
 .host-badge.show { display: flex; }
 
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .host-badge-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   flex-shrink: 0;
+  font-size: 1.15rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-.host-badge-icon svg { width: 15px; height: 15px; }
+.host-badge-info {
+  flex: 1;
+  min-width: 0;
+}
 
 .host-badge-name {
   color: var(--text-primary);
   font-weight: 800;
+  font-size: 0.88rem;
+  margin-bottom: 2px;
 }
 
 .host-badge-hint {
   color: var(--text-muted);
   font-weight: 600;
-  font-size: 0.74rem;
+  font-size: 0.72rem;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
-/* رسائل التحقق */
+.host-badge-hint .dot-ok {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-emerald);
+  box-shadow: 0 0 8px var(--accent-emerald);
+}
+
+.host-badge-hint .dot-warn {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warning);
+  box-shadow: 0 0 8px var(--warning);
+}
+
+/* ═══ رسالة خطأ ═══ */
 .url-error {
   display: none;
   align-items: center;
@@ -476,23 +487,24 @@ header {
   color: #f87171;
   font-size: 0.82rem;
   font-weight: 700;
+  animation: slideIn 0.3s ease;
 }
 
 .url-error.show { display: flex; }
-.url-error svg { width: 16px; height: 16px; flex-shrink: 0; }
+.url-error i { font-size: 0.9rem; flex-shrink: 0; }
 
-/* صناديق المعلومات */
+/* ═══ صناديق المعلومات ═══ */
 .info-box {
   padding: 13px 14px;
   border-radius: 14px;
   font-size: 0.82rem;
-  line-height: 1.6;
+  line-height: 1.7;
   display: flex;
   gap: 10px;
   align-items: flex-start;
 }
 
-.info-box svg { width: 17px; height: 17px; flex-shrink: 0; margin-top: 2px; }
+.info-box i { font-size: 1rem; flex-shrink: 0; margin-top: 2px; }
 
 .info-blue {
   background: rgba(59, 130, 246, 0.08);
@@ -500,13 +512,56 @@ header {
   color: #93c5fd;
 }
 
+[data-theme="light"] .info-blue { color: #2563eb; }
+
 .info-green {
   background: rgba(16, 185, 129, 0.08);
   border: 1px solid rgba(16, 185, 129, 0.25);
   color: var(--accent-light);
 }
 
-/* الأزرار */
+.info-box strong { color: var(--text-primary); font-weight: 800; }
+
+/* شارات المضيفين المدعومين */
+.supported-hosts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.supported-host {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+[data-theme="light"] .supported-host {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+.supported-host i { font-size: 0.75rem; }
+
+.supported-host.drive i   { color: #4285F4; }
+.supported-host.dropbox i { color: #0061FF; }
+.supported-host.mega i    { color: #D9272E; }
+.supported-host.mediafire i { color: #1299F3; }
+.supported-host.onedrive i { color: #0078D4; }
+.supported-host.icloud i  { color: #3693F3; }
+.supported-host.telegram i { color: #0088CC; }
+.supported-host.youtube i { color: #FF0000; }
+.supported-host.pdf i     { color: #ef4444; }
+.supported-host.any i     { color: var(--accent-emerald); }
+
+/* ═══ الأزرار ═══ */
 .submit-btn {
   width: 100%;
   padding: 15px;
@@ -527,11 +582,11 @@ header {
   margin-top: 6px;
 }
 
-.submit-btn svg { width: 19px; height: 19px; }
+.submit-btn i { font-size: 1rem; }
 .submit-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 32px var(--accent-glow); }
 .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-/* شريط التقدم */
+/* ═══ شريط التقدم ═══ */
 .progress-wrap {
   display: none;
   flex-direction: column;
@@ -562,6 +617,8 @@ header {
   overflow: hidden;
 }
 
+[data-theme="light"] .progress-bar { background: rgba(0, 0, 0, 0.08); }
+
 .progress-fill {
   height: 100%;
   width: 0%;
@@ -570,7 +627,7 @@ header {
   transition: width 0.3s;
 }
 
-/* شاشة التحقق */
+/* ═══ شاشة التحقق ═══ */
 .auth-check {
   position: fixed;
   inset: 0;
@@ -597,7 +654,7 @@ header {
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Toast */
+/* ═══ Toast ═══ */
 .toast-container {
   position: fixed;
   top: 16px;
@@ -646,23 +703,24 @@ header {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  font-size: 0.95rem;
 }
 
 .toast.error .toast-icon { background: linear-gradient(145deg, #ff6b5b, #b8332a); }
 .toast.info .toast-icon { background: linear-gradient(145deg, #5dade2, #21618c); }
 .toast.warning .toast-icon { background: linear-gradient(145deg, #ffb340, #b87700); }
 
-.toast-icon svg { width: 17px; height: 17px; }
-
 .toast-content { flex: 1; min-width: 0; }
 .toast-title { font-weight: 800; font-size: 0.86rem; }
 .toast-message { font-size: 0.76rem; color: #b0c8b0; margin-top: 1px; }
 
+/* ═══ استجابة ═══ */
 @media (max-width: 640px) {
   .container { padding: 18px 12px; }
   .form-card { padding: 20px 16px; border-radius: 18px; }
   .subjects-grid { grid-template-columns: repeat(2, 1fr); }
   .tab-btn { font-size: 0.82rem; padding: 12px 8px; }
+  .host-badge-icon { width: 34px; height: 34px; font-size: 1rem; }
 }
 </style>
 </head>
@@ -679,7 +737,7 @@ header {
 <!-- الهيدر -->
 <header>
   <a href="index.html" class="nav-btn">
-    <i data-lucide="arrow-right" style="width: 19px; height: 19px;"></i>
+    <i class="fa-solid fa-arrow-right"></i>
   </a>
   <div class="header-title">إضافة محتوى</div>
   <div style="width: 42px;"></div>
@@ -691,21 +749,21 @@ header {
   <div class="tabs">
     <button class="tab-btn active" data-tab="upload">
       <i class="fa-solid fa-cloud-arrow-up"></i>
-      رفع ملف PDF
+      رفع ملف
     </button>
     <button class="tab-btn" data-tab="link">
-      <i data-lucide="link-2"></i>
+      <i class="fa-solid fa-link"></i>
       إضافة رابط
     </button>
   </div>
 
-  <!-- لوحة رفع الملف -->
+  <!-- ═══ لوحة رفع الملف ═══ -->
   <div class="tab-panel active" id="panel-upload">
     <form class="form-card" id="uploadForm" novalidate>
 
       <div class="form-group">
         <label class="form-label">
-          <i data-lucide="file-text"></i>
+          <i class="fa-solid fa-heading"></i>
           عنوان الملف <span class="req">*</span>
         </label>
         <input type="text" id="uploadTitle" class="form-input" placeholder="مثال: ملخص الفصل الأول">
@@ -713,47 +771,69 @@ header {
 
       <div class="form-group">
         <label class="form-label">
-          <i data-lucide="align-right"></i>
+          <i class="fa-solid fa-align-right"></i>
           وصف مختصر (اختياري)
         </label>
         <input type="text" id="uploadDesc" class="form-input" placeholder="وصف قصير...">
       </div>
 
       <div class="form-group">
-        <label class="form-label"><i data-lucide="book-open"></i> المادة <span class="req">*</span></label>
+        <label class="form-label">
+          <i class="fa-solid fa-book-open"></i>
+          المادة <span class="req">*</span>
+        </label>
         <div class="subjects-grid" id="subjectsGridUpload"></div>
       </div>
 
       <div class="form-group">
-        <label class="form-label"><i data-lucide="layers"></i> التصنيف <span class="req">*</span></label>
+        <label class="form-label">
+          <i class="fa-solid fa-layer-group"></i>
+          التصنيف <span class="req">*</span>
+        </label>
         <div class="categories-row" data-target="upload">
-          <button type="button" class="chip" data-value="book"><i data-lucide="book-open"></i> كتاب</button>
-          <button type="button" class="chip" data-value="summary"><i data-lucide="file-text"></i> ملخص</button>
-          <button type="button" class="chip" data-value="automation"><i data-lucide="check-circle-2"></i> أتمتة</button>
-          <button type="button" class="chip" data-value="exam"><i data-lucide="graduation-cap"></i> دورات</button>
+          <button type="button" class="chip" data-value="book">
+            <i class="fa-solid fa-book"></i> كتاب
+          </button>
+          <button type="button" class="chip" data-value="summary">
+            <i class="fa-solid fa-file-lines"></i> ملخص
+          </button>
+          <button type="button" class="chip" data-value="automation">
+            <i class="fa-solid fa-list-check"></i> أتمتة
+          </button>
+          <button type="button" class="chip" data-value="exam">
+            <i class="fa-solid fa-graduation-cap"></i> دورات
+          </button>
         </div>
       </div>
 
       <div class="form-group">
-        <label class="form-label"><i data-lucide="paperclip"></i> الملف (PDF) <span class="req">*</span></label>
+        <label class="form-label">
+          <i class="fa-solid fa-paperclip"></i>
+          الملف (PDF) <span class="req">*</span>
+        </label>
         <div class="dropzone" id="dropzone">
           <input type="file" id="fileInput" accept=".pdf,application/pdf">
-<div class="dropzone-icon">
-    <i class="fa-solid fa-cloud-arrow-up" style="font-size: 32px; color: #10b981;"></i>
-</div>
+          <div class="dropzone-icon">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+          </div>
           <div class="dropzone-title">اسحب الملف هنا أو انقر للاختيار</div>
-          <div class="dropzone-sub">PDF بحد أقصى 50 MB</div>
+          <div class="dropzone-sub">
+            <i class="fa-solid fa-file-pdf" style="color: #ef4444;"></i>
+            ملفات PDF بحد أقصى 50 MB
+          </div>
         </div>
         <div class="file-preview" id="filePreview">
           <div class="file-preview-info">
-            <div class="file-preview-icon"><i data-lucide="file-check-2"></i></div>
+            <div class="file-preview-icon">
+              <i class="fa-solid fa-file-pdf" style="color: #ef4444;"></i>
+            </div>
             <div style="min-width: 0;">
               <div class="file-preview-name" id="fileName">file.pdf</div>
               <div class="file-preview-size" id="fileSize">0 MB</div>
             </div>
           </div>
           <button type="button" class="remove-btn" id="removeFile">
-            <i data-lucide="trash-2" style="width: 17px; height: 17px;"></i>
+            <i class="fa-solid fa-trash"></i>
           </button>
         </div>
       </div>
@@ -767,27 +847,39 @@ header {
       </div>
 
       <button type="submit" class="submit-btn" id="uploadBtn">
-        <i data-lucide="upload"></i>
-        <span>رفع وتصنيف</span>
+        <i class="fa-solid fa-cloud-arrow-up"></i>
+        <span>رفع الملف</span>
       </button>
 
     </form>
   </div>
 
-  <!-- لوحة إضافة رابط -->
+  <!-- ═══ لوحة إضافة رابط ═══ -->
   <div class="tab-panel" id="panel-link">
     <form class="form-card" id="linkForm" novalidate>
 
       <div class="info-box info-blue">
-        <i data-lucide="info"></i>
+        <i class="fa-solid fa-circle-info"></i>
         <div>
-          <strong>يدعم:</strong> Google Drive · Dropbox · Mega · MediaFire · OneDrive · iCloud · Telegram · أي رابط PDF
+          <strong>المواقع المدعومة:</strong>
+          <div class="supported-hosts">
+            <span class="supported-host drive"><i class="fa-brands fa-google-drive"></i> Drive</span>
+            <span class="supported-host dropbox"><i class="fa-brands fa-dropbox"></i> Dropbox</span>
+            <span class="supported-host mega"><i class="fa-solid fa-cloud"></i> Mega</span>
+            <span class="supported-host mediafire"><i class="fa-solid fa-fire"></i> MediaFire</span>
+            <span class="supported-host onedrive"><i class="fa-brands fa-microsoft"></i> OneDrive</span>
+            <span class="supported-host icloud"><i class="fa-brands fa-apple"></i> iCloud</span>
+            <span class="supported-host telegram"><i class="fa-brands fa-telegram"></i> Telegram</span>
+            <span class="supported-host youtube"><i class="fa-brands fa-youtube"></i> YouTube</span>
+            <span class="supported-host pdf"><i class="fa-solid fa-file-pdf"></i> PDF مباشر</span>
+            <span class="supported-host any"><i class="fa-solid fa-link"></i> أي رابط</span>
+          </div>
         </div>
       </div>
 
       <div class="form-group">
         <label class="form-label">
-          <i data-lucide="file-text"></i>
+          <i class="fa-solid fa-heading"></i>
           عنوان الملف <span class="req">*</span>
         </label>
         <input type="text" id="linkTitle" class="form-input" placeholder="مثال: كتاب التشريح الكامل">
@@ -795,55 +887,84 @@ header {
 
       <div class="form-group">
         <label class="form-label">
-          <i data-lucide="align-right"></i>
+          <i class="fa-solid fa-align-right"></i>
           وصف مختصر (اختياري)
         </label>
         <input type="text" id="linkDesc" class="form-input" placeholder="وصف قصير...">
       </div>
 
       <div class="form-group">
-        <label class="form-label"><i data-lucide="book-open"></i> المادة <span class="req">*</span></label>
+        <label class="form-label">
+          <i class="fa-solid fa-book-open"></i>
+          المادة <span class="req">*</span>
+        </label>
         <div class="subjects-grid" id="subjectsGridLink"></div>
       </div>
 
       <div class="form-group">
-        <label class="form-label"><i data-lucide="layers"></i> التصنيف <span class="req">*</span></label>
+        <label class="form-label">
+          <i class="fa-solid fa-layer-group"></i>
+          التصنيف <span class="req">*</span>
+        </label>
         <div class="categories-row" data-target="link">
-          <button type="button" class="chip" data-value="book"><i data-lucide="book-open"></i> كتاب</button>
-          <button type="button" class="chip" data-value="summary"><i data-lucide="file-text"></i> ملخص</button>
-          <button type="button" class="chip" data-value="automation"><i data-lucide="check-circle-2"></i> أتمتة</button>
-          <button type="button" class="chip" data-value="exam"><i data-lucide="graduation-cap"></i> دورات</button>
+          <button type="button" class="chip" data-value="book">
+            <i class="fa-solid fa-book"></i> كتاب
+          </button>
+          <button type="button" class="chip" data-value="summary">
+            <i class="fa-solid fa-file-lines"></i> ملخص
+          </button>
+          <button type="button" class="chip" data-value="automation">
+            <i class="fa-solid fa-list-check"></i> أتمتة
+          </button>
+          <button type="button" class="chip" data-value="exam">
+            <i class="fa-solid fa-graduation-cap"></i> دورات
+          </button>
         </div>
       </div>
 
       <div class="form-group">
-        <label class="form-label"><i data-lucide="link-2"></i> الرابط <span class="req">*</span></label>
+        <label class="form-label">
+          <i class="fa-solid fa-link"></i>
+          الرابط <span class="req">*</span>
+        </label>
         <div class="link-input-wrap">
-          <span class="link-input-icon"><i data-lucide="link"></i></span>
-          <input type="url" id="linkUrl" class="form-input" placeholder="https://drive.google.com/..." dir="ltr" style="text-align: left;">
+          <span class="link-input-icon">
+            <i class="fa-solid fa-link"></i>
+          </span>
+          <input type="url" id="linkUrl" class="form-input"
+                 placeholder="https://drive.google.com/..."
+                 dir="ltr" style="text-align: left;">
         </div>
+
         <div class="host-badge" id="hostBadge">
-          <div class="host-badge-icon" id="hostIcon" style="background: #10b981;">
-            <i data-lucide="link"></i>
+          <div class="host-badge-icon" id="hostIcon">
+            <i class="fa-solid fa-link"></i>
           </div>
-          <div style="flex: 1; min-width: 0;">
+          <div class="host-badge-info">
             <div class="host-badge-name" id="hostName">—</div>
-            <div class="host-badge-hint" id="hostHint">—</div>
+            <div class="host-badge-hint" id="hostHint">
+              <span class="dot-ok"></span>
+              <span>—</span>
+            </div>
           </div>
         </div>
+
         <div class="url-error" id="urlError">
-          <i data-lucide="alert-circle"></i>
+          <i class="fa-solid fa-circle-exclamation"></i>
           <span id="urlErrorText">الرابط غير صحيح</span>
         </div>
       </div>
 
       <div class="info-box info-green">
-        <i data-lucide="shield-check"></i>
-        <div>تأكد أن الملف <strong>متاح للجميع</strong> أو <strong>يمكن لأي شخص لديه الرابط</strong> عرضه.</div>
+        <i class="fa-solid fa-shield-halved"></i>
+        <div>
+          تأكد أن الملف <strong>متاح للجميع</strong> أو
+          <strong>يمكن لأي شخص لديه الرابط</strong> عرضه.
+        </div>
       </div>
 
       <button type="submit" class="submit-btn" id="linkBtn">
-        <i data-lucide="plus"></i>
+        <i class="fa-solid fa-plus"></i>
         <span>إضافة الرابط</span>
       </button>
 
@@ -852,13 +973,27 @@ header {
 
 </div>
 
-<!-- السكربتات -->
+<!-- ═══ السكربتات ═══ -->
 <script src="supabase-config.js"></script>
 <script src="auth.js"></script>
 <script src="files.js"></script>
 
 <script>
-lucide.createIcons();
+/* ═══════════════════════════════════════════════════════
+   شارات المضيفين — Font Awesome
+   ═══════════════════════════════════════════════════════ */
+const HOST_DISPLAY = {
+  drive:     { name: 'Google Drive', icon: 'fa-brands fa-google-drive', color: '#4285F4', hint: 'سيتم تحسين الرابط تلقائياً', ok: true },
+  dropbox:   { name: 'Dropbox',      icon: 'fa-brands fa-dropbox',      color: '#0061FF', hint: 'سيتم فتحه في Dropbox',       ok: true },
+  mega:      { name: 'Mega',         icon: 'fa-solid fa-cloud',         color: '#D9272E', hint: 'رابط Mega',                 ok: true },
+  mediafire: { name: 'MediaFire',    icon: 'fa-solid fa-fire',          color: '#1299F3', hint: 'رابط MediaFire',            ok: true },
+  onedrive:  { name: 'OneDrive',     icon: 'fa-brands fa-microsoft',    color: '#0078D4', hint: 'رابط OneDrive',             ok: true },
+  icloud:    { name: 'iCloud',       icon: 'fa-brands fa-apple',        color: '#3693F3', hint: 'رابط iCloud',               ok: true },
+  telegram:  { name: 'Telegram',     icon: 'fa-brands fa-telegram',     color: '#0088CC', hint: 'رابط Telegram',             ok: true },
+  youtube:   { name: 'YouTube',      icon: 'fa-brands fa-youtube',      color: '#FF0000', hint: 'سيفتح الفيديو في YouTube',  ok: true },
+  pdf:       { name: 'رابط PDF مباشر', icon: 'fa-solid fa-file-pdf',    color: '#ef4444', hint: 'ملف PDF مباشر',             ok: true },
+  other:     { name: 'رابط خارجي',   icon: 'fa-solid fa-link',          color: '#94a3b8', hint: 'رابط عام — تأكد أنه يعمل',  ok: false }
+};
 
 /* ═══ الحالة ═══ */
 const state = {
@@ -871,7 +1006,7 @@ const state = {
 /* ═══ Toast ═══ */
 function showToast(message, type = 'success', title = null) {
   if (document.activeElement &&
-      ['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) {
+      ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
     document.activeElement.blur();
   }
 
@@ -883,10 +1018,10 @@ function showToast(message, type = 'success', title = null) {
   }
 
   const config = {
-    success: { icon: 'check-circle-2', title: 'تم بنجاح' },
-    error:   { icon: 'alert-circle',   title: 'خطأ' },
-    warning: { icon: 'alert-triangle', title: 'تنبيه' },
-    info:    { icon: 'info',           title: 'معلومة' }
+    success: { icon: 'fa-circle-check',          title: 'تم بنجاح' },
+    error:   { icon: 'fa-circle-exclamation',    title: 'خطأ' },
+    warning: { icon: 'fa-triangle-exclamation',  title: 'تنبيه' },
+    info:    { icon: 'fa-circle-info',           title: 'معلومة' }
   };
 
   const cfg = config[type] || config.info;
@@ -895,14 +1030,13 @@ function showToast(message, type = 'success', title = null) {
   const toast = document.createElement('div');
   toast.className = 'toast ' + type;
   toast.innerHTML = `
-    <div class="toast-icon"><i data-lucide="${cfg.icon}"></i></div>
+    <div class="toast-icon"><i class="fa-solid ${cfg.icon}"></i></div>
     <div class="toast-content">
       <div class="toast-title">${displayTitle}</div>
       <div class="toast-message">${message}</div>
     </div>
   `;
   container.appendChild(toast);
-  lucide.createIcons();
 
   setTimeout(() => {
     toast.style.transition = 'all 0.3s';
@@ -947,6 +1081,21 @@ async function loadSubjects() {
   }
 }
 
+function mapIconToFa(icon) {
+  const map = {
+    'atom': 'fa-atom',
+    'flask-conical': 'fa-flask',
+    'dna': 'fa-dna',
+    'scroll-text': 'fa-scroll',
+    'languages': 'fa-language',
+    'book-open': 'fa-book-open',
+    'book': 'fa-book',
+    'graduation-cap': 'fa-graduation-cap',
+    'file-text': 'fa-file-lines'
+  };
+  return map[icon] || 'fa-book-open';
+}
+
 function renderSubjects(containerId, target) {
   const grid = document.getElementById(containerId);
   grid.innerHTML = '';
@@ -956,7 +1105,10 @@ function renderSubjects(containerId, target) {
     btn.type = 'button';
     btn.className = 'subject-card';
     btn.dataset.id = sub.id;
-    btn.innerHTML = `<i data-lucide="${sub.icon || 'book-open'}"></i><span>${sub.name}</span>`;
+    btn.innerHTML = `
+      <i class="fa-solid ${mapIconToFa(sub.icon)}"></i>
+      <span>${sub.name}</span>
+    `;
     btn.addEventListener('click', () => {
       grid.querySelectorAll('.subject-card').forEach(c => c.classList.remove('active'));
       btn.classList.add('active');
@@ -964,8 +1116,6 @@ function renderSubjects(containerId, target) {
     });
     grid.appendChild(btn);
   });
-
-  lucide.createIcons();
 }
 
 /* ═══ التبويبات ═══ */
@@ -994,11 +1144,17 @@ const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('fileInput');
 const filePreview = document.getElementById('filePreview');
 
-['dragenter','dragover'].forEach(evt => {
-  dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+['dragenter', 'dragover'].forEach(evt => {
+  dropzone.addEventListener(evt, e => {
+    e.preventDefault();
+    dropzone.classList.add('dragover');
+  });
 });
-['dragleave','drop'].forEach(evt => {
-  dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.remove('dragover'); });
+['dragleave', 'drop'].forEach(evt => {
+  dropzone.addEventListener(evt, e => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+  });
 });
 
 dropzone.addEventListener('drop', e => {
@@ -1041,7 +1197,7 @@ document.getElementById('uploadForm').addEventListener('submit', async e => {
   e.preventDefault();
 
   const title = document.getElementById('uploadTitle').value.trim();
-  const desc  = document.getElementById('uploadDesc').value.trim();
+  const desc = document.getElementById('uploadDesc').value.trim();
 
   if (!title) return showToast('أدخل العنوان', 'error');
   if (!state.upload.subjectId) return showToast('اختر المادة', 'error');
@@ -1116,7 +1272,7 @@ document.getElementById('uploadForm').addEventListener('submit', async e => {
     fill.style.width = '100%';
     pct.textContent = '100%';
     status.textContent = 'تم ✅';
-    showToast('تم الرفع بنجاح 🎉');
+    showToast('تم رفع الملف بنجاح', 'success');
 
     setTimeout(() => location.href = 'index.html', 1200);
 
@@ -1168,17 +1324,21 @@ function validateUrl() {
   state.link.url = result.normalized;
   state.link.host = result.host;
 
-  hostIcon.style.background = result.host.color;
-  hostIcon.innerHTML = `<i data-lucide="${result.host.icon}"></i>`;
-  hostName.textContent = result.host.name;
-  hostHint.textContent = result.host.key === 'drive' ?
-    'سيُحسَّن الرابط تلقائياً' :
-    result.host.key === 'other' ?
-    'رابط خارجي — تأكد أنه يعمل' :
-    'رابط صحيح';
-  hostBadge.classList.add('show');
+  // الحصول على شارة المضيف
+  const hostKey = result.host.key || 'other';
+  const display = HOST_DISPLAY[hostKey] || HOST_DISPLAY.other;
 
-  lucide.createIcons();
+  hostIcon.style.background = display.color;
+  hostIcon.innerHTML = `<i class="${display.icon}"></i>`;
+  hostName.textContent = display.name;
+
+  // hint مع dot
+  hostHint.innerHTML = `
+    <span class="${display.ok ? 'dot-ok' : 'dot-warn'}"></span>
+    <span>${display.hint}</span>
+  `;
+
+  hostBadge.classList.add('show');
 }
 
 linkUrl.addEventListener('blur', validateUrl);
@@ -1187,7 +1347,7 @@ document.getElementById('linkForm').addEventListener('submit', async e => {
   e.preventDefault();
 
   const title = document.getElementById('linkTitle').value.trim();
-  const desc  = document.getElementById('linkDesc').value.trim();
+  const desc = document.getElementById('linkDesc').value.trim();
 
   if (!title) return showToast('أدخل العنوان', 'error');
   if (!state.link.subjectId) return showToast('اختر المادة', 'error');
@@ -1207,7 +1367,7 @@ document.getElementById('linkForm').addEventListener('submit', async e => {
       externalUrl: state.link.url,
     });
 
-    showToast('تم إضافة الرابط بنجاح 🎉');
+    showToast('تم إضافة الرابط بنجاح', 'success');
     setTimeout(() => location.href = 'index.html', 1200);
 
   } catch (err) {
@@ -1218,7 +1378,7 @@ document.getElementById('linkForm').addEventListener('submit', async e => {
   }
 });
 
-console.log('✅ upload.html ready');
+console.log('✅ upload.html ready — Font Awesome');
 </script>
 
 <script>
