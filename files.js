@@ -462,4 +462,214 @@ window.addEventListener('offline', () => {
   console.log('🔴 Offline');
 });
 
+// ============================================
+// 14. 🆕 دعم الروابط الخارجية
+// ============================================
+
+// مواقع الرفع المدعومة
+const FILE_HOSTS = {
+  drive:     { name: 'Google Drive',  icon: 'hard-drive',  color: '#4285F4', pattern: /drive\.google\.com|docs\.google\.com/ },
+  dropbox:   { name: 'Dropbox',       icon: 'box',         color: '#0061FF', pattern: /dropbox\.com/ },
+  mega:      { name: 'Mega',          icon: 'cloud',       color: '#D9272E', pattern: /mega\.nz/ },
+  mediafire: { name: 'MediaFire',     icon: 'flame',       color: '#1299F3', pattern: /mediafire\.com/ },
+  onedrive:  { name: 'OneDrive',      icon: 'cloud',       color: '#0078D4', pattern: /1drv\.ms|onedrive\.live\.com/ },
+  icloud:    { name: 'iCloud',        icon: 'cloud',       color: '#3693F3', pattern: /icloud\.com/ },
+  telegram:  { name: 'Telegram',      icon: 'send',        color: '#0088CC', pattern: /t\.me|telegram\.(me|org)/ },
+  pdf:       { name: 'رابط PDF',      icon: 'file-text',   color: '#10b981', pattern: /\.pdf($|\?)/i },
+  other:     { name: 'رابط خارجي',    icon: 'link',        color: '#94a3b8', pattern: /.*/ }
+};
+
+// كشف نوع موقع الرفع من الرابط
+function detectFileHost(url) {
+  if (!url) return FILE_HOSTS.other;
+  const cleanUrl = url.toLowerCase();
+  for (const [key, host] of Object.entries(FILE_HOSTS)) {
+    if (host.pattern.test(cleanUrl)) return { ...host, key };
+  }
+  return { ...FILE_HOSTS.other, key: 'other' };
+}
+
+// هل الملف خارجي (رابط)؟
+function isExternalFile(file) {
+  return file && file.source === 'link';
+}
+
+// تحسين رابط Google Drive
+function normalizeDriveUrl(url) {
+  if (!url) return url;
+  try {
+    // نمط: /file/d/FILE_ID/view أو /open?id=FILE_ID
+    let fileId = null;
+    
+    const match1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (match1) fileId = match1[1];
+    
+    const match2 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (match2) fileId = match2[1];
+    
+    const match3 = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (match3 && !fileId) fileId = match3[1];
+    
+    if (fileId) {
+      return `https://drive.google.com/file/d/${fileId}/view`;
+    }
+    return url;
+  } catch (e) {
+    return url;
+  }
+}
+
+// تحسين رابط Dropbox
+function normalizeDropboxUrl(url) {
+  if (!url) return url;
+  try {
+    // حول ?dl=0 إلى ?dl=1
+    if (url.includes('dropbox.com')) {
+      let newUrl = url.replace(/[?&]dl=0/, '?dl=1');
+      if (!newUrl.includes('dl=')) {
+        newUrl += (newUrl.includes('?') ? '&' : '?') + 'dl=1';
+      }
+      // احذف ?dl=1 إذا كان الملف غير PDF (نريده يُفتح في العرض)
+      // لكن للتبسيط نتركه يفتح في المتصفح
+      return url; // نبقي الرابط الأصلي حتى يفتح في Dropbox
+    }
+    return url;
+  } catch (e) {
+    return url;
+  }
+}
+
+// تحسين الرابط حسب الموقع
+function normalizeExternalUrl(url) {
+  if (!url) return url;
+  const trimmed = url.trim();
+  
+  if (FILE_HOSTS.drive.pattern.test(trimmed)) {
+    return normalizeDriveUrl(trimmed);
+  }
+  if (FILE_HOSTS.dropbox.pattern.test(trimmed)) {
+    return normalizeDropboxUrl(trimmed);
+  }
+  
+  // تأكد أن الرابط يبدأ بـ http
+  if (!/^https?:\/\//i.test(trimmed)) {
+    return 'https://' + trimmed;
+  }
+  
+  return trimmed;
+}
+
+// التحقق من صحة الرابط (بسيط — بدون fetch)
+function validateExternalUrl(url) {
+  if (!url || typeof url !== 'string') {
+    return { valid: false, error: 'الرابط فارغ' };
+  }
+  
+  const trimmed = url.trim();
+  
+  if (trimmed.length < 10) {
+    return { valid: false, error: 'الرابط قصير جداً' };
+  }
+  
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : 'https://' + trimmed;
+  
+  try {
+    const parsed = new URL(withProtocol);
+    
+    // تأكد من وجود نطاق حقيقي
+    if (!parsed.hostname || parsed.hostname.length < 3) {
+      return { valid: false, error: 'النطاق غير صحيح' };
+    }
+    
+    // تأكد من وجود . في النطاق
+    if (!parsed.hostname.includes('.')) {
+      return { valid: false, error: 'النطاق غير صحيح' };
+    }
+    
+    // رفض نطاقات محلية/خطرة
+    const dangerous = ['localhost', '127.0.0.1', '0.0.0.0', 'javascript:', 'data:'];
+    if (dangerous.some(d => withProtocol.toLowerCase().includes(d))) {
+      return { valid: false, error: 'رابط غير آمن' };
+    }
+    
+    // الحصول على معلومات المضيف
+    const host = detectFileHost(parsed.href);
+    
+    return { 
+      valid: true, 
+      normalized: normalizeExternalUrl(trimmed),
+      host: host
+    };
+  } catch (e) {
+    return { valid: false, error: 'الرابط غير صحيح' };
+  }
+}
+
+// حفظ ملف برابط خارجي
+async function uploadLinkFile(info) {
+  if (!isOnline()) {
+    throw new Error('يجب الاتصال بالإنترنت لحفظ الرابط');
+  }
+  
+  const user = await getCurrentUser();
+  if (!user) throw new Error('يجب تسجيل الدخول');
+  
+  const { data, error } = await supabaseClient
+    .from('files')
+    .insert({
+      uploaded_by: user.id,
+      subject_id: info.subjectId,
+      title: info.title,
+      description: info.description || null,
+      category: info.category,
+      source: 'link',
+      external_url: info.externalUrl,
+      file_url: info.externalUrl, // للتوافق مع الكود القديم
+      file_path: null,
+      file_size: 0,
+      mime_type: 'external/link',
+      is_published: true
+    })
+    .select()
+    .single();
+  
+  if (error) throw error;
+  
+  // امسح cache
+  try {
+    const keys = Object.keys(localStorage).filter(k => 
+      k.startsWith('medfav_data_')
+    );
+    keys.forEach(k => {
+      if (k.includes('files') || k.includes('recent') || k.includes('stats')) {
+        localStorage.removeItem(k);
+      }
+    });
+  } catch (e) {}
+  
+  return data;
+}
+
+// فتح ملف خارجي مع التحقق
+async function openExternalFile(file) {
+  const url = file.external_url || file.file_url;
+  if (!url) {
+    showToast?.('لا يوجد رابط', 'error') || alert('لا يوجد رابط');
+    return;
+  }
+  
+  // افتح الرابط
+  window.open(url, '_blank', 'noopener,noreferrer');
+  
+  // زد العداد
+  if (file.id) {
+    incrementFileViews(file.id).catch(() => {});
+  }
+}
+
+// الحصول على معلومات المضيف
+function getHostInfo(url) {
+  return detectFileHost(url);
+}
+
 console.log('✅ files.js v2.0.0 loaded — full cache');

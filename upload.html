@@ -1,1330 +1,1231 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#06110d">
-  <title>رفع ملف جديد - المنصة الطبية</title>
-  
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#06110d">
+<title>إضافة محتوى - المنصة الطبية</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
 <script src="theme-init.js"></script>
-  <!-- PWA Meta Tags -->
+
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="المنصة الطبية">
-<meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-512.png">
+
 <style>
-    :root {
-      --bg-main: #06110d;
-      --bg-card: rgba(16, 34, 27, 0.65);
-      --bg-card-hover: rgba(22, 48, 38, 0.9);
-      --border-card: rgba(16, 185, 129, 0.2);
-      --border-card-hover: rgba(16, 185, 129, 0.5);
-      --accent-emerald: #10b981;
-      --accent-light: #34d399;
-      --accent-dark: #059669;
-      --accent-glow: rgba(16, 185, 129, 0.25);
-      --accent-glow-strong: rgba(16, 185, 129, 0.45);
-      --text-primary: #f0fdf4;
-      --text-secondary: #94a3b8;
-      --text-muted: #64748b;
-      --danger: #ef4444;
-      --warning: #f59e0b;
-      --info: #3b82f6;
-      --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      --transition-smooth: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Cairo', sans-serif;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    html { scroll-behavior: smooth; }
-
-    body {
-      background-color: var(--bg-main);
-      background-image: 
-        radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.12) 0%, transparent 50%),
-        radial-gradient(circle at 100% 100%, rgba(5, 150, 105, 0.08) 0%, transparent 45%);
-      background-attachment: fixed;
-      color: var(--text-primary);
-      min-height: 100vh;
-      padding-bottom: 60px;
-      overflow-x: hidden;
-      position: relative;
-    }
-
-
-
-    /* الهيدر */
-    header {
-      padding: 16px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid var(--border-card);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      background: rgba(6, 17, 13, 0.85);
-    }
-
-    .nav-btn {
-      width: 44px;
-      height: 44px;
-      border-radius: 14px;
-      background: var(--bg-card);
-      border: 1px solid var(--border-card);
-      color: var(--text-primary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      text-decoration: none;
-      transition: all var(--transition-fast);
-    }
-
-    .nav-btn:hover {
-      border-color: var(--accent-emerald);
-      color: var(--accent-light);
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px var(--accent-glow);
-    }
-
-    .header-center {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
-    }
-
-    .breadcrumb {
-      font-size: 0.72rem;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .breadcrumb a {
-      color: var(--text-secondary);
-      text-decoration: none;
-    }
-
-    .breadcrumb a:hover { color: var(--accent-light); }
-
-    .header-title {
-      font-size: 1.1rem;
-      font-weight: 800;
-      color: var(--text-primary);
-    }
-
-    /* حاوية */
-    .container {
-      max-width: 780px;
-      margin: 0 auto;
-      padding: 32px 20px;
-      position: relative;
-      z-index: 1;
-    }
-
-    .page-intro {
-      margin-bottom: 28px;
-      text-align: center;
-      animation: slideDown 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    @keyframes slideDown {
-      from { opacity: 0; transform: translateY(-20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .page-intro h1 {
-      font-size: 1.9rem;
-      font-weight: 900;
-      margin-bottom: 10px;
-      background: linear-gradient(135deg, #ffffff 0%, var(--accent-light) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .page-intro p {
-      color: var(--text-secondary);
-      font-size: 0.95rem;
-      line-height: 1.6;
-    }
-
-    /* بطاقة الرفع */
-    .upload-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-card);
-      border-radius: 24px;
-      padding: 32px;
-      backdrop-filter: blur(16px);
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-      animation: cardIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s backwards;
-      position: relative;
-      overflow: hidden;
-    }
-
-    @keyframes cardIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .upload-card::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      right: -20%;
-      width: 300px;
-      height: 300px;
-      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
-      pointer-events: none;
-    }
-
-    .upload-card > * { position: relative; z-index: 1; }
-
-    /* حقول النموذج */
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .form-label {
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: var(--text-primary);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .form-label i { color: var(--accent-light); width: 18px; height: 18px; }
-
-    .form-label .required {
-      color: var(--danger);
-      font-size: 1.1rem;
-      line-height: 1;
-    }
-
-    .form-input {
-      width: 100%;
-      padding: 14px 16px;
-      border-radius: 16px;
-      background: rgba(6, 17, 13, 0.6);
-      border: 1px solid var(--border-card);
-      color: var(--text-primary);
-      font-size: 0.95rem;
-      outline: none;
-      transition: all var(--transition-fast);
-      font-family: inherit;
-    }
-
-    .form-input::placeholder { color: var(--text-muted); }
-
-    .form-input:focus {
-      border-color: var(--accent-emerald);
-      box-shadow: 0 0 0 4px var(--accent-glow);
-      background: rgba(6, 17, 13, 0.9);
-    }
-
-    /* بطاقات المواد */
-    .subjects-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      gap: 10px;
-    }
-
-    .subject-card {
-      padding: 14px;
-      border-radius: 14px;
-      background: rgba(6, 17, 13, 0.5);
-      border: 1.5px solid var(--border-card);
-      color: var(--text-secondary);
-      font-size: 0.85rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all var(--transition-fast);
-      font-family: inherit;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      text-align: right;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .subject-card i { width: 18px; height: 18px; flex-shrink: 0; color: var(--text-muted); }
-    .subject-card:hover { border-color: var(--accent-emerald); color: var(--text-primary); transform: translateY(-2px); background: rgba(16, 185, 129, 0.08); }
-    .subject-card:hover i { color: var(--accent-light); }
-    .subject-card.active {
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.15));
-      border-color: var(--accent-emerald);
-      color: var(--text-primary);
-      box-shadow: 0 6px 20px var(--accent-glow);
-    }
-    .subject-card.active i { color: var(--accent-light); }
-    .subject-card.active::after {
-      content: '';
-      position: absolute;
-      top: 8px;
-      left: 8px;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--accent-light);
-      box-shadow: 0 0 12px var(--accent-emerald);
-    }
-
-    /* Chips للتصنيف */
-    .categories-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-
-    .category-chip {
-      padding: 10px 16px;
-      border-radius: 14px;
-      background: rgba(6, 17, 13, 0.5);
-      border: 1.5px solid var(--border-card);
-      color: var(--text-secondary);
-      font-size: 0.85rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all var(--transition-fast);
-      font-family: inherit;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      white-space: nowrap;
-    }
-
-    .category-chip i { width: 16px; height: 16px; }
-    .category-chip:hover { border-color: var(--accent-emerald); color: var(--text-primary); transform: translateY(-2px); }
-    .category-chip.active {
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.15));
-      border-color: var(--accent-emerald);
-      color: var(--text-primary);
-      box-shadow: 0 6px 20px var(--accent-glow);
-    }
-
-    /* Dropzone */
-    .dropzone {
-      border: 2px dashed var(--border-card-hover);
-      border-radius: 20px;
-      padding: 40px 20px;
-      text-align: center;
-      background: rgba(16, 185, 129, 0.03);
-      cursor: pointer;
-      transition: all var(--transition-smooth);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 14px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .dropzone:hover, .dropzone.dragover {
-      border-color: var(--accent-emerald);
-      border-style: solid;
-      background: rgba(16, 185, 129, 0.08);
-      transform: scale(1.01);
-    }
-
-    .dropzone-icon {
-      width: 68px;
-      height: 68px;
-      border-radius: 20px;
-      background: rgba(16, 185, 129, 0.15);
-      border: 1px solid var(--border-card);
-      color: var(--accent-light);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all var(--transition-smooth);
-    }
-
-    .dropzone:hover .dropzone-icon {
-      transform: translateY(-6px) scale(1.05);
-      box-shadow: 0 12px 28px var(--accent-glow);
-    }
-
-    .dropzone-title {
-      font-size: 1rem;
-      font-weight: 700;
-      color: var(--text-primary);
-    }
-
-    .dropzone-subtitle {
-      font-size: 0.82rem;
-      color: var(--text-muted);
-    }
-
-    .file-input-hidden {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      cursor: pointer;
-    }
-
-    /* معاينة الملف */
-    .file-preview {
-      display: none;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 18px;
-      background: rgba(16, 185, 129, 0.1);
-      border: 1px solid var(--accent-emerald);
-      border-radius: 16px;
-      animation: fadeIn 0.3s ease;
-      gap: 12px;
-    }
-
-    .file-preview.active { display: flex; }
-
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-
-    .file-preview-info {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      min-width: 0;
-      flex: 1;
-    }
-
-    .file-preview-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 12px;
-      background: rgba(16, 185, 129, 0.2);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--accent-light);
-      flex-shrink: 0;
-    }
-
-    .file-preview-name {
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: var(--text-primary);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      margin-bottom: 2px;
-    }
-
-    .file-preview-size {
-      font-size: 0.78rem;
-      color: var(--text-secondary);
-    }
-
-    .remove-file-btn {
-      background: transparent;
-      border: none;
-      color: var(--danger);
-      cursor: pointer;
-      padding: 8px;
-      border-radius: 10px;
-      transition: all var(--transition-fast);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .remove-file-btn:hover {
-      background: rgba(239, 68, 68, 0.15);
-    }
-
-    /* شريط التقدم */
-    .progress-wrapper {
-      display: none;
-      flex-direction: column;
-      gap: 8px;
-      padding: 16px;
-      background: rgba(16, 185, 129, 0.05);
-      border: 1px solid var(--border-card);
-      border-radius: 16px;
-      animation: fadeIn 0.3s ease;
-    }
-
-    .progress-wrapper.active { display: flex; }
-
-    .progress-labels {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.85rem;
-      color: var(--text-secondary);
-      font-weight: 600;
-    }
-
-    .progress-labels .percent {
-      color: var(--accent-light);
-      font-weight: 800;
-    }
-
-    .progress-bar-bg {
-      width: 100%;
-      height: 8px;
-      background: rgba(255, 255, 255, 0.08);
-      border-radius: 10px;
-      overflow: hidden;
-      position: relative;
-    }
-
-    .progress-bar-fill {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(90deg, var(--accent-dark), var(--accent-light));
-      border-radius: 10px;
-      transition: width 0.3s ease;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .progress-bar-fill::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-      animation: shine 1.5s ease-in-out infinite;
-    }
-
-    @keyframes shine {
-      from { transform: translateX(-100%); }
-      to { transform: translateX(100%); }
-    }
-
-    /* زر الإرسال */
-    .submit-btn {
-      width: 100%;
-      padding: 16px;
-      border-radius: 16px;
-      background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
-      border: none;
-      color: #ffffff;
-      font-size: 1rem;
-      font-weight: 800;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      box-shadow: 0 8px 24px var(--accent-glow);
-      transition: all var(--transition-fast);
-      font-family: inherit;
-      margin-top: 8px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .submit-btn::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
-      transform: translateX(-100%);
-      transition: transform 0.6s ease;
-    }
-
-    .submit-btn:hover::before { transform: translateX(100%); }
-
-    .submit-btn:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 32px var(--accent-glow-strong);
-    }
-
-    .submit-btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    /* Loading state للتحقق الأولي */
-    .auth-checking {
-      position: fixed;
-      inset: 0;
-      background: var(--bg-main);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 20px;
-      z-index: 9999;
-      transition: opacity 0.3s ease;
-    }
-
-    .auth-checking.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .auth-checking .loader {
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      border: 3px solid var(--border-card);
-      border-top-color: var(--accent-emerald);
-      animation: spin 0.9s linear infinite;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-/* ============================================
-   نظام Toast الاحترافي
-   ============================================ */
-.toast-container {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 99999;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: calc(100% - 30px);
-  max-width: 420px;
-  pointer-events: none;
+:root {
+  --bg-main: #06110d;
+  --bg-card: rgba(16, 34, 27, 0.7);
+  --bg-elevated: #0a1a14;
+  --border-card: rgba(16, 185, 129, 0.2);
+  --accent-emerald: #10b981;
+  --accent-light: #34d399;
+  --accent-dark: #059669;
+  --accent-glow: rgba(16, 185, 129, 0.25);
+  --text-primary: #f0fdf4;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+  --t: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.toast-item {
-  background: linear-gradient(145deg, rgba(14, 34, 24, 0.98), rgba(6, 18, 12, 0.98));
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
-  border-radius: 16px;
-  padding: 14px 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  box-shadow: 
-    0 10px 30px rgba(0, 0, 0, 0.6),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset,
-    0 0 25px rgba(16, 185, 129, 0.15);
-  font-family: 'Cairo', sans-serif;
-  color: #fff;
-  opacity: 0;
-  transform: translateY(-30px) scale(0.95);
-  animation: toastIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  pointer-events: auto;
-  position: relative;
-  overflow: hidden;
-  border-right: 4px solid #10b981;
-}
-
-.toast-item.toast-success { border-right-color: #10b981; box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 25px rgba(16, 185, 129, 0.25); }
-.toast-item.toast-error { border-right-color: #ef4444; box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 25px rgba(239, 68, 68, 0.25); }
-.toast-item.toast-warning { border-right-color: #f59e0b; box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 25px rgba(245, 158, 11, 0.25); }
-.toast-item.toast-info { border-right-color: #3b82f6; box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 25px rgba(59, 130, 246, 0.25); }
-
-.toast-item.removing {
-  animation: toastOut 0.3s ease forwards;
-}
-
-@keyframes toastIn {
-  0% { opacity: 0; transform: translateY(-30px) scale(0.95); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-@keyframes toastOut {
-  0% { opacity: 1; transform: translateY(0) scale(1); max-height: 100px; margin-bottom: 0; }
-  100% { opacity: 0; transform: translateY(-30px) scale(0.95); max-height: 0; margin-bottom: -10px; }
-}
-
-.toast-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-size: 1.15rem;
-  color: #fff;
-}
-
-.toast-success .toast-icon { background: linear-gradient(145deg, #10b981, #059669); box-shadow: 0 0 15px rgba(16, 185, 129, 0.5); }
-.toast-error .toast-icon { background: linear-gradient(145deg, #ff6b5b, #b8332a); box-shadow: 0 0 15px rgba(239, 68, 68, 0.5); }
-.toast-warning .toast-icon { background: linear-gradient(145deg, #ffb340, #b87700); box-shadow: 0 0 15px rgba(245, 158, 11, 0.5); }
-.toast-info .toast-icon { background: linear-gradient(145deg, #5dade2, #21618c); box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
-
-.toast-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.toast-title {
-  font-weight: 800;
-  font-size: 0.9rem;
-  margin-bottom: 2px;
-  letter-spacing: 0.3px;
-}
-
-.toast-message {
-  font-size: 0.78rem;
-  color: #b0c8b0;
-  font-weight: 500;
-  line-height: 1.4;
-}
-
-.toast-success .toast-title { color: #34d399; }
-.toast-error .toast-title { color: #ff7a6a; }
-.toast-warning .toast-title { color: #f5b041; }
-.toast-info .toast-title { color: #5dade2; }
-
-.toast-progress {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  height: 3px;
-  background: #10b981;
-  border-radius: 0 0 16px 0;
-  animation: toastProgress linear forwards;
-}
-
-.toast-error .toast-progress { background: #ef4444; }
-.toast-warning .toast-progress { background: #f59e0b; }
-.toast-info .toast-progress { background: #3b82f6; }
-
-@keyframes toastProgress {
-  0% { width: 100%; }
-  100% { width: 0%; }
-}
-
-    @media (max-width: 640px) {
-      .container { padding: 20px 14px; }
-      .upload-card { padding: 22px 18px; border-radius: 20px; }
-      .page-intro h1 { font-size: 1.5rem; }
-      .subjects-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-      .subject-card { padding: 12px 10px; font-size: 0.78rem; gap: 6px; }
-      .dropzone { padding: 30px 16px; }
-      .dropzone-icon { width: 56px; height: 56px; }
-      .category-chip { padding: 9px 14px; font-size: 0.8rem; }
-      .breadcrumb { display: none; }
-      header { padding: 12px 16px; }
-    }
-
-    @media (max-width: 380px) {
-      .subjects-grid { grid-template-columns: 1fr; }
-    }
-    /* ============================================ */
-/* الوضع النهاري - تلقائي */
-/* ============================================ */
 [data-theme="light"] {
   --bg-main: #f8fafb;
-  --bg-card: rgba(255, 255, 255, 0.85);
-  --bg-card-hover: rgba(255, 255, 255, 0.95);
-  --bg-solid: #ffffff;
+  --bg-card: rgba(255, 255, 255, 0.95);
   --bg-elevated: #f1f5f9;
   --border-card: rgba(16, 185, 129, 0.25);
-  --border-card-hover: rgba(16, 185, 129, 0.6);
   --accent-emerald: #059669;
   --accent-light: #10b981;
-  --accent-dark: #047857;
-  --accent-glow: rgba(16, 185, 129, 0.2);
-  --accent-glow-strong: rgba(16, 185, 129, 0.35);
   --text-primary: #0f172a;
   --text-secondary: #475569;
   --text-muted: #94a3b8;
 }
 
-[data-theme="light"] body {
-  background-color: var(--bg-main) !important;
-  background-image: 
-    radial-gradient(circle at 10% 10%, rgba(16, 185, 129, 0.06) 0%, transparent 40%),
-    radial-gradient(circle at 90% 80%, rgba(5, 150, 105, 0.04) 0%, transparent 40%) !important;
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Cairo', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background-color: var(--bg-main);
   color: var(--text-primary);
+  min-height: 100vh;
+  padding-bottom: 60px;
+  overflow-x: hidden;
+  transition: background 0.3s;
+}
+
+[data-theme="light"] body {
+  background-image:
+    radial-gradient(circle at 10% 10%, rgba(16, 185, 129, 0.06) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(5, 150, 105, 0.04) 0%, transparent 40%);
+}
+
+/* الهيدر */
+header {
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(6, 17, 13, 0.85);
 }
 
 [data-theme="light"] header {
-  background: rgba(248, 250, 251, 0.9) !important;
-  border-bottom-color: var(--border-card);
+  background: rgba(248, 250, 251, 0.92);
 }
 
-[data-theme="light"] .floating-nav {
-  background: rgba(255, 255, 255, 0.95) !important;
+.nav-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all var(--t);
 }
 
-[data-theme="light"] .form-input,
-[data-theme="light"] .search-input,
-[data-theme="light"] .form-select {
-  background: rgba(255, 255, 255, 0.9);
+.nav-btn:hover {
+  border-color: var(--accent-emerald);
+  color: var(--accent-light);
+}
+
+.header-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+/* الحاوية */
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+/* التبويبات */
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 18px;
+  margin-bottom: 22px;
+  backdrop-filter: blur(16px);
+}
+
+.tab-btn {
+  padding: 14px;
+  border-radius: 13px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all var(--t);
+}
+
+.tab-btn svg { width: 18px; height: 18px; }
+
+.tab-btn.active {
+  background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+  color: #fff;
+  box-shadow: 0 6px 20px var(--accent-glow);
+}
+
+.tab-btn:not(.active):hover {
+  color: var(--text-primary);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+/* اللوحات */
+.tab-panel { display: none; animation: fadeIn 0.3s; }
+.tab-panel.active { display: block; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* بطاقة النموذج */
+.form-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 22px;
+  padding: 26px 22px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.form-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.form-label svg { width: 16px; height: 16px; color: var(--accent-light); }
+.form-label .req { color: var(--danger); }
+
+.form-input {
+  width: 100%;
+  padding: 13px 15px;
+  border-radius: 14px;
+  background: var(--bg-elevated);
+  border: 1.5px solid var(--border-card);
+  color: var(--text-primary);
+  font-size: 0.92rem;
+  outline: none;
+  transition: all var(--t);
+  font-family: inherit;
+}
+
+.form-input::placeholder { color: var(--text-muted); }
+
+.form-input:focus {
+  border-color: var(--accent-emerald);
+  box-shadow: 0 0 0 4px var(--accent-glow);
+}
+
+/* المواد */
+.subjects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.subject-card {
+  padding: 13px;
+  border-radius: 13px;
+  background: var(--bg-elevated);
+  border: 1.5px solid var(--border-card);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--t);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: right;
+}
+
+.subject-card svg { width: 17px; height: 17px; flex-shrink: 0; }
+.subject-card:hover { border-color: var(--accent-emerald); color: var(--text-primary); }
+.subject-card.active {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.15));
+  border-color: var(--accent-emerald);
+  color: var(--text-primary);
+  box-shadow: 0 6px 20px var(--accent-glow);
+}
+
+/* التصنيفات */
+.categories-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  padding: 9px 14px;
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  border: 1.5px solid var(--border-card);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--t);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.chip svg { width: 15px; height: 15px; }
+.chip:hover { border-color: var(--accent-emerald); color: var(--text-primary); }
+.chip.active {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.15));
+  border-color: var(--accent-emerald);
+  color: var(--text-primary);
+  box-shadow: 0 6px 20px var(--accent-glow);
+}
+
+/* Dropzone */
+.dropzone {
+  border: 2px dashed var(--accent-emerald);
+  border-radius: 18px;
+  padding: 32px 18px;
+  text-align: center;
+  background: rgba(16, 185, 129, 0.04);
+  cursor: pointer;
+  transition: all var(--t);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+
+.dropzone:hover, .dropzone.dragover {
+  border-style: solid;
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.dropzone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.dropzone-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--accent-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dropzone-icon svg { width: 28px; height: 28px; }
+
+.dropzone-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.dropzone-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* معاينة الملف */
+.file-preview {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid var(--accent-emerald);
+  border-radius: 14px;
+  gap: 10px;
+}
+
+.file-preview.active { display: flex; }
+
+.file-preview-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.file-preview-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--accent-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.file-preview-icon svg { width: 18px; height: 18px; }
+
+.file-preview-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-preview-size {
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+}
+
+.remove-btn {
+  background: transparent;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 10px;
+  display: flex;
+}
+
+.remove-btn:hover { background: rgba(239, 68, 68, 0.15); }
+
+/* حقل الرابط */
+.link-input-wrap {
+  position: relative;
+}
+
+.link-input-wrap .form-input {
+  padding-inline-start: 42px;
+}
+
+.link-input-icon {
+  position: absolute;
+  inset-inline-start: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--accent-light);
+  pointer-events: none;
+}
+
+.link-input-icon svg { width: 18px; height: 18px; }
+
+/* عرض كشف المضيف */
+.host-badge {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 13px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid var(--border-card);
+  border-radius: 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
   color: var(--text-primary);
 }
-  </style>
+
+.host-badge.show { display: flex; }
+
+.host-badge-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.host-badge-icon svg { width: 15px; height: 15px; }
+
+.host-badge-name {
+  color: var(--text-primary);
+  font-weight: 800;
+}
+
+.host-badge-hint {
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.74rem;
+}
+
+/* رسائل التحقق */
+.url-error {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 12px;
+  color: #f87171;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.url-error.show { display: flex; }
+.url-error svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+/* صناديق المعلومات */
+.info-box {
+  padding: 13px 14px;
+  border-radius: 14px;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.info-box svg { width: 17px; height: 17px; flex-shrink: 0; margin-top: 2px; }
+
+.info-blue {
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  color: #93c5fd;
+}
+
+.info-green {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: var(--accent-light);
+}
+
+/* الأزرار */
+.submit-btn {
+  width: 100%;
+  padding: 15px;
+  border-radius: 15px;
+  background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+  border: none;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.98rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  box-shadow: 0 8px 24px var(--accent-glow);
+  transition: all var(--t);
+  margin-top: 6px;
+}
+
+.submit-btn svg { width: 19px; height: 19px; }
+.submit-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 32px var(--accent-glow); }
+.submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* شريط التقدم */
+.progress-wrap {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  background: rgba(16, 185, 129, 0.05);
+  border: 1px solid var(--border-card);
+  border-radius: 14px;
+}
+
+.progress-wrap.show { display: flex; }
+
+.progress-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.progress-labels .pct { color: var(--accent-light); font-weight: 800; }
+
+.progress-bar {
+  width: 100%;
+  height: 7px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent-dark), var(--accent-light));
+  border-radius: 10px;
+  transition: width 0.3s;
+}
+
+/* شاشة التحقق */
+.auth-check {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-main);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  z-index: 9999;
+  transition: opacity 0.3s;
+}
+
+.auth-check.hidden { opacity: 0; pointer-events: none; }
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 3px solid var(--border-card);
+  border-top-color: var(--accent-emerald);
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Toast */
+.toast-container {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: calc(100% - 24px);
+  max-width: 400px;
+  pointer-events: none;
+}
+
+.toast {
+  background: linear-gradient(145deg, rgba(14, 34, 24, 0.98), rgba(6, 18, 12, 0.98));
+  backdrop-filter: blur(15px);
+  border-radius: 14px;
+  padding: 13px 15px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  color: #fff;
+  opacity: 0;
+  transform: translateY(-30px);
+  animation: toastIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  pointer-events: auto;
+  border-right: 4px solid #10b981;
+}
+
+@keyframes toastIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.toast.error { border-right-color: #ef4444; }
+.toast.info { border-right-color: #3b82f6; }
+.toast.warning { border-right-color: #f59e0b; }
+
+.toast-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #10b981, #059669);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.toast.error .toast-icon { background: linear-gradient(145deg, #ff6b5b, #b8332a); }
+.toast.info .toast-icon { background: linear-gradient(145deg, #5dade2, #21618c); }
+.toast.warning .toast-icon { background: linear-gradient(145deg, #ffb340, #b87700); }
+
+.toast-icon svg { width: 17px; height: 17px; }
+
+.toast-content { flex: 1; min-width: 0; }
+.toast-title { font-weight: 800; font-size: 0.86rem; }
+.toast-message { font-size: 0.76rem; color: #b0c8b0; margin-top: 1px; }
+
+@media (max-width: 640px) {
+  .container { padding: 18px 12px; }
+  .form-card { padding: 20px 16px; border-radius: 18px; }
+  .subjects-grid { grid-template-columns: repeat(2, 1fr); }
+  .tab-btn { font-size: 0.82rem; padding: 12px 8px; }
+}
+</style>
 </head>
 <body>
 
-  <!-- شاشة التحقق من الدخول -->
-  <div class="auth-checking" id="authChecking">
-    <div class="loader"></div>
-    <div style="color: var(--text-secondary); font-size: 0.9rem; font-weight: 600;">
-      جاري التحقق من الجلسة...
-    </div>
+<!-- شاشة التحقق -->
+<div class="auth-check" id="authCheck">
+  <div class="spinner"></div>
+  <div style="color: var(--text-secondary); font-size: 0.9rem; font-weight: 600;">
+    جاري التحقق...
+  </div>
+</div>
+
+<!-- الهيدر -->
+<header>
+  <a href="index.html" class="nav-btn">
+    <i data-lucide="arrow-right" style="width: 19px; height: 19px;"></i>
+  </a>
+  <div class="header-title">إضافة محتوى</div>
+  <div style="width: 42px;"></div>
+</header>
+
+<div class="container">
+
+  <!-- التبويبات -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="upload">
+      <i data-lucide="upload-cloud"></i>
+      رفع ملف PDF
+    </button>
+    <button class="tab-btn" data-tab="link">
+      <i data-lucide="link-2"></i>
+      إضافة رابط
+    </button>
   </div>
 
+  <!-- لوحة رفع الملف -->
+  <div class="tab-panel active" id="panel-upload">
+    <form class="form-card" id="uploadForm" novalidate>
 
-  <!-- الهيدر -->
-  <header>
-    <a href="index.html" class="nav-btn" aria-label="رجوع">
-      <i data-lucide="arrow-right" style="width: 20px; height: 20px;"></i>
-    </a>
-    <div class="header-center">
-      <div class="breadcrumb">
-        <a href="index.html">الرئيسية</a>
-        <i data-lucide="chevron-left" style="width: 12px;"></i>
-        <span>رفع ملف</span>
-      </div>
-      <div class="header-title">رفع ملف جديد</div>
-    </div>
-    <div style="width: 44px;"></div>
-  </header>
-
-  <div class="container">
-    
-    <div class="page-intro">
-      <h1>إضافة محتوى تعليمي</h1>
-      <p>قم برفع وتصنيف المراجع والمستندات لإتاحتها للطلاب</p>
-    </div>
-
-    <form class="upload-card" id="uploadForm" novalidate>
-      
-      <!-- عنوان الملف -->
       <div class="form-group">
-        <label class="form-label" for="fileTitle">
+        <label class="form-label">
           <i data-lucide="file-text"></i>
-          عنوان الملف أو الدورة
-          <span class="required">*</span>
+          عنوان الملف <span class="req">*</span>
         </label>
-        <input 
-          type="text" 
-          id="fileTitle" 
-          class="form-input" 
-          placeholder="مثال: ملخص الفصل الأول - الأمواج والاهتزازات" 
-          required
-        >
+        <input type="text" id="uploadTitle" class="form-input" placeholder="مثال: ملخص الفصل الأول">
       </div>
 
-      <!-- الوصف (اختياري) -->
       <div class="form-group">
-        <label class="form-label" for="fileDescription">
+        <label class="form-label">
           <i data-lucide="align-right"></i>
           وصف مختصر (اختياري)
         </label>
-        <input 
-          type="text" 
-          id="fileDescription" 
-          class="form-input" 
-          placeholder="مثال: ملخص شامل يغطي الفصل الأول مع الأمثلة"
-        >
+        <input type="text" id="uploadDesc" class="form-input" placeholder="وصف قصير...">
       </div>
 
-      <!-- المادة -->
       <div class="form-group">
-        <label class="form-label">
-          <i data-lucide="book-open"></i>
-          المادة الدراسية
-          <span class="required">*</span>
-        </label>
-        <div class="subjects-grid" id="subjectsGrid">
-          <!-- تُملأ ديناميكياً من Supabase -->
+        <label class="form-label"><i data-lucide="book-open"></i> المادة <span class="req">*</span></label>
+        <div class="subjects-grid" id="subjectsGridUpload"></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label"><i data-lucide="layers"></i> التصنيف <span class="req">*</span></label>
+        <div class="categories-row" data-target="upload">
+          <button type="button" class="chip" data-value="book"><i data-lucide="book-open"></i> كتاب</button>
+          <button type="button" class="chip" data-value="summary"><i data-lucide="file-text"></i> ملخص</button>
+          <button type="button" class="chip" data-value="automation"><i data-lucide="check-circle-2"></i> أتمتة</button>
+          <button type="button" class="chip" data-value="exam"><i data-lucide="graduation-cap"></i> دورات</button>
         </div>
       </div>
 
-      <!-- التصنيف -->
       <div class="form-group">
-        <label class="form-label">
-          <i data-lucide="layers"></i>
-          نوع التصنيف
-          <span class="required">*</span>
-        </label>
-        <div class="categories-row" id="categoriesRow">
-          <button type="button" class="category-chip" data-value="book">
-            <i data-lucide="book-open"></i> كتاب رسمي
-          </button>
-          <button type="button" class="category-chip" data-value="summary">
-            <i data-lucide="file-text"></i> ملخص دراسي
-          </button>
-          <button type="button" class="category-chip" data-value="automation">
-            <i data-lucide="check-circle-2"></i> بنك أتمتة
-          </button>
-          <button type="button" class="category-chip" data-value="exam">
-            <i data-lucide="graduation-cap"></i> أسئلة دورات
-          </button>
-        </div>
-      </div>
-
-      <!-- الملف -->
-      <div class="form-group">
-        <label class="form-label">
-          <i data-lucide="paperclip"></i>
-          المستند (PDF)
-          <span class="required">*</span>
-        </label>
-        
+        <label class="form-label"><i data-lucide="paperclip"></i> الملف (PDF) <span class="req">*</span></label>
         <div class="dropzone" id="dropzone">
-          <input type="file" id="fileInput" class="file-input-hidden" accept=".pdf,application/pdf">
-          <div class="dropzone-icon">
-            <i data-lucide="upload-cloud" style="width: 32px; height: 32px;"></i>
-          </div>
-          <div class="dropzone-title">اسحب الملف إلى هنا أو انقر للاختيار</div>
-          <div class="dropzone-subtitle">يُدعم PDF بحد أقصى 50 ميغابايت</div>
+          <input type="file" id="fileInput" accept=".pdf,application/pdf">
+          <div class="dropzone-icon"><i data-lucide="upload-cloud"></i></div>
+          <div class="dropzone-title">اسحب الملف هنا أو انقر للاختيار</div>
+          <div class="dropzone-sub">PDF بحد أقصى 50 MB</div>
         </div>
-
-        <!-- معاينة الملف -->
         <div class="file-preview" id="filePreview">
           <div class="file-preview-info">
-            <div class="file-preview-icon">
-              <i data-lucide="file-check-2" style="width: 20px; height: 20px;"></i>
-            </div>
+            <div class="file-preview-icon"><i data-lucide="file-check-2"></i></div>
             <div style="min-width: 0;">
               <div class="file-preview-name" id="fileName">file.pdf</div>
               <div class="file-preview-size" id="fileSize">0 MB</div>
             </div>
           </div>
-          <button type="button" class="remove-file-btn" onclick="resetFileSelection()" aria-label="حذف">
-            <i data-lucide="trash-2" style="width: 18px; height: 18px;"></i>
+          <button type="button" class="remove-btn" id="removeFile">
+            <i data-lucide="trash-2" style="width: 17px; height: 17px;"></i>
           </button>
         </div>
       </div>
 
-      <!-- شريط التقدم -->
-      <div class="progress-wrapper" id="progressWrapper">
+      <div class="progress-wrap" id="uploadProgress">
         <div class="progress-labels">
-          <span id="progressStatus">جاري رفع الملف...</span>
-          <span class="percent" id="progressPercent">0%</span>
+          <span id="uploadStatus">جاري الرفع...</span>
+          <span class="pct" id="uploadPct">0%</span>
         </div>
-        <div class="progress-bar-bg">
-          <div class="progress-bar-fill" id="progressBarFill"></div>
-        </div>
+        <div class="progress-bar"><div class="progress-fill" id="uploadFill"></div></div>
       </div>
 
-      <!-- زر الإرسال -->
-      <button type="submit" class="submit-btn" id="submitBtn">
-        <i data-lucide="upload" style="width: 20px; height: 20px;"></i>
-        <span id="submitBtnText">رفع وتصنيف الملف</span>
+      <button type="submit" class="submit-btn" id="uploadBtn">
+        <i data-lucide="upload"></i>
+        <span>رفع وتصنيف</span>
       </button>
 
     </form>
-
   </div>
 
-  <!-- سكربتات -->
-  <script src="supabase-config.js"></script>
-  <script src="auth.js"></script>
+  <!-- لوحة إضافة رابط -->
+  <div class="tab-panel" id="panel-link">
+    <form class="form-card" id="linkForm" novalidate>
 
-  <script>
-    lucide.createIcons();
+      <div class="info-box info-blue">
+        <i data-lucide="info"></i>
+        <div>
+          <strong>يدعم:</strong> Google Drive · Dropbox · Mega · MediaFire · OneDrive · iCloud · Telegram · أي رابط PDF
+        </div>
+      </div>
 
-    // ============================================
-    // حالة عامة
-    // ============================================
-    const state = {
-      currentUser: null,
-      selectedSubjectId: null,
-      selectedCategory: null,
-      selectedFile: null,
-      subjects: []
-    };
+      <div class="form-group">
+        <label class="form-label">
+          <i data-lucide="file-text"></i>
+          عنوان الملف <span class="req">*</span>
+        </label>
+        <input type="text" id="linkTitle" class="form-input" placeholder="مثال: كتاب التشريح الكامل">
+      </div>
 
+      <div class="form-group">
+        <label class="form-label">
+          <i data-lucide="align-right"></i>
+          وصف مختصر (اختياري)
+        </label>
+        <input type="text" id="linkDesc" class="form-input" placeholder="وصف قصير...">
+      </div>
 
-    // ============================================
-    // التحقق من الدخول
-    // ============================================
-    async function checkAuth() {
-      const user = await requireAuth();
-      if (!user) return;
-      
-      state.currentUser = user;
-      
-      // إخفاء شاشة التحقق
-      document.getElementById('authChecking').classList.add('hidden');
-      
-      // تحميل المواد
-      await loadSubjects();
-    }
+      <div class="form-group">
+        <label class="form-label"><i data-lucide="book-open"></i> المادة <span class="req">*</span></label>
+        <div class="subjects-grid" id="subjectsGridLink"></div>
+      </div>
 
-    checkAuth();
+      <div class="form-group">
+        <label class="form-label"><i data-lucide="layers"></i> التصنيف <span class="req">*</span></label>
+        <div class="categories-row" data-target="link">
+          <button type="button" class="chip" data-value="book"><i data-lucide="book-open"></i> كتاب</button>
+          <button type="button" class="chip" data-value="summary"><i data-lucide="file-text"></i> ملخص</button>
+          <button type="button" class="chip" data-value="automation"><i data-lucide="check-circle-2"></i> أتمتة</button>
+          <button type="button" class="chip" data-value="exam"><i data-lucide="graduation-cap"></i> دورات</button>
+        </div>
+      </div>
 
-    // ===========================================
-    // تحميل المواد من Supabase
-    // ============================================
-    async function loadSubjects() {
-      try {
-        const { data, error } = await supabaseClient
-          .from('subjects')
-          .select('*')
-          .order('sort_order');
-        
-        if (error) throw error;
-        
-        state.subjects = data;
-        renderSubjects(data);
-      } catch (err) {
-        console.error('loadSubjects error:', err);
-        showToast('تعذّر تحميل المواد', 'error');
-      }
-    }
+      <div class="form-group">
+        <label class="form-label"><i data-lucide="link-2"></i> الرابط <span class="req">*</span></label>
+        <div class="link-input-wrap">
+          <span class="link-input-icon"><i data-lucide="link"></i></span>
+          <input type="url" id="linkUrl" class="form-input" placeholder="https://drive.google.com/..." dir="ltr" style="text-align: left;">
+        </div>
+        <div class="host-badge" id="hostBadge">
+          <div class="host-badge-icon" id="hostIcon" style="background: #10b981;">
+            <i data-lucide="link"></i>
+          </div>
+          <div style="flex: 1; min-width: 0;">
+            <div class="host-badge-name" id="hostName">—</div>
+            <div class="host-badge-hint" id="hostHint">—</div>
+          </div>
+        </div>
+        <div class="url-error" id="urlError">
+          <i data-lucide="alert-circle"></i>
+          <span id="urlErrorText">الرابط غير صحيح</span>
+        </div>
+      </div>
 
-    // ===========================================
-    // عرض بطاقات المواد
-    // ============================================
-    function renderSubjects(subjects) {
-      const grid = document.getElementById('subjectsGrid');
-      grid.innerHTML = '';
-      
-      subjects.forEach(sub => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'subject-card';
-        btn.dataset.id = sub.id;
-        btn.innerHTML = `
-          <i data-lucide="${sub.icon || 'book-open'}"></i>
-          <span>${sub.name}</span>
-        `;
-        
-        btn.addEventListener('click', () => {
-          document.querySelectorAll('.subject-card').forEach(c => c.classList.remove('active'));
-          btn.classList.add('active');
-          state.selectedSubjectId = sub.id;
-        });
-        
-        grid.appendChild(btn);
-      });
-      
-      lucide.createIcons();
-    }
+      <div class="info-box info-green">
+        <i data-lucide="shield-check"></i>
+        <div>تأكد أن الملف <strong>متاح للجميع</strong> أو <strong>يمكن لأي شخص لديه الرابط</strong> عرضه.</div>
+      </div>
 
-    // ============================================
-    // اختيار التصنيف
-    // ============================================
-    document.querySelectorAll('.category-chip').forEach(chip => {
-      chip.addEventListener('click', () => {
-        document.querySelectorAll('.category-chip').forEach(c => c.classList.remove('active'));
-        chip.classList.add('active');
-        state.selectedCategory = chip.dataset.value;
-      });
-    });
+      <button type="submit" class="submit-btn" id="linkBtn">
+        <i data-lucide="plus"></i>
+        <span>إضافة الرابط</span>
+      </button>
 
-    // ============================================
-    // Dropzone
-    // ============================================
-    const dropzone = document.getElementById('dropzone');
-    const fileInput = document.getElementById('fileInput');
-    const filePreview = document.getElementById('filePreview');
+    </form>
+  </div>
 
-    ['dragenter', 'dragover'].forEach(evt => {
-      dropzone.addEventListener(evt, (e) => {
-        e.preventDefault();
-        dropzone.classList.add('dragover');
-      });
-    });
+</div>
 
-    ['dragleave', 'drop'].forEach(evt => {
-      dropzone.addEventListener(evt, (e) => {
-        e.preventDefault();
-        dropzone.classList.remove('dragover');
-      });
-    });
+<!-- السكربتات -->
+<script src="supabase-config.js"></script>
+<script src="auth.js"></script>
+<script src="files.js"></script>
 
-    dropzone.addEventListener('drop', (e) => {
-      const files = e.dataTransfer.files;
-      if (files.length > 0) {
-        fileInput.files = files;
-        handleFileSelect(files);
-      }
-    });
+<script>
+lucide.createIcons();
 
-    fileInput.addEventListener('change', (e) => {
-      handleFileSelect(e.target.files);
-    });
+/* ═══ الحالة ═══ */
+const state = {
+  user: null,
+  subjects: [],
+  upload: { subjectId: null, category: null, file: null },
+  link:   { subjectId: null, category: null, url: '', host: null },
+};
 
-    // ============================================
-    // معالجة اختيار الملف
-    // ============================================
-    function handleFileSelect(files) {
-      if (!files || files.length === 0) return;
-      const file = files[0];
-      
-      if (file.type !== 'application/pdf') {
-        showToast('يرجى اختيار ملف PDF فقط', 'error');
-        resetFileSelection();
-        return;
-      }
-
-      if (file.size > 50 * 1024 * 1024) {
-        showToast('حجم الملف يتجاوز 50 ميغابايت', 'error');
-        resetFileSelection();
-        return;
-      }
-
-      state.selectedFile = file;
-      
-      document.getElementById('fileName').textContent = file.name;
-      const sizeMB = file.size / (1024 * 1024);
-      const sizeKB = file.size / 1024;
-      document.getElementById('fileSize').textContent = sizeMB >= 1 
-        ? sizeMB.toFixed(2) + ' MB' 
-        : sizeKB.toFixed(0) + ' KB';
-      
-      dropzone.style.display = 'none';
-      filePreview.classList.add('active');
-    }
-
-    function resetFileSelection() {
-      fileInput.value = '';
-      state.selectedFile = null;
-      filePreview.classList.remove('active');
-      dropzone.style.display = 'flex';
-    }
-
-    // ============================================
-    // رفع الملف — العملية الكاملة
-    // ============================================
-    document.getElementById('uploadForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      // ========== التحقق من المدخلات ==========
-      const title = document.getElementById('fileTitle').value.trim();
-      const description = document.getElementById('fileDescription').value.trim();
-
-      if (!title) {
-        showToast('يرجى إدخال عنوان الملف', 'error');
-        return;
-      }
-      if (!state.selectedSubjectId) {
-        showToast('يرجى اختيار المادة', 'error');
-        return;
-      }
-      if (!state.selectedCategory) {
-        showToast('يرجى اختيار نوع التصنيف', 'error');
-        return;
-      }
-      if (!state.selectedFile) {
-        showToast('يرجى اختيار ملف PDF', 'error');
-        return;
-      }
-
-      // ========== تحضير الواجهة ==========
-      const submitBtn = document.getElementById('submitBtn');
-      const submitBtnText = document.getElementById('submitBtnText');
-      const progressWrapper = document.getElementById('progressWrapper');
-      const progressBarFill = document.getElementById('progressBarFill');
-      const progressPercent = document.getElementById('progressPercent');
-      const progressStatus = document.getElementById('progressStatus');
-
-      submitBtn.disabled = true;
-      progressWrapper.classList.add('active');
-      progressStatus.textContent = 'جاري رفع الملف...';
-      progressBarFill.style.width = '0%';
-      progressPercent.textContent = '0%';
-
-      try {
-        // ========== 1. رفع الملف إلى Storage ==========
-        // المسار: {userId}/{timestamp}_{filename}
-        const userId = state.currentUser.id;
-        const timestamp = Date.now();
-        const safeFileName = state.selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-        const filePath = `${userId}/${timestamp}_${safeFileName}`;
-
-        // محاكاة تقدم الرفع (Supabase لا يدعم progress callback مباشرة)
-        let fakeProgress = 0;
-        const progressInterval = setInterval(() => {
-          fakeProgress = Math.min(fakeProgress + Math.random() * 8, 90);
-          progressBarFill.style.width = fakeProgress + '%';
-          progressPercent.textContent = Math.round(fakeProgress) + '%';
-        }, 200);
-
-        const { data: uploadData, error: uploadError } = await supabaseClient.storage
-          .from('files')
-          .upload(filePath, state.selectedFile, {
-            cacheControl: '3600',
-            upsert: false,
-            contentType: 'application/pdf'
-          });
-
-        clearInterval(progressInterval);
-
-        if (uploadError) throw uploadError;
-
-        progressBarFill.style.width = '95%';
-        progressPercent.textContent = '95%';
-        progressStatus.textContent = 'جاري حفظ البيانات...';
-
-        // ========== 2. الحصول على الرابط العام ==========
-        const { data: { publicUrl } } = supabaseClient.storage
-          .from('files')
-          .getPublicUrl(filePath);
-
-        // ========== 3. حفظ البيانات في جدول files ==========
-        const { data: fileRecord, error: dbError } = await supabaseClient
-          .from('files')
-          .insert({
-            uploaded_by: userId,
-            subject_id: state.selectedSubjectId,
-            title: title,
-            description: description || null,
-            file_url: publicUrl,
-            file_path: filePath,
-            file_size: state.selectedFile.size,
-            mime_type: 'application/pdf',
-            category: state.selectedCategory,
-            is_published: true
-          })
-          .select()
-          .single();
-
-        if (dbError) {
-          // فشل الحفظ في DB → نحذف الملف من Storage
-          await supabaseClient.storage.from('files').remove([filePath]);
-          throw dbError;
-        }
-
-        // ========== 4. اكتمل ==========
-        progressBarFill.style.width = '100%';
-        progressPercent.textContent = '100%';
-        progressStatus.textContent = 'تم بنجاح! ✅';
-
-        showToast('تم رفع الملف بنجاح! 🎉');
-
-        // إعادة التوجيه بعد 1.2 ثانية
-        setTimeout(() => {
-          window.location.href = 'index.html';
-        }, 1200);
-
-      } catch (err) {
-        console.error('Upload error:', err);
-        
-        submitBtn.disabled = false;
-        progressWrapper.classList.remove('active');
-        
-        let errorMsg = 'حدث خطأ أثناء الرفع';
-        if (err.message?.includes('exceeded')) {
-          errorMsg = 'حجم الملف كبير جداً';
-        } else if (err.message?.includes('duplicate')) {
-          errorMsg = 'الملف موجود بالفعل';
-        } else if (err.message?.includes('row-level')) {
-          errorMsg = 'ليس لديك صلاحية الرفع';
-        } else if (err.message) {
-          errorMsg = err.message;
-        }
-        
-        showToast(errorMsg, 'error');
-      }
-    });
-
-// ============================================
-// 🆕 نظام Toast الاحترافي
-// ============================================
-function showToast(message, type = 'success', title = null, duration = 4000) {
-  // إغلاق الكيبورد إن كان مفتوحاً
-  if (document.activeElement && 
-      (document.activeElement.tagName === 'INPUT' || 
-       document.activeElement.tagName === 'TEXTAREA')) {
+/* ═══ Toast ═══ */
+function showToast(message, type = 'success', title = null) {
+  if (document.activeElement &&
+      ['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) {
     document.activeElement.blur();
   }
-  
-  // إنشاء الحاوية إن لم تكن موجودة
+
   let container = document.querySelector('.toast-container');
   if (!container) {
     container = document.createElement('div');
     container.className = 'toast-container';
     document.body.appendChild(container);
   }
-  
-  // الإعدادات حسب النوع
+
   const config = {
-    success: { icon: 'check-circle-2', defaultTitle: 'تم بنجاح' },
-    error:   { icon: 'alert-circle',   defaultTitle: 'خطأ' },
-    warning: { icon: 'alert-triangle', defaultTitle: 'تنبيه' },
-    info:    { icon: 'info',           defaultTitle: 'معلومة' }
+    success: { icon: 'check-circle-2', title: 'تم بنجاح' },
+    error:   { icon: 'alert-circle',   title: 'خطأ' },
+    warning: { icon: 'alert-triangle', title: 'تنبيه' },
+    info:    { icon: 'info',           title: 'معلومة' }
   };
-  
+
   const cfg = config[type] || config.info;
-  const displayTitle = title || cfg.defaultTitle;
-  
-  // إنشاء الـ Toast
+  const displayTitle = title || cfg.title;
+
   const toast = document.createElement('div');
-  toast.className = `toast-item toast-${type}`;
+  toast.className = 'toast ' + type;
   toast.innerHTML = `
-    <div class="toast-icon">
-      <i data-lucide="${cfg.icon}" style="width: 20px; height: 20px;"></i>
-    </div>
+    <div class="toast-icon"><i data-lucide="${cfg.icon}"></i></div>
     <div class="toast-content">
       <div class="toast-title">${displayTitle}</div>
       <div class="toast-message">${message}</div>
     </div>
-    <div class="toast-progress" style="animation-duration: ${duration}ms;"></div>
   `;
-  
   container.appendChild(toast);
   lucide.createIcons();
-  
-  // إزالة تلقائية
-  const removeToast = () => {
-    if (!toast.parentNode) return;
-    toast.classList.add('removing');
+
+  setTimeout(() => {
+    toast.style.transition = 'all 0.3s';
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(-30px)';
     setTimeout(() => {
-      if (toast.parentNode) toast.remove();
-      if (container && container.children.length === 0) {
-        container.remove();
-      }
+      toast.remove();
+      if (container.children.length === 0) container.remove();
     }, 300);
-  };
-  
-  setTimeout(removeToast, duration);
-  toast.addEventListener('click', removeToast);
+  }, 3500);
 }
 
-    console.log('✅ upload.html loaded');
-  </script>
-<!-- PWA Service Worker -->
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js')
-        .then(reg => {
-          console.log('✅ SW registered:', reg.scope);
-          
-          // تحديث تلقائي عند وجود نسخة جديدة
-          reg.addEventListener('updatefound', () => {
-            const newWorker = reg.installing;
-            if (newWorker) {
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('🔄 New version available');
-                }
-              });
-            }
-          });
-        })
-        .catch(err => console.warn('⚠️ SW failed:', err));
-    });
+/* ═══ التحقق من الدخول ═══ */
+async function init() {
+  const user = await requireAuth();
+  if (!user) return;
+
+  state.user = user;
+  document.getElementById('authCheck').classList.add('hidden');
+
+  await loadSubjects();
+}
+
+init();
+
+/* ═══ تحميل المواد ═══ */
+async function loadSubjects() {
+  try {
+    const { data, error } = await supabaseClient
+      .from('subjects')
+      .select('*')
+      .order('sort_order');
+
+    if (error) throw error;
+    state.subjects = data || [];
+
+    renderSubjects('subjectsGridUpload', 'upload');
+    renderSubjects('subjectsGridLink',   'link');
+  } catch (e) {
+    console.error(e);
+    showToast('تعذّر تحميل المواد', 'error');
   }
+}
+
+function renderSubjects(containerId, target) {
+  const grid = document.getElementById(containerId);
+  grid.innerHTML = '';
+
+  state.subjects.forEach(sub => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'subject-card';
+    btn.dataset.id = sub.id;
+    btn.innerHTML = `<i data-lucide="${sub.icon || 'book-open'}"></i><span>${sub.name}</span>`;
+    btn.addEventListener('click', () => {
+      grid.querySelectorAll('.subject-card').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      state[target].subjectId = sub.id;
+    });
+    grid.appendChild(btn);
+  });
+
+  lucide.createIcons();
+}
+
+/* ═══ التبويبات ═══ */
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + tab));
+  });
+});
+
+/* ═══ التصنيفات ═══ */
+document.querySelectorAll('.categories-row').forEach(row => {
+  const target = row.dataset.target;
+  row.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      row.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      state[target].category = chip.dataset.value;
+    });
+  });
+});
+
+/* ═══ Dropzone ═══ */
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const filePreview = document.getElementById('filePreview');
+
+['dragenter','dragover'].forEach(evt => {
+  dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+});
+['dragleave','drop'].forEach(evt => {
+  dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.remove('dragover'); });
+});
+
+dropzone.addEventListener('drop', e => {
+  if (e.dataTransfer.files.length) {
+    fileInput.files = e.dataTransfer.files;
+    handleFile(e.dataTransfer.files[0]);
+  }
+});
+fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+document.getElementById('removeFile').addEventListener('click', resetFile);
+
+function handleFile(file) {
+  if (!file) return;
+  if (file.type !== 'application/pdf') {
+    showToast('اختر ملف PDF فقط', 'error');
+    return resetFile();
+  }
+  if (file.size > 50 * 1024 * 1024) {
+    showToast('الحجم أكبر من 50 ميجا', 'error');
+    return resetFile();
+  }
+  state.upload.file = file;
+  document.getElementById('fileName').textContent = file.name;
+  const mb = file.size / (1024 * 1024);
+  document.getElementById('fileSize').textContent =
+    mb >= 1 ? mb.toFixed(2) + ' MB' : (file.size / 1024).toFixed(0) + ' KB';
+  dropzone.style.display = 'none';
+  filePreview.classList.add('active');
+}
+
+function resetFile() {
+  fileInput.value = '';
+  state.upload.file = null;
+  filePreview.classList.remove('active');
+  dropzone.style.display = 'flex';
+}
+
+/* ═══ نموذج الرفع ═══ */
+document.getElementById('uploadForm').addEventListener('submit', async e => {
+  e.preventDefault();
+
+  const title = document.getElementById('uploadTitle').value.trim();
+  const desc  = document.getElementById('uploadDesc').value.trim();
+
+  if (!title) return showToast('أدخل العنوان', 'error');
+  if (!state.upload.subjectId) return showToast('اختر المادة', 'error');
+  if (!state.upload.category) return showToast('اختر التصنيف', 'error');
+  if (!state.upload.file) return showToast('اختر الملف', 'error');
+
+  const btn = document.getElementById('uploadBtn');
+  const pw = document.getElementById('uploadProgress');
+  const fill = document.getElementById('uploadFill');
+  const pct = document.getElementById('uploadPct');
+  const status = document.getElementById('uploadStatus');
+
+  btn.disabled = true;
+  pw.classList.add('show');
+  fill.style.width = '0%';
+  pct.textContent = '0%';
+  status.textContent = 'جاري الرفع...';
+
+  try {
+    const userId = state.user.id;
+    const ts = Date.now();
+    const safeName = state.upload.file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const filePath = `${userId}/${ts}_${safeName}`;
+
+    let fake = 0;
+    const int = setInterval(() => {
+      fake = Math.min(fake + Math.random() * 8, 90);
+      fill.style.width = fake + '%';
+      pct.textContent = Math.round(fake) + '%';
+    }, 200);
+
+    const { error: upErr } = await supabaseClient.storage
+      .from('files')
+      .upload(filePath, state.upload.file, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: 'application/pdf'
+      });
+
+    clearInterval(int);
+    if (upErr) throw upErr;
+
+    fill.style.width = '95%';
+    pct.textContent = '95%';
+    status.textContent = 'حفظ البيانات...';
+
+    const { data: { publicUrl } } = supabaseClient.storage
+      .from('files')
+      .getPublicUrl(filePath);
+
+    const { error: dbErr } = await supabaseClient
+      .from('files')
+      .insert({
+        uploaded_by: userId,
+        subject_id: state.upload.subjectId,
+        title,
+        description: desc || null,
+        file_url: publicUrl,
+        file_path: filePath,
+        file_size: state.upload.file.size,
+        mime_type: 'application/pdf',
+        category: state.upload.category,
+        source: 'upload',
+        is_published: true
+      });
+
+    if (dbErr) {
+      await supabaseClient.storage.from('files').remove([filePath]);
+      throw dbErr;
+    }
+
+    fill.style.width = '100%';
+    pct.textContent = '100%';
+    status.textContent = 'تم ✅';
+    showToast('تم الرفع بنجاح 🎉');
+
+    setTimeout(() => location.href = 'index.html', 1200);
+
+  } catch (err) {
+    console.error(err);
+    btn.disabled = false;
+    pw.classList.remove('show');
+    showToast(err.message || 'فشل الرفع', 'error');
+  }
+});
+
+/* ═══ نموذج الرابط ═══ */
+const linkUrl = document.getElementById('linkUrl');
+const hostBadge = document.getElementById('hostBadge');
+const hostIcon = document.getElementById('hostIcon');
+const hostName = document.getElementById('hostName');
+const hostHint = document.getElementById('hostHint');
+const urlError = document.getElementById('urlError');
+const urlErrorText = document.getElementById('urlErrorText');
+
+let urlCheckTimer;
+linkUrl.addEventListener('input', () => {
+  clearTimeout(urlCheckTimer);
+  urlCheckTimer = setTimeout(() => validateUrl(), 400);
+});
+
+function validateUrl() {
+  const raw = linkUrl.value.trim();
+
+  hostBadge.classList.remove('show');
+  urlError.classList.remove('show');
+
+  if (!raw) {
+    state.link.url = '';
+    state.link.host = null;
+    return;
+  }
+
+  const result = validateExternalUrl(raw);
+
+  if (!result.valid) {
+    urlErrorText.textContent = result.error;
+    urlError.classList.add('show');
+    state.link.url = '';
+    state.link.host = null;
+    return;
+  }
+
+  state.link.url = result.normalized;
+  state.link.host = result.host;
+
+  hostIcon.style.background = result.host.color;
+  hostIcon.innerHTML = `<i data-lucide="${result.host.icon}"></i>`;
+  hostName.textContent = result.host.name;
+  hostHint.textContent = result.host.key === 'drive' ?
+    'سيُحسَّن الرابط تلقائياً' :
+    result.host.key === 'other' ?
+    'رابط خارجي — تأكد أنه يعمل' :
+    'رابط صحيح';
+  hostBadge.classList.add('show');
+
+  lucide.createIcons();
+}
+
+linkUrl.addEventListener('blur', validateUrl);
+
+document.getElementById('linkForm').addEventListener('submit', async e => {
+  e.preventDefault();
+
+  const title = document.getElementById('linkTitle').value.trim();
+  const desc  = document.getElementById('linkDesc').value.trim();
+
+  if (!title) return showToast('أدخل العنوان', 'error');
+  if (!state.link.subjectId) return showToast('اختر المادة', 'error');
+  if (!state.link.category) return showToast('اختر التصنيف', 'error');
+  if (!state.link.url) return showToast('أدخل رابطاً صحيحاً', 'error');
+
+  const btn = document.getElementById('linkBtn');
+  btn.disabled = true;
+  btn.querySelector('span').textContent = 'جاري الحفظ...';
+
+  try {
+    await uploadLinkFile({
+      subjectId: state.link.subjectId,
+      title,
+      description: desc,
+      category: state.link.category,
+      externalUrl: state.link.url,
+    });
+
+    showToast('تم إضافة الرابط بنجاح 🎉');
+    setTimeout(() => location.href = 'index.html', 1200);
+
+  } catch (err) {
+    console.error(err);
+    btn.disabled = false;
+    btn.querySelector('span').textContent = 'إضافة الرابط';
+    showToast(err.message || 'فشل الحفظ', 'error');
+  }
+});
+
+console.log('✅ upload.html ready');
 </script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+
 </body>
 </html>
