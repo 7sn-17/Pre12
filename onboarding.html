@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="المنصة الطبية">
+  <title>مرحباً بك - المنصة الطبية</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-512.png">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Cairo', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      position: fixed;
+      inset: 0;
+      background: #ffffff;
+      color: #0f172a;
+      user-select: none;
+      -webkit-user-select: none;
+      overscroll-behavior: none;
+    }
+
+    /* ============================================ */
+    /* Slides Container — Absolute Positioning */
+    /* ============================================ */
+    .slides-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #ffffff;
+      touch-action: pan-y;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+      overflow: hidden;
+      will-change: transform;
+      transform: translate3d(0, 0, 0);
+      transition: transform 0.65s cubic-bezier(0.25, 1, 0.5, 1);
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      /* RTL: next slide comes from the right → +100% */
+      transform: translate3d(100%, 0, 0);
+    }
+
+    .slide.active {
+      transform: translate3d(0, 0, 0);
+      z-index: 10;
+    }
+
+    .slide.prev {
+      transform: translate3d(100%, 0, 0); /* to the right (out of view) */
+    }
+
+    .slide.next {
+      transform: translate3d(-100%, 0, 0); /* to the left (out of view) */
+    }
+
+    /* During drag — no transition */
+    .slide.dragging {
+      transition: none;
+    }
+
+    /* ============================================ */
+    /* Per-Slide Color Themes */
+    /* ============================================ */
+    .slide:nth-child(1) {
+      --grad-1: #6ee7b7;
+      --grad-2: #10b981;
+      --grad-3: #047857;
+    }
+
+    .slide:nth-child(2) {
+      --grad-1: #93c5fd;
+      --grad-2: #3b82f6;
+      --grad-3: #1d4ed8;
+    }
+
+    .slide:nth-child(3) {
+      --grad-1: #67e8f9;
+      --grad-2: #06b6d4;
+      --grad-3: #0e7490;
+    }
+
+    .slide:nth-child(4) {
+      --grad-1: #c4b5fd;
+      --grad-2: #8b5cf6;
+      --grad-3: #6d28d9;
+    }
+
+    /* ============================================ */
+    /* Top Section — Wave + Image */
+    /* ============================================ */
+    .slide-top {
+      position: relative;
+      flex: 0 0 62%;
+      padding-top: 18%;
+      overflow: hidden;
+    }
+
+    .wave-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+    }
+
+    .wave-bg svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .slide-image {
+      position: absolute;
+      bottom: 8%;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
+      max-width: 68%;
+      max-height: 68%;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 24px 45px rgba(15, 23, 42, 0.18));
+    }
+
+    /* ============================================ */
+    /* Bottom Section */
+    /* ============================================ */
+    .slide-bottom {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 16px 32px max(24px, env(safe-area-inset-bottom)) 32px;
+      background: #ffffff;
+      position: relative;
+      z-index: 2;
+    }
+
+    .slide-title {
+      font-size: 1.7rem;
+      font-weight: 900;
+      line-height: 1.32;
+      color: #0f172a;
+      margin-bottom: 14px;
+      max-width: 340px;
+      letter-spacing: -0.5px;
+    }
+
+    .slide-desc {
+      font-size: 0.92rem;
+      line-height: 1.8;
+      color: #64748b;
+      max-width: 340px;
+      font-weight: 500;
+      margin-bottom: 18px;
+    }
+
+    /* ============================================ */
+    /* Dots */
+    /* ============================================ */
+    .dots {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      justify-content: center;
+      margin-bottom: 22px;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #cbd5e1;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      flex-shrink: 0;
+    }
+
+    .dot.active {
+      width: 26px;
+      border-radius: 4px;
+      background: #0f172a;
+    }
+
+    /* ============================================ */
+    /* Actions */
+    /* ============================================ */
+    .slide-actions {
+      width: 100%;
+      max-width: 380px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-top: auto;
+    }
+
+    .action-skip {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 0.92rem;
+      font-weight: 700;
+      padding: 14px 18px;
+      cursor: pointer;
+      transition: color 0.2s ease;
+      font-family: inherit;
+      letter-spacing: 0.2px;
+    }
+
+    .action-skip:hover { color: #475569; }
+    .action-skip:active { transform: scale(0.95); }
+
+    .action-next {
+      background: #0f172a;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 15px;
+      font-size: 0.95rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      font-family: inherit;
+      box-shadow: 0 8px 22px rgba(15, 23, 42, 0.22);
+      letter-spacing: 0.2px;
+    }
+
+    .action-next:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.3);
+    }
+
+    .action-next:active {
+      transform: translateY(0) scale(0.97);
+    }
+
+    .action-next i {
+      font-size: 0.88rem;
+      transition: transform 0.3s ease;
+    }
+
+    .action-next:hover i { transform: translateX(-4px); }
+
+    /* ============================================ */
+    /* Last Slide — Big Button (Fix Center Alignment) */
+    /* ============================================ */
+    .slide:last-child .slide-actions {
+      justify-content: center;
+      max-width: 100%;
+    }
+
+    .slide:last-child .action-skip {
+      display: none;
+    }
+
+    .slide:last-child .action-next {
+      width: 100%;
+      max-width: 380px;
+      padding: 18px 60px 18px 30px; /* مساحة للأيقونة على اليسار */
+      font-size: 1.05rem;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #7c3aed, #5b21b6);
+      box-shadow: 
+        0 12px 32px rgba(124, 58, 237, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      letter-spacing: 0.3px;
+      position: relative;
+      justify-content: center;
+    }
+
+    .slide:last-child .action-next span {
+      display: block;
+      text-align: center;
+    }
+
+    /* الأيقونة في الطرف الأيسر بشكل مطلق */
+    .slide:last-child .action-next i {
+      position: absolute;
+      left: 22px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.1rem;
+      transition: transform 0.3s ease;
+    }
+
+    .slide:last-child .action-next:hover {
+      transform: translateY(-3px);
+      box-shadow: 
+        0 18px 40px rgba(124, 58, 237, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    }
+
+    .slide:last-child .action-next:hover i {
+      transform: translateY(-50%) scale(1.15);
+    }
+
+    /* ============================================ */
+    /* Responsive */
+    /* ============================================ */
+    @media (max-width: 400px) {
+      .slide-top { flex: 0 0 60%; padding-top: 16%; }
+      .slide-image { max-width: 72%; max-height: 68%; }
+      .slide-bottom { padding: 14px 24px max(20px, env(safe-area-inset-bottom)) 24px; }
+      .slide-title { font-size: 1.48rem; margin-bottom: 10px; }
+      .slide-desc { font-size: 0.85rem; margin-bottom: 14px; line-height: 1.7; }
+      .dots { margin-bottom: 16px; }
+      .action-next { padding: 13px 24px; font-size: 0.88rem; }
+      .action-skip { font-size: 0.86rem; }
+      .slide:last-child .action-next { padding: 16px 55px 16px 24px; font-size: 1rem; }
+      .slide:last-child .action-next i { left: 18px; font-size: 1rem; }
+    }
+
+    @media (max-height: 700px) {
+      .slide-top { flex: 0 0 58%; padding-top: 15%; }
+      .slide-image { max-width: 68%; max-height: 64%; bottom: 6%; }
+      .slide-title { font-size: 1.38rem; margin-bottom: 8px; }
+      .slide-desc { font-size: 0.83rem; margin-bottom: 12px; line-height: 1.6; }
+      .dots { margin-bottom: 14px; }
+      .action-next { padding: 12px 22px; }
+      .action-skip { padding: 12px 14px; }
+      .slide:last-child .action-next { padding: 15px 55px 15px 24px; font-size: 1rem; }
+    }
+
+    @media (max-height: 600px) {
+      .slide-top { flex: 0 0 54%; padding-top: 12%; }
+      .slide-title { font-size: 1.22rem; }
+      .slide-desc { font-size: 0.78rem; margin-bottom: 10px; }
+      .dots { margin-bottom: 10px; }
+      .action-next { padding: 11px 20px; font-size: 0.86rem; }
+      .slide:last-child .action-next { padding: 14px 50px 14px 22px; font-size: 0.95rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .slide { transition: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="slides-container" id="slidesContainer">
+
+    <!-- ============================================ -->
+    <!-- Slide 1 — الترحيب (Emerald) — Wave Style A -->
+    <!-- ============================================ -->
+    <div class="slide active" data-slide="0">
+      <div class="slide-top">
+        <div class="wave-bg">
+          <svg viewBox="0 0 400 500" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#6ee7b7"/>
+                <stop offset="55%" stop-color="#10b981"/>
+                <stop offset="100%" stop-color="#047857"/>
+              </linearGradient>
+            </defs>
+            <!-- Wave A: موجة متعرجة عادية -->
+            <path d="M0,110 C60,80 140,60 200,70 C270,82 340,110 400,95 L400,380 C340,415 280,430 220,425 C140,418 60,398 0,360 Z" 
+                  fill="url(#grad1)"/>
+          </svg>
+        </div>
+        <img src="Medical%20prescription-pana.png" alt="المنصة الطبية" class="slide-image">
+      </div>
+
+      <div class="slide-bottom">
+        <h1 class="slide-title">مرحباً بك في المنصة الطبية</h1>
+        <p class="slide-desc">رفيقك الأمثل في السنة التحضيرية — كل ما تحتاجه من ملفات وملاحظات وأهداف في مكان واحد.</p>
+
+        <div class="dots" data-dots></div>
+
+        <div class="slide-actions">
+          <button class="action-skip" data-skip>تخطي</button>
+          <button class="action-next" data-next>
+            <span>التالي</span>
+            <i class="fa-solid fa-arrow-left"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- Slide 2 — المكتبة (Blue) — Wave Style B (معكوسة) -->
+    <!-- ============================================ -->
+    <div class="slide" data-slide="1">
+      <div class="slide-top">
+        <div class="wave-bg">
+          <svg viewBox="0 0 400 500" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#93c5fd"/>
+                <stop offset="55%" stop-color="#3b82f6"/>
+                <stop offset="100%" stop-color="#1d4ed8"/>
+              </linearGradient>
+            </defs>
+            <!-- Wave B: معكوسة (قمة يمين أعلى من يسار) -->
+            <path d="M0,90 C60,110 140,130 200,120 C270,108 340,80 400,100 L400,360 C340,395 280,415 220,420 C140,428 60,408 0,380 Z" 
+                  fill="url(#grad2)"/>
+          </svg>
+        </div>
+        <img src="Library-pana.png" alt="مكتبة شاملة" class="slide-image">
+      </div>
+
+      <div class="slide-bottom">
+        <h1 class="slide-title">مكتبة شاملة بين يديك</h1>
+        <p class="slide-desc">كتب، ملخصات، مراجع، وبحث فوري في 5 مواد أساسية مع إمكانية تحميل كل شيء.</p>
+
+        <div class="dots" data-dots></div>
+
+        <div class="slide-actions">
+          <button class="action-skip" data-skip>تخطي</button>
+          <button class="action-next" data-next>
+            <span>التالي</span>
+            <i class="fa-solid fa-arrow-left"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- Slide 3 — القراءة offline (Cyan) — Wave Style C (مزدوجة) -->
+    <!-- ============================================ -->
+    <div class="slide" data-slide="2">
+      <div class="slide-top">
+        <div class="wave-bg">
+          <svg viewBox="0 0 400 500" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="grad3" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#67e8f9"/>
+                <stop offset="55%" stop-color="#06b6d4"/>
+                <stop offset="100%" stop-color="#0e7490"/>
+              </linearGradient>
+            </defs>
+            <!-- Wave C: مزدوجة (موجة متموجة بعمق) -->
+            <path d="M0,130 C50,100 100,140 150,110 C200,80 250,120 300,95 C340,78 370,95 400,85 L400,400 C340,430 280,435 220,430 C140,422 60,405 0,375 Z" 
+                  fill="url(#grad3)"/>
+          </svg>
+        </div>
+        <img src="Uploading-pana.png" alt="تحميل وقراءة" class="slide-image">
+      </div>
+
+      <div class="slide-bottom">
+        <h1 class="slide-title">اقرأ بدون إنترنت</h1>
+        <p class="slide-desc">حمّل الملفات مرة واحدة، وافتحها في أي وقت ومكان بدون اتصال — بسرعة فائقة.</p>
+
+        <div class="dots" data-dots></div>
+
+        <div class="slide-actions">
+          <button class="action-skip" data-skip>تخطي</button>
+          <button class="action-next" data-next>
+            <span>التالي</span>
+            <i class="fa-solid fa-arrow-left"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- Slide 4 — الملاحظات والأهداف (Violet) — Wave Style D (مسطحة) -->
+    <!-- ============================================ -->
+    <div class="slide" data-slide="3">
+      <div class="slide-top">
+        <div class="wave-bg">
+          <svg viewBox="0 0 400 500" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="grad4" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#c4b5fd"/>
+                <stop offset="55%" stop-color="#8b5cf6"/>
+                <stop offset="100%" stop-color="#6d28d9"/>
+              </linearGradient>
+            </defs>
+            <!-- Wave D: مسطحة مع انحناء خفيف جداً -->
+            <path d="M0,120 C100,90 200,110 300,95 C350,88 380,95 400,90 L400,390 C340,410 280,420 220,422 C140,425 60,410 0,385 Z" 
+                  fill="url(#grad4)"/>
+          </svg>
+        </div>
+        <img src="Mobile%20note%20list-amico.png" alt="الملاحظات والأهداف" class="slide-image">
+      </div>
+
+      <div class="slide-bottom">
+        <h1 class="slide-title">نظّم دراستك بذكاء</h1>
+        <p class="slide-desc">ملاحظات شخصية ومشتركة، أهداف دراسية يومية، وتتبع تقدمك خطوة بخطوة.</p>
+
+        <div class="dots" data-dots></div>
+
+        <div class="slide-actions">
+          <button class="action-skip" data-skip>تخطي</button>
+          <button class="action-next" data-next>
+            <span>ابدأ الآن</span>
+            <i class="fa-solid fa-rocket"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ============================================
+    // Config
+    // ============================================
+    const TOTAL_SLIDES = 4;
+    const SWIPE_THRESHOLD = 50;
+    const VELOCITY_THRESHOLD = 0.3;
+
+    let currentSlide = 0;
+    let isAnimating = false;
+    let startX = 0;
+    let startY = 0;
+    let startTime = 0;
+    let currentX = 0;
+    let isDragging = false;
+    let isHorizontalSwipe = null;
+
+    const container = document.getElementById('slidesContainer');
+    const slides = document.querySelectorAll('.slide');
+
+    // ============================================
+    // Build Dots
+    // ============================================
+    document.querySelectorAll('[data-dots]').forEach(dotsContainer => {
+      let html = '';
+      for (let i = 0; i < TOTAL_SLIDES; i++) {
+        html += `<button class="dot" data-dot="${i}" aria-label="الشاشة ${i + 1}"></button>`;
+      }
+      dotsContainer.innerHTML = html;
+    });
+
+    const allDots = document.querySelectorAll('[data-dot]');
+
+    // ============================================
+    // Core: Set Slide Positions (Absolute Positioning)
+    // ============================================
+    function updateSlideStates() {
+      slides.forEach((slide, i) => {
+        slide.classList.remove('active', 'prev', 'next');
+        if (i === currentSlide) {
+          slide.classList.add('active');
+        } else if (i < currentSlide) {
+          // Slides to the right (out of view RTL)
+          slide.classList.add('prev');
+        } else {
+          // Slides to the left (out of view RTL)
+          slide.classList.add('next');
+        }
+      });
+
+      allDots.forEach(dot => {
+        const idx = parseInt(dot.dataset.dot);
+        dot.classList.toggle('active', idx === currentSlide);
+      });
+    }
+
+    // ============================================
+    // Navigation
+    // ============================================
+    function goToSlide(index) {
+      if (isAnimating) return;
+      if (index === currentSlide) return;
+      if (index < 0 || index >= TOTAL_SLIDES) return;
+
+      isAnimating = true;
+      currentSlide = index;
+      updateSlideStates();
+
+      setTimeout(() => {
+        isAnimating = false;
+      }, 680);
+    }
+
+    function nextSlide() {
+      if (currentSlide < TOTAL_SLIDES - 1) {
+        goToSlide(currentSlide + 1);
+      } else {
+        finish();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 0) {
+        goToSlide(currentSlide - 1);
+      }
+    }
+
+    function finish() {
+      localStorage.setItem('medfav_onboarding_done', 'true');
+      window.location.href = 'index.html';
+    }
+
+    // ============================================
+    // Click Events
+    // ============================================
+    document.addEventListener('click', (e) => {
+      const nextBtn = e.target.closest('[data-next]');
+      if (nextBtn) { e.preventDefault(); nextSlide(); return; }
+
+      const skipBtn = e.target.closest('[data-skip]');
+      if (skipBtn) { e.preventDefault(); finish(); return; }
+
+      const dot = e.target.closest('[data-dot]');
+      if (dot) {
+        e.preventDefault();
+        goToSlide(parseInt(dot.dataset.dot));
+        return;
+      }
+    });
+
+// ============================================
+// Swipe — Direct Slide Manipulation (No Track)
+// ============================================
+container.addEventListener('touchstart', (e) => {
+  if (isAnimating) return;
+  if (e.touches.length !== 1) return;
+
+  const touch = e.touches[0];
+  startX = touch.clientX;
+  startY = touch.clientY;
+  currentX = startX;
+  startTime = Date.now();
+  isDragging = true;
+  isHorizontalSwipe = null;
+
+  slides.forEach(s => {
+    s.classList.add('dragging');
+    s.style.transform = ''; // ✅ نظّف أي تأثير سابق
+  });
+}, { passive: true });
+
+container.addEventListener('touchmove', (e) => {
+  if (!isDragging || e.touches.length !== 1) return;
+
+  const touch = e.touches[0];
+  const dx = touch.clientX - startX;
+  const dy = touch.clientY - startY;
+
+  if (isHorizontalSwipe === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+    isHorizontalSwipe = Math.abs(dx) > Math.abs(dy);
+  }
+
+  if (isHorizontalSwipe === false) return;
+
+  e.preventDefault();
+  currentX = touch.clientX;
+
+  // ✅ حرّك الشريحة النشطة فقط
+  const activeSlide = slides[currentSlide];
+
+  let effectiveDx = dx;
+  if ((currentSlide === 0 && dx < 0) || (currentSlide === TOTAL_SLIDES - 1 && dx > 0)) {
+    effectiveDx = dx * 0.35;
+  }
+
+  // الشريحة النشطة تتبع الإصبع
+  activeSlide.style.transform = `translate3d(${effectiveDx}px, 0, 0)`;
+
+  // ✅ الشرائح المجاورة تبقى في مواقعها الطبيعية تمامًا (لا نلمسها)
+  // لأنها موجودة بالفعل في المكان الصحيح عبر كلاسات .prev / .next
+  // وبمجرد رفع الإصبع، updateSlideStates سيعيد ترتيب كل شيء
+}, { passive: false });
+
+container.addEventListener('touchend', () => {
+  if (!isDragging) return;
+  isDragging = false;
+
+  const dx = currentX - startX;
+  const elapsed = Date.now() - startTime;
+  const velocity = Math.abs(dx) / elapsed;
+
+  // ✅ امسح inline styles أولاً قبل تغيير الحالة
+  slides.forEach(s => {
+    s.classList.remove('dragging');
+    s.style.transform = '';
+  });
+
+  const isFastSwipe = velocity > VELOCITY_THRESHOLD && Math.abs(dx) > 20;
+  const isLongSwipe = Math.abs(dx) > SWIPE_THRESHOLD;
+
+  if (isFastSwipe || isLongSwipe) {
+    if (dx > 0) {
+      nextSlide();
+    } else {
+      prevSlide();
+    }
+  } else {
+    // ✅ إذا لم يكتمل السحب، أعد الشريحة لمكانها بشكل صحيح
+    updateSlideStates();
+  }
+
+  isHorizontalSwipe = null;
+}, { passive: true });
+
+container.addEventListener('touchcancel', () => {
+  if (!isDragging) return;
+  isDragging = false;
+  isHorizontalSwipe = null;
+  slides.forEach(s => {
+    s.classList.remove('dragging');
+    s.style.transform = '';
+  });
+  updateSlideStates();
+}, { passive: true });
+
+    // ============================================
+    // Keyboard
+    // ============================================
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') nextSlide();
+      if (e.key === 'ArrowRight') prevSlide();
+      if (e.key === 'Escape') finish();
+    });
+
+    // ============================================
+    // Init
+    // ============================================
+    updateSlideStates();
+
+    console.log('✅ onboarding.html loaded');
+  </script>
+
+</body>
+</html>

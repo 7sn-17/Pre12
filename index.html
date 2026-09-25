@@ -19,14 +19,27 @@
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-512.png">
-  <script>
-    (function() {
-      const theme = localStorage.getItem('medfav_theme') || 'dark';
-      if (theme === 'light') {
-        document.documentElement.setAttribute('data-theme', 'light');
+<script src="theme-init.js"></script>
+
+<script>
+  // ============================================
+  // Onboarding Redirect (first visit only)
+  // ============================================
+  (function() {
+    try {
+      // إذا لم يسبق للمستخدم مشاهدة الجولة التعريفية
+      if (!localStorage.getItem('medfav_onboarding_done')) {
+        // تجنب الحلقة اللانهائية: لا تعيد التوجيه إذا كنت بالفعل في onboarding.html
+        var path = window.location.pathname;
+        if (!path.endsWith('onboarding.html')) {
+          window.location.replace('onboarding.html');
+        }
       }
-    })();
-  </script>
+    } catch (e) {
+      console.warn('Onboarding check failed:', e);
+    }
+  })();
+</script>
 
   <style>
     :root {
@@ -2677,8 +2690,8 @@
       currentUser: null,
       currentProfile: null,
       allFilesCache: null,
-      theme: localStorage.getItem('medfav_theme') || 'dark'
-    };
+      theme: localStorage.getItem('medfav_theme') || 'light'  // ✅
+};
 
     // ============================================
     // نظام الثيمات

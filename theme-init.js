@@ -1,27 +1,24 @@
 // ============================================
-// theme-init.js — نظام الثيمات الموحّد
-// يقرأ الثيم من localStorage ويطبّقه تلقائياً
-// يُستخدم في جميع صفحات المنصة
+// Theme Init — يعمل قبل رسم الصفحة
 // ============================================
-
 (function() {
-  'use strict';
-  
-  // قراءة الثيم المحفوظ
-  const theme = localStorage.getItem('medfav_theme') || 'dark';
-  
-  // تطبيق الثيم فوراً (قبل رسم الصفحة)
-  if (theme === 'light') {
+  try {
+    var theme = localStorage.getItem('medfav_theme');
+    
+    // إذا لم يختر المستخدم ثيماً من قبل → الوضع النهاري افتراضياً
+    if (!theme) {
+      theme = 'light';
+      localStorage.setItem('medfav_theme', 'light');
+    }
+    
+    // طبّق الثيم على <html>
+    if (theme === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  } catch (e) {
+    // في حالة الخطأ → نهاري
     document.documentElement.setAttribute('data-theme', 'light');
   }
-  
-  // تحديث meta theme-color إذا كان موجوداً
-  document.addEventListener('DOMContentLoaded', function() {
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) {
-      meta.setAttribute('content', theme === 'light' ? '#f8fafb' : '#06110d');
-    }
-  });
-  
-  console.log('✅ theme-init.js loaded - theme:', theme);
 })();
