@@ -1198,13 +1198,18 @@ function renderTabs() {
   const container = document.getElementById('tabsContainer');
   container.innerHTML = '';
 
-  const counts = { all: state.allFiles.length, book: 0, summary: 0, automation: 0, exam: 0 };
+  // ⭐ احسب عدد الملفات لكل تصنيف ديناميكياً
+  const counts = { all: state.allFiles.length };
+  
   state.allFiles.forEach(f => {
-    if (counts[f.category] !== undefined) counts[f.category]++;
+    const cat = f.category || 'summary';
+    counts[cat] = (counts[cat] || 0) + 1;
   });
 
+  // ⭐ اعرض التصنيفات من CATEGORY_INFO
   Object.entries(CATEGORY_INFO).forEach(([key, info]) => {
-    if (key !== 'all' && counts[key] === 0) return;
+    // إذا لم يكن "الكل" وليس فيه ملفات — تجاهله
+    if (key !== 'all' && !counts[key]) return;
 
     const btn = document.createElement('button');
     btn.className = 'tab-btn' + (key === state.currentCategory ? ' active' : '');
@@ -1213,7 +1218,7 @@ function renderTabs() {
     btn.innerHTML = `
       <i class="fa-solid ${info.icon}"></i>
       ${info.label}
-      <span class="tab-count">${counts[key]}</span>
+      <span class="tab-count">${counts[key] || 0}</span>
     `;
     container.appendChild(btn);
   });
@@ -1545,14 +1550,11 @@ async function downloadFile(fileId) {
       file_url: file.file_url,
       file_path: file.file_path,
       created_at: file.created_at
+    }, (percent, received, total) => {
+      if (btn) {
+        btn.innerHTML = `<span>${percent}%</span>`;
+      }
     });
-
-}, (percent, received, total) => {
-  // ✅ عرض التقدم في الزر
-  if (btn) {
-    btn.innerHTML = `<span>${percent}%</span>`;
-  }
-});
 
     if (!result.success) throw new Error(result.error);
 
