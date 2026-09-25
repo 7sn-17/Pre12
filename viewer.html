@@ -1,719 +1,1153 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#06110d">
-  <title>معاينة الملف - المنصة الطبية</title>
-  
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="theme-init.js"></script>
-<!-- PWA Meta Tags -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f8fafb">
+<title>معاينة الملف — المنصة الطبية</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="theme-init.js"></script>
+
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="المنصة الطبية">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-512.png">
-  <style>
-    :root {
-      --bg-main: #06110d;
-      --bg-card: rgba(16, 34, 27, 0.7);
-      --border-card: rgba(16, 185, 129, 0.18);
-      --accent-emerald: #10b981;
-      --accent-light: #34d399;
-      --accent-glow: rgba(16, 185, 129, 0.25);
-      --text-primary: #f0fdf4;
-      --text-secondary: #94a3b8;
-      --text-muted: #64748b;
-      --header-h: 58px;
-      --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Cairo', sans-serif;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    html, body { height: 100%; overflow: hidden; }
-
-    body {
-      background-color: var(--bg-main);
-      color: var(--text-primary);
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* الهيدر — بسيط */
-    header {
-      height: var(--header-h);
-      padding: 0 14px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: rgba(6, 17, 13, 0.95);
-      backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--border-card);
-      flex-shrink: 0;
-      z-index: 100;
-    }
-
-    .nav-btn {
-      width: 40px;
-      height: 40px;
-      border-radius: 12px;
-      background: var(--bg-card);
-      border: 1px solid var(--border-card);
-      color: var(--text-primary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      text-decoration: none;
-      transition: all var(--transition-fast);
-      flex-shrink: 0;
-    }
-
-    .nav-btn:hover {
-      border-color: var(--accent-emerald);
-      color: var(--accent-light);
-    }
-
-    .nav-btn i { width: 18px; height: 18px; }
-
-    .file-info {
-      flex: 1;
-      min-width: 0;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .file-icon {
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
-      background: rgba(16, 185, 129, 0.15);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--accent-light);
-      flex-shrink: 0;
-    }
-
-    .file-icon i { width: 18px; height: 18px; }
-
-    .file-text {
-      min-width: 0;
-      flex: 1;
-    }
-
-    .file-title {
-      font-size: 0.88rem;
-      font-weight: 800;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      margin-bottom: 1px;
-    }
-
-    .file-sub {
-      font-size: 0.7rem;
-      color: var(--text-muted);
-      font-weight: 600;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    /* منطقة PDF */
-    .viewer-area {
-      flex: 1;
-      overflow: auto;
-      background: #0a1a14;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 12px;
-      gap: 8px;
-      scrollbar-width: thin;
-      scrollbar-color: var(--border-card) transparent;
-      position: relative;
-    }
-
-    .viewer-area::-webkit-scrollbar { width: 6px; }
-    .viewer-area::-webkit-scrollbar-track { background: transparent; }
-    .viewer-area::-webkit-scrollbar-thumb {
-      background: var(--border-card);
-      border-radius: 3px;
-    }
-
-    /* حالة التحميل */
-    .loading-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      padding: 60px 20px;
-      text-align: center;
-      width: 100%;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-    }
-
-    .loader-ring {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      border: 3px solid rgba(16, 185, 129, 0.15);
-      border-top-color: var(--accent-emerald);
-      animation: spin 0.8s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .loading-text {
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: var(--text-primary);
-    }
-
-    .loading-sub {
-      font-size: 0.78rem;
-      color: var(--text-muted);
-      margin-top: 4px;
-    }
-
-    /* صفحة PDF */
-    .pdf-page-wrapper {
-      background: white;
-      border-radius: 6px;
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
-      overflow: hidden;
-      max-width: 100%;
-      transition: box-shadow var(--transition-fast);
-    }
-
-    .pdf-page-wrapper canvas {
-      display: block;
-      max-width: 100%;
-      height: auto;
-    }
-
-    /* حالة خطأ */
-    .error-state {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 14px;
-      padding: 60px 20px;
-      text-align: center;
-      width: 100%;
-      height: 100%;
-    }
-
-    .error-state.visible { display: flex; }
-
-    .error-icon {
-      width: 70px;
-      height: 70px;
-      border-radius: 20px;
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px dashed rgba(239, 68, 68, 0.3);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #f87171;
-    }
-
-    .error-icon i { width: 32px; height: 32px; }
-
-    .error-state h3 {
-      font-size: 1.05rem;
-      font-weight: 800;
-    }
-
-    .error-state p {
-      font-size: 0.82rem;
-      color: var(--text-secondary);
-      max-width: 320px;
-      line-height: 1.5;
-    }
-
-    /* Toast */
-    .toast {
-      position: fixed;
-      top: calc(var(--header-h) + 12px);
-      left: 50%;
-      transform: translateX(-50%) translateY(-20px);
-      background: rgba(16, 185, 129, 0.98);
-      color: white;
-      padding: 11px 20px;
-      border-radius: 12px;
-      font-size: 0.85rem;
-      font-weight: 700;
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 0 20px var(--accent-glow);
-      z-index: 9999;
-      opacity: 0;
-      transition: all var(--transition-fast);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(16px);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      max-width: calc(100vw - 40px);
-      pointer-events: none;
-    }
-
-    .toast.visible {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-
-    .toast.error { background: rgba(239, 68, 68, 0.98); }
-    .toast.info { background: rgba(59, 130, 246, 0.98); }
-
-    /* نقاط التقدم */
-    .page-indicator {
-      position: fixed;
-      bottom: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 6px 14px;
-      background: rgba(6, 17, 13, 0.9);
-      border: 1px solid var(--border-card);
-      border-radius: 20px;
-      font-size: 0.72rem;
-      font-weight: 700;
-      color: var(--accent-light);
-      backdrop-filter: blur(12px);
-      z-index: 50;
-      opacity: 0;
-      transition: opacity var(--transition-fast);
-      pointer-events: none;
-    }
-
-    .page-indicator.visible { opacity: 1; }
-
-    @media (max-width: 640px) {
-      header { padding: 0 12px; }
-      .viewer-area { padding: 8px; }
-      .file-icon { width: 32px; height: 32px; }
-      .file-icon i { width: 16px; height: 16px; }
-      .file-title { font-size: 0.82rem; }
-    }
-    
-    /* ============================================ */
-/* الوضع النهاري - تلقائي */
-/* ============================================ */
-[data-theme="light"] {
+<style>
+:root {
   --bg-main: #f8fafb;
-  --bg-card: rgba(255, 255, 255, 0.85);
-  --bg-card-hover: rgba(255, 255, 255, 0.95);
-  --bg-solid: #ffffff;
+  --bg-card: #ffffff;
   --bg-elevated: #f1f5f9;
-  --border-card: rgba(16, 185, 129, 0.25);
-  --border-card-hover: rgba(16, 185, 129, 0.6);
-  --accent-emerald: #059669;
+  --bg-header: rgba(248, 250, 251, 0.95);
+  --bg-overlay: rgba(255, 255, 255, 0.98);
+  --border: rgba(16, 185, 129, 0.2);
+  --border-strong: rgba(16, 185, 129, 0.4);
+  --accent: #059669;
   --accent-light: #10b981;
-  --accent-dark: #047857;
-  --accent-glow: rgba(16, 185, 129, 0.2);
-  --accent-glow-strong: rgba(16, 185, 129, 0.35);
   --text-primary: #0f172a;
   --text-secondary: #475569;
   --text-muted: #94a3b8;
+  --danger: #ef4444;
+  --viewer-bg: #e8ecf0;
+  --paper-bg: #ffffff;
+  --page-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+  --header-h: 58px;
+  --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-[data-theme="light"] body {
-  background-color: var(--bg-main) !important;
-  background-image: 
-    radial-gradient(circle at 10% 10%, rgba(16, 185, 129, 0.06) 0%, transparent 40%),
-    radial-gradient(circle at 90% 80%, rgba(5, 150, 105, 0.04) 0%, transparent 40%) !important;
+[data-theme="dark"] {
+  --bg-main: #06110d;
+  --bg-card: rgba(16, 34, 27, 0.7);
+  --bg-elevated: #0a1a14;
+  --bg-header: rgba(6, 17, 13, 0.95);
+  --bg-overlay: rgba(10, 26, 20, 0.98);
+  --border: rgba(16, 185, 129, 0.25);
+  --border-strong: rgba(16, 185, 129, 0.5);
+  --accent: #10b981;
+  --accent-light: #34d399;
+  --text-primary: #f0fdf4;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --viewer-bg: #0a1410;
+  --paper-bg: #f5f5f5;
+  --page-shadow: 0 2px 12px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Cairo', system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  background: var(--bg-main);
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  transition: background var(--transition), color var(--transition);
+}
+
+/* الهيدر */
+.header {
+  height: var(--header-h);
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-header);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  z-index: 100;
+}
+
+.icon-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+
+.icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+.icon-btn:active { transform: scale(0.94); }
+.icon-btn svg { width: 19px; height: 19px; }
+
+.file-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.file-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.file-icon svg { width: 19px; height: 19px; }
+
+.file-text { min-width: 0; flex: 1; }
+
+.file-title {
+  font-size: 0.88rem;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--text-primary);
 }
 
-[data-theme="light"] header {
-  background: rgba(248, 250, 251, 0.9) !important;
-  border-bottom-color: var(--border-card);
+.file-sub {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 1px;
 }
 
-[data-theme="light"] .floating-nav {
-  background: rgba(255, 255, 255, 0.95) !important;
+/* منطقة العرض */
+.viewer {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--viewer-bg);
+  padding: 12px 8px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+  overscroll-behavior: contain;
 }
 
-[data-theme="light"] .form-input,
-[data-theme="light"] .search-input,
-[data-theme="light"] .form-select {
-  background: rgba(255, 255, 255, 0.9);
+.viewer::-webkit-scrollbar { width: 5px; }
+.viewer::-webkit-scrollbar-track { background: transparent; }
+.viewer::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+
+/* صفحة */
+.pdf-page {
+  background: var(--paper-bg);
+  border-radius: 4px;
+  box-shadow: var(--page-shadow);
+  overflow: hidden;
+  max-width: 100%;
+  position: relative;
+  display: block;
+  flex-shrink: 0;
+  transition: box-shadow 0.3s;
+}
+
+.pdf-page canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Text Layer (للنسخ) */
+.pdf-page .text-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  line-height: 1;
+  z-index: 2;
+  pointer-events: auto;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.pdf-page .text-layer span,
+.pdf-page .text-layer br {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+  pointer-events: auto;
+}
+
+.pdf-page .text-layer span::selection {
+  background: rgba(16, 185, 129, 0.4);
+}
+
+/* Placeholder */
+.pdf-page.placeholder {
+  background: linear-gradient(90deg, var(--bg-elevated) 25%, rgba(200, 200, 200, 0.15) 50%, var(--bg-elevated) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.pdf-page.placeholder::after {
+  content: attr(data-page-num);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+/* شاشة التحميل */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-main);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  z-index: 200;
+  transition: opacity 0.35s, visibility 0.35s;
+}
+
+.loading-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.spinner {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  animation: spin 0.85s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-text {
+  font-size: 0.9rem;
+  font-weight: 700;
   color: var(--text-primary);
 }
-  </style>
+
+.loading-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: -10px;
+  min-height: 20px;
+}
+
+.progress-bar {
+  width: 200px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-light));
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+/* خطأ */
+.error-state {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 40px 20px;
+  text-align: center;
+  height: 100%;
+}
+
+.error-state.visible { display: flex; }
+
+.error-state svg {
+  width: 60px;
+  height: 60px;
+  color: var(--danger);
+  opacity: 0.6;
+}
+
+.error-state h3 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.error-state p {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  max-width: 320px;
+  line-height: 1.6;
+}
+
+/* البحث */
+.search-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(6px);
+  z-index: 500;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 70px 16px 16px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.25s;
+}
+
+.search-overlay.visible { opacity: 1; visibility: visible; }
+
+.search-box {
+  width: 100%;
+  max-width: 500px;
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 14px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  transform: translateY(-20px);
+  transition: transform 0.25s;
+}
+
+.search-overlay.visible .search-box { transform: translateY(0); }
+
+.search-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0 14px;
+}
+
+.search-input-wrap:focus-within { border-color: var(--accent); }
+.search-input-wrap svg { width: 18px; height: 18px; color: var(--text-muted); flex-shrink: 0; }
+
+.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: 'Cairo', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 13px 0;
+  outline: none;
+}
+
+.search-input::placeholder { color: var(--text-muted); }
+
+.search-results {
+  margin-top: 10px;
+  max-height: 50vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.search-result-item {
+  padding: 11px 13px;
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.search-result-item:hover {
+  border-color: var(--accent);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.search-result-item .page-label {
+  font-size: 0.68rem;
+  color: var(--accent);
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.search-result-item .snippet {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  direction: ltr;
+  text-align: left;
+}
+
+.search-result-item .snippet mark {
+  background: rgba(245, 158, 11, 0.3);
+  color: var(--text-primary);
+  padding: 0 2px;
+  border-radius: 3px;
+}
+
+.search-hint {
+  text-align: center;
+  padding: 20px 10px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 12px 20px;
+  border-radius: 14px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  z-index: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  max-width: calc(100% - 32px);
+  backdrop-filter: blur(16px);
+}
+
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.toast svg { width: 17px; height: 17px; flex-shrink: 0; }
+.toast.success svg { color: var(--accent); }
+.toast.error svg { color: var(--danger); }
+.toast.info svg { color: #3b82f6; }
+
+/* مؤشر الصفحة */
+.page-hud {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: rgba(15, 23, 42, 0.9);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  backdrop-filter: blur(12px);
+  z-index: 90;
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.page-hud.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+@media (min-width: 768px) {
+  .viewer { padding: 20px 16px 60px; gap: 18px; }
+}
+</style>
 </head>
 <body>
 
-  <header>
-    <a href="javascript:history.back()" class="nav-btn" title="رجوع">
-      <i data-lucide="arrow-right"></i>
-    </a>
-    <div class="file-info">
-      <div class="file-icon">
-        <i data-lucide="file-text"></i>
-      </div>
-      <div class="file-text">
-        <div class="file-title" id="fileTitle">جاري التحميل...</div>
-        <div class="file-sub" id="fileSub"></div>
-      </div>
-    </div>
-    <button class="nav-btn" onclick="downloadCurrentFile()" title="تحميل">
-      <i data-lucide="download"></i>
-    </button>
-  </header>
+<!-- الهيدر -->
+<header class="header">
+  <a href="javascript:history.back()" class="icon-btn" title="رجوع">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 18l6-6-6-6"/>
+    </svg>
+  </a>
 
-  <div class="viewer-area" id="viewerArea">
-    <div class="loading-state" id="loadingState">
-      <div class="loader-ring"></div>
-      <div>
-        <div class="loading-text">جاري تحضير الملف...</div>
-        <div class="loading-sub" id="loadingSub">يتم التحميل</div>
-      </div>
+  <div class="file-info">
+    <div class="file-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+      </svg>
     </div>
-
-    <div class="error-state" id="errorState">
-      <div class="error-icon"><i data-lucide="file-x"></i></div>
-      <h3>تعذّر فتح الملف</h3>
-      <p id="errorMessage">حدث خطأ أثناء تحميل الملف.</p>
+    <div class="file-text">
+      <div class="file-title" id="fileTitle">جاري التحميل...</div>
+      <div class="file-sub" id="fileSub">—</div>
     </div>
-
-    <div id="pdfContainer"></div>
   </div>
 
-  <div class="page-indicator" id="pageIndicator">صفحة <span id="currentPage">1</span> / <span id="totalPages">0</span></div>
+  <button class="icon-btn" id="searchBtn" title="بحث">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/>
+      <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+  </button>
 
-  <script src="supabase-config.js"></script>
-  <script src="db.js"></script>
-  <script src="files.js"></script>
+  <button class="icon-btn" id="themeBtn" title="تبديل الثيم">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+    </svg>
+  </button>
+</header>
 
-  <script>
-    lucide.createIcons();
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+<!-- منطقة العرض -->
+<main class="viewer" id="viewer">
+  <div class="error-state" id="errorState">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <h3 id="errorTitle">تعذّر فتح الملف</h3>
+    <p id="errorMessage">حدث خطأ أثناء التحميل.</p>
+  </div>
+</main>
 
-    const state = {
-      file: null,
-      pdfDoc: null,
-      totalPages: 0,
-      currentPage: 1,
-      blobUrl: null,
-      isRendering: false
-    };
+<!-- شاشة التحميل -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text">جاري تحضير الملف...</div>
+  <div class="loading-sub" id="loadingSub">الاتصال بالسيرفر</div>
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+</div>
 
-    // قراءة معلومات الملف من URL
-    function parseParams() {
-      const params = new URLSearchParams(window.location.search);
-      
-      state.file = {
-        id: params.get('id'),
-        title: params.get('file') || 'ملف',
-        subject_name: params.get('subject') || '',
-        size: params.get('size') || '',
-        file_url: params.get('url') || '',
-        file_path: params.get('path') || '',
-        category: params.get('category') || '',
-        created_at: params.get('created')
-      };
-      
-      if (!state.file.file_url && !state.file.id) {
-        showError('لم يتم تحديد ملف', 'يرجى الرجوع واختيار ملف.');
-        return false;
-      }
-      
-      document.getElementById('fileTitle').textContent = state.file.title;
-      document.getElementById('fileSub').textContent = 
-        [state.file.subject_name, state.file.size].filter(Boolean).join(' • ');
-      document.title = `${state.file.title} - المنصة الطبية`;
-      
-      return true;
-    }
+<!-- مؤشر الصفحة -->
+<div class="page-hud" id="pageHud">الصفحة 1</div>
 
-// تحميل الملف — من IndexedDB أو الشبكة
-async function loadPDF() {
-  try {
-    let pdfSource = null;
-    
-    // ⭐ 1. البحث في IndexedDB أولاً (الأهم!)
-    const cached = await getDownloadedFile(state.file.id);
-    
-    if (cached && cached.blob) {
-      console.log('✅ Found in IndexedDB — offline ready!');
-      state.blobUrl = URL.createObjectURL(cached.blob);
-      pdfSource = state.blobUrl;
-      document.getElementById('loadingSub').textContent = 'من الذاكرة المحلية';
-    } else {
-      // ⭐ 2. لم يوجد — تحقق من الإنترنت
-      if (!navigator.onLine) {
-        showError(
-          'الملف غير محمّل',
-          'هذا الملف غير محفوظ على جهازك. اتصل بالإنترنت وحمّله أولاً.'
-        );
-        return;
-      }
-      
-      document.getElementById('loadingSub').textContent = 'يتم الجلب من الشبكة';
-      pdfSource = state.file.file_url;
-    }
-        
-        // 2. تحميل PDF
-        const loadingTask = pdfjsLib.getDocument({
-          url: pdfSource,
-          cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
-          cMapPacked: true
-        });
-        
-        loadingTask.onProgress = (progress) => {
-          if (progress.total > 0) {
-            const percent = Math.round((progress.loaded / progress.total) * 100);
-            document.getElementById('loadingSub').textContent = `يتم التحميل ${percent}%`;
-          }
-        };
-        
-        state.pdfDoc = await loadingTask.promise;
-        state.totalPages = state.pdfDoc.numPages;
-        document.getElementById('totalPages').textContent = state.totalPages;
-        
-        // 3. إخفاء التحميل
-        document.getElementById('loadingState').style.display = 'none';
-        
-        // 4. عرض أول 3 صفحات فوراً
-        const initial = Math.min(3, state.totalPages);
-        for (let i = 1; i <= initial; i++) {
-          await renderPage(i);
-        }
-        
-        // 5. تحميل باقي الصفحات في الخلفية
-        loadRemainingPages(initial);
-        
-        // 6. زيادة العداد
-        if (state.file.id) {
-          incrementFileViews(state.file.id);
-        }
-        
-        // 7. إعداد مراقبة التمرير
-        setupScrollTracking();
-        
-      } catch (err) {
-        console.error('loadPDF error:', err);
-        showError('تعذّر فتح الملف', 'الملف غير متاح أو تالف.');
-      }
-    }
+<!-- نافذة البحث -->
+<div class="search-overlay" id="searchOverlay">
+  <div class="search-box">
+    <div class="search-input-wrap">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" class="search-input" id="searchInput" placeholder="ابحث في الملف..." autocomplete="off">
+    </div>
+    <div class="search-results" id="searchResults">
+      <div class="search-hint">اكتب كلمة للبحث في جميع الصفحات</div>
+    </div>
+  </div>
+</div>
 
-    // عرض صفحة
-    async function renderPage(pageNum) {
-      const container = document.getElementById('pdfContainer');
-      
-      const page = await state.pdfDoc.getPage(pageNum);
-      const viewport = page.getViewport({ scale: 1.5 });
-      
-      const wrapper = document.createElement('div');
-      wrapper.className = 'pdf-page-wrapper';
-      wrapper.dataset.pageNum = pageNum;
-      
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      
-      const outputScale = window.devicePixelRatio || 1;
-      canvas.width = Math.floor(viewport.width * outputScale);
-      canvas.height = Math.floor(viewport.height * outputScale);
-      canvas.style.width = Math.floor(viewport.width) + 'px';
-      canvas.style.height = Math.floor(viewport.height) + 'px';
-      
-      wrapper.appendChild(canvas);
-      container.appendChild(wrapper);
-      
-      await page.render({
-        canvasContext: ctx,
-        viewport: viewport,
-        transform: outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null
-      }).promise;
-    }
+<!-- Toast -->
+<div class="toast" id="toast">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+    <polyline points="22 4 12 14.01 9 11.01"/>
+  </svg>
+  <span id="toastText"></span>
+</div>
 
-    // تحميل باقي الصفحات
-    async function loadRemainingPages(startFrom) {
-      for (let i = startFrom + 1; i <= state.totalPages; i++) {
-        if (state.isRendering) break;
-        state.isRendering = true;
-        await renderPage(i);
-        state.isRendering = false;
-      }
-    }
+<!-- السكربتات -->
+<script src="supabase-config.js"></script>
+<script src="auth.js"></script>
+<script src="db.js"></script>
+<script src="files.js"></script>
 
-    // تتبع التمرير
-    function setupScrollTracking() {
-      const area = document.getElementById('viewerArea');
-      let scrollTimeout;
-      
-      area.addEventListener('scroll', () => {
-        clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => {
-          const pages = document.querySelectorAll('.pdf-page-wrapper');
-          const areaRect = area.getBoundingClientRect();
-          const areaCenter = areaRect.top + areaRect.height / 2;
-          
-          let closest = 1;
-          let minDist = Infinity;
-          
-          pages.forEach(p => {
-            const rect = p.getBoundingClientRect();
-            const center = rect.top + rect.height / 2;
-            const dist = Math.abs(center - areaCenter);
-            if (dist < minDist) {
-              minDist = dist;
-              closest = parseInt(p.dataset.pageNum);
-            }
-          });
-          
-          if (closest !== state.currentPage) {
-            state.currentPage = closest;
-            document.getElementById('currentPage').textContent = closest;
-            showPageIndicator();
-          }
-        }, 100);
-      }, { passive: true });
-    }
-
-    let indicatorTimeout;
-    function showPageIndicator() {
-      const el = document.getElementById('pageIndicator');
-      el.classList.add('visible');
-      clearTimeout(indicatorTimeout);
-      indicatorTimeout = setTimeout(() => {
-        el.classList.remove('visible');
-      }, 1500);
-    }
-
-    // تحميل
-    async function downloadCurrentFile() {
-      try {
-        showToast('جاري التحميل...', 'info');
-        
-        // جلب الـ Blob
-        let blob = null;
-        const cached = await getDownloadedFile(state.file.id);
-        
-        if (cached && cached.blob) {
-          blob = cached.blob;
-        } else {
-          const response = await fetch(state.file.file_url);
-          blob = await response.blob();
-          
-          // حفظ للاستخدام المستقبلي
-          await saveDownloadedFile({
-            id: state.file.id,
-            title: state.file.title,
-            subject_name: state.file.subject_name,
-            category: state.file.category,
-            file_size: blob.size,
-            file_url: state.file.file_url,
-            file_path: state.file.file_path,
-            created_at: state.file.created_at
-          }, blob);
-        }
-        
-        // تحميل
-        const blobUrl = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = state.file.title + '.pdf';
-        document.body.appendChild(link);
-        link.click();
-        setTimeout(() => {
-          document.body.removeChild(link);
-          URL.revokeObjectURL(blobUrl);
-        }, 100);
-        
-        if (state.file.id) incrementFileDownloads(state.file.id);
-        
-        showToast('تم التحميل بنجاح');
-      } catch (err) {
-        console.error('download error:', err);
-        showToast('تعذّر التحميل', 'error');
-      }
-    }
-
-    function showError(title, message) {
-      document.getElementById('loadingState').style.display = 'none';
-      document.getElementById('pdfContainer').innerHTML = '';
-      document.getElementById('errorMessage').textContent = message;
-      document.getElementById('errorState').classList.add('visible');
-    }
-
-    function showToast(message, type = 'success') {
-      const existing = document.querySelector('.toast');
-      if (existing) existing.remove();
-      
-      const toast = document.createElement('div');
-      toast.className = 'toast' + (type === 'error' ? ' error' : type === 'info' ? ' info' : '');
-      const icon = type === 'error' ? 'alert-circle' : type === 'info' ? 'info' : 'check-circle-2';
-      toast.innerHTML = `<i data-lucide="${icon}" style="width: 16px; height: 16px;"></i><span>${message}</span>`;
-      document.body.appendChild(toast);
-      lucide.createIcons();
-      
-      requestAnimationFrame(() => toast.classList.add('visible'));
-      setTimeout(() => {
-        toast.classList.remove('visible');
-        setTimeout(() => toast.remove(), 350);
-      }, 2400);
-    }
-
-    // Cleanup
-    window.addEventListener('beforeunload', () => {
-      if (state.blobUrl) URL.revokeObjectURL(state.blobUrl);
-    });
-
-    // تشغيل
-    (async () => {
-      if (parseParams()) {
-        await loadPDF();
-      }
-    })();
-  </script>
-<!-- PWA Service Worker -->
 <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js')
-        .then(reg => {
-          console.log('✅ SW registered:', reg.scope);
-          
-          // تحديث تلقائي عند وجود نسخة جديدة
-          reg.addEventListener('updatefound', () => {
-            const newWorker = reg.installing;
-            if (newWorker) {
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('🔄 New version available');
-                }
-              });
-            }
-          });
-        })
-        .catch(err => console.warn('⚠️ SW failed:', err));
-    });
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const state = {
+  fileId: null,
+  fileInfo: null,
+  pdfDoc: null,
+  totalPages: 0,
+  pdfBlob: null,
+  renderedPages: new Set(),
+  renderingPages: new Set(),
+  observer: null,
+  pageTextCache: new Map(),
+  containerWidth: 0,
+  renderOrder: [],
+};
+
+const $ = id => document.getElementById(id);
+const els = {
+  fileTitle:     $('fileTitle'),
+  fileSub:       $('fileSub'),
+  viewer:        $('viewer'),
+  errorState:    $('errorState'),
+  errorTitle:    $('errorTitle'),
+  errorMessage:  $('errorMessage'),
+  loadingOverlay:$('loadingOverlay'),
+  loadingSub:    $('loadingSub'),
+  progressFill:  $('progressFill'),
+  themeBtn:      $('themeBtn'),
+  searchBtn:     $('searchBtn'),
+  searchOverlay: $('searchOverlay'),
+  searchInput:   $('searchInput'),
+  searchResults: $('searchResults'),
+  toast:         $('toast'),
+  toastText:     $('toastText'),
+  pageHud:       $('pageHud'),
+};
+
+/* ═══ Toast ═══ */
+let toastTimer = null;
+function showToast(message, type = 'success') {
+  if (toastTimer) clearTimeout(toastTimer);
+  els.toastText.textContent = message;
+  els.toast.className = 'toast show ' + type;
+  const icons = {
+    success: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+    error:   '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>',
+    info:    '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>'
+  };
+  els.toast.querySelector('svg').innerHTML = icons[type] || icons.info;
+  toastTimer = setTimeout(() => els.toast.classList.remove('show'), 2200);
+}
+
+/* ═══ الثيم ═══ */
+function applyTheme() {
+  const theme = localStorage.getItem('medfav_theme') || 'light';
+  document.documentElement.setAttribute('data-theme', theme);
+  updateThemeIcon(theme);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = theme === 'dark' ? '#06110d' : '#f8fafb';
+}
+
+function updateThemeIcon(theme) {
+  const icon = els.themeBtn.querySelector('svg');
+  if (theme === 'dark') {
+    icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+  } else {
+    icon.innerHTML = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>';
   }
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'light';
+  const next = current === 'light' ? 'dark' : 'light';
+  localStorage.setItem('medfav_theme', next);
+  applyTheme();
+  showToast(next === 'dark' ? 'الوضع الليلي 🌙' : 'الوضع النهاري ☀️', 'info');
+}
+
+/* ═══ تقدم التحميل ═══ */
+function setProgress(pct, text) {
+  els.progressFill.style.width = pct + '%';
+  if (text) els.loadingSub.textContent = text;
+}
+
+function hideLoading() {
+  els.loadingOverlay.classList.add('hidden');
+  setTimeout(() => {
+    if (els.loadingOverlay.parentNode) els.loadingOverlay.remove();
+  }, 500);
+}
+
+/* ═══ تحميل الملف كامل ═══ */
+async function downloadPdf(fileId, fileUrl) {
+  // 1) IndexedDB
+  try {
+    const cached = await getDownloadedFile(fileId);
+    if (cached && cached.blob) {
+      console.log('✅ من IndexedDB');
+      return cached.blob;
+    }
+  } catch (e) { /* تجاهل */ }
+
+  // 2) الشبكة
+  if (!navigator.onLine) throw new Error('لا يوجد اتصال بالإنترنت والملف غير محفوظ');
+
+  console.log('🌐 تحميل من الشبكة');
+  const response = await fetch(fileUrl);
+  if (!response.ok) throw new Error('فشل التحميل: ' + response.status);
+
+  const total = parseInt(response.headers.get('content-length') || '0', 10);
+  const chunks = [];
+  let received = 0;
+
+  const reader = response.body.getReader();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    received += value.length;
+    if (total > 0) {
+      const realPct = Math.round((received / total) * 100);
+      const barPct = Math.round((received / total) * 55);
+      setProgress(barPct, `تحميل ${realPct}%`);
+    }
+  }
+
+  return new Blob(chunks, { type: 'application/pdf' });
+}
+
+/* ═══ حساب العرض ═══ */
+function calcContainerWidth() {
+  const rect = els.viewer.getBoundingClientRect();
+  const padding = window.innerWidth <= 640 ? 16 : 32;
+  const w = rect.width - padding;
+  return Math.max(w, 280);
+}
+
+/* ═══ إنشاء Placeholders ═══ */
+async function createPlaceholders() {
+  state.containerWidth = calcContainerWidth();
+  console.log('Container width:', state.containerWidth);
+
+  // أبعاد الصفحة الأولى
+  const firstPage = await state.pdfDoc.getPage(1);
+  const vp = firstPage.getViewport({ scale: 1 });
+  const ratio = vp.height / vp.width;
+
+  const pageHeight = Math.round(state.containerWidth * ratio);
+
+  const frag = document.createDocumentFragment();
+  for (let i = 1; i <= state.totalPages; i++) {
+    const div = document.createElement('div');
+    div.className = 'pdf-page placeholder';
+    div.dataset.pageNum = i;
+    div.style.width = state.containerWidth + 'px';
+    div.style.height = pageHeight + 'px';
+    frag.appendChild(div);
+  }
+  els.viewer.appendChild(frag);
+}
+
+/* ═══ رسم صفحة ═══ */
+async function renderPage(pageEl) {
+  const pageNum = parseInt(pageEl.dataset.pageNum, 10);
+  if (state.renderedPages.has(pageNum)) return;
+  if (state.renderingPages.has(pageNum)) return;
+  state.renderingPages.add(pageNum);
+
+  try {
+    const page = await state.pdfDoc.getPage(pageNum);
+
+    // أبعاد
+    const baseViewport = page.getViewport({ scale: 1 });
+    const containerWidth = state.containerWidth || calcContainerWidth() || 360;
+    const scale = containerWidth / baseViewport.width;
+    const viewport = page.getViewport({ scale });
+
+    // Canvas
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.floor(viewport.width * dpr));
+    canvas.height = Math.max(1, Math.floor(viewport.height * dpr));
+    canvas.style.width = '100%';
+    canvas.style.height = 'auto';
+
+    const ctx = canvas.getContext('2d', { alpha: false });
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    await page.render({
+      canvasContext: ctx,
+      viewport: viewport,
+      transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : null,
+    }).promise;
+
+    // Text Layer للنسخ
+    let textLayer = null;
+    try {
+      const textContent = await page.getTextContent();
+      state.pageTextCache.set(pageNum, textContent.items.map(i => i.str).join(' '));
+
+      textLayer = document.createElement('div');
+      textLayer.className = 'text-layer';
+      textLayer.style.width = viewport.width + 'px';
+      textLayer.style.height = viewport.height + 'px';
+
+      const params = {
+        container: textLayer,
+        viewport: viewport,
+        textDivs: [],
+      };
+      // v3.11 يستخدم textContentSource أو textContent
+      if (pdfjsLib.renderTextLayer.length >= 0) {
+        try {
+          pdfjsLib.renderTextLayer({ ...params, textContentSource: textContent });
+        } catch (err) {
+          pdfjsLib.renderTextLayer({ ...params, textContent: textContent });
+        }
+      }
+    } catch (e) {
+      console.warn('Text layer failed for page ' + pageNum, e);
+    }
+
+    // استبدال
+    pageEl.classList.remove('placeholder');
+    pageEl.style.height = 'auto';
+    pageEl.innerHTML = '';
+    pageEl.appendChild(canvas);
+    if (textLayer) pageEl.appendChild(textLayer);
+
+    state.renderedPages.add(pageNum);
+
+  } catch (e) {
+    console.error('فشل رسم الصفحة ' + pageNum, e);
+    // إذا فشلت، أبقِ placeholder مع نص الخطأ
+    pageEl.classList.remove('placeholder');
+    pageEl.style.display = 'flex';
+    pageEl.style.alignItems = 'center';
+    pageEl.style.justifyContent = 'center';
+    pageEl.innerHTML = '<span style="color:var(--text-muted);font-size:0.85rem;">تعذّر عرض الصفحة ' + pageNum + '</span>';
+  } finally {
+    state.renderingPages.delete(pageNum);
+  }
+}
+
+/* ═══ IntersectionObserver ═══ */
+function setupObserver() {
+  if (state.observer) state.observer.disconnect();
+
+  state.observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const el = entry.target;
+        requestAnimationFrame(() => renderPage(el));
+      }
+    });
+  }, {
+    root: els.viewer,
+    rootMargin: '400px 0px',
+    threshold: 0,
+  });
+
+  document.querySelectorAll('.pdf-page').forEach(el => {
+    state.observer.observe(el);
+  });
+}
+
+/* ═══ HUD السكرول ═══ */
+let hudTimer = null;
+function setupScrollHUD() {
+  els.viewer.addEventListener('scroll', () => {
+    const containerRect = els.viewer.getBoundingClientRect();
+    const centerY = containerRect.top + containerRect.height / 2;
+
+    let closestPage = 1;
+    let minDist = Infinity;
+
+    document.querySelectorAll('.pdf-page').forEach(p => {
+      const rect = p.getBoundingClientRect();
+      const pageCenter = rect.top + rect.height / 2;
+      const dist = Math.abs(pageCenter - centerY);
+      if (dist < minDist) {
+        minDist = dist;
+        closestPage = parseInt(p.dataset.pageNum, 10);
+      }
+    });
+
+    els.pageHud.textContent = `الصفحة ${closestPage} من ${state.totalPages}`;
+    els.pageHud.classList.add('show');
+
+    clearTimeout(hudTimer);
+    hudTimer = setTimeout(() => els.pageHud.classList.remove('show'), 1200);
+  }, { passive: true });
+}
+
+/* ═══ البحث ═══ */
+async function performSearch(query) {
+  const q = query.trim();
+  if (q.length < 2) {
+    els.searchResults.innerHTML = '<div class="search-hint">اكتب حرفين على الأقل</div>';
+    return;
+  }
+
+  els.searchResults.innerHTML = '<div class="search-hint">جاري البحث...</div>';
+
+  const results = [];
+  const lowerQ = q.toLowerCase();
+  const regex = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+
+  for (let i = 1; i <= state.totalPages; i++) {
+    let text = state.pageTextCache.get(i);
+    if (!text) {
+      try {
+        const page = await state.pdfDoc.getPage(i);
+        const tc = await page.getTextContent();
+        text = tc.items.map(it => it.str).join(' ');
+        state.pageTextCache.set(i, text);
+      } catch (e) { continue; }
+    }
+
+    if (text.toLowerCase().includes(lowerQ)) {
+      const idx = text.toLowerCase().indexOf(lowerQ);
+      const start = Math.max(0, idx - 50);
+      const end = Math.min(text.length, idx + q.length + 50);
+      let snippet = text.substring(start, end);
+      if (start > 0) snippet = '…' + snippet;
+      if (end < text.length) snippet = snippet + '…';
+      snippet = snippet.replace(regex, '<mark>$1</mark>');
+      results.push({ page: i, snippet });
+    }
+  }
+
+  if (results.length === 0) {
+    els.searchResults.innerHTML = '<div class="search-hint">لا توجد نتائج</div>';
+    return;
+  }
+
+  els.searchResults.innerHTML = results.map(r => `
+    <div class="search-result-item" data-page="${r.page}">
+      <div class="page-label">الصفحة ${r.page}</div>
+      <div class="snippet">${r.snippet}</div>
+    </div>
+  `).join('');
+
+  els.searchResults.querySelectorAll('.search-result-item').forEach(item => {
+    item.addEventListener('click', () => {
+      scrollToPage(parseInt(item.dataset.page, 10));
+      closeSearch();
+    });
+  });
+}
+
+function scrollToPage(pageNum) {
+  const el = document.querySelector(`.pdf-page[data-page-num="${pageNum}"]`);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    el.style.transition = 'box-shadow 0.4s';
+    el.style.boxShadow = '0 0 0 3px var(--accent), var(--page-shadow)';
+    setTimeout(() => { el.style.boxShadow = ''; }, 1800);
+  }
+}
+
+function openSearch() {
+  els.searchOverlay.classList.add('visible');
+  setTimeout(() => els.searchInput.focus(), 100);
+}
+
+function closeSearch() {
+  els.searchOverlay.classList.remove('visible');
+  els.searchInput.value = '';
+  els.searchResults.innerHTML = '<div class="search-hint">اكتب كلمة للبحث في جميع الصفحات</div>';
+}
+
+/* ═══ خطأ ═══ */
+function showError(title, message) {
+  els.errorTitle.textContent = title;
+  els.errorMessage.textContent = message;
+  els.errorState.classList.add('visible');
+  hideLoading();
+}
+
+/* ═══ URL Params ═══ */
+function parseParams() {
+  const params = new URLSearchParams(location.search);
+  const fileId = params.get('id');
+  if (!fileId) return null;
+  return {
+    id: fileId,
+    title:   params.get('file')     || 'بدون عنوان',
+    subject: params.get('subject')  || '',
+    size:    params.get('size')     || '',
+    url:     params.get('url')      || '',
+    path:    params.get('path')     || '',
+    category:params.get('category') || '',
+  };
+}
+
+/* ═══ التشغيل ═══ */
+async function init() {
+  applyTheme();
+
+  try {
+    const params = parseParams();
+    if (!params) {
+      showError('ملف غير محدد', 'لم يتم تحديد ملف للعرض.');
+      return;
+    }
+
+    state.fileId = params.id;
+
+    let fileInfo;
+    if (params.url && params.title) {
+      fileInfo = {
+        id: params.id,
+        title: params.title,
+        subject_name: params.subject,
+        file_url: params.url,
+        file_path: params.path,
+      };
+    } else {
+      fileInfo = await fetchFileById(params.id);
+      if (!fileInfo) throw new Error('الملف غير موجود');
+    }
+
+    state.fileInfo = fileInfo;
+
+    els.fileTitle.textContent = fileInfo.title || 'بدون عنوان';
+    els.fileSub.textContent = [fileInfo.subject_name, params.size].filter(Boolean).join(' • ') || 'PDF';
+    document.title = (fileInfo.title || 'ملف') + ' — المنصة الطبية';
+
+    // 1. تحميل كامل
+    setProgress(2, 'الاتصال بالسيرفر...');
+    const blob = await downloadPdf(state.fileId, fileInfo.file_url);
+    state.pdfBlob = blob;
+
+    setProgress(60, 'جاري قراءة الملف...');
+
+    // 2. تحويل إلى ArrayBuffer
+    const arrayBuffer = await blob.arrayBuffer();
+
+    setProgress(75, 'جاري تجهيز العرض...');
+
+    // 3. تحميل في PDF.js
+    const loadingTask = pdfjsLib.getDocument({
+      data: arrayBuffer,
+      cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+      cMapPacked: true,
+    });
+
+    state.pdfDoc = await loadingTask.promise;
+    state.totalPages = state.pdfDoc.numPages;
+
+    setProgress(85, 'جاري تجهيز الصفحات...');
+
+    // 4. Placeholders
+    await createPlaceholders();
+
+    setProgress(95, 'جاري العرض...');
+
+    // 5. العرض
+    setTimeout(() => {
+      hideLoading();
+      els.viewer.scrollTop = 0;
+      setupObserver();
+      setupScrollHUD();
+
+      // ابدأ أول 3 صفحات فوراً
+      const first3 = [1, 2, 3].map(n =>
+        document.querySelector(`.pdf-page[data-page-num="${n}"]`)
+      ).filter(Boolean);
+
+      first3.forEach((el, i) => {
+        setTimeout(() => renderPage(el), i * 80);
+      });
+    }, 300);
+
+    // تتبع المشاهدة
+    try { incrementFileViews(state.fileId); } catch (e) {}
+
+    // إعادة حساب عند تغيير الحجم
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        state.containerWidth = calcContainerWidth();
+      }, 300);
+    });
+
+  } catch (e) {
+    console.error('فشل التهيئة:', e);
+    showError('تعذّر فتح الملف', e.message || 'حدث خطأ غير متوقع.');
+  }
+}
+
+/* ═══ الأحداث ═══ */
+els.themeBtn.addEventListener('click', toggleTheme);
+els.searchBtn.addEventListener('click', openSearch);
+
+els.searchOverlay.addEventListener('click', (e) => {
+  if (e.target === els.searchOverlay) closeSearch();
+});
+
+let searchTimeout;
+els.searchInput.addEventListener('input', (e) => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => performSearch(e.target.value), 300);
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeSearch();
+  if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+    e.preventDefault();
+    openSearch();
+  }
+});
+
+/* ═══ ابدأ ═══ */
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
 </script>
+
+<!-- Service Worker -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+
 </body>
 </html>
