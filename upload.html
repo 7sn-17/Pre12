@@ -595,34 +595,125 @@
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Toast */
-    .toast {
-      position: fixed;
-      top: 90px;
-      left: 50%;
-      transform: translateX(-50%) translateY(-20px);
-      background: rgba(16, 185, 129, 0.98);
-      color: white;
-      padding: 13px 22px;
-      border-radius: 14px;
-      font-size: 0.88rem;
-      font-weight: 600;
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 0 20px var(--accent-glow);
-      z-index: 9999;
-      opacity: 0;
-      transition: all var(--transition-smooth);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(16px);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      max-width: calc(100vw - 40px);
-      pointer-events: none;
-    }
+/* ============================================
+   نظام Toast الاحترافي
+   ============================================ */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: calc(100% - 30px);
+  max-width: 420px;
+  pointer-events: none;
+}
 
-    .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
-    .toast.error { background: rgba(239, 68, 68, 0.98); }
-    .toast.info { background: rgba(59, 130, 246, 0.98); }
+.toast-item {
+  background: linear-gradient(145deg, rgba(14, 34, 24, 0.98), rgba(6, 18, 12, 0.98));
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 
+    0 10px 30px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+    0 0 25px rgba(16, 185, 129, 0.15);
+  font-family: 'Cairo', sans-serif;
+  color: #fff;
+  opacity: 0;
+  transform: translateY(-30px) scale(0.95);
+  animation: toastIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  pointer-events: auto;
+  position: relative;
+  overflow: hidden;
+  border-right: 4px solid #10b981;
+}
+
+.toast-item.toast-success { border-right-color: #10b981; box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 25px rgba(16, 185, 129, 0.25); }
+.toast-item.toast-error { border-right-color: #ef4444; box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 25px rgba(239, 68, 68, 0.25); }
+.toast-item.toast-warning { border-right-color: #f59e0b; box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 25px rgba(245, 158, 11, 0.25); }
+.toast-item.toast-info { border-right-color: #3b82f6; box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 25px rgba(59, 130, 246, 0.25); }
+
+.toast-item.removing {
+  animation: toastOut 0.3s ease forwards;
+}
+
+@keyframes toastIn {
+  0% { opacity: 0; transform: translateY(-30px) scale(0.95); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes toastOut {
+  0% { opacity: 1; transform: translateY(0) scale(1); max-height: 100px; margin-bottom: 0; }
+  100% { opacity: 0; transform: translateY(-30px) scale(0.95); max-height: 0; margin-bottom: -10px; }
+}
+
+.toast-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1.15rem;
+  color: #fff;
+}
+
+.toast-success .toast-icon { background: linear-gradient(145deg, #10b981, #059669); box-shadow: 0 0 15px rgba(16, 185, 129, 0.5); }
+.toast-error .toast-icon { background: linear-gradient(145deg, #ff6b5b, #b8332a); box-shadow: 0 0 15px rgba(239, 68, 68, 0.5); }
+.toast-warning .toast-icon { background: linear-gradient(145deg, #ffb340, #b87700); box-shadow: 0 0 15px rgba(245, 158, 11, 0.5); }
+.toast-info .toast-icon { background: linear-gradient(145deg, #5dade2, #21618c); box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
+
+.toast-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.toast-title {
+  font-weight: 800;
+  font-size: 0.9rem;
+  margin-bottom: 2px;
+  letter-spacing: 0.3px;
+}
+
+.toast-message {
+  font-size: 0.78rem;
+  color: #b0c8b0;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.toast-success .toast-title { color: #34d399; }
+.toast-error .toast-title { color: #ff7a6a; }
+.toast-warning .toast-title { color: #f5b041; }
+.toast-info .toast-title { color: #5dade2; }
+
+.toast-progress {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  height: 3px;
+  background: #10b981;
+  border-radius: 0 0 16px 0;
+  animation: toastProgress linear forwards;
+}
+
+.toast-error .toast-progress { background: #ef4444; }
+.toast-warning .toast-progress { background: #f59e0b; }
+.toast-info .toast-progress { background: #3b82f6; }
+
+@keyframes toastProgress {
+  0% { width: 100%; }
+  100% { width: 0%; }
+}
 
     @media (max-width: 640px) {
       .container { padding: 20px 14px; }
@@ -1146,29 +1237,68 @@
       }
     });
 
-    // ============================================
-    // Toast
-    // ============================================
-    function showToast(message, type = 'success') {
-      const existing = document.querySelector('.toast');
-      if (existing) existing.remove();
-      
-      const toast = document.createElement('div');
-      toast.className = 'toast' + (type === 'error' ? ' error' : type === 'info' ? ' info' : '');
-      
-      const icon = type === 'error' ? 'alert-circle' : type === 'info' ? 'info' : 'check-circle-2';
-      toast.innerHTML = `<i data-lucide="${icon}" style="width: 18px; height: 18px;"></i><span>${message}</span>`;
-      
-      document.body.appendChild(toast);
-      lucide.createIcons();
-      
-      requestAnimationFrame(() => toast.classList.add('visible'));
-      
-      setTimeout(() => {
-        toast.classList.remove('visible');
-        setTimeout(() => toast.remove(), 350);
-      }, 3000);
-    }
+// ============================================
+// 🆕 نظام Toast الاحترافي
+// ============================================
+function showToast(message, type = 'success', title = null, duration = 4000) {
+  // إغلاق الكيبورد إن كان مفتوحاً
+  if (document.activeElement && 
+      (document.activeElement.tagName === 'INPUT' || 
+       document.activeElement.tagName === 'TEXTAREA')) {
+    document.activeElement.blur();
+  }
+  
+  // إنشاء الحاوية إن لم تكن موجودة
+  let container = document.querySelector('.toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+  
+  // الإعدادات حسب النوع
+  const config = {
+    success: { icon: 'check-circle-2', defaultTitle: 'تم بنجاح' },
+    error:   { icon: 'alert-circle',   defaultTitle: 'خطأ' },
+    warning: { icon: 'alert-triangle', defaultTitle: 'تنبيه' },
+    info:    { icon: 'info',           defaultTitle: 'معلومة' }
+  };
+  
+  const cfg = config[type] || config.info;
+  const displayTitle = title || cfg.defaultTitle;
+  
+  // إنشاء الـ Toast
+  const toast = document.createElement('div');
+  toast.className = `toast-item toast-${type}`;
+  toast.innerHTML = `
+    <div class="toast-icon">
+      <i data-lucide="${cfg.icon}" style="width: 20px; height: 20px;"></i>
+    </div>
+    <div class="toast-content">
+      <div class="toast-title">${displayTitle}</div>
+      <div class="toast-message">${message}</div>
+    </div>
+    <div class="toast-progress" style="animation-duration: ${duration}ms;"></div>
+  `;
+  
+  container.appendChild(toast);
+  lucide.createIcons();
+  
+  // إزالة تلقائية
+  const removeToast = () => {
+    if (!toast.parentNode) return;
+    toast.classList.add('removing');
+    setTimeout(() => {
+      if (toast.parentNode) toast.remove();
+      if (container && container.children.length === 0) {
+        container.remove();
+      }
+    }, 300);
+  };
+  
+  setTimeout(removeToast, duration);
+  toast.addEventListener('click', removeToast);
+}
 
     console.log('✅ upload.html loaded');
   </script>

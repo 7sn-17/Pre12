@@ -1782,7 +1782,7 @@
                 <span class="form-label-hint">اختر الدور</span>
               </label>
               <div class="role-selector" id="editRoleSelector">
-                <div class="role-option" data-role="student" onclick="selectRole('student')">
+                <div class="role-option" data-role="student">
                   <div class="role-option-icon" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); color: #34d399;">
                     <i data-lucide="graduation-cap"></i>
                   </div>
@@ -1791,7 +1791,7 @@
                     <div class="role-option-desc">مشاهدة وتحميل الملفات، كتابة ملاحظات</div>
                   </div>
                 </div>
-                <div class="role-option" data-role="moderator" onclick="selectRole('moderator')">
+                <div class="role-option" data-role="moderator">
                   <div class="role-option-icon" style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.35); color: #60a5fa;">
                     <i data-lucide="eye"></i>
                   </div>
@@ -1800,7 +1800,7 @@
                     <div class="role-option-desc">تعديل الملفات والملاحظات، إدارة المحتوى</div>
                   </div>
                 </div>
-                <div class="role-option" data-role="admin" onclick="selectRole('admin')">
+                <div class="role-option" data-role="admin">
                   <div class="role-option-icon" style="background: rgba(251, 191, 36, 0.15); border: 1px solid rgba(251, 191, 36, 0.4); color: #fbbf24;">
                     <i data-lucide="crown"></i>
                   </div>
@@ -2072,33 +2072,75 @@
     // فحص الصلاحيات
     // ============================================
     async function checkAdminAccess() {
-      try {
-        const session = await getSession();
-        
-        if (!session) {
-          window.location.href = 'login.html';
-          return false;
-        }
-        
-        adminState.currentUser = session.user;
-        
-        const profile = await getProfile(session.user.id);
-        adminState.currentProfile = profile;
-        
-        if (profile?.role !== 'admin') {
-          showToast('هذه الصفحة للمشرفين فقط', 'error');
-          setTimeout(() => window.location.href = 'index.html', 1500);
-          return false;
-        }
-        
-        return true;
-      } catch (err) {
-        console.error('checkAdminAccess error:', err);
-        showToast('تعذّر التحقق من الصلاحيات', 'error');
-        setTimeout(() => window.location.href = 'index.html', 1500);
-        return false;
-      }
+  try {
+    const session = await getSession();
+    
+    if (!session) {
+      window.location.href = 'login.html';
+      return false;
     }
+    
+    adminState.currentUser = session.user;
+    
+    const profile = await getProfile(session.user.id);
+    adminState.currentProfile = profile;
+    
+    // ✅ السماح للمشرف والمراقب
+    const allowedRoles = ['admin', 'moderator'];
+    if (!allowedRoles.includes(profile?.role)) {
+      showToast('هذه الصفحة للمشرفين والمراقبين فقط', 'error');
+      setTimeout(() => window.location.href = 'index.html', 1500);
+      return false;
+    }
+    
+    // ✅ للمراقب: إخفاء الميزات الخاصة بالمشرف
+    if (profile.role === 'moderator') {
+      hideAdminOnlyFeatures();
+    }
+    
+    return true;
+  } catch (err) {
+    console.error('checkAdminAccess error:', err);
+    showToast('تعذّر التحقق من الصلاحيات', 'error');
+    setTimeout(() => window.location.href = 'index.html', 1500);
+    return false;
+  }
+}
+
+// ✅ إخفاء الميزات الخاصة بالمشرف للمراقب
+function hideAdminOnlyFeatures() {
+  // 1. إخفاء تبويب المستخدمين في شريط التنقل
+  const usersNavBtn = document.querySelector('.admin-nav-btn[data-view="users"]');
+  if (usersNavBtn) usersNavBtn.style.display = 'none';
+  
+  // 2. إخفاء صفحة المستخدمين من الـ views
+  const usersView = document.getElementById('usersView');
+  if (usersView) usersView.style.display = 'none';
+  
+  // 3. تغيير شارة اللوحة في الهيدر
+  const badge = document.querySelector('.admin-badge span');
+  if (badge) badge.textContent = 'لوحة المراقبة';
+  
+  const badgeIcon = document.querySelector('.admin-badge i');
+  if (badgeIcon) badgeIcon.setAttribute('data-lucide', 'eye');
+  
+  // 4. إذا كان التبويب الحالي هو المستخدمون، انتقل إلى نظرة عامة
+  if (adminState.currentView === 'users') {
+    switchView('overview');
+  }
+  
+  // 5. إعادة رسم الأيقونات
+  if (window.lucide) lucide.createIcons();
+}
+
+// ✅ التحقق من كون المستخدم مشرفاً (للعمليات الحساسة)
+function isAdmin() {
+  return adminState.currentProfile?.role === 'admin';
+}
+
+function isModerator() {
+  return adminState.currentProfile?.role === 'moderator';
+}
 
     // ============================================
     // تحميل الإحصائيات
@@ -2503,11 +2545,17 @@
     // تحميل المستخدمين
     // ============================================
     async function loadUsers() {
-      try {
-        const { data, error } = await supabaseClient
-          .from('profiles')
-          .select('*')
-          .order('created_at', { ascending: false });
+  // ✅ منع المراقب من تحميل المستخدمين
+  if (!isAdmin()) {
+    console.warn('⛔ المراقب لا يمكنه تحميل المستخدمين');
+    return;
+  }
+  
+  try {
+    const { data, error } = await supabaseClient
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
         
         if (error) throw error;
         
@@ -2802,7 +2850,6 @@
       document.getElementById('editDescription').value = file.description || '';
       document.getElementById('editCategory').value = file.category || 'summary';
       
-      // بناء شبكة المواد
       renderSubjectGrid(file.subject_id);
       
       document.getElementById('editModal').classList.add('active');
@@ -2920,20 +2967,74 @@
     }
 
     // ============================================
-    // تعديل صلاحية مستخدم
+    // ربط أحداث الأدوار — نسخة محصّنة
+    // ============================================
+    function bindRoleOptions() {
+      const roleOptions = document.querySelectorAll('#editRoleSelector .role-option');
+      
+      roleOptions.forEach(opt => {
+        // إزالة أي مستمع سابق عن طريق استنساخ العقدة
+        const newOpt = opt.cloneNode(true);
+        opt.parentNode.replaceChild(newOpt, opt);
+      });
+      
+      // إعادة الربط بعد الاستنساخ
+      document.querySelectorAll('#editRoleSelector .role-option').forEach(opt => {
+        opt.addEventListener('click', function() {
+          const role = this.dataset.role;
+          window.selectRole(role);
+        });
+      });
+      
+      if (window.lucide) lucide.createIcons();
+    }
+
+    // ============================================
+    // اختيار الدور — نسخة محصّنة ضد التعارض
+    // ============================================
+    window.selectRole = function(role) {
+      const validRoles = ['student', 'moderator', 'admin'];
+      if (!validRoles.includes(role)) {
+        console.error('❌ دور غير صالح:', role);
+        return;
+      }
+      
+      adminState.selectedRole = role;
+      updateRoleSelection();
+    };
+
+    function updateRoleSelection() {
+      document.querySelectorAll('#editRoleSelector .role-option').forEach(opt => {
+        const isSelected = opt.dataset.role === adminState.selectedRole;
+        opt.classList.toggle('selected', isSelected);
+      });
+      if (window.lucide) lucide.createIcons();
+    }
+
+    // ============================================
+    // تعديل صلاحية مستخدم — نسخة محصّنة
     // ============================================
     function editUserRole(userId) {
-      const user = adminState.users.find(u => u.id === userId);
-      if (!user) return;
+  // ✅ حماية: المراقب لا يمكنه تعديل الأدوار
+  if (!isAdmin()) {
+    showToast('هذه العملية متاحة للمشرفين فقط', 'error');
+    return;
+  }
+  
+  const targetUser = adminState.users.find(u => u.id === userId);
+  if (!targetUser) {
+    showToast('المستخدم غير موجود', 'error');
+    return;
+  }
       
-      if (user.id === adminState.currentUser.id) {
+      if (targetUser.id === adminState.currentUser.id) {
         showToast('لا يمكنك تعديل صلاحيتك الخاصة', 'error');
         return;
       }
       
-      adminState.editingItem = user;
+      adminState.editingItem = targetUser;
       adminState.editingType = 'user';
-      adminState.selectedRole = user.role || 'student';
+      adminState.selectedRole = targetUser.role || 'student';
       
       document.getElementById('editModalTitle').textContent = 'تعديل الصلاحية';
       document.getElementById('editModalSubtitle').textContent = 'اختر صلاحية المستخدم';
@@ -2942,26 +3043,16 @@
       document.getElementById('noteFields').style.display = 'none';
       document.getElementById('userFields').style.display = 'block';
       
-      document.getElementById('editUserName').value = user.full_name || user.email || 'مستخدم';
+      document.getElementById('editUserName').value = targetUser.full_name || targetUser.email || 'مستخدم';
       
-      // تحديث الاختيار
-      updateRoleSelection();
-      
+      // فتح المودال أولاً
       document.getElementById('editModal').classList.add('active');
       document.body.style.overflow = 'hidden';
       
-      lucide.createIcons();
-    }
-
-    function selectRole(role) {
-      adminState.selectedRole = role;
+      // ربط الأحداث بعد الفتح
+      bindRoleOptions();
       updateRoleSelection();
-    }
-
-    function updateRoleSelection() {
-      document.querySelectorAll('.role-option').forEach(opt => {
-        opt.classList.toggle('selected', opt.dataset.role === adminState.selectedRole);
-      });
+      
       lucide.createIcons();
     }
 
@@ -2969,8 +3060,14 @@
     // حذف مستخدم
     // ============================================
     function deleteUser(userId) {
-      const user = adminState.users.find(u => u.id === userId);
-      if (!user) return;
+  // ✅ حماية: المراقب لا يمكنه حذف المستخدمين
+  if (!isAdmin()) {
+    showToast('هذه العملية متاحة للمشرفين فقط', 'error');
+    return;
+  }
+  
+  const user = adminState.users.find(u => u.id === userId);
+  if (!user) return;
       
       if (user.id === adminState.currentUser.id) {
         showToast('لا يمكنك حذف حسابك الخاص', 'error');
@@ -2988,22 +3085,17 @@
           showToast('جاري الحذف...', 'info');
           
           try {
-            // حذف الملاحظات المشتركة للمستخدم
             await supabaseClient
               .from('notes')
               .delete()
               .eq('user_id', userId);
             
-            // حذف البروفايل
             const { error: profileError } = await supabaseClient
               .from('profiles')
               .delete()
               .eq('id', userId);
             
             if (profileError) throw profileError;
-            
-            // ملاحظة: حذف الحساب من auth يحتاج admin API - سيُحذف يدوياً إن لزم
-            // أو يمكن استخدام Edge Function
             
             showToast('تم حذف المستخدم بنجاح');
             await loadUsers();
@@ -3096,7 +3188,7 @@
     }
 
     // ============================================
-    // حفظ التعديلات
+    // حفظ التعديلات — نسخة محصّنة
     // ============================================
     async function saveEdit() {
       if (!adminState.editingItem || !adminState.editingType) return;
@@ -3121,7 +3213,7 @@
             return;
           }
           
-          const { error } = await supabaseClient
+          const { data, error } = await supabaseClient
             .from('files')
             .update({
               title,
@@ -3130,9 +3222,13 @@
               subject_id: subjectId,
               updated_at: new Date().toISOString()
             })
-            .eq('id', adminState.editingItem.id);
+            .eq('id', adminState.editingItem.id)
+            .select();
           
           if (error) throw error;
+          if (!data || data.length === 0) {
+            throw new Error('لم يتم التحديث — تحقق من الصلاحيات');
+          }
           
           showToast('تم تحديث الملف بنجاح');
           await loadFiles();
@@ -3148,12 +3244,16 @@
             return;
           }
           
-          const { error } = await supabaseClient
+          const { data, error } = await supabaseClient
             .from('subjects')
             .update({ name, description: description || null })
-            .eq('id', adminState.editingItem.id);
+            .eq('id', adminState.editingItem.id)
+            .select();
           
           if (error) throw error;
+          if (!data || data.length === 0) {
+            throw new Error('لم يتم التحديث');
+          }
           
           showToast('تم تحديث المادة بنجاح');
           await loadSubjects();
@@ -3174,36 +3274,66 @@
             return;
           }
           
-          const { error } = await supabaseClient
+          const { data, error } = await supabaseClient
             .from('notes')
             .update({
               title,
               content,
               updated_at: new Date().toISOString()
             })
-            .eq('id', adminState.editingItem.id);
+            .eq('id', adminState.editingItem.id)
+            .select();
           
           if (error) throw error;
+          if (!data || data.length === 0) {
+            throw new Error('لم يتم التحديث');
+          }
           
           showToast('تم تحديث الملاحظة بنجاح');
           await loadNotes();
         }
         
-        // تعديل صلاحية مستخدم
-        else if (adminState.editingType === 'user') {
-          if (!adminState.selectedRole) {
-            showToast('اختر صلاحية', 'error');
+// تعديل صلاحية مستخدم — النسخة المحصّنة
+else if (adminState.editingType === 'user') {
+  // ✅ حماية: المراقب لا يمكنه تعديل الأدوار
+  if (!isAdmin()) {
+    showToast('هذه العملية متاحة للمشرفين فقط', 'error');
+    return;
+  }
+  
+  if (!adminState.selectedRole) {
+    showToast('اختر صلاحية', 'error');
+    return;
+  }
+          
+          // ⚠️ تحقق: لا يمكن ترقية نفسك
+          if (adminState.editingItem.id === adminState.currentUser.id) {
+            showToast('لا يمكنك تعديل صلاحيتك الخاصة', 'error');
             return;
           }
           
-          const { error } = await supabaseClient
+          const targetUserId = adminState.editingItem.id;
+          const newRole = adminState.selectedRole;
+          
+          const { data, error } = await supabaseClient
             .from('profiles')
-            .update({ role: adminState.selectedRole })
-            .eq('id', adminState.editingItem.id);
+            .update({ 
+              role: newRole,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', targetUserId)
+            .select();
           
-          if (error) throw error;
+          if (error) {
+            console.error('❌ خطأ Supabase:', error);
+            throw error;
+          }
           
-          const roleInfo = getRoleInfo(adminState.selectedRole);
+          if (!data || data.length === 0) {
+            throw new Error('لم يتم التحديث — تحقق من الصلاحيات أو RLS');
+          }
+          
+          const roleInfo = getRoleInfo(newRole);
           showToast(`تم تغيير الصلاحية إلى "${roleInfo.label}"`);
           await loadUsers();
         }
@@ -3212,7 +3342,7 @@
         
       } catch (err) {
         console.error('saveEdit error:', err);
-        showToast('تعذّر حفظ التعديلات: ' + err.message, 'error');
+        showToast('تعذّر حفظ التعديلات: ' + (err.message || 'خطأ غير معروف'), 'error');
       } finally {
         btn.disabled = false;
         btn.innerHTML = originalHTML;
@@ -3271,7 +3401,8 @@
         loadStats(),
         loadFiles(),
         loadSubjects(),
-        loadNotes()
+        loadNotes(),
+        loadUsers()
       ]);
       showToast('تم التحديث');
     }
@@ -3289,7 +3420,8 @@
         loadStats(),
         loadSubjects(),
         loadFiles(),
-        loadNotes()
+        loadNotes(),
+        loadUsers()
       ]);
       
       console.log('✅ Admin panel loaded');

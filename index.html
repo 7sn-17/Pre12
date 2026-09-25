@@ -3029,9 +3029,32 @@
       }
       
       const adminItem = document.getElementById('adminPanelItem');
-      if (adminItem && role === 'admin') {
-        adminItem.style.display = 'flex';
-      }
+if (adminItem && (role === 'admin' || role === 'moderator')) {
+  adminItem.style.display = 'flex';
+  
+  // تخصيص العنوان والوصف حسب الدور
+  const titleEl = adminItem.querySelector('.settings-text h4');
+  const descEl = adminItem.querySelector('.settings-text p');
+  const iconEl = adminItem.querySelector('.settings-icon i');
+  
+  if (role === 'moderator') {
+    if (titleEl) titleEl.textContent = 'لوحة المراقبة';
+    if (descEl) descEl.textContent = 'تعديل الملفات والملاحظات المشتركة';
+    if (iconEl) iconEl.setAttribute('data-lucide', 'eye');
+    adminItem.style.borderColor = 'rgba(59, 130, 246, 0.35)';
+    adminItem.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(37, 99, 235, 0.05))';
+    
+    const iconBox = adminItem.querySelector('.settings-icon');
+    if (iconBox) {
+      iconBox.style.background = 'rgba(59, 130, 246, 0.15)';
+      iconBox.style.borderColor = 'rgba(59, 130, 246, 0.35)';
+      iconBox.style.color = '#60a5fa';
+    }
+    
+    const arrow = adminItem.querySelector('.settings-arrow');
+    if (arrow) arrow.style.color = '#60a5fa';
+  }
+}
       
       lucide.createIcons();
     }

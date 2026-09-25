@@ -1,9 +1,9 @@
 // ============================================
 // sw.js — Service Worker للمنصة الطبية
-// Version 2.4.2 — Cache ذكي مع ملفات منفصلة
+// Version 2.4.3 — Cache ذكي مع ملفات منفصلة
 // ============================================
 
-const CACHE_VERSION = 'v2.4.2';
+const CACHE_VERSION = 'v2.4.3';
 const STATIC_CACHE = `medfav-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `medfav-runtime-${CACHE_VERSION}`;
 const PDF_CACHE = `medfav-pdf-${CACHE_VERSION}`;
