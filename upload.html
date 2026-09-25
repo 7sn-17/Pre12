@@ -290,6 +290,18 @@ header {
   box-shadow: 0 6px 20px var(--accent-glow);
 }
 
+/* ⭐ تصنيف "مقاطع توضيحية" — لون زهري */
+.chip[data-value="videos"].active {
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.25), rgba(219, 39, 119, 0.15));
+  border-color: #ec4899;
+  box-shadow: 0 6px 20px rgba(236, 72, 153, 0.3);
+}
+
+.chip[data-value="videos"]:hover {
+  border-color: #ec4899;
+  color: var(--text-primary);
+}
+
 /* ═══ Dropzone ═══ */
 .dropzone {
   border: 2px dashed var(--accent-emerald);
@@ -518,6 +530,12 @@ header {
   background: rgba(16, 185, 129, 0.08);
   border: 1px solid rgba(16, 185, 129, 0.25);
   color: var(--accent-light);
+}
+
+.info-pink {
+  background: rgba(236, 72, 153, 0.08);
+  border: 1px solid rgba(236, 72, 153, 0.25);
+  color: #f472b6;
 }
 
 .info-box strong { color: var(--text-primary); font-weight: 800; }
@@ -803,6 +821,9 @@ header {
           <button type="button" class="chip" data-value="exam">
             <i class="fa-solid fa-graduation-cap"></i> دورات
           </button>
+          <button type="button" class="chip" data-value="videos">
+            <i class="fa-solid fa-video"></i> مقاطع توضيحية
+          </button>
         </div>
       </div>
 
@@ -918,6 +939,9 @@ header {
           </button>
           <button type="button" class="chip" data-value="exam">
             <i class="fa-solid fa-graduation-cap"></i> دورات
+          </button>
+          <button type="button" class="chip" data-value="videos">
+            <i class="fa-solid fa-video"></i> مقاطع توضيحية
           </button>
         </div>
       </div>
@@ -1324,7 +1348,6 @@ function validateUrl() {
   state.link.url = result.normalized;
   state.link.host = result.host;
 
-  // الحصول على شارة المضيف
   const hostKey = result.host.key || 'other';
   const display = HOST_DISPLAY[hostKey] || HOST_DISPLAY.other;
 
@@ -1332,7 +1355,6 @@ function validateUrl() {
   hostIcon.innerHTML = `<i class="${display.icon}"></i>`;
   hostName.textContent = display.name;
 
-  // hint مع dot
   hostHint.innerHTML = `
     <span class="${display.ok ? 'dot-ok' : 'dot-warn'}"></span>
     <span>${display.hint}</span>
@@ -1378,7 +1400,7 @@ document.getElementById('linkForm').addEventListener('submit', async e => {
   }
 });
 
-console.log('✅ upload.html ready — Font Awesome');
+console.log('✅ upload.html ready — Font Awesome + Videos Category');
 </script>
 
 <script>
