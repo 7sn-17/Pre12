@@ -308,53 +308,133 @@
       gap: 12px;
     }
 
-    .checkbox-wrapper {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      user-select: none;
-      font-size: 0.85rem;
-      color: var(--text-secondary);
-    }
+/* ============================================ */
+/* نظام صناديق الاختيار — جديد احترافي */
+/* ============================================ */
 
-    .checkbox-wrapper input { display: none; }
+/* الحاوية العامة (تذكرني + أوافق) */
+.checkbox-wrapper,
+.terms-agreement {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  -webkit-tap-highlight-color: transparent;
+}
 
-    .checkbox-custom {
-      width: 20px;
-      height: 20px;
-      border-radius: 6px;
-      border: 1.5px solid var(--border-card);
-      background: rgba(6, 17, 13, 0.6);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all var(--transition);
-      flex-shrink: 0;
-    }
+.checkbox-wrapper input,
+.terms-agreement input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
 
-    [data-theme="light"] .checkbox-custom {
-      background: rgba(241, 245, 249, 0.9);
-    }
+/* الصندوق الصغير */
+.checkbox-custom,
+.terms-check {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1.8px solid var(--text-muted);
+  background: rgba(6, 17, 13, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  position: relative;
+}
 
-    .checkbox-custom i {
-      width: 14px;
-      height: 14px;
-      color: white;
-      opacity: 0;
-      transform: scale(0.5);
-      transition: all var(--transition);
-    }
+[data-theme="light"] .checkbox-custom,
+[data-theme="light"] .terms-check {
+  background: rgba(241, 245, 249, 0.9);
+  border-color: #cbd5e1;
+}
 
-    .checkbox-wrapper input:checked + .checkbox-custom {
-      background: var(--accent-emerald);
-      border-color: var(--accent-emerald);
-    }
+/* علامة الصح — مخفية بشكل مطلق */
+.checkbox-custom i,
+.terms-check i,
+.checkbox-custom svg,
+.terms-check svg {
+  width: 13px !important;
+  height: 13px !important;
+  color: white !important;
+  stroke-width: 4 !important;
+  opacity: 0;
+  transform: scale(0.3);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: block;
+}
 
-    .checkbox-wrapper input:checked + .checkbox-custom i {
-      opacity: 1;
-      transform: scale(1);
-    }
+/* عند التحديد — يصير أخضر */
+.checkbox-wrapper input:checked + .checkbox-custom,
+.terms-agreement input:checked + .terms-check {
+  background: var(--accent-emerald);
+  border-color: var(--accent-emerald);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+/* عند التحديد — تظهر علامة الصح */
+.checkbox-wrapper input:checked + .checkbox-custom i,
+.checkbox-wrapper input:checked + .checkbox-custom svg,
+.terms-agreement input:checked + .terms-check i,
+.terms-agreement input:checked + .terms-check svg {
+  opacity: 1 !important;
+  transform: scale(1) !important;
+}
+
+/* عند hover */
+.checkbox-wrapper:hover .checkbox-custom,
+.terms-agreement:hover .terms-check {
+  border-color: var(--accent-emerald);
+}
+
+/* ============================================ */
+/* النص والعناصر داخل الحاويات */
+/* ============================================ */
+.terms-text {
+  line-height: 1.5;
+  flex: 1;
+}
+
+.terms-link {
+  color: var(--accent-light);
+  font-weight: 800;
+  text-decoration: none;
+  transition: all var(--transition);
+  cursor: pointer;
+}
+
+.terms-link:hover {
+  text-decoration: underline;
+}
+
+/* ============================================ */
+/* الاهتزاز عند عدم الموافقة */
+/* ============================================ */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-6px); }
+  30% { transform: translateX(6px); }
+  45% { transform: translateX(-5px); }
+  60% { transform: translateX(5px); }
+  75% { transform: translateX(-2px); }
+  90% { transform: translateX(2px); }
+}
+
+.terms-agreement.shake {
+  animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+.terms-agreement.shake .terms-check {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
 
     .forgot-link {
       font-size: 0.85rem;
@@ -809,6 +889,103 @@
       margin-top: 2px;
     }
 
+/* ============================================ */
+/* 🆕 الموافقة على الشروط — سطر واحد */
+/* ============================================ */
+.terms-agreement {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  padding: 6px 2px;
+  transition: all var(--transition);
+}
+
+.terms-agreement input { display: none; }
+
+/* المربع الصغير */
+.terms-agreement .terms-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid var(--border-card);
+  background: rgba(6, 17, 13, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+[data-theme="light"] .terms-agreement .terms-check {
+  background: rgba(241, 245, 249, 0.9);
+}
+
+/* أيقونة الصح — مخفية افتراضياً */
+.terms-agreement .terms-check i {
+  width: 12px;
+  height: 12px;
+  color: white;
+  opacity: 0;
+  transform: scale(0.4);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  stroke-width: 3.5;
+}
+
+/* عند الموافقة — المربع يصير أخضر */
+.terms-agreement input:checked + .terms-check {
+  background: var(--accent-emerald);
+  border-color: var(--accent-emerald);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+/* عند الموافقة — الصح يظهر */
+.terms-agreement input:checked + .terms-check i {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* النص */
+.terms-text {
+  line-height: 1.4;
+  flex: 1;
+}
+
+.terms-link {
+  color: var(--accent-light);
+  font-weight: 800;
+  text-decoration: none;
+  transition: all var(--transition);
+  cursor: pointer;
+}
+
+.terms-link:hover {
+  text-decoration: underline;
+}
+
+/* الاهتزاز */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-6px); }
+  30% { transform: translateX(6px); }
+  45% { transform: translateX(-5px); }
+  60% { transform: translateX(5px); }
+  75% { transform: translateX(-2px); }
+  90% { transform: translateX(2px); }
+}
+
+.terms-agreement.shake {
+  animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+.terms-agreement.shake .terms-check {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
     /* Toast */
     .toast {
       position: fixed;
@@ -1026,6 +1203,20 @@
             </div>
             <div class="error-message" id="registerConfirmError">كلمتا المرور غير متطابقتين</div>
           </div>
+
+<!-- 🆕 الموافقة على الشروط -->
+<label class="terms-agreement" id="termsAgreement">
+  <input type="checkbox" id="agreeTerms">
+  <span class="terms-check">
+    <i data-lucide="check"></i>
+  </span>
+  <span class="terms-text">
+    أوافق على
+    <a href="terms.html" target="_blank" class="terms-link">شروط الخدمة</a>
+    و
+    <a href="privacy.html" target="_blank" class="terms-link">سياسة الخصوصية</a>
+  </span>
+</label>
 
           <button type="submit" class="submit-btn" id="registerBtn">
             <span class="btn-loader"></span>
@@ -1429,12 +1620,20 @@
         showError('registerPassword', 'registerPasswordError');
         hasError = true;
       }
-      if (password !== confirm) {
-        showError('registerConfirm', 'registerConfirmError');
-        hasError = true;
-      }
+if (password !== confirm) {
+  showError('registerConfirm', 'registerConfirmError');
+  hasError = true;
+}
 
-      if (hasError) return;
+// 🆕 فحص الموافقة على الشروط
+const agreedToTerms = document.getElementById('agreeTerms').checked;
+if (!agreedToTerms) {
+  shakeTermsBox();
+  showToast('يجب الموافقة على الشروط والسياسة للمتابعة', 'error');
+  hasError = true;
+}
+
+if (hasError) return;
 
       state.isSubmitting = true;
       const btn = document.getElementById('registerBtn');
@@ -1536,6 +1735,41 @@
         showToast('تعذّر النسخ — انسخه يدوياً', 'error');
       }
     }
+
+// ============================================
+// 🆕 اهتزاز صندوق الشروط
+// ============================================
+function shakeTermsBox() {
+  const box = document.getElementById('termsAgreement');
+  if (!box) return;
+
+  // 🎬 إزالة الكلاس القديم أولاً (لإعادة تشغيل الأنيميشن)
+  box.classList.remove('shake');
+
+  // إجبار المتصفح على "إعادة الرسم" قبل إضافة الكلاس
+  void box.offsetWidth;
+
+  // إضافة الكلاس
+  box.classList.add('shake');
+
+  // 📳 اهتزاز الجهاز (إن كان مدعوماً)
+  if (navigator.vibrate) {
+    navigator.vibrate(50);
+  }
+
+  // إزالة الكلاس بعد انتهاء الأنيميشن
+  setTimeout(() => {
+    box.classList.remove('shake');
+  }, 600);
+}
+
+// 🆕 إزالة تأثير الاهتزاز عند الموافقة
+document.addEventListener('change', (e) => {
+  if (e.target && e.target.id === 'agreeTerms' && e.target.checked) {
+    const box = document.getElementById('termsAgreement');
+    if (box) box.classList.remove('shake');
+  }
+});
 
     // ============================================
     // تعديل البريد — يعيد تعيين النموذج بالكامل

@@ -660,6 +660,46 @@
         transition-duration: 0.01ms !important;
       }
     }
+/* ============================================ */
+/* Legal Links - بسيط */
+/* ============================================ */
+.legal-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.legal-link {
+  color: #60a5fa;
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 700;
+  transition: color var(--transition-fast), text-decoration var(--transition-fast);
+  cursor: pointer;
+}
+
+.legal-link:hover {
+  color: #93c5fd;
+  text-decoration: underline;
+}
+
+[data-theme="light"] .legal-link {
+  color: #2563eb;
+}
+
+[data-theme="light"] .legal-link:hover {
+  color: #1d4ed8;
+}
+
+.legal-separator {
+  color: var(--text-muted);
+  font-weight: 700;
+  opacity: 0.5;
+  font-size: 0.9rem;
+}
   </style>
 </head>
 <body>
@@ -868,17 +908,25 @@
       </div>
     </div>
 
-    <!-- Footer -->
-    <div class="footer">
-      <div class="footer-text">
-        <i data-lucide="heart"></i>
-        <span>صُنع بحب لطلاب السنة التحضيرية</span>
-        <i data-lucide="heart"></i>
-      </div>
-      <div class="footer-copyright">
-        © 2026 المنصة الطبية — جميع الحقوق محفوظة
-      </div>
-    </div>
+<!-- Footer -->
+<div class="footer">
+  <div class="footer-text">
+    <i data-lucide="heart"></i>
+    <span>صُنع بحب لطلاب السنة التحضيرية</span>
+    <i data-lucide="heart"></i>
+  </div>
+
+  <!-- روابط قانونية -->
+  <div class="legal-links">
+    <a href="privacy.html" class="legal-link">سياسة الخصوصية</a>
+    <span class="legal-separator">•</span>
+    <a href="terms.html" class="legal-link">شروط الخدمة</a>
+  </div>
+
+  <div class="footer-copyright">
+    © 2026 المنصة الطبية — جميع الحقوق محفوظة
+  </div>
+</div>
 
   </div>
 
