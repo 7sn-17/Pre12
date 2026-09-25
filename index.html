@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
 <!-- PWA Meta Tags -->
@@ -525,145 +526,172 @@
     /* ============================================ */
     /* New Today - Horizontal Cards */
     /* ============================================ */
-    .files-horizontal {
-      display: flex;
-      gap: 12px;
-      overflow-x: auto;
-      padding-bottom: 8px;
-      margin: 0 -20px;
-      padding-left: 20px;
-      padding-right: 20px;
-      scrollbar-width: none;
-      scroll-snap-type: x mandatory;
-    }
+.files-horizontal {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  overflow-y: visible;
+  padding: 6px 20px 12px;
+  margin: 0 -20px;
+  scrollbar-width: none;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
 
     .files-horizontal::-webkit-scrollbar { display: none; }
 
-    .file-mini-card {
-      min-width: 280px;
-      max-width: 280px;
-      background: var(--bg-card);
-      border: 1px solid var(--border-card);
-      border-radius: var(--radius-lg);
-      padding: 12px 14px;
-      cursor: pointer;
-      transition: all var(--transition-smooth);
-      scroll-snap-align: start;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      position: relative;
-      overflow: hidden;
-      animation: cardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
-    }
+/* ═══ بطاقات جديد اليوم — التصميم الجديد ═══ */
+.file-mini-card {
+  min-width: 280px;
+  max-width: 280px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 16px;
+  padding: 14px 14px 14px 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  scroll-snap-align: start;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
+  animation: cardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
 
-    .file-mini-card:hover {
-      background: var(--bg-card-hover);
-      border-color: var(--border-card-hover);
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.4);
-    }
+.file-mini-card::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 12%;
+  bottom: 12%;
+  width: 3px;
+  background: var(--file-color, #10b981);
+  border-radius: 0 4px 4px 0;
+  opacity: 0.85;
+  transition: all 0.3s ease;
+}
 
-    .file-mini-icon-lg {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      transition: all var(--transition-fast);
-    }
+.file-mini-card:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-card-hover);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.4);
+}
 
-    .file-mini-icon-lg i { width: 20px; height: 20px; }
+.file-mini-card:hover::before {
+  top: 8%;
+  bottom: 8%;
+  opacity: 1;
+}
 
-    .file-mini-card:hover .file-mini-icon-lg {
-      transform: scale(1.06) rotate(-3deg);
-    }
+.file-mini-icon-lg {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
 
-    .file-mini-content {
-      flex: 1;
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
+.file-mini-icon-lg i {
+  width: 19px;
+  height: 19px;
+}
 
-    .file-mini-title {
-      font-size: 0.85rem;
-      font-weight: 700;
-      color: var(--text-primary);
-      line-height: 1.35;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      display: -webkit-box;
-      -webkit-line-clamp: 1;
-      -webkit-box-orient: vertical;
-    }
+.file-mini-card:hover .file-mini-icon-lg {
+  transform: scale(1.08) rotate(-5deg);
+}
 
-    .file-mini-info {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.7rem;
-      color: var(--text-muted);
-      font-weight: 600;
-    }
+.file-mini-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
 
-    .file-mini-info i { width: 11px; height: 11px; }
+.file-mini-title {
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
 
-    .file-mini-info .dot {
-      width: 3px;
-      height: 3px;
-      border-radius: 50%;
-      background: var(--text-muted);
-    }
+.file-mini-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
 
-    .file-mini-actions-mini {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      flex-shrink: 0;
-    }
+.file-mini-info i {
+  width: 11px;
+  height: 11px;
+}
 
-    .mini-icon-btn {
-      width: 32px;
-      height: 32px;
-      border-radius: 10px;
-      background: rgba(128, 128, 128, 0.08);
-      border: 1px solid var(--border-card);
-      color: var(--text-secondary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-family: inherit;
-      transition: all var(--transition-fast);
-      flex-shrink: 0;
-    }
+.file-mini-info .dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
+}
 
-    .mini-icon-btn i { width: 14px; height: 14px; }
+.file-mini-actions-mini {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex-shrink: 0;
+}
 
-    .mini-icon-btn:hover {
-      border-color: var(--accent-emerald);
-      color: var(--accent-light);
-      background: rgba(16, 185, 129, 0.1);
-      transform: scale(1.05);
-    }
+.mini-icon-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: rgba(128, 128, 128, 0.06);
+  border: 1px solid var(--border-card);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
 
-    .mini-icon-btn.fav-active {
-      background: rgba(239, 68, 68, 0.15);
-      border-color: var(--danger);
-      color: var(--danger);
-    }
+.mini-icon-btn i {
+  width: 13px;
+  height: 13px;
+}
 
-    .mini-icon-btn.fav-active i { fill: var(--danger); }
+.mini-icon-btn:hover {
+  border-color: var(--accent-emerald);
+  color: var(--accent-light);
+  background: rgba(16, 185, 129, 0.1);
+  transform: scale(1.08);
+}
 
-    .mini-icon-btn.downloaded {
-      background: rgba(16, 185, 129, 0.15);
-      border-color: var(--accent-emerald);
-      color: var(--accent-light);
-    }
+.mini-icon-btn.fav-active {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: #fbbf24;
+  color: #fbbf24;
+}
+
+.mini-icon-btn.downloaded {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: var(--accent-emerald);
+  color: var(--accent-light);
+}
 
     /* ============================================ */
     /* Tip Card */
@@ -1134,73 +1162,133 @@
       gap: 10px;
     }
 
-    .mini-file-card {
-      background: rgba(128, 128, 128, 0.05);
-      border: 1px solid var(--border-card);
-      border-radius: 14px;
-      padding: 12px 14px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      cursor: pointer;
-      transition: all var(--transition-fast);
-      animation: cardIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) backwards;
-    }
+/* ═══ بطاقات الملفات — التصميم الجديد ═══ */
+.mini-file-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 14px;
+  padding: 13px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: cardIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  position: relative;
+  overflow: hidden;
+}
 
-    .mini-file-card:hover {
-      background: var(--bg-card-hover);
-      border-color: var(--border-card-hover);
-      transform: translateX(-2px);
-    }
+.mini-file-card::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 15%;
+  bottom: 15%;
+  width: 3px;
+  background: var(--file-color, #10b981);
+  border-radius: 0 4px 4px 0;
+  opacity: 0.7;
+  transition: all 0.3s ease;
+}
 
-    .mini-file-icon {
-      width: 42px; height: 42px;
-      border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
+.mini-file-card:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-card-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.3);
+}
 
-    .mini-file-icon i { width: 18px; height: 18px; }
+.mini-file-card:hover::before {
+  top: 10%;
+  bottom: 10%;
+  opacity: 1;
+}
 
-    .mini-file-content { flex: 1; min-width: 0; }
+.mini-file-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
 
-    .mini-file-title {
-      font-size: 0.85rem;
-      font-weight: 700;
-      color: var(--text-primary);
-      margin-bottom: 4px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+.mini-file-icon i {
+  width: 20px;
+  height: 20px;
+}
 
-    .mini-file-meta {
-      font-size: 0.68rem;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-weight: 600;
-      flex-wrap: wrap;
-    }
+.mini-file-card:hover .mini-file-icon {
+  transform: scale(1.06) rotate(-4deg);
+}
 
-    .mini-file-meta i { width: 11px; height: 11px; }
+.mini-file-content {
+  flex: 1;
+  min-width: 0;
+}
 
-    .mini-file-delete {
-      width: 34px; height: 34px;
-      border-radius: 10px;
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px solid rgba(239, 68, 68, 0.25);
-      color: #f87171;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer;
-      flex-shrink: 0;
-      transition: all var(--transition-fast);
-      font-family: inherit;
-    }
+.mini-file-title {
+  font-size: 0.87rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.35;
+}
 
-    .mini-file-delete:hover { background: rgba(239, 68, 68, 0.2); }
-    .mini-file-delete i { width: 14px; height: 14px; }
+.mini-file-meta {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+  flex-wrap: wrap;
+}
+
+.mini-file-meta i {
+  width: 11px;
+  height: 11px;
+}
+
+.mini-file-meta .dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.mini-file-delete {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.mini-file-delete:hover {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.4);
+  transform: scale(1.08);
+}
+
+.mini-file-delete i {
+  width: 13px;
+  height: 13px;
+}
 
     /* ============================================ */
     /* Settings */
@@ -2771,24 +2859,27 @@
     // ============================================
     // آخر نشاطاتي — localStorage
     // ============================================
-    function saveLastActivity(file) {
-      try {
-        const activity = {
-          id: file.id,
-          title: file.title,
-          subject: file.subjects?.name || file.subject_name || '',
-          category: file.category || 'summary',
-          file_size: file.file_size || 0,
-          file_url: file.file_url || '',
-          file_path: file.file_path || '',
-          created_at: file.created_at || '',
-          timestamp: Date.now()
-        };
-        localStorage.setItem('medfav_last_activity', JSON.stringify(activity));
-      } catch (err) {
-        console.error('saveLastActivity error:', err);
-      }
-    }
+function saveLastActivity(file) {
+  try {
+    const activity = {
+      id: file.id,
+      title: file.title,
+      subject: file.subjects?.name || file.subject_name || '',
+      category: file.category || 'summary',
+      file_size: file.file_size || 0,
+      file_url: file.file_url || '',
+      file_path: file.file_path || '',
+      external_url: file.external_url || null,  // ⭐
+      source: file.source || 'upload',           // ⭐
+      mime_type: file.mime_type || 'application/pdf',  // ⭐
+      created_at: file.created_at || '',
+      timestamp: Date.now()
+    };
+    localStorage.setItem('medfav_last_activity', JSON.stringify(activity));
+  } catch (err) {
+    console.error('saveLastActivity error:', err);
+  }
+}
 
     function getLastActivity() {
       try {
@@ -2799,50 +2890,51 @@
       }
     }
 
-    function loadLastActivity() {
-      const container = document.getElementById('lastActivityContainer');
-      const activity = getLastActivity();
-      
-      if (!activity) {
-        container.innerHTML = `
-          <div class="last-activity-empty">
-            <i data-lucide="file-x"></i>
-            <span>لا يوجد نشاط بعد</span>
-          </div>
-        `;
-        lucide.createIcons();
-        return;
-      }
-      
-      const catInfo = getCategoryInfo(activity.category);
-      const iconBg = hexToRgba(catInfo.color, 0.15);
-      const iconBorder = hexToRgba(catInfo.color, 0.35);
-      
-      container.innerHTML = `
-        <div class="last-activity-card" onclick="openLastActivity()">
-          <div class="mini-file-icon" style="background: ${iconBg}; border: 1px solid ${iconBorder}; color: ${catInfo.color};">
-            <i data-lucide="${catInfo.icon}"></i>
-          </div>
-          <div class="mini-file-content">
-            <div class="mini-file-title">${activity.title}</div>
-            <div class="mini-file-meta">
-              <i data-lucide="clock"></i>
-              <span>${formatDate(new Date(activity.timestamp).toISOString())}</span>
-              ${activity.subject ? `
-                <span>•</span>
-                <span>${activity.subject}</span>
-              ` : ''}
-            </div>
-          </div>
-          <div class="arrow-box">
-            <i data-lucide="chevron-left"></i>
-          </div>
-        </div>
-      `;
-      
-      lucide.createIcons();
-    }
+function loadLastActivity() {
+  const container = document.getElementById('lastActivityContainer');
+  const activity = getLastActivity();
 
+  if (!activity) {
+    container.innerHTML = `
+      <div class="last-activity-empty">
+        <i class="fa-solid fa-folder-open"></i>
+        <span>لا يوجد نشاط بعد</span>
+      </div>
+    `;
+    return;
+  }
+
+  // ⭐ كشف نوع الملف
+  const typeInfo = detectFileType(activity);
+  const iconBg = hexToRgba(typeInfo.color, 0.15);
+  const iconBorder = hexToRgba(typeInfo.color, 0.35);
+  const dateText = formatDate(new Date(activity.timestamp).toISOString());
+
+  container.innerHTML = `
+    <div class="last-activity-card" onclick="openLastActivity()">
+      <div class="mini-file-icon" style="background: ${iconBg}; border: 1px solid ${iconBorder}; color: ${typeInfo.color}; font-size: 1.2rem;">
+        <i class="fa-solid ${typeInfo.icon}"></i>
+      </div>
+      <div class="mini-file-content">
+        <div class="mini-file-title">${activity.title}</div>
+        <div class="mini-file-meta">
+          <i class="fa-solid fa-clock"></i>
+          <span>${dateText}</span>
+          ${activity.subject ? `
+            <span class="dot"></span>
+            <i class="fa-solid fa-book-open"></i>
+            <span>${activity.subject}</span>
+          ` : ''}
+        </div>
+      </div>
+      <div class="arrow-box">
+        <i class="fa-solid fa-chevron-left"></i>
+      </div>
+    </div>
+  `;
+}
+      
+      
     function openLastActivity() {
       const activity = getLastActivity();
       if (!activity) return;
@@ -3264,63 +3356,124 @@ if (adminItem && (role === 'admin' || role === 'moderator')) {
       lucide.createIcons();
     }
 
-    async function createRecentFileCard(file, downloadedIds, index) {
-      const catInfo = getCategoryInfo(file.category);
-      const isDownloaded = downloadedIds.has(file.id);
-      const isFav = await isFavorite(file.id);
-      
-      const card = document.createElement('div');
-      card.className = 'file-mini-card';
-      card.style.animationDelay = (index * 0.05) + 's';
-      
-      const iconBg = hexToRgba(catInfo.color, 0.15);
-      const iconBorder = hexToRgba(catInfo.color, 0.35);
-      
-      card.innerHTML = `
-        <div class="file-mini-icon-lg" style="background: ${iconBg}; border: 1px solid ${iconBorder}; color: ${catInfo.color};">
-          <i data-lucide="${catInfo.icon}"></i>
-        </div>
-        
-        <div class="file-mini-content">
-          <div class="file-mini-title">${file.title}</div>
-          <div class="file-mini-info">
-            <i data-lucide="book-open"></i>
-            <span>${file.subjects?.name || 'غير محدد'}</span>
-            <span class="dot"></span>
-            <span>${catInfo.label}</span>
-          </div>
-        </div>
-        
-        <div class="file-mini-actions-mini" onclick="event.stopPropagation()">
-          <button class="mini-icon-btn ${isDownloaded ? 'downloaded' : ''}" 
-                  id="recent-dl-${file.id}"
-                  onclick="event.stopPropagation(); downloadRecentFile('${file.id}')"
-                  title="${isDownloaded ? 'محمّل' : 'تحميل'}">
-            <i data-lucide="${isDownloaded ? 'check' : 'download'}"></i>
-          </button>
-          <button class="mini-icon-btn ${isFav ? 'fav-active' : ''}" 
-                  id="recent-fav-${file.id}"
-                  onclick="event.stopPropagation(); toggleRecentFav('${file.id}')"
-                  title="${isFav ? 'إزالة' : 'حفظ'}">
-            <i data-lucide="${isFav ? 'bookmark-check' : 'bookmark'}"></i>
-          </button>
-        </div>
-      `;
-      
-      card.onclick = () => openRecentFile(file.id);
-      
-      return card;
-    }
+async function createRecentFileCard(file, downloadedIds, index) {
+  const catInfo = getCategoryInfo(file.category);
+  const typeInfo = detectFileType(file);
+  const isExternal = file.source === 'link';
+  const isDownloaded = downloadedIds.has(file.id);
+  const isFav = await isFavorite(file.id);
 
-    function openRecentFile(fileId) {
-      const file = appState.recentFiles.find(f => f.id === fileId);
-      if (!file) return;
-      
-      // حفظ النشاط
-      saveLastActivity(file);
-      
-      window.location.href = buildViewerUrl(file);
+  const card = document.createElement('div');
+  card.className = 'file-mini-card';
+  card.style.animationDelay = (index * 0.05) + 's';
+  card.style.setProperty('--file-color', typeInfo.color);
+
+  const iconBg = hexToRgba(typeInfo.color, 0.15);
+  const iconBorder = hexToRgba(typeInfo.color, 0.35);
+
+  const subjectName = file.subjects?.name || file.subject_name || 'غير محدد';
+
+  // ⭐ زر ثاني: تحميل للملفات | نسخ للروابط
+  const secondBtn = isExternal
+    ? `<button class="mini-icon-btn"
+              id="recent-copy-${file.id}"
+              onclick="event.stopPropagation(); copyRecentLink('${file.id}')"
+              title="نسخ الرابط">
+         <i class="fa-solid fa-copy"></i>
+       </button>`
+    : `<button class="mini-icon-btn ${isDownloaded ? 'downloaded' : ''}"
+              id="recent-dl-${file.id}"
+              onclick="event.stopPropagation(); downloadRecentFile('${file.id}')"
+              title="${isDownloaded ? 'محمّل' : 'تحميل'}">
+         <i class="fa-solid ${isDownloaded ? 'fa-check' : 'fa-download'}"></i>
+       </button>`;
+
+  card.innerHTML = `
+    <div class="file-mini-icon-lg" style="background: ${iconBg}; border: 1px solid ${iconBorder}; color: ${typeInfo.color};">
+      <i class="fa-solid ${typeInfo.icon}"></i>
+    </div>
+
+    <div class="file-mini-content">
+      <div class="file-mini-title">${file.title}</div>
+      <div class="file-mini-info">
+        <i class="fa-solid fa-book-open"></i>
+        <span>${subjectName}</span>
+        <span class="dot"></span>
+        <span>${catInfo.label}</span>
+      </div>
+    </div>
+
+    <div class="file-mini-actions-mini" onclick="event.stopPropagation()">
+      ${secondBtn}
+      <button class="mini-icon-btn ${isFav ? 'fav-active' : ''}"
+              id="recent-fav-${file.id}"
+              onclick="event.stopPropagation(); toggleRecentFav('${file.id}')"
+              title="${isFav ? 'إزالة' : 'حفظ'}">
+        <i class="fa-${isFav ? 'solid fa-bookmark' : 'regular fa-bookmark'}"></i>
+      </button>
+    </div>
+  `;
+
+  card.onclick = () => openRecentFile(file.id);
+
+  return card;
+}
+
+async function copyRecentLink(fileId) {
+  const file = appState.recentFiles.find(f => f.id === fileId);
+  if (!file) return;
+
+  const url = file.external_url || file.file_url;
+  if (!url) return showToast('لا يوجد رابط', 'error');
+
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast('تم نسخ الرابط', 'success');
+  } catch (e) {
+    // طريقة قديمة
+    const ta = document.createElement('textarea');
+    ta.value = url;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+    showToast('تم نسخ الرابط', 'success');
+  }
+}
+
+function openRecentFile(fileId) {
+  const file = appState.recentFiles.find(f => f.id === fileId);
+  if (!file) return;
+
+  // حفظ النشاط
+  saveLastActivity(file);
+
+  // ⭐ زيادة العداد
+  incrementFileViews(file.id).catch(() => {});
+
+  // ⭐ رابط خارجي → تبويب جديد
+  if (file.source === 'link') {
+    const url = file.external_url || file.file_url;
+    if (!url) {
+      showToast('لا يوجد رابط', 'error');
+      return;
     }
+    window.open(url, '_blank', 'noopener,noreferrer');
+    return;
+  }
+
+  // ⭐ PDF مرفوع → viewer
+  const typeInfo = detectFileType(file);
+  if (typeInfo.viewer) {
+    window.location.href = buildViewerUrl(file);
+    return;
+  }
+
+  // ⭐ أنواع أخرى → تبويب جديد
+  if (file.file_url) {
+    window.open(file.file_url, '_blank', 'noopener,noreferrer');
+  }
+}
 
     async function downloadRecentFile(fileId) {
       if (!requireLogin()) return;
@@ -3487,125 +3640,123 @@ if (adminItem && (role === 'admin' || role === 'moderator')) {
       await loadFavoritedFiles();
     }
 
-    async function loadDownloadedFiles() {
-      const downloaded = await getAllDownloadedFiles();
-      const list = document.getElementById('downloadedList');
-      const subtitle = document.getElementById('downloadedSubtitle');
-      
-      list.innerHTML = '';
-      subtitle.textContent = downloaded.length === 0 
-        ? 'لا توجد ملفات محمّلة' 
-        : `${downloaded.length} ملف محمّل`;
-      
-      if (downloaded.length === 0) {
-        list.innerHTML = `
-          <div class="empty-state visible" style="padding: 30px 10px;">
-            <div class="empty-icon" style="width: 56px; height: 56px;">
-              <i data-lucide="download" style="width: 26px; height: 26px;"></i>
-            </div>
-            <h3 style="font-size: 0.9rem;">لا توجد ملفات محمّلة</h3>
-            <p style="font-size: 0.78rem;">عندما تحمّل أي ملف، سيُحفظ هنا للوصول بدون إنترنت.</p>
-          </div>
-        `;
-        lucide.createIcons();
-        updateSectionHeight('downloadedSection');
-        return;
-      }
-      
-      downloaded.forEach((file, i) => {
-        const catInfo = getCategoryInfo(file.category);
-        const card = document.createElement('div');
-        card.className = 'mini-file-card';
-        card.style.animationDelay = (i * 0.04) + 's';
-        card.onclick = () => openFileInViewer(file.id);
-        
-        const iconBg = hexToRgba(catInfo.color, 0.15);
-        const iconBorder = hexToRgba(catInfo.color, 0.35);
-        
-        card.innerHTML = `
-          <div class="mini-file-icon" style="background: ${iconBg}; border: 1px solid ${iconBorder}; color: ${catInfo.color};">
-            <i data-lucide="${catInfo.icon}"></i>
-          </div>
-          <div class="mini-file-content">
-            <div class="mini-file-title">${file.title}</div>
-            <div class="mini-file-meta">
-              <i data-lucide="check-circle-2" style="color: var(--accent-light);"></i>
-              <span>محمّل</span>
-              <span>•</span>
-              <span>${formatFileSize(file.file_size)}</span>
-            </div>
-          </div>
-          <button class="mini-file-delete" onclick="event.stopPropagation(); removeDownloaded('${file.id}')" title="حذف">
-            <i data-lucide="trash-2"></i>
-          </button>
-        `;
-        
-        list.appendChild(card);
-      });
-      
-      lucide.createIcons();
-      updateSectionHeight('downloadedSection');
-    }
+async function loadDownloadedFiles() {
+  const downloaded = await getAllDownloadedFiles();
+  const list = document.getElementById('downloadedList');
+  const subtitle = document.getElementById('downloadedSubtitle');
 
-    async function loadFavoritedFiles() {
-      const favorites = await getAllFavorites();
-      const list = document.getElementById('favoritesList');
-      const subtitle = document.getElementById('favoritesSubtitle');
-      
-      list.innerHTML = '';
-      subtitle.textContent = favorites.length === 0 
-        ? 'لا توجد ملفات محفوظة' 
-        : `${favorites.length} ملف محفوظ`;
-      
-      if (favorites.length === 0) {
-        list.innerHTML = `
-          <div class="empty-state visible" style="padding: 30px 10px;">
-            <div class="empty-icon" style="width: 56px; height: 56px;">
-              <i data-lucide="bookmark-x" style="width: 26px; height: 26px;"></i>
-            </div>
-            <h3 style="font-size: 0.9rem;">لا توجد ملفات محفوظة</h3>
-            <p style="font-size: 0.78rem;">عندما تحفظ أي ملف، سيظهر هنا.</p>
-          </div>
-        `;
-        lucide.createIcons();
-        updateSectionHeight('favoritesSection');
-        return;
-      }
-      
-      favorites.forEach((file, i) => {
-        const catInfo = getCategoryInfo(file.category);
-        const card = document.createElement('div');
-        card.className = 'mini-file-card';
-        card.style.animationDelay = (i * 0.04) + 's';
-        card.onclick = () => openFileInViewer(file.id);
-        
-        const iconBg = hexToRgba(catInfo.color, 0.15);
-        const iconBorder = hexToRgba(catInfo.color, 0.35);
-        
-        card.innerHTML = `
-          <div class="mini-file-icon" style="background: ${iconBg}; border: 1px solid ${iconBorder}; color: ${catInfo.color};">
-            <i data-lucide="${catInfo.icon}"></i>
-          </div>
-          <div class="mini-file-content">
-            <div class="mini-file-title">${file.title}</div>
-            <div class="mini-file-meta">
-              <i data-lucide="bookmark-check" style="color: #fbbf24;"></i>
-              <span>محفوظ</span>
-              <span>•</span>
-              <span>${file.subject_name || 'غير محدد'}</span>
-            </div>
-          </div>
-          <button class="mini-file-delete" onclick="event.stopPropagation(); removeFavoriteFromList('${file.id}')" title="إزالة">
-            <i data-lucide="trash-2"></i>
-          </button>
-        `;
-        
-        list.appendChild(card);
-      });
-      
-      lucide.createIcons();
-      updateSectionHeight('favoritesSection');
-    }
+  list.innerHTML = '';
+  subtitle.textContent = downloaded.length === 0
+    ? 'لا توجد ملفات محمّلة'
+    : `${downloaded.length} ملف محمّل`;
+
+  if (downloaded.length === 0) {
+    list.innerHTML = `
+      <div class="empty-state visible" style="padding: 30px 10px;">
+        <div class="empty-icon" style="width: 56px; height: 56px;">
+          <i class="fa-solid fa-download" style="font-size: 1.6rem;"></i>
+        </div>
+        <h3 style="font-size: 0.9rem;">لا توجد ملفات محمّلة</h3>
+        <p style="font-size: 0.78rem;">عندما تحمّل أي ملف، سيُحفظ هنا للوصول بدون إنترنت.</p>
+      </div>
+    `;
+    updateSectionHeight('downloadedSection');
+    return;
+  }
+
+  downloaded.forEach((file, i) => {
+    const typeInfo = detectFileType(file);  // ⭐
+    const card = document.createElement('div');
+    card.className = 'mini-file-card';
+    card.style.animationDelay = (i * 0.04) + 's';
+    card.style.setProperty('--file-color', typeInfo.color);
+    card.onclick = () => openFileInViewer(file.id);
+
+    const iconBg = hexToRgba(typeInfo.color, 0.15);
+    const iconBorder = hexToRgba(typeInfo.color, 0.35);
+
+    card.innerHTML = `
+      <div class="mini-file-icon" style="background: ${iconBg}; border: 1px solid ${iconBorder}; color: ${typeInfo.color}; font-size: 1.2rem;">
+        <i class="fa-solid ${typeInfo.icon}"></i>
+      </div>
+      <div class="mini-file-content">
+        <div class="mini-file-title">${file.title}</div>
+        <div class="mini-file-meta">
+          <i class="fa-solid fa-circle-check" style="color: var(--accent-light);"></i>
+          <span>محمّل</span>
+          <span class="dot"></span>
+          <span>${formatFileSize(file.file_size)}</span>
+        </div>
+      </div>
+      <button class="mini-file-delete" onclick="event.stopPropagation(); removeDownloaded('${file.id}')" title="حذف">
+        <i class="fa-solid fa-trash"></i>
+      </button>
+    `;
+
+    list.appendChild(card);
+  });
+
+  updateSectionHeight('downloadedSection');
+}
+
+async function loadFavoritedFiles() {
+  const favorites = await getAllFavorites();
+  const list = document.getElementById('favoritesList');
+  const subtitle = document.getElementById('favoritesSubtitle');
+
+  list.innerHTML = '';
+  subtitle.textContent = favorites.length === 0
+    ? 'لا توجد ملفات محفوظة'
+    : `${favorites.length} ملف محفوظ`;
+
+  if (favorites.length === 0) {
+    list.innerHTML = `
+      <div class="empty-state visible" style="padding: 30px 10px;">
+        <div class="empty-icon" style="width: 56px; height: 56px;">
+          <i class="fa-regular fa-bookmark" style="font-size: 1.6rem;"></i>
+        </div>
+        <h3 style="font-size: 0.9rem;">لا توجد ملفات محفوظة</h3>
+        <p style="font-size: 0.78rem;">عندما تحفظ أي ملف، سيظهر هنا.</p>
+      </div>
+    `;
+    updateSectionHeight('favoritesSection');
+    return;
+  }
+
+  favorites.forEach((file, i) => {
+    const typeInfo = detectFileType(file);  // ⭐
+    const card = document.createElement('div');
+    card.className = 'mini-file-card';
+    card.style.animationDelay = (i * 0.04) + 's';
+    card.style.setProperty('--file-color', typeInfo.color);
+    card.onclick = () => openFileInViewer(file.id);
+
+    const iconBg = hexToRgba(typeInfo.color, 0.15);
+    const iconBorder = hexToRgba(typeInfo.color, 0.35);
+
+    card.innerHTML = `
+      <div class="mini-file-icon" style="background: ${iconBg}; border: 1px solid ${iconBorder}; color: ${typeInfo.color}; font-size: 1.2rem;">
+        <i class="fa-solid ${typeInfo.icon}"></i>
+      </div>
+      <div class="mini-file-content">
+        <div class="mini-file-title">${file.title}</div>
+        <div class="mini-file-meta">
+          <i class="fa-solid fa-bookmark" style="color: #fbbf24;"></i>
+          <span>محفوظ</span>
+          <span class="dot"></span>
+          <span>${file.subject_name || 'غير محدد'}</span>
+        </div>
+      </div>
+      <button class="mini-file-delete" onclick="event.stopPropagation(); removeFavoriteFromList('${file.id}')" title="إزالة">
+        <i class="fa-solid fa-trash"></i>
+      </button>
+    `;
+
+    list.appendChild(card);
+  });
+
+  updateSectionHeight('favoritesSection');
+}
 
     function updateSectionHeight(sectionId) {
       const section = document.getElementById(sectionId);
@@ -3629,9 +3780,40 @@ if (adminItem && (role === 'admin' || role === 'moderator')) {
       showToast('تم إزالة الملف من المحفوظات', 'info');
     }
 
-    function openFileInViewer(fileId) {
-      window.location.href = `viewer.html?id=${fileId}`;
+async function openFileInViewer(fileId) {
+  // ⭐ ابحث في الملفات المحمّلة والمحفوظة
+  const downloaded = await getAllDownloadedFiles();
+  const favorites = await getAllFavorites();
+  
+  const file = downloaded.find(f => f.id === fileId)
+            || favorites.find(f => f.id === fileId);
+  
+  if (!file) {
+    showToast('الملف غير موجود', 'error');
+    return;
+  }
+
+  // ⭐ رابط خارجي → تبويب جديد
+  if (file.source === 'link') {
+    const url = file.external_url || file.file_url;
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+      return;
     }
+  }
+
+  // ⭐ PDF → viewer
+  const typeInfo = detectFileType(file);
+  if (typeInfo.viewer) {
+    window.location.href = `viewer.html?id=${fileId}`;
+    return;
+  }
+
+  // ⭐ أنواع أخرى → تبويب جديد
+  if (file.file_url) {
+    window.open(file.file_url, '_blank', 'noopener,noreferrer');
+  }
+}
 
     async function clearAllDownloaded() {
       if (!confirm('هل تريد مسح جميع الملفات المحمّلة؟ لن يعمل التطبيق بدون إنترنت.')) return;
