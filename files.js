@@ -134,14 +134,17 @@ async function fetchFilesBySubject(subjectSlug) {
   }
 
   try {
+    // 1. اجلب المادة
     const { data: subject, error: subError } = await supabaseClient
       .from('subjects')
-      .select('id')
+      .select('*')
       .eq('slug', subjectSlug)
       .single();
 
     if (subError) throw subError;
+    if (!subject) throw new Error('المادة غير موجودة');
 
+    // 2. اجلب كل الملفات بـ select *
     const { data: files, error: filesError } = await supabaseClient
       .from('files')
       .select('*')
@@ -151,8 +154,15 @@ async function fetchFilesBySubject(subjectSlug) {
 
     if (filesError) throw filesError;
 
-    saveDataCache(cacheKey, files || []);
-    return files || [];
+    // 3. دمج المادة مع كل ملف
+    const merged = (files || []).map(f => ({
+      ...f,
+      subjects: subject
+    }));
+
+    saveDataCache(cacheKey, merged);
+    return merged;
+
   } catch (err) {
     console.warn('fetchFilesBySubject error:', err.message);
     return getDataCache(cacheKey) || [];
@@ -170,28 +180,47 @@ async function fetchRecentFiles(limit = 10) {
   }
 
   try {
-    const { data, error } = await supabaseClient
+    // ⭐ 1. اجلب كل الأعمدة (select * يعطي كل شيء)
+    const { data: files, error: filesError } = await supabaseClient
       .from('files')
-      .select(`
-        *,
-        subjects (
-          name,
-          slug,
-          icon,
-          color
-        )
-      `)
+      .select('*')
       .eq('is_published', true)
       .order('created_at', { ascending: false })
       .limit(limit);
 
-    if (error) throw error;
+    if (filesError) throw filesError;
 
-    if (data && data.length > 0) {
-      saveDataCache(cacheKey, data);
+    if (!files || files.length === 0) {
+      saveDataCache(cacheKey, []);
+      return [];
     }
 
-    return data || [];
+    // ⭐ 2. اجلب المواد المستخدمة فقط
+    const subjectIds = [...new Set(
+      files.map(f => f.subject_id).filter(Boolean)
+    )];
+
+    let subjectsMap = {};
+    if (subjectIds.length > 0) {
+      const { data: subjects, error: subjectsError } = await supabaseClient
+        .from('subjects')
+        .select('id, name, slug, icon, color')
+        .in('id', subjectIds);
+
+      if (!subjectsError && subjects) {
+        subjects.forEach(s => { subjectsMap[s.id] = s; });
+      }
+    }
+
+    // ⭐ 3. دمج الملفات مع المواد
+    const merged = files.map(f => ({
+      ...f,  // كل حقول الملف
+      subjects: subjectsMap[f.subject_id] || null
+    }));
+
+    saveDataCache(cacheKey, merged);
+    return merged;
+
   } catch (err) {
     console.warn('fetchRecentFiles error:', err.message);
     return getDataCache(cacheKey) || [];
@@ -250,24 +279,31 @@ async function fetchFileById(fileId) {
   }
 
   try {
-    const { data, error } = await supabaseClient
+    // 1. اجلب الملف كاملاً
+    const { data: file, error: fileError } = await supabaseClient
       .from('files')
-      .select(`
-        *,
-        subjects (
-          name,
-          slug,
-          icon,
-          color
-        )
-      `)
+      .select('*')
       .eq('id', fileId)
       .single();
 
-    if (error) throw error;
+    if (fileError) throw fileError;
+    if (!file) return null;
 
-    if (data) saveDataCache(cacheKey, data);
-    return data;
+    // 2. اجلب المادة
+    let subject = null;
+    if (file.subject_id) {
+      const { data: subData } = await supabaseClient
+        .from('subjects')
+        .select('id, name, slug, icon, color')
+        .eq('id', file.subject_id)
+        .single();
+      subject = subData || null;
+    }
+
+    const merged = { ...file, subjects: subject };
+    saveDataCache(cacheKey, merged);
+    return merged;
+
   } catch (err) {
     console.warn('fetchFileById error:', err.message);
     return getDataCache(cacheKey) || null;
