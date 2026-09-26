@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
 <!-- PWA Meta Tags -->
@@ -542,7 +542,11 @@
 
     .files-horizontal::-webkit-scrollbar { display: none; }
 
-/* ═══ بطاقات جديد اليوم — التصميم الجديد ═══ */
+/* ═══════════════════════════════════════════════════ */
+/* بطاقات جديد اليوم + إصلاح Font Awesome الشامل      */
+/* ═══════════════════════════════════════════════════ */
+
+/* ============ بطاقة ملف مصغّرة ============ */
 .file-mini-card {
   min-width: 280px;
   max-width: 280px;
@@ -587,6 +591,7 @@
   opacity: 1;
 }
 
+/* ============ حاوية الأيقونة الكبيرة ============ */
 .file-mini-icon-lg {
   width: 42px;
   height: 42px;
@@ -596,17 +601,51 @@
   justify-content: center;
   flex-shrink: 0;
   transition: all 0.3s ease;
+  overflow: hidden;
+  position: relative;
 }
 
+/* ✅ Font Awesome — الحجم */
 .file-mini-icon-lg i {
-  width: 19px;
-  height: 19px;
+  font-size: 1.15rem;
+  line-height: 1;
+  width: auto;
+  height: auto;
+  display: inline-block;
+  font-style: normal;
+}
+
+/* ✅ Font Awesome — الوزن والعائلة */
+.file-mini-icon-lg i.fa-solid,
+.file-mini-icon-lg i.fas {
+  font-family: "Font Awesome 6 Free" !important;
+  font-weight: 900 !important;
+}
+
+.file-mini-icon-lg i.fa-regular,
+.file-mini-icon-lg i.far {
+  font-family: "Font Awesome 6 Free" !important;
+  font-weight: 400 !important;
+}
+
+.file-mini-icon-lg i.fa-brands,
+.file-mini-icon-lg i.fab {
+  font-family: "Font Awesome 6 Brands" !important;
+  font-weight: 400 !important;
+}
+
+/* ✅ Lucide SVG */
+.file-mini-icon-lg svg,
+.file-mini-icon-lg [data-lucide] {
+  width: 19px !important;
+  height: 19px !important;
 }
 
 .file-mini-card:hover .file-mini-icon-lg {
   transform: scale(1.08) rotate(-5deg);
 }
 
+/* ============ محتوى البطاقة ============ */
 .file-mini-content {
   flex: 1;
   min-width: 0;
@@ -635,9 +674,32 @@
   font-weight: 600;
 }
 
+/* ✅ أيقونات صغيرة داخل file-mini-info */
 .file-mini-info i {
-  width: 11px;
-  height: 11px;
+  font-size: 0.7rem;
+  line-height: 1;
+  width: auto;
+  height: auto;
+  display: inline-block;
+  font-style: normal;
+}
+
+.file-mini-info i.fa-solid,
+.file-mini-info i.fas {
+  font-family: "Font Awesome 6 Free" !important;
+  font-weight: 900 !important;
+}
+
+.file-mini-info i.fa-brands,
+.file-mini-info i.fab {
+  font-family: "Font Awesome 6 Brands" !important;
+  font-weight: 400 !important;
+}
+
+.file-mini-info svg,
+.file-mini-info [data-lucide] {
+  width: 11px !important;
+  height: 11px !important;
 }
 
 .file-mini-info .dot {
@@ -648,6 +710,7 @@
   flex-shrink: 0;
 }
 
+/* ============ أزرار الأيقونات المصغّرة ============ */
 .file-mini-actions-mini {
   display: flex;
   flex-direction: column;
@@ -671,9 +734,38 @@
   flex-shrink: 0;
 }
 
+/* ✅ أيقونات الأزرار */
 .mini-icon-btn i {
-  width: 13px;
-  height: 13px;
+  font-size: 0.8rem;
+  line-height: 1;
+  width: auto;
+  height: auto;
+  display: inline-block;
+  font-style: normal;
+}
+
+.mini-icon-btn i.fa-solid,
+.mini-icon-btn i.fas {
+  font-family: "Font Awesome 6 Free" !important;
+  font-weight: 900 !important;
+}
+
+.mini-icon-btn i.fa-regular,
+.mini-icon-btn i.far {
+  font-family: "Font Awesome 6 Free" !important;
+  font-weight: 400 !important;
+}
+
+.mini-icon-btn i.fa-brands,
+.mini-icon-btn i.fab {
+  font-family: "Font Awesome 6 Brands" !important;
+  font-weight: 400 !important;
+}
+
+.mini-icon-btn svg,
+.mini-icon-btn [data-lucide] {
+  width: 13px !important;
+  height: 13px !important;
 }
 
 .mini-icon-btn:hover {
@@ -693,6 +785,285 @@
   background: rgba(16, 185, 129, 0.15);
   border-color: var(--accent-emerald);
   color: var(--accent-light);
+}
+
+/* ═══════════════════════════════════════════════════ */
+/* بطاقات الملفات العادية (mini-file-card)           */
+/* ═══════════════════════════════════════════════════ */
+
+.mini-file-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 14px;
+  padding: 13px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: cardIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  position: relative;
+  overflow: hidden;
+}
+
+.mini-file-card::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 15%;
+  bottom: 15%;
+  width: 3px;
+  background: var(--file-color, #10b981);
+  border-radius: 0 4px 4px 0;
+  opacity: 0.7;
+  transition: all 0.3s ease;
+}
+
+.mini-file-card:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-card-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.3);
+}
+
+.mini-file-card:hover::before {
+  top: 10%;
+  bottom: 10%;
+  opacity: 1;
+}
+
+/* حاوية أيقونة البطاقة العادية */
+.mini-file-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ✅ Font Awesome في البطاقة العادية */
+.mini-file-icon i {
+  font-size: 1.2rem;
+  line-height: 1;
+  width: auto;
+  height: auto;
+  display: inline-block;
+  font-style: normal;
+}
+
+.mini-file-icon i.fa-solid,
+.mini-file-icon i.fas {
+  font-family: "Font Awesome 6 Free" !important;
+  font-weight: 900 !important;
+}
+
+.mini-file-icon i.fa-regular,
+.mini-file-icon i.far {
+  font-family: "Font Awesome 6 Free" !important;
+  font-weight: 400 !important;
+}
+
+.mini-file-icon i.fa-brands,
+.mini-file-icon i.fab {
+  font-family: "Font Awesome 6 Brands" !important;
+  font-weight: 400 !important;
+}
+
+.mini-file-icon svg,
+.mini-file-icon [data-lucide] {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+.mini-file-card:hover .mini-file-icon {
+  transform: scale(1.06) rotate(-4deg);
+}
+
+/* محتوى البطاقة العادية */
+.mini-file-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.mini-file-title {
+  font-size: 0.87rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.35;
+}
+
+.mini-file-meta {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+  flex-wrap: wrap;
+}
+
+/* ✅ أيقونات mini-file-meta */
+.mini-file-meta i {
+  font-size: 0.68rem;
+  line-height: 1;
+  width: auto;
+  height: auto;
+  display: inline-block;
+  font-style: normal;
+}
+
+.mini-file-meta i.fa-solid,
+.mini-file-meta i.fas {
+  font-family: "Font Awesome 6 Free" !important;
+  font-weight: 900 !important;
+}
+
+.mini-file-meta i.fa-regular,
+.mini-file-meta i.far {
+  font-family: "Font Awesome 6 Free" !important;
+  font-weight: 400 !important;
+}
+
+.mini-file-meta i.fa-brands,
+.mini-file-meta i.fab {
+  font-family: "Font Awesome 6 Brands" !important;
+  font-weight: 400 !important;
+}
+
+.mini-file-meta svg,
+.mini-file-meta [data-lucide] {
+  width: 11px !important;
+  height: 11px !important;
+}
+
+.mini-file-meta .dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* زر الحذف */
+.mini-file-delete {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.mini-file-delete i {
+  font-size: 0.8rem;
+  line-height: 1;
+  width: auto;
+  height: auto;
+  display: inline-block;
+  font-style: normal;
+}
+
+.mini-file-delete i.fa-solid,
+.mini-file-delete i.fas {
+  font-family: "Font Awesome 6 Free" !important;
+  font-weight: 900 !important;
+}
+
+.mini-file-delete:hover {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.4);
+  transform: scale(1.08);
+}
+
+/* ═══════════════════════════════════════════════════ */
+/* بطاقات نتائج البحث                                */
+/* ═══════════════════════════════════════════════════ */
+
+.search-result-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.search-result-icon i {
+  font-size: 1.15rem;
+  line-height: 1;
+  width: auto;
+  height: auto;
+  display: inline-block;
+  font-style: normal;
+}
+
+.search-result-icon i.fa-solid,
+.search-result-icon i.fas {
+  font-family: "Font Awesome 6 Free" !important;
+  font-weight: 900 !important;
+}
+
+.search-result-icon i.fa-brands,
+.search-result-icon i.fab {
+  font-family: "Font Awesome 6 Brands" !important;
+  font-weight: 400 !important;
+}
+
+.search-result-icon svg,
+.search-result-icon [data-lucide] {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+/* ═══════════════════════════════════════════════════ */
+/* إصلاح عام لكل Font Awesome في الصفحة              */
+/* ═══════════════════════════════════════════════════ */
+
+i.fa-solid,
+i.fas {
+  font-family: "Font Awesome 6 Free" !important;
+  font-weight: 900 !important;
+  font-style: normal;
+}
+
+i.fa-regular,
+i.far {
+  font-family: "Font Awesome 6 Free" !important;
+  font-weight: 400 !important;
+  font-style: normal;
+}
+
+i.fa-brands,
+i.fab {
+  font-family: "Font Awesome 6 Brands" !important;
+  font-weight: 400 !important;
+  font-style: normal;
+}
+
+/* أيقونة "آخر نشاطاتي" */
+.last-activity-card .mini-file-icon i,
+.last-activity-empty i {
+  font-size: 1.2rem;
+  line-height: 1;
 }
 
     /* ============================================ */
@@ -2913,89 +3284,65 @@ function loadLastActivity() {
   if (!activity) {
     container.innerHTML = `
       <div class="last-activity-empty">
-        <i class="fa-solid fa-folder-open"></i>
+        <i data-lucide="folder-open"></i>
         <span>لا يوجد نشاط بعد</span>
       </div>
     `;
+    setTimeout(() => lucide.createIcons(), 10);
     return;
   }
 
-  // ⭐ كشف نوع الملف
   const typeInfo = detectFileType(activity);
   const dateText = formatDate(new Date(activity.timestamp).toISOString());
 
-  // ⭐ كشف المضيف من الرابط
-  let fileIconClass = typeInfo.icon;
-  let fileIconColor = typeInfo.color;
-  let fileIconBg = hexToRgba(typeInfo.color, 0.15);
-  let fileIconBorder = hexToRgba(typeInfo.color, 0.35);
+  let lucideIcon = typeInfo.lucide || 'file-text';
+  let fileColor = typeInfo.color;
+  let fileBg = hexToRgba(typeInfo.color, 0.15);
+  let fileBorder = hexToRgba(typeInfo.color, 0.35);
 
   const url = (activity.external_url || activity.file_url || '').toLowerCase();
 
   if (url.includes('youtube.com') || url.includes('youtu.be')) {
-    fileIconClass = 'fa-brands fa-youtube';
-    fileIconColor = '#FF0000';
-    fileIconBg = 'rgba(255, 0, 0, 0.12)';
-    fileIconBorder = 'rgba(255, 0, 0, 0.3)';
+    lucideIcon = 'youtube'; fileColor = '#FF0000';
+    fileBg = 'rgba(255, 0, 0, 0.12)'; fileBorder = 'rgba(255, 0, 0, 0.3)';
   } else if (url.includes('t.me') || url.includes('telegram')) {
-    fileIconClass = 'fa-brands fa-telegram';
-    fileIconColor = '#0088CC';
-    fileIconBg = 'rgba(0, 136, 204, 0.12)';
-    fileIconBorder = 'rgba(0, 136, 204, 0.3)';
+    lucideIcon = 'send'; fileColor = '#0088CC';
+    fileBg = 'rgba(0, 136, 204, 0.12)'; fileBorder = 'rgba(0, 136, 204, 0.3)';
   } else if (url.includes('drive.google.com')) {
-    fileIconClass = 'fa-brands fa-google-drive';
-    fileIconColor = '#4285F4';
-    fileIconBg = 'rgba(66, 133, 244, 0.12)';
-    fileIconBorder = 'rgba(66, 133, 244, 0.3)';
+    lucideIcon = 'hard-drive'; fileColor = '#4285F4';
+    fileBg = 'rgba(66, 133, 244, 0.12)'; fileBorder = 'rgba(66, 133, 244, 0.3)';
   } else if (url.includes('dropbox.com')) {
-    fileIconClass = 'fa-brands fa-dropbox';
-    fileIconColor = '#0061FF';
-    fileIconBg = 'rgba(0, 97, 255, 0.12)';
-    fileIconBorder = 'rgba(0, 97, 255, 0.3)';
+    lucideIcon = 'box'; fileColor = '#0061FF';
+    fileBg = 'rgba(0, 97, 255, 0.12)'; fileBorder = 'rgba(0, 97, 255, 0.3)';
   } else if (url.includes('mega.nz')) {
-    fileIconClass = 'fa-solid fa-cloud';
-    fileIconColor = '#D9272E';
-    fileIconBg = 'rgba(217, 39, 46, 0.12)';
-    fileIconBorder = 'rgba(217, 39, 46, 0.3)';
-  } else if (url.includes('mediafire.com')) {
-    fileIconClass = 'fa-solid fa-fire';
-    fileIconColor = '#1299F3';
-    fileIconBg = 'rgba(18, 153, 243, 0.12)';
-    fileIconBorder = 'rgba(18, 153, 243, 0.3)';
-  } else if (url.includes('1drv.ms') || url.includes('onedrive')) {
-    fileIconClass = 'fa-brands fa-microsoft';
-    fileIconColor = '#0078D4';
-    fileIconBg = 'rgba(0, 120, 212, 0.12)';
-    fileIconBorder = 'rgba(0, 120, 212, 0.3)';
-  } else if (url.includes('icloud.com')) {
-    fileIconClass = 'fa-brands fa-apple';
-    fileIconColor = '#3693F3';
-    fileIconBg = 'rgba(54, 147, 243, 0.12)';
-    fileIconBorder = 'rgba(54, 147, 243, 0.3)';
+    lucideIcon = 'cloud'; fileColor = '#D9272E';
+    fileBg = 'rgba(217, 39, 46, 0.12)'; fileBorder = 'rgba(217, 39, 46, 0.3)';
   }
 
   container.innerHTML = `
     <div class="last-activity-card" onclick="openLastActivity()">
-      <div class="mini-file-icon" style="background: ${fileIconBg}; border: 1px solid ${fileIconBorder}; color: ${fileIconColor}; font-size: 1.2rem;">
-        <i class="${fileIconClass}"></i>
+      <div class="mini-file-icon" style="background: ${fileBg}; border: 1px solid ${fileBorder}; color: ${fileColor};">
+        <i data-lucide="${lucideIcon}"></i>
       </div>
       <div class="mini-file-content">
         <div class="mini-file-title">${activity.title}</div>
         <div class="mini-file-meta">
-          <i class="fa-solid fa-clock"></i>
+          <i data-lucide="clock"></i>
           <span>${dateText}</span>
           ${activity.subject ? `
             <span class="dot"></span>
-            <i class="fa-solid fa-book-open"></i>
+            <i data-lucide="book-open"></i>
             <span>${activity.subject}</span>
           ` : ''}
         </div>
       </div>
       <div class="arrow-box">
-        <i class="fa-solid fa-chevron-left"></i>
+        <i data-lucide="chevron-left"></i>
       </div>
     </div>
   `;
+
+  setTimeout(() => lucide.createIcons(), 10);
 }
       
       
@@ -3449,81 +3796,63 @@ async function createRecentFileCard(file, downloadedIds, index) {
   const isDownloaded = downloadedIds.has(file.id);
   const isFav = await isFavorite(file.id);
 
-  // ⭐ كشف المضيف من الرابط
-  let fileIconClass = typeInfo.icon;
-  let fileIconColor = typeInfo.color;
-  let fileIconBg = hexToRgba(typeInfo.color, 0.15);
-  let fileIconBorder = hexToRgba(typeInfo.color, 0.35);
-  let hostLabel = typeInfo.host || 'رابط';
+  // ✅ استخدام Lucide فقط
+  let lucideIcon = typeInfo.lucide || 'file-text';
+  let fileColor = typeInfo.color || '#10b981';
+  let fileBg = hexToRgba(fileColor, 0.15);
+  let fileBorder = hexToRgba(fileColor, 0.35);
 
   const url = (file.external_url || file.file_url || '').toLowerCase();
 
+  // كشف المضيف - Lucide
   if (url.includes('youtube.com') || url.includes('youtu.be')) {
-    fileIconClass = 'fa-brands fa-youtube';
-    fileIconColor = '#FF0000';
-    fileIconBg = 'rgba(255, 0, 0, 0.12)';
-    fileIconBorder = 'rgba(255, 0, 0, 0.3)';
-    hostLabel = 'YouTube';
+    lucideIcon = 'youtube';
+    fileColor = '#FF0000';
+    fileBg = 'rgba(255, 0, 0, 0.12)';
+    fileBorder = 'rgba(255, 0, 0, 0.3)';
   } else if (url.includes('t.me') || url.includes('telegram')) {
-    fileIconClass = 'fa-brands fa-telegram';
-    fileIconColor = '#0088CC';
-    fileIconBg = 'rgba(0, 136, 204, 0.12)';
-    fileIconBorder = 'rgba(0, 136, 204, 0.3)';
-    hostLabel = 'Telegram';
+    lucideIcon = 'send';
+    fileColor = '#0088CC';
+    fileBg = 'rgba(0, 136, 204, 0.12)';
+    fileBorder = 'rgba(0, 136, 204, 0.3)';
   } else if (url.includes('drive.google.com')) {
-    fileIconClass = 'fa-brands fa-google-drive';
-    fileIconColor = '#4285F4';
-    fileIconBg = 'rgba(66, 133, 244, 0.12)';
-    fileIconBorder = 'rgba(66, 133, 244, 0.3)';
-    hostLabel = 'Google Drive';
+    lucideIcon = 'hard-drive';
+    fileColor = '#4285F4';
+    fileBg = 'rgba(66, 133, 244, 0.12)';
+    fileBorder = 'rgba(66, 133, 244, 0.3)';
   } else if (url.includes('dropbox.com')) {
-    fileIconClass = 'fa-brands fa-dropbox';
-    fileIconColor = '#0061FF';
-    fileIconBg = 'rgba(0, 97, 255, 0.12)';
-    fileIconBorder = 'rgba(0, 97, 255, 0.3)';
-    hostLabel = 'Dropbox';
+    lucideIcon = 'box';
+    fileColor = '#0061FF';
+    fileBg = 'rgba(0, 97, 255, 0.12)';
+    fileBorder = 'rgba(0, 97, 255, 0.3)';
   } else if (url.includes('mega.nz')) {
-    fileIconClass = 'fa-solid fa-cloud';
-    fileIconColor = '#D9272E';
-    fileIconBg = 'rgba(217, 39, 46, 0.12)';
-    fileIconBorder = 'rgba(217, 39, 46, 0.3)';
-    hostLabel = 'Mega';
+    lucideIcon = 'cloud';
+    fileColor = '#D9272E';
+    fileBg = 'rgba(217, 39, 46, 0.12)';
+    fileBorder = 'rgba(217, 39, 46, 0.3)';
   } else if (url.includes('mediafire.com')) {
-    fileIconClass = 'fa-solid fa-fire';
-    fileIconColor = '#1299F3';
-    fileIconBg = 'rgba(18, 153, 243, 0.12)';
-    fileIconBorder = 'rgba(18, 153, 243, 0.3)';
-    hostLabel = 'MediaFire';
-  } else if (url.includes('1drv.ms') || url.includes('onedrive')) {
-    fileIconClass = 'fa-brands fa-microsoft';
-    fileIconColor = '#0078D4';
-    fileIconBg = 'rgba(0, 120, 212, 0.12)';
-    fileIconBorder = 'rgba(0, 120, 212, 0.3)';
-    hostLabel = 'OneDrive';
-  } else if (url.includes('icloud.com')) {
-    fileIconClass = 'fa-brands fa-apple';
-    fileIconColor = '#3693F3';
-    fileIconBg = 'rgba(54, 147, 243, 0.12)';
-    fileIconBorder = 'rgba(54, 147, 243, 0.3)';
-    hostLabel = 'iCloud';
+    lucideIcon = 'flame';
+    fileColor = '#1299F3';
+    fileBg = 'rgba(18, 153, 243, 0.12)';
+    fileBorder = 'rgba(18, 153, 243, 0.3)';
   }
 
   const card = document.createElement('div');
   card.className = 'file-mini-card';
   card.style.animationDelay = (index * 0.05) + 's';
-  card.style.setProperty('--file-color', fileIconColor);
+  card.style.setProperty('--file-color', fileColor);
 
   const subjectName = file.subjects?.name || file.subject_name || 'غير محدد';
 
   card.innerHTML = `
-    <div class="file-mini-icon-lg" style="background: ${fileIconBg}; border: 1px solid ${fileIconBorder}; color: ${fileIconColor};">
-      <i class="${fileIconClass}"></i>
+    <div class="file-mini-icon-lg" style="background: ${fileBg}; border: 1px solid ${fileBorder}; color: ${fileColor};">
+      <i data-lucide="${lucideIcon}"></i>
     </div>
 
     <div class="file-mini-content">
       <div class="file-mini-title">${file.title}</div>
       <div class="file-mini-info">
-        <i class="fa-solid fa-book-open"></i>
+        <i data-lucide="book-open"></i>
         <span>${subjectName}</span>
         <span class="dot"></span>
         <span>${catInfo.label}</span>
@@ -3535,18 +3864,21 @@ async function createRecentFileCard(file, downloadedIds, index) {
               id="recent-dl-${file.id}"
               onclick="event.stopPropagation(); downloadRecentFile('${file.id}')"
               title="${isDownloaded ? 'محمّل' : 'تحميل'}">
-        <i class="fa-solid ${isDownloaded ? 'fa-check' : 'fa-download'}"></i>
+        <i data-lucide="${isDownloaded ? 'check' : 'download'}"></i>
       </button>
       <button class="mini-icon-btn ${isFav ? 'fav-active' : ''}"
               id="recent-fav-${file.id}"
               onclick="event.stopPropagation(); toggleRecentFav('${file.id}')"
               title="${isFav ? 'إزالة' : 'حفظ'}">
-        <i class="fa-${isFav ? 'solid fa-bookmark' : 'regular fa-bookmark'}"></i>
+        <i data-lucide="${isFav ? 'bookmark-check' : 'bookmark'}"></i>
       </button>
     </div>
   `;
 
   card.onclick = () => openRecentFile(file.id);
+
+  // ✅ إعادة رسم أيقونات Lucide
+  setTimeout(() => lucide.createIcons(), 10);
 
   return card;
 }
@@ -3853,9 +4185,9 @@ async function loadDownloadedFiles() {
     card.style.setProperty('--file-color', fileIconColor);
 
     card.innerHTML = `
-      <div class="mini-file-icon" style="background: ${fileIconBg}; border: 1px solid ${fileIconBorder}; color: ${fileIconColor}; font-size: 1.2rem;">
-        <i class="${fileIconClass}"></i>
-      </div>
+<div class="mini-file-icon" style="background: ${fileIconBg}; border: 1px solid ${fileIconBorder}; color: ${fileIconColor};">
+  <i data-lucide="${typeInfo.lucide || 'file-text'}"></i>
+</div>
       <div class="mini-file-content">
         <div class="mini-file-title">${file.title}</div>
         <div class="mini-file-meta">
