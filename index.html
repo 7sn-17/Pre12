@@ -391,20 +391,22 @@
       margin-bottom: 24px;
     }
 
-    .quick-access-btn {
-      background: var(--bg-card);
-      border: 1px solid var(--border-card);
-      border-radius: var(--radius-lg);
-      padding: 14px 8px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      transition: all var(--transition-fast);
-      font-family: inherit;
-      animation: cardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
-    }
+.quick-access-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-lg);
+  padding: 14px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+  animation: cardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  text-decoration: none;      /* ← أضف هذا */
+  color: inherit;              /* ← وأضف هذا */
+}
 
     .quick-access-btn:nth-child(1) { animation-delay: 0.1s; }
     .quick-access-btn:nth-child(2) { animation-delay: 0.15s; }
@@ -2190,12 +2192,12 @@
       </div>
 
       <div class="quick-access-grid">
-        <button class="quick-access-btn" onclick="switchTab('subjects')">
-          <div class="qa-icon" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.35); color: #34d399;">
-            <i data-lucide="book-open"></i>
-          </div>
-          <span class="qa-label">المواد</span>
-        </button>
+<a href="gpa.html" class="quick-access-btn">
+<div class="qa-icon" style="background: rgba(244, 114, 182, 0.15); border-color: rgba(244, 114, 182, 0.35); color: #f472b6;">
+    <i data-lucide="calculator"></i>
+  </div>
+  <span class="qa-label">معدلي</span>
+</a>
         <button class="quick-access-btn" onclick="switchTab('studies')">
           <div class="qa-icon" style="background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.35); color: #60a5fa;">
             <i data-lucide="clipboard-list"></i>
