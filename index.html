@@ -2307,7 +2307,6 @@
       <div class="study-card-content">
         <div class="study-card-title">
           <span>الملاحظات</span>
-          <span class="study-status">متاح</span>
         </div>
         <div class="study-card-desc">سجّل ملاحظاتك وشاركها مع زملائك</div>
       </div>
@@ -2324,7 +2323,6 @@
       <div class="study-card-content">
         <div class="study-card-title">
           <span>أهدافي</span>
-          <span class="study-status">متاح</span>
         </div>
         <div class="study-card-desc">حدد أهدافك الدراسية وتابع إنجازها</div>
       </div>
@@ -2332,6 +2330,22 @@
         <i data-lucide="chevron-left"></i>
       </div>
     </a>
+
+<!-- صندوق أدواتي - جديد -->
+<a href="tools.html" class="study-card" style="animation-delay: 0.12s">
+  <div class="study-card-icon" style="background: rgba(139, 92, 246, 0.15); border-color: rgba(139, 92, 246, 0.35); color: #a78bfa;">
+    <i data-lucide="toolbox"></i>
+  </div>
+  <div class="study-card-content">
+    <div class="study-card-title">
+      <span>صندوق أدواتي</span>
+  </div>
+    <div class="study-card-desc">تطبيقات مختارة بعناية لمساعدتك في الدراسة</div>
+  </div>
+  <div class="study-card-arrow">
+    <i data-lucide="chevron-left"></i>
+  </div>
+</a>
 
     <!-- بنك الأسئلة - قريباً -->
     <div class="study-card coming-soon" style="animation-delay: 0.15s">
@@ -2906,14 +2920,62 @@ function loadLastActivity() {
 
   // ⭐ كشف نوع الملف
   const typeInfo = detectFileType(activity);
-  const iconBg = hexToRgba(typeInfo.color, 0.15);
-  const iconBorder = hexToRgba(typeInfo.color, 0.35);
   const dateText = formatDate(new Date(activity.timestamp).toISOString());
+
+  // ⭐ كشف المضيف من الرابط
+  let fileIconClass = typeInfo.icon;
+  let fileIconColor = typeInfo.color;
+  let fileIconBg = hexToRgba(typeInfo.color, 0.15);
+  let fileIconBorder = hexToRgba(typeInfo.color, 0.35);
+
+  const url = (activity.external_url || activity.file_url || '').toLowerCase();
+
+  if (url.includes('youtube.com') || url.includes('youtu.be')) {
+    fileIconClass = 'fa-brands fa-youtube';
+    fileIconColor = '#FF0000';
+    fileIconBg = 'rgba(255, 0, 0, 0.12)';
+    fileIconBorder = 'rgba(255, 0, 0, 0.3)';
+  } else if (url.includes('t.me') || url.includes('telegram')) {
+    fileIconClass = 'fa-brands fa-telegram';
+    fileIconColor = '#0088CC';
+    fileIconBg = 'rgba(0, 136, 204, 0.12)';
+    fileIconBorder = 'rgba(0, 136, 204, 0.3)';
+  } else if (url.includes('drive.google.com')) {
+    fileIconClass = 'fa-brands fa-google-drive';
+    fileIconColor = '#4285F4';
+    fileIconBg = 'rgba(66, 133, 244, 0.12)';
+    fileIconBorder = 'rgba(66, 133, 244, 0.3)';
+  } else if (url.includes('dropbox.com')) {
+    fileIconClass = 'fa-brands fa-dropbox';
+    fileIconColor = '#0061FF';
+    fileIconBg = 'rgba(0, 97, 255, 0.12)';
+    fileIconBorder = 'rgba(0, 97, 255, 0.3)';
+  } else if (url.includes('mega.nz')) {
+    fileIconClass = 'fa-solid fa-cloud';
+    fileIconColor = '#D9272E';
+    fileIconBg = 'rgba(217, 39, 46, 0.12)';
+    fileIconBorder = 'rgba(217, 39, 46, 0.3)';
+  } else if (url.includes('mediafire.com')) {
+    fileIconClass = 'fa-solid fa-fire';
+    fileIconColor = '#1299F3';
+    fileIconBg = 'rgba(18, 153, 243, 0.12)';
+    fileIconBorder = 'rgba(18, 153, 243, 0.3)';
+  } else if (url.includes('1drv.ms') || url.includes('onedrive')) {
+    fileIconClass = 'fa-brands fa-microsoft';
+    fileIconColor = '#0078D4';
+    fileIconBg = 'rgba(0, 120, 212, 0.12)';
+    fileIconBorder = 'rgba(0, 120, 212, 0.3)';
+  } else if (url.includes('icloud.com')) {
+    fileIconClass = 'fa-brands fa-apple';
+    fileIconColor = '#3693F3';
+    fileIconBg = 'rgba(54, 147, 243, 0.12)';
+    fileIconBorder = 'rgba(54, 147, 243, 0.3)';
+  }
 
   container.innerHTML = `
     <div class="last-activity-card" onclick="openLastActivity()">
-      <div class="mini-file-icon" style="background: ${iconBg}; border: 1px solid ${iconBorder}; color: ${typeInfo.color}; font-size: 1.2rem;">
-        <i class="fa-solid ${typeInfo.icon}"></i>
+      <div class="mini-file-icon" style="background: ${fileIconBg}; border: 1px solid ${fileIconBorder}; color: ${fileIconColor}; font-size: 1.2rem;">
+        <i class="${fileIconClass}"></i>
       </div>
       <div class="mini-file-content">
         <div class="mini-file-title">${activity.title}</div>
@@ -3382,38 +3444,78 @@ if (adminItem && (role === 'admin' || role === 'moderator')) {
 async function createRecentFileCard(file, downloadedIds, index) {
   const catInfo = getCategoryInfo(file.category);
   const typeInfo = detectFileType(file);
-  const isExternal = file.source === 'link';
   const isDownloaded = downloadedIds.has(file.id);
   const isFav = await isFavorite(file.id);
+
+  // ⭐ كشف المضيف من الرابط
+  let fileIconClass = typeInfo.icon;
+  let fileIconColor = typeInfo.color;
+  let fileIconBg = hexToRgba(typeInfo.color, 0.15);
+  let fileIconBorder = hexToRgba(typeInfo.color, 0.35);
+  let hostLabel = typeInfo.host || 'رابط';
+
+  const url = (file.external_url || file.file_url || '').toLowerCase();
+
+  if (url.includes('youtube.com') || url.includes('youtu.be')) {
+    fileIconClass = 'fa-brands fa-youtube';
+    fileIconColor = '#FF0000';
+    fileIconBg = 'rgba(255, 0, 0, 0.12)';
+    fileIconBorder = 'rgba(255, 0, 0, 0.3)';
+    hostLabel = 'YouTube';
+  } else if (url.includes('t.me') || url.includes('telegram')) {
+    fileIconClass = 'fa-brands fa-telegram';
+    fileIconColor = '#0088CC';
+    fileIconBg = 'rgba(0, 136, 204, 0.12)';
+    fileIconBorder = 'rgba(0, 136, 204, 0.3)';
+    hostLabel = 'Telegram';
+  } else if (url.includes('drive.google.com')) {
+    fileIconClass = 'fa-brands fa-google-drive';
+    fileIconColor = '#4285F4';
+    fileIconBg = 'rgba(66, 133, 244, 0.12)';
+    fileIconBorder = 'rgba(66, 133, 244, 0.3)';
+    hostLabel = 'Google Drive';
+  } else if (url.includes('dropbox.com')) {
+    fileIconClass = 'fa-brands fa-dropbox';
+    fileIconColor = '#0061FF';
+    fileIconBg = 'rgba(0, 97, 255, 0.12)';
+    fileIconBorder = 'rgba(0, 97, 255, 0.3)';
+    hostLabel = 'Dropbox';
+  } else if (url.includes('mega.nz')) {
+    fileIconClass = 'fa-solid fa-cloud';
+    fileIconColor = '#D9272E';
+    fileIconBg = 'rgba(217, 39, 46, 0.12)';
+    fileIconBorder = 'rgba(217, 39, 46, 0.3)';
+    hostLabel = 'Mega';
+  } else if (url.includes('mediafire.com')) {
+    fileIconClass = 'fa-solid fa-fire';
+    fileIconColor = '#1299F3';
+    fileIconBg = 'rgba(18, 153, 243, 0.12)';
+    fileIconBorder = 'rgba(18, 153, 243, 0.3)';
+    hostLabel = 'MediaFire';
+  } else if (url.includes('1drv.ms') || url.includes('onedrive')) {
+    fileIconClass = 'fa-brands fa-microsoft';
+    fileIconColor = '#0078D4';
+    fileIconBg = 'rgba(0, 120, 212, 0.12)';
+    fileIconBorder = 'rgba(0, 120, 212, 0.3)';
+    hostLabel = 'OneDrive';
+  } else if (url.includes('icloud.com')) {
+    fileIconClass = 'fa-brands fa-apple';
+    fileIconColor = '#3693F3';
+    fileIconBg = 'rgba(54, 147, 243, 0.12)';
+    fileIconBorder = 'rgba(54, 147, 243, 0.3)';
+    hostLabel = 'iCloud';
+  }
 
   const card = document.createElement('div');
   card.className = 'file-mini-card';
   card.style.animationDelay = (index * 0.05) + 's';
-  card.style.setProperty('--file-color', typeInfo.color);
-
-  const iconBg = hexToRgba(typeInfo.color, 0.15);
-  const iconBorder = hexToRgba(typeInfo.color, 0.35);
+  card.style.setProperty('--file-color', fileIconColor);
 
   const subjectName = file.subjects?.name || file.subject_name || 'غير محدد';
 
-  // ⭐ زر ثاني: تحميل للملفات | نسخ للروابط
-  const secondBtn = isExternal
-    ? `<button class="mini-icon-btn"
-              id="recent-copy-${file.id}"
-              onclick="event.stopPropagation(); copyRecentLink('${file.id}')"
-              title="نسخ الرابط">
-         <i class="fa-solid fa-copy"></i>
-       </button>`
-    : `<button class="mini-icon-btn ${isDownloaded ? 'downloaded' : ''}"
-              id="recent-dl-${file.id}"
-              onclick="event.stopPropagation(); downloadRecentFile('${file.id}')"
-              title="${isDownloaded ? 'محمّل' : 'تحميل'}">
-         <i class="fa-solid ${isDownloaded ? 'fa-check' : 'fa-download'}"></i>
-       </button>`;
-
   card.innerHTML = `
-    <div class="file-mini-icon-lg" style="background: ${iconBg}; border: 1px solid ${iconBorder}; color: ${typeInfo.color};">
-      <i class="fa-solid ${typeInfo.icon}"></i>
+    <div class="file-mini-icon-lg" style="background: ${fileIconBg}; border: 1px solid ${fileIconBorder}; color: ${fileIconColor};">
+      <i class="${fileIconClass}"></i>
     </div>
 
     <div class="file-mini-content">
@@ -3427,7 +3529,12 @@ async function createRecentFileCard(file, downloadedIds, index) {
     </div>
 
     <div class="file-mini-actions-mini" onclick="event.stopPropagation()">
-      ${secondBtn}
+      <button class="mini-icon-btn ${isDownloaded ? 'downloaded' : ''}"
+              id="recent-dl-${file.id}"
+              onclick="event.stopPropagation(); downloadRecentFile('${file.id}')"
+              title="${isDownloaded ? 'محمّل' : 'تحميل'}">
+        <i class="fa-solid ${isDownloaded ? 'fa-check' : 'fa-download'}"></i>
+      </button>
       <button class="mini-icon-btn ${isFav ? 'fav-active' : ''}"
               id="recent-fav-${file.id}"
               onclick="event.stopPropagation(); toggleRecentFav('${file.id}')"
@@ -3503,7 +3610,19 @@ function openRecentFile(fileId) {
       
       const file = appState.recentFiles.find(f => f.id === fileId);
       if (!file) return;
-      
+    
+  // ⭐ إذا كان رابطاً خارجياً — لا يمكن تحميله
+  if (file.source === 'link') {
+    const url = file.external_url || file.file_url;
+    if (url) {
+      // افتحه بدل تحميله
+      window.open(url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    showToast('لا يمكن تحميل رابط خارجي — جرّب فتحه', 'info');
+    return;
+  }
+  
       const btn = document.getElementById(`recent-dl-${fileId}`);
       if (!btn) return;
       
@@ -3688,19 +3807,52 @@ async function loadDownloadedFiles() {
   }
 
   downloaded.forEach((file, i) => {
-    const typeInfo = detectFileType(file);  // ⭐
+    const typeInfo = detectFileType(file);
     const card = document.createElement('div');
     card.className = 'mini-file-card';
     card.style.animationDelay = (i * 0.04) + 's';
-    card.style.setProperty('--file-color', typeInfo.color);
     card.onclick = () => openFileInViewer(file.id);
 
-    const iconBg = hexToRgba(typeInfo.color, 0.15);
-    const iconBorder = hexToRgba(typeInfo.color, 0.35);
+    // ⭐ كشف المضيف
+    let fileIconClass = typeInfo.icon;
+    let fileIconColor = typeInfo.color;
+    let fileIconBg = hexToRgba(typeInfo.color, 0.15);
+    let fileIconBorder = hexToRgba(typeInfo.color, 0.35);
+
+    const url = (file.external_url || file.file_url || '').toLowerCase();
+
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      fileIconClass = 'fa-brands fa-youtube';
+      fileIconColor = '#FF0000';
+      fileIconBg = 'rgba(255, 0, 0, 0.12)';
+      fileIconBorder = 'rgba(255, 0, 0, 0.3)';
+    } else if (url.includes('t.me') || url.includes('telegram')) {
+      fileIconClass = 'fa-brands fa-telegram';
+      fileIconColor = '#0088CC';
+      fileIconBg = 'rgba(0, 136, 204, 0.12)';
+      fileIconBorder = 'rgba(0, 136, 204, 0.3)';
+    } else if (url.includes('drive.google.com')) {
+      fileIconClass = 'fa-brands fa-google-drive';
+      fileIconColor = '#4285F4';
+      fileIconBg = 'rgba(66, 133, 244, 0.12)';
+      fileIconBorder = 'rgba(66, 133, 244, 0.3)';
+    } else if (url.includes('dropbox.com')) {
+      fileIconClass = 'fa-brands fa-dropbox';
+      fileIconColor = '#0061FF';
+      fileIconBg = 'rgba(0, 97, 255, 0.12)';
+      fileIconBorder = 'rgba(0, 97, 255, 0.3)';
+    } else if (url.includes('mega.nz')) {
+      fileIconClass = 'fa-solid fa-cloud';
+      fileIconColor = '#D9272E';
+      fileIconBg = 'rgba(217, 39, 46, 0.12)';
+      fileIconBorder = 'rgba(217, 39, 46, 0.3)';
+    }
+
+    card.style.setProperty('--file-color', fileIconColor);
 
     card.innerHTML = `
-      <div class="mini-file-icon" style="background: ${iconBg}; border: 1px solid ${iconBorder}; color: ${typeInfo.color}; font-size: 1.2rem;">
-        <i class="fa-solid ${typeInfo.icon}"></i>
+      <div class="mini-file-icon" style="background: ${fileIconBg}; border: 1px solid ${fileIconBorder}; color: ${fileIconColor}; font-size: 1.2rem;">
+        <i class="${fileIconClass}"></i>
       </div>
       <div class="mini-file-content">
         <div class="mini-file-title">${file.title}</div>
@@ -3747,19 +3899,52 @@ async function loadFavoritedFiles() {
   }
 
   favorites.forEach((file, i) => {
-    const typeInfo = detectFileType(file);  // ⭐
+    const typeInfo = detectFileType(file);
     const card = document.createElement('div');
     card.className = 'mini-file-card';
     card.style.animationDelay = (i * 0.04) + 's';
-    card.style.setProperty('--file-color', typeInfo.color);
     card.onclick = () => openFileInViewer(file.id);
 
-    const iconBg = hexToRgba(typeInfo.color, 0.15);
-    const iconBorder = hexToRgba(typeInfo.color, 0.35);
+    // ⭐ كشف المضيف
+    let fileIconClass = typeInfo.icon;
+    let fileIconColor = typeInfo.color;
+    let fileIconBg = hexToRgba(typeInfo.color, 0.15);
+    let fileIconBorder = hexToRgba(typeInfo.color, 0.35);
+
+    const url = (file.external_url || file.file_url || '').toLowerCase();
+
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      fileIconClass = 'fa-brands fa-youtube';
+      fileIconColor = '#FF0000';
+      fileIconBg = 'rgba(255, 0, 0, 0.12)';
+      fileIconBorder = 'rgba(255, 0, 0, 0.3)';
+    } else if (url.includes('t.me') || url.includes('telegram')) {
+      fileIconClass = 'fa-brands fa-telegram';
+      fileIconColor = '#0088CC';
+      fileIconBg = 'rgba(0, 136, 204, 0.12)';
+      fileIconBorder = 'rgba(0, 136, 204, 0.3)';
+    } else if (url.includes('drive.google.com')) {
+      fileIconClass = 'fa-brands fa-google-drive';
+      fileIconColor = '#4285F4';
+      fileIconBg = 'rgba(66, 133, 244, 0.12)';
+      fileIconBorder = 'rgba(66, 133, 244, 0.3)';
+    } else if (url.includes('dropbox.com')) {
+      fileIconClass = 'fa-brands fa-dropbox';
+      fileIconColor = '#0061FF';
+      fileIconBg = 'rgba(0, 97, 255, 0.12)';
+      fileIconBorder = 'rgba(0, 97, 255, 0.3)';
+    } else if (url.includes('mega.nz')) {
+      fileIconClass = 'fa-solid fa-cloud';
+      fileIconColor = '#D9272E';
+      fileIconBg = 'rgba(217, 39, 46, 0.12)';
+      fileIconBorder = 'rgba(217, 39, 46, 0.3)';
+    }
+
+    card.style.setProperty('--file-color', fileIconColor);
 
     card.innerHTML = `
-      <div class="mini-file-icon" style="background: ${iconBg}; border: 1px solid ${iconBorder}; color: ${typeInfo.color}; font-size: 1.2rem;">
-        <i class="fa-solid ${typeInfo.icon}"></i>
+      <div class="mini-file-icon" style="background: ${fileIconBg}; border: 1px solid ${fileIconBorder}; color: ${fileIconColor}; font-size: 1.2rem;">
+        <i class="${fileIconClass}"></i>
       </div>
       <div class="mini-file-content">
         <div class="mini-file-title">${file.title}</div>
@@ -3990,8 +4175,42 @@ async function openFileInViewer(fileId) {
       
       results.slice(0, 30).forEach((file, i) => {
         const catInfo = getCategoryInfo(file.category);
-        const iconBg = hexToRgba(catInfo.color, 0.15);
-        const iconBorder = hexToRgba(catInfo.color, 0.35);
+        const typeInfo = detectFileType(file);
+
+        // ⭐ كشف المضيف
+        let fileIconClass = typeInfo.icon;
+        let fileIconColor = typeInfo.color;
+        let fileIconBg = hexToRgba(typeInfo.color, 0.15);
+        let fileIconBorder = hexToRgba(typeInfo.color, 0.35);
+
+        const url = (file.external_url || file.file_url || '').toLowerCase();
+
+        if (url.includes('youtube.com') || url.includes('youtu.be')) {
+          fileIconClass = 'fa-brands fa-youtube';
+          fileIconColor = '#FF0000';
+          fileIconBg = 'rgba(255, 0, 0, 0.12)';
+          fileIconBorder = 'rgba(255, 0, 0, 0.3)';
+        } else if (url.includes('t.me') || url.includes('telegram')) {
+          fileIconClass = 'fa-brands fa-telegram';
+          fileIconColor = '#0088CC';
+          fileIconBg = 'rgba(0, 136, 204, 0.12)';
+          fileIconBorder = 'rgba(0, 136, 204, 0.3)';
+        } else if (url.includes('drive.google.com')) {
+          fileIconClass = 'fa-brands fa-google-drive';
+          fileIconColor = '#4285F4';
+          fileIconBg = 'rgba(66, 133, 244, 0.12)';
+          fileIconBorder = 'rgba(66, 133, 244, 0.3)';
+        } else if (url.includes('dropbox.com')) {
+          fileIconClass = 'fa-brands fa-dropbox';
+          fileIconColor = '#0061FF';
+          fileIconBg = 'rgba(0, 97, 255, 0.12)';
+          fileIconBorder = 'rgba(0, 97, 255, 0.3)';
+        } else if (url.includes('mega.nz')) {
+          fileIconClass = 'fa-solid fa-cloud';
+          fileIconColor = '#D9272E';
+          fileIconBg = 'rgba(217, 39, 46, 0.12)';
+          fileIconBorder = 'rgba(217, 39, 46, 0.3)';
+        }
         
         const item = document.createElement('div');
         item.className = 'search-result-item';
@@ -4005,8 +4224,8 @@ async function openFileInViewer(fileId) {
         const highlightedTitle = highlightText(file.title, query);
         
         item.innerHTML = `
-          <div class="search-result-icon" style="background: ${iconBg}; border: 1px solid ${iconBorder}; color: ${catInfo.color};">
-            <i data-lucide="${catInfo.icon}"></i>
+          <div class="search-result-icon" style="background: ${fileIconBg}; border: 1px solid ${fileIconBorder}; color: ${fileIconColor};">
+            <i class="${fileIconClass}"></i>
           </div>
           <div class="search-result-content">
             <div class="search-result-title">${highlightedTitle}</div>

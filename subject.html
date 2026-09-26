@@ -1321,8 +1321,64 @@ function createFileItem(file, index) {
   item.dataset.fileId = file.id;
   item.style.animationDelay = (index * 0.04) + 's';
 
-  const iconBg = hexToRgba(typeInfo.color, 0.15);
-  const iconBorder = hexToRgba(typeInfo.color, 0.35);
+  // ⭐ كشف المضيف من الرابط
+  let fileIconClass = typeInfo.icon;
+  let fileIconColor = typeInfo.color;
+  let fileIconBg = hexToRgba(typeInfo.color, 0.15);
+  let fileIconBorder = hexToRgba(typeInfo.color, 0.35);
+  let hostLabel = typeInfo.host || 'رابط';
+
+  const url = (file.external_url || file.file_url || '').toLowerCase();
+
+  if (url.includes('youtube.com') || url.includes('youtu.be')) {
+    fileIconClass = 'fa-brands fa-youtube';
+    fileIconColor = '#FF0000';
+    fileIconBg = 'rgba(255, 0, 0, 0.12)';
+    fileIconBorder = 'rgba(255, 0, 0, 0.3)';
+    hostLabel = 'YouTube';
+  } else if (url.includes('t.me') || url.includes('telegram')) {
+    fileIconClass = 'fa-brands fa-telegram';
+    fileIconColor = '#0088CC';
+    fileIconBg = 'rgba(0, 136, 204, 0.12)';
+    fileIconBorder = 'rgba(0, 136, 204, 0.3)';
+    hostLabel = 'Telegram';
+  } else if (url.includes('drive.google.com')) {
+    fileIconClass = 'fa-brands fa-google-drive';
+    fileIconColor = '#4285F4';
+    fileIconBg = 'rgba(66, 133, 244, 0.12)';
+    fileIconBorder = 'rgba(66, 133, 244, 0.3)';
+    hostLabel = 'Google Drive';
+  } else if (url.includes('dropbox.com')) {
+    fileIconClass = 'fa-brands fa-dropbox';
+    fileIconColor = '#0061FF';
+    fileIconBg = 'rgba(0, 97, 255, 0.12)';
+    fileIconBorder = 'rgba(0, 97, 255, 0.3)';
+    hostLabel = 'Dropbox';
+  } else if (url.includes('mega.nz')) {
+    fileIconClass = 'fa-solid fa-cloud';
+    fileIconColor = '#D9272E';
+    fileIconBg = 'rgba(217, 39, 46, 0.12)';
+    fileIconBorder = 'rgba(217, 39, 46, 0.3)';
+    hostLabel = 'Mega';
+  } else if (url.includes('mediafire.com')) {
+    fileIconClass = 'fa-solid fa-fire';
+    fileIconColor = '#1299F3';
+    fileIconBg = 'rgba(18, 153, 243, 0.12)';
+    fileIconBorder = 'rgba(18, 153, 243, 0.3)';
+    hostLabel = 'MediaFire';
+  } else if (url.includes('onedrive') || url.includes('1drv.ms')) {
+    fileIconClass = 'fa-brands fa-microsoft';
+    fileIconColor = '#0078D4';
+    fileIconBg = 'rgba(0, 120, 212, 0.12)';
+    fileIconBorder = 'rgba(0, 120, 212, 0.3)';
+    hostLabel = 'OneDrive';
+  } else if (url.includes('icloud.com')) {
+    fileIconClass = 'fa-brands fa-apple';
+    fileIconColor = '#3693F3';
+    fileIconBg = 'rgba(54, 147, 243, 0.12)';
+    fileIconBorder = 'rgba(54, 147, 243, 0.3)';
+    hostLabel = 'iCloud';
+  }
 
   // زر الفتح
   const openBtnClass = isExternal ? 'link-open' : 'primary';
@@ -1344,7 +1400,7 @@ function createFileItem(file, index) {
 
   // شارة المصدر
   const sourceBadgeHTML = isExternal
-    ? `<span class="source-badge"><i class="fa-solid fa-link"></i>${typeInfo.host || 'رابط'}</span>`
+    ? `<span class="source-badge"><i class="fa-solid fa-link"></i>${hostLabel}</span>`
     : '';
 
   // شريحة الحجم
@@ -1354,7 +1410,7 @@ function createFileItem(file, index) {
 
   // شريحة المصدر
   const sourceChipHTML = isExternal
-    ? `<span class="info-chip"><i class="fa-solid fa-cloud"></i>${typeInfo.host || 'رابط خارجي'}</span>`
+    ? `<span class="info-chip"><i class="fa-solid fa-cloud"></i>${hostLabel}</span>`
     : '';
 
   item.innerHTML = `
@@ -1365,8 +1421,8 @@ function createFileItem(file, index) {
           <span>محمّل</span>
         </div>
       ` : ''}
-      <div class="file-type-icon" style="background: ${iconBg}; border: 1px solid ${iconBorder}; color: ${typeInfo.color};">
-        <i class="fa-solid ${typeInfo.icon}"></i>
+      <div class="file-type-icon" style="background: ${fileIconBg}; border: 1px solid ${fileIconBorder}; color: ${fileIconColor};">
+        <i class="${fileIconClass}"></i>
       </div>
       <div class="file-basic">
         <div class="file-basic-title">${file.title}</div>
@@ -1392,7 +1448,7 @@ function createFileItem(file, index) {
 
         <div class="file-info-row">
           <span class="info-chip">
-            <i class="fa-solid ${typeInfo.icon}"></i>
+            <i class="${fileIconClass}"></i>
             ${typeInfo.label}
           </span>
           ${sizeChipHTML}

@@ -656,6 +656,49 @@ function createFileCard(file, index) {
   const iconBg = hexToRgba(typeInfo.color, 0.15);
   const iconBorder = hexToRgba(typeInfo.color, 0.35);
 
+  // ⭐ أيقونة الملف (Font Awesome)
+  let fileIconClass = typeInfo.icon;
+  let fileIconColor = typeInfo.color;
+  let fileIconBg = iconBg;
+  let fileIconBorder = iconBorder;
+
+  // ⭐ كشف يوتيوب — أيقونة يوتيوب الحمراء
+  const url = (file.external_url || file.file_url || '').toLowerCase();
+  if (url.includes('youtube.com') || url.includes('youtu.be')) {
+    fileIconClass = 'fa-brands fa-youtube';
+    fileIconColor = '#FF0000';
+    fileIconBg = 'rgba(255, 0, 0, 0.12)';
+    fileIconBorder = 'rgba(255, 0, 0, 0.3)';
+  }
+  // ⭐ كشف Telegram
+  else if (url.includes('t.me') || url.includes('telegram')) {
+    fileIconClass = 'fa-brands fa-telegram';
+    fileIconColor = '#0088CC';
+    fileIconBg = 'rgba(0, 136, 204, 0.12)';
+    fileIconBorder = 'rgba(0, 136, 204, 0.3)';
+  }
+  // ⭐ كشف Google Drive
+  else if (url.includes('drive.google.com')) {
+    fileIconClass = 'fa-brands fa-google-drive';
+    fileIconColor = '#4285F4';
+    fileIconBg = 'rgba(66, 133, 244, 0.12)';
+    fileIconBorder = 'rgba(66, 133, 244, 0.3)';
+  }
+  // ⭐ كشف Dropbox
+  else if (url.includes('dropbox.com')) {
+    fileIconClass = 'fa-brands fa-dropbox';
+    fileIconColor = '#0061FF';
+    fileIconBg = 'rgba(0, 97, 255, 0.12)';
+    fileIconBorder = 'rgba(0, 97, 255, 0.3)';
+  }
+  // ⭐ كشف Mega
+  else if (url.includes('mega.nz')) {
+    fileIconClass = 'fa-solid fa-cloud';
+    fileIconColor = '#D9272E';
+    fileIconBg = 'rgba(217, 39, 46, 0.12)';
+    fileIconBorder = 'rgba(217, 39, 46, 0.3)';
+  }
+
   // شارة المصدر
   const sourceBadge = isExternal
     ? `<span class="source-badge"><i class="fa-solid fa-link"></i>${typeInfo.host || 'رابط'}</span>`
@@ -670,8 +713,8 @@ function createFileCard(file, index) {
   const sizeText = isExternal ? typeInfo.label : formatFileSize(file.file_size);
 
   card.innerHTML = `
-    <div class="file-icon" style="background: ${iconBg}; border: 1px solid ${iconBorder}; color: ${typeInfo.color};">
-      <i class="fa-solid ${typeInfo.icon}"></i>
+    <div class="file-icon" style="background: ${fileIconBg}; border: 1px solid ${fileIconBorder}; color: ${fileIconColor};">
+      <i class="${fileIconClass}"></i>
     </div>
     <div class="file-content">
       <div class="file-title">${file.title}</div>

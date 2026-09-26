@@ -388,11 +388,12 @@ function formatDate(dateString) {
 // 10. معلومات التصنيف — Font Awesome
 // ============================================
 const CATEGORY_INFO = {
-  all:        { label: 'الكل',   icon: 'fa-layer-group',     color: '#34d399' },
-  book:       { label: 'كتب',    icon: 'fa-book',            color: '#34d399' },
-  summary:    { label: 'ملخصات', icon: 'fa-file-lines',      color: '#60a5fa' },
-  automation: { label: 'أتمتة',  icon: 'fa-list-check',      color: '#fbbf24' },
-  exam:       { label: 'دورات',  icon: 'fa-graduation-cap',  color: '#a78bfa' }
+  all:        { label: 'الكل',           icon: 'fa-layer-group',    color: '#34d399' },
+  book:       { label: 'كتب',            icon: 'fa-book',           color: '#34d399' },
+  summary:    { label: 'ملخصات',         icon: 'fa-file-lines',     color: '#60a5fa' },
+  automation: { label: 'أتمتة',          icon: 'fa-list-check',     color: '#fbbf24' },
+  exam:       { label: 'دورات',          icon: 'fa-graduation-cap', color: '#a78bfa' },
+  videos:     { label: 'مقاطع توضيحية', icon: 'fa-video',          color: '#ec4899' }
 };
 
 function getCategoryInfo(category) {

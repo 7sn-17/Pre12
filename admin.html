@@ -1518,13 +1518,14 @@ header {
       <select class="filter-select" id="fileSubjectFilter" onchange="filterFiles()">
         <option value="">كل المواد</option>
       </select>
-      <select class="filter-select" id="fileCategoryFilter" onchange="filterFiles()">
-        <option value="">كل التصنيفات</option>
-        <option value="book">كتب</option>
-        <option value="summary">ملخصات</option>
-        <option value="automation">أتمتة</option>
-        <option value="exam">دورات</option>
-      </select>
+<select class="filter-select" id="fileCategoryFilter" onchange="filterFiles()">
+  <option value="">كل التصنيفات</option>
+  <option value="book">كتب</option>
+  <option value="summary">ملخصات</option>
+  <option value="automation">أتمتة</option>
+  <option value="exam">دورات</option>
+  <option value="videos">مقاطع توضيحية</option>
+</select>
       <select class="filter-select" id="fileSourceFilter" onchange="filterFiles()">
         <option value="">كل المصادر</option>
         <option value="upload">مرفوعة</option>
@@ -1725,12 +1726,13 @@ header {
                 <span>التصنيف</span>
               </span>
             </label>
-            <select id="editCategory" class="form-select">
-              <option value="book">كتاب رسمي</option>
-              <option value="summary">ملخص دراسي</option>
-              <option value="automation">بنك أتمتة</option>
-              <option value="exam">أسئلة دورات</option>
-            </select>
+<select id="editCategory" class="form-select">
+  <option value="book">كتاب رسمي</option>
+  <option value="summary">ملخص دراسي</option>
+  <option value="automation">بنك أتمتة</option>
+  <option value="exam">أسئلة دورات</option>
+  <option value="videos">مقاطع توضيحية</option>
+</select>
           </div>
         </div>
 
@@ -1966,7 +1968,8 @@ if (typeof getCategoryInfo === 'undefined') {
       book: { label: 'كتب', icon: 'fa-book', color: '#34d399' },
       summary: { label: 'ملخصات', icon: 'fa-file-lines', color: '#60a5fa' },
       automation: { label: 'أتمتة', icon: 'fa-list-check', color: '#fbbf24' },
-      exam: { label: 'دورات', icon: 'fa-graduation-cap', color: '#a78bfa' }
+      exam: { label: 'دورات', icon: 'fa-graduation-cap', color: '#a78bfa' },
+      videos: { label: 'مقاطع توضيحية', icon: 'fa-video', color: '#ec4899' }
     };
     return map[category] || { label: 'ملف', icon: 'fa-file', color: '#94a3b8' };
   };
