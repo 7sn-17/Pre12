@@ -9,9 +9,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
 <script src="theme-init.js"></script>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -19,9 +19,6 @@
 <link rel="apple-touch-icon" href="icon-512.png">
 
 <style>
-/* ═══════════════════════════════════════════════════════
-   المتغيرات
-   ═══════════════════════════════════════════════════════ */
 :root {
   --bg-main: #06110d;
   --bg-card: rgba(16, 34, 27, 0.7);
@@ -151,7 +148,11 @@ header {
   text-decoration: none;
   transition: all var(--t-fast);
   flex-shrink: 0;
-  font-size: 1rem;
+}
+
+.nav-btn svg {
+  width: 20px;
+  height: 20px;
 }
 
 .nav-btn:hover {
@@ -215,7 +216,12 @@ header {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-size: 1.5rem;
+}
+
+.subject-icon-wrapper svg {
+  width: 28px;
+  height: 28px;
+  stroke-width: 2;
 }
 
 .subject-icon-wrapper.physics   { background: rgba(16, 185, 129, 0.2);  border: 1px solid rgba(16, 185, 129, 0.4);  color: #34d399; }
@@ -256,7 +262,7 @@ header {
 }
 
 .stat-item { display: flex; align-items: center; gap: 4px; }
-.stat-item i { font-size: 0.72rem; color: var(--accent-light); }
+.stat-item svg { width: 14px; height: 14px; color: var(--accent-light); }
 .stat-item strong { color: var(--text-primary); font-weight: 800; }
 
 /* ═══ البحث ═══ */
@@ -293,7 +299,8 @@ header {
   transform: translateY(-50%);
   color: var(--text-muted);
   pointer-events: none;
-  font-size: 0.9rem;
+  width: 18px;
+  height: 18px;
 }
 
 .search-wrapper .icon-left {
@@ -306,7 +313,10 @@ header {
   display: none;
   padding: 6px;
   border-radius: 8px;
-  font-size: 0.9rem;
+  width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
 }
 
 .search-wrapper .icon-left:hover {
@@ -315,6 +325,7 @@ header {
 }
 
 .search-wrapper .icon-left.visible { display: flex; }
+.search-wrapper .icon-left svg { width: 16px; height: 16px; }
 
 /* ═══ التصنيفات ═══ */
 .tabs-wrapper {
@@ -352,7 +363,11 @@ header {
   flex-shrink: 0;
 }
 
-.tab-btn i { font-size: 0.82rem; }
+.tab-btn svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2;
+}
 
 .tab-btn .tab-count {
   background: rgba(255, 255, 255, 0.08);
@@ -442,8 +457,13 @@ header {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-size: 1.15rem;
   transition: all var(--t-smooth);
+}
+
+.file-type-icon svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 2;
 }
 
 .file-item.expanded .file-type-icon {
@@ -504,6 +524,11 @@ header {
   color: #2563eb;
 }
 
+.source-badge svg {
+  width: 10px;
+  height: 10px;
+}
+
 /* السهم */
 .file-arrow {
   width: 30px;
@@ -517,7 +542,12 @@ header {
   color: var(--text-secondary);
   flex-shrink: 0;
   transition: all var(--t-fast);
-  font-size: 0.75rem;
+}
+
+.file-arrow svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.2;
 }
 
 [data-theme="light"] .file-arrow { background: rgba(0, 0, 0, 0.02); }
@@ -544,6 +574,11 @@ header {
   font-size: 0.58rem;
   font-weight: 800;
   z-index: 2;
+}
+
+.downloaded-badge svg {
+  width: 10px;
+  height: 10px;
 }
 
 /* ═══ التفاصيل ═══ */
@@ -605,9 +640,12 @@ header {
   border-color: rgba(0, 0, 0, 0.06);
 }
 
-.info-chip i {
+.info-chip svg {
+  width: 12px;
+  height: 12px;
   color: var(--accent-light);
-  font-size: 0.72rem;
+  stroke-width: 2;
+  flex-shrink: 0;
 }
 
 /* ═══ الأزرار ═══ */
@@ -634,6 +672,12 @@ header {
   font-family: inherit;
   transition: all var(--t-fast);
   white-space: nowrap;
+}
+
+.action-btn-lg svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.2;
 }
 
 [data-theme="light"] .action-btn-lg {
@@ -716,7 +760,12 @@ header {
   align-items: center;
   justify-content: center;
   color: var(--text-muted);
-  font-size: 2rem;
+}
+
+.empty-icon svg {
+  width: 36px;
+  height: 36px;
+  stroke-width: 1.8;
 }
 
 .empty-state h3 {
@@ -802,7 +851,13 @@ header {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-size: 0.95rem;
+  color: white;
+}
+
+.toast-icon svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 2.5;
 }
 
 .toast.error .toast-icon   { background: linear-gradient(145deg, #ff6b5b, #b8332a); }
@@ -832,7 +887,12 @@ header {
   transition: all var(--t-smooth);
   z-index: 500;
   text-decoration: none;
-  font-size: 1.1rem;
+}
+
+.fab svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2.2;
 }
 
 .fab:hover {
@@ -844,17 +904,20 @@ header {
   header { padding: 12px 14px; }
   .container { padding: 14px; }
   .subject-banner { padding: 14px; gap: 12px; }
-  .subject-icon-wrapper { width: 52px; height: 52px; font-size: 1.3rem; }
+  .subject-icon-wrapper { width: 52px; height: 52px; }
+  .subject-icon-wrapper svg { width: 26px; height: 26px; }
   .subject-info h1 { font-size: 1.05rem; }
   .subject-info p { display: none; }
   .file-header { padding: 11px 12px; gap: 10px; }
-  .file-type-icon { width: 42px; height: 42px; border-radius: 12px; font-size: 1rem; }
+  .file-type-icon { width: 42px; height: 42px; border-radius: 12px; }
+  .file-type-icon svg { width: 20px; height: 20px; }
   .file-basic-title { font-size: 0.85rem; }
   .file-details-inner { padding: 11px 12px 13px; }
   .action-btn-lg { padding: 10px; font-size: 0.75rem; }
   .action-btn-lg span { display: none; }
   .action-btn-lg.icon-only { width: 40px; }
   .fab { width: 48px; height: 48px; }
+  .fab svg { width: 22px; height: 22px; }
 }
 
 @supports (padding: env(safe-area-inset-bottom)) {
@@ -868,7 +931,7 @@ header {
 
 <header>
   <a href="index.html" class="nav-btn">
-    <i class="fa-solid fa-arrow-right"></i>
+    <i data-lucide="arrow-right"></i>
   </a>
   <div class="header-center">
     <div class="header-title" id="headerTitle">جاري التحميل...</div>
@@ -890,9 +953,9 @@ header {
       placeholder="ابحث في ملفات المادة..."
       oninput="handleSearch(this.value)"
     >
-    <i class="fa-solid fa-magnifying-glass icon-right"></i>
+    <i data-lucide="search" class="icon-right"></i>
     <span class="icon-left" id="searchClear" onclick="clearSearch()">
-      <i class="fa-solid fa-xmark"></i>
+      <i data-lucide="x"></i>
     </span>
   </div>
 
@@ -911,7 +974,7 @@ header {
   </div>
 
   <div class="empty-state" id="emptyState">
-    <div class="empty-icon"><i class="fa-solid fa-inbox"></i></div>
+    <div class="empty-icon"><i data-lucide="inbox"></i></div>
     <h3 id="emptyTitle">لا توجد ملفات بعد</h3>
     <p id="emptyMessage">لم يتم إضافة أي ملفات لهذه المادة حتى الآن.</p>
   </div>
@@ -919,7 +982,7 @@ header {
 </div>
 
 <a href="upload.html" class="fab" title="إضافة محتوى">
-  <i class="fa-solid fa-plus"></i>
+  <i data-lucide="plus"></i>
 </a>
 
 <script src="supabase-config.js"></script>
@@ -929,21 +992,126 @@ header {
 
 <script>
 /* ═══════════════════════════════════════════════════════
-   كشف أيقونات Lucide → Font Awesome
+   خرائط الأيقونات — كل شيء Lucide
    ═══════════════════════════════════════════════════════ */
-function mapIconToFa(icon) {
+
+// أيقونة المادة
+function mapSubjectIcon(icon) {
   const map = {
     'atom': 'atom',
-    'flask-conical': 'flask',
+    'flask': 'flask-conical',
+    'flask-conical': 'flask-conical',
     'dna': 'dna',
-    'scroll-text': 'scroll',
-    'languages': 'language',
+    'scroll': 'scroll-text',
+    'scroll-text': 'scroll-text',
+    'language': 'languages',
+    'languages': 'languages',
     'book-open': 'book-open',
     'book': 'book',
     'graduation-cap': 'graduation-cap',
-    'file-text': 'file-lines'
+    'file-text': 'file-text',
+    'file-lines': 'file-text'
   };
   return map[icon] || 'book-open';
+}
+
+// أيقونة نوع الملف (Lucide)
+const FILE_TYPE_LUCIDE = {
+  pdf:     { icon: 'file-text',      color: '#ef4444', label: 'PDF',         viewer: true  },
+  word:    { icon: 'file-text',      color: '#2563eb', label: 'Word',        viewer: false },
+  excel:   { icon: 'file-spreadsheet', color: '#16a34a', label: 'Excel',     viewer: false },
+  ppt:     { icon: 'presentation',   color: '#ea580c', label: 'PowerPoint',  viewer: false },
+  image:   { icon: 'image',          color: '#8b5cf6', label: 'صورة',        viewer: false },
+  video:   { icon: 'video',          color: '#ec4899', label: 'فيديو',       viewer: false },
+  audio:   { icon: 'music',          color: '#f59e0b', label: 'صوت',         viewer: false },
+  archive: { icon: 'file-archive',   color: '#64748b', label: 'ZIP',         viewer: false },
+  text:    { icon: 'file-text',      color: '#0ea5e9', label: 'نص',          viewer: false },
+  link:    { icon: 'link',           color: '#3b82f6', label: 'رابط',        viewer: false },
+  other:   { icon: 'file',           color: '#94a3b8', label: 'ملف',         viewer: false }
+};
+
+// أيقونة التصنيف (Lucide)
+const CATEGORY_LUCIDE = {
+  all:        { label: 'الكل',           icon: 'layers',        color: '#34d399' },
+  book:       { label: 'كتب',            icon: 'book',          color: '#34d399' },
+  summary:    { label: 'ملخصات',         icon: 'file-text',     color: '#60a5fa' },
+  automation: { label: 'أتمتة',          icon: 'list-checks',   color: '#fbbf24' },
+  exam:       { label: 'دورات',          icon: 'graduation-cap',color: '#a78bfa' },
+  videos:     { label: 'مقاطع توضيحية', icon: 'video',         color: '#ec4899' }
+};
+
+// مضيفو الروابط (Lucide)
+const FILE_HOST_LUCIDE = {
+  drive:     { name: 'Google Drive', icon: 'hard-drive', color: '#4285F4' },
+  dropbox:   { name: 'Dropbox',      icon: 'box',        color: '#0061FF' },
+  mega:      { name: 'Mega',         icon: 'cloud',      color: '#D9272E' },
+  mediafire: { name: 'MediaFire',    icon: 'flame',      color: '#1299F3' },
+  onedrive:  { name: 'OneDrive',     icon: 'grid-2x2',   color: '#0078D4' },
+  icloud:    { name: 'iCloud',       icon: 'apple',      color: '#3693F3' },
+  telegram:  { name: 'Telegram',     icon: 'send',       color: '#0088CC' },
+  youtube:   { name: 'YouTube',      icon: 'youtube',    color: '#FF0000' },
+  pdf:       { name: 'رابط PDF',     icon: 'file-text',  color: '#10b981' },
+  other:     { name: 'رابط خارجي',   icon: 'link',       color: '#94a3b8' }
+};
+
+// تحويل نوع الملف من files.js إلى Lucide
+function detectFileTypeLucide(file) {
+  if (!file) return FILE_TYPE_LUCIDE.other;
+
+  if (file.source === 'link') {
+    const url = (file.external_url || file.file_url || '').toLowerCase();
+    if (url.match(/\.pdf(\?|$)/i))          return FILE_TYPE_LUCIDE.pdf;
+    if (url.match(/\.(doc|docx)(\?|$)/i))   return FILE_TYPE_LUCIDE.word;
+    if (url.match(/\.(xls|xlsx)(\?|$)/i))   return FILE_TYPE_LUCIDE.excel;
+    if (url.match(/\.(ppt|pptx)(\?|$)/i))   return FILE_TYPE_LUCIDE.ppt;
+    if (url.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i)) return FILE_TYPE_LUCIDE.image;
+    if (url.match(/\.(mp4|avi|mov|mkv|webm)(\?|$)/i))      return FILE_TYPE_LUCIDE.video;
+    if (url.match(/\.(mp3|wav|m4a|ogg)(\?|$)/i))           return FILE_TYPE_LUCIDE.audio;
+    if (url.match(/\.(zip|rar|7z)(\?|$)/i))                return FILE_TYPE_LUCIDE.archive;
+    if (url.match(/\.txt(\?|$)/i))                         return FILE_TYPE_LUCIDE.text;
+    if (url.includes('drive.google.com') || url.includes('dropbox.com')) {
+      return FILE_TYPE_LUCIDE.pdf;
+    }
+    return FILE_TYPE_LUCIDE.link;
+  }
+
+  const mime = (file.mime_type || '').toLowerCase();
+  const fileName = (file.title || '').toLowerCase();
+
+  if (mime.includes('pdf') || fileName.endsWith('.pdf'))               return FILE_TYPE_LUCIDE.pdf;
+  if (mime.includes('word') || fileName.match(/\.(doc|docx)$/))        return FILE_TYPE_LUCIDE.word;
+  if (mime.includes('excel') || mime.includes('spreadsheet') || fileName.match(/\.(xls|xlsx)$/)) return FILE_TYPE_LUCIDE.excel;
+  if (mime.includes('powerpoint') || mime.includes('presentation') || fileName.match(/\.(ppt|pptx)$/)) return FILE_TYPE_LUCIDE.ppt;
+  if (mime.includes('image') || fileName.match(/\.(jpg|jpeg|png|gif|webp|svg)$/)) return FILE_TYPE_LUCIDE.image;
+  if (mime.includes('video') || fileName.match(/\.(mp4|avi|mov|mkv|webm)$/))      return FILE_TYPE_LUCIDE.video;
+  if (mime.includes('audio') || fileName.match(/\.(mp3|wav|m4a|ogg)$/))           return FILE_TYPE_LUCIDE.audio;
+  if (mime.includes('zip') || mime.includes('compressed') || fileName.match(/\.(zip|rar|7z)$/)) return FILE_TYPE_LUCIDE.archive;
+  if (mime.includes('text') || fileName.endsWith('.txt'))              return FILE_TYPE_LUCIDE.text;
+
+  return FILE_TYPE_LUCIDE.other;
+}
+
+// كشف المضيف (Lucide)
+function detectHostLucide(url) {
+  if (!url) return FILE_HOST_LUCIDE.other;
+  const u = String(url).toLowerCase();
+
+  if (u.includes('youtube.com') || u.includes('youtu.be')) return FILE_HOST_LUCIDE.youtube;
+  if (u.includes('t.me') || u.includes('telegram'))        return FILE_HOST_LUCIDE.telegram;
+  if (u.includes('drive.google.com'))                      return FILE_HOST_LUCIDE.drive;
+  if (u.includes('dropbox.com'))                           return FILE_HOST_LUCIDE.dropbox;
+  if (u.includes('mega.nz'))                               return FILE_HOST_LUCIDE.mega;
+  if (u.includes('mediafire.com'))                         return FILE_HOST_LUCIDE.mediafire;
+  if (u.includes('1drv.ms') || u.includes('onedrive'))     return FILE_HOST_LUCIDE.onedrive;
+  if (u.includes('icloud.com'))                            return FILE_HOST_LUCIDE.icloud;
+  if (u.match(/\.pdf(\?|$)/))                              return FILE_HOST_LUCIDE.pdf;
+
+  return FILE_HOST_LUCIDE.other;
+}
+
+// معلومات التصنيف
+function getCategoryInfoLucide(cat) {
+  return CATEGORY_LUCIDE[cat] || { label: 'ملف', icon: 'file', color: '#94a3b8' };
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -971,10 +1139,10 @@ function showToast(message, type = 'success', title = null) {
   }
 
   const config = {
-    success: { icon: 'fa-circle-check', title: 'تم بنجاح' },
-    error:   { icon: 'fa-circle-exclamation', title: 'خطأ' },
-    warning: { icon: 'fa-triangle-exclamation', title: 'تنبيه' },
-    info:    { icon: 'fa-circle-info', title: 'معلومة' }
+    success: { icon: 'check-circle-2', title: 'تم بنجاح' },
+    error:   { icon: 'alert-circle',   title: 'خطأ' },
+    warning: { icon: 'alert-triangle', title: 'تنبيه' },
+    info:    { icon: 'info',           title: 'معلومة' }
   };
 
   const cfg = config[type] || config.info;
@@ -983,13 +1151,14 @@ function showToast(message, type = 'success', title = null) {
   const toast = document.createElement('div');
   toast.className = 'toast ' + type;
   toast.innerHTML = `
-    <div class="toast-icon"><i class="fa-solid ${cfg.icon}"></i></div>
+    <div class="toast-icon"><i data-lucide="${cfg.icon}"></i></div>
     <div class="toast-content">
       <div class="toast-title">${displayTitle}</div>
       <div class="toast-message">${message}</div>
     </div>
   `;
   container.appendChild(toast);
+  lucide.createIcons();
 
   setTimeout(() => {
     toast.style.transition = 'all 0.3s';
@@ -1028,6 +1197,7 @@ function createParticles() {
    أدوات
    ═══════════════════════════════════════════════════════ */
 function hexToRgba(hex, alpha) {
+  if (!hex || hex[0] !== '#') return `rgba(16, 185, 129, ${alpha})`;
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
@@ -1051,7 +1221,6 @@ async function loadSubject() {
   }
 
   try {
-    // offline
     if (!navigator.onLine) {
       const cached = getDataCache(`subject_${slug}`);
       if (!cached) {
@@ -1069,7 +1238,6 @@ async function loadSubject() {
       return;
     }
 
-    // online
     const { data: subject, error } = await supabaseClient
       .from('subjects')
       .select('*')
@@ -1170,45 +1338,38 @@ function renderBanner(subject) {
   container.innerHTML = `
     <div class="subject-banner">
       <div class="subject-icon-wrapper ${subject.color || 'default'}">
-        <i class="fa-solid fa-${mapIconToFa(subject.icon)}"></i>
+        <i data-lucide="${mapSubjectIcon(subject.icon)}"></i>
       </div>
       <div class="subject-info">
         <h1>${subject.name}</h1>
         <p>${subject.description || 'جميع الملفات التعليمية'}</p>
         <div class="subject-stats">
           <div class="stat-item">
-            <i class="fa-solid fa-file-lines"></i>
+            <i data-lucide="file-text"></i>
             <span><strong id="totalFilesCount">0</strong> ملف</span>
           </div>
         </div>
       </div>
     </div>
   `;
+  lucide.createIcons();
 }
 
 /* ═══════════════════════════════════════════════════════
    التصنيفات
    ═══════════════════════════════════════════════════════ */
-
-function getCategoryInfo(cat) {
-  return CATEGORY_INFO[cat] || { label: 'ملف', icon: 'fa-file' };
-}
-
 function renderTabs() {
   const container = document.getElementById('tabsContainer');
   container.innerHTML = '';
 
-  // ⭐ احسب عدد الملفات لكل تصنيف ديناميكياً
   const counts = { all: state.allFiles.length };
-  
+
   state.allFiles.forEach(f => {
     const cat = f.category || 'summary';
     counts[cat] = (counts[cat] || 0) + 1;
   });
 
-  // ⭐ اعرض التصنيفات من CATEGORY_INFO
-  Object.entries(CATEGORY_INFO).forEach(([key, info]) => {
-    // إذا لم يكن "الكل" وليس فيه ملفات — تجاهله
+  Object.entries(CATEGORY_LUCIDE).forEach(([key, info]) => {
     if (key !== 'all' && !counts[key]) return;
 
     const btn = document.createElement('button');
@@ -1216,12 +1377,14 @@ function renderTabs() {
     btn.dataset.category = key;
     btn.onclick = () => selectCategory(key, btn);
     btn.innerHTML = `
-      <i class="fa-solid ${info.icon}"></i>
+      <i data-lucide="${info.icon}"></i>
       ${info.label}
       <span class="tab-count">${counts[key] || 0}</span>
     `;
     container.appendChild(btn);
   });
+
+  lucide.createIcons();
 }
 
 function selectCategory(cat, btnEl) {
@@ -1305,14 +1468,16 @@ function renderFiles(files) {
   files.forEach((file, i) => {
     list.appendChild(createFileItem(file, i));
   });
+
+  lucide.createIcons();
 }
 
 /* ═══════════════════════════════════════════════════════
    بطاقة ملف
    ═══════════════════════════════════════════════════════ */
 function createFileItem(file, index) {
-  const catInfo = getCategoryInfo(file.category);
-  const typeInfo = detectFileType(file);
+  const catInfo = getCategoryInfoLucide(file.category);
+  const typeInfo = detectFileTypeLucide(file);
   const isDownloaded = state.downloadedIds.has(file.id);
   const isExternal = file.source === 'link';
 
@@ -1321,108 +1486,69 @@ function createFileItem(file, index) {
   item.dataset.fileId = file.id;
   item.style.animationDelay = (index * 0.04) + 's';
 
-  // ⭐ كشف المضيف من الرابط
-  let fileIconClass = typeInfo.icon;
-  let fileIconColor = typeInfo.color;
-  let fileIconBg = hexToRgba(typeInfo.color, 0.15);
-  let fileIconBorder = hexToRgba(typeInfo.color, 0.35);
-  let hostLabel = typeInfo.host || 'رابط';
+  // كشف المضيف
+  let iconName = typeInfo.icon;
+  let iconColor = typeInfo.color;
+  let hostLabel = '';
 
   const url = (file.external_url || file.file_url || '').toLowerCase();
 
-  if (url.includes('youtube.com') || url.includes('youtu.be')) {
-    fileIconClass = 'fa-brands fa-youtube';
-    fileIconColor = '#FF0000';
-    fileIconBg = 'rgba(255, 0, 0, 0.12)';
-    fileIconBorder = 'rgba(255, 0, 0, 0.3)';
-    hostLabel = 'YouTube';
-  } else if (url.includes('t.me') || url.includes('telegram')) {
-    fileIconClass = 'fa-brands fa-telegram';
-    fileIconColor = '#0088CC';
-    fileIconBg = 'rgba(0, 136, 204, 0.12)';
-    fileIconBorder = 'rgba(0, 136, 204, 0.3)';
-    hostLabel = 'Telegram';
-  } else if (url.includes('drive.google.com')) {
-    fileIconClass = 'fa-brands fa-google-drive';
-    fileIconColor = '#4285F4';
-    fileIconBg = 'rgba(66, 133, 244, 0.12)';
-    fileIconBorder = 'rgba(66, 133, 244, 0.3)';
-    hostLabel = 'Google Drive';
-  } else if (url.includes('dropbox.com')) {
-    fileIconClass = 'fa-brands fa-dropbox';
-    fileIconColor = '#0061FF';
-    fileIconBg = 'rgba(0, 97, 255, 0.12)';
-    fileIconBorder = 'rgba(0, 97, 255, 0.3)';
-    hostLabel = 'Dropbox';
-  } else if (url.includes('mega.nz')) {
-    fileIconClass = 'fa-solid fa-cloud';
-    fileIconColor = '#D9272E';
-    fileIconBg = 'rgba(217, 39, 46, 0.12)';
-    fileIconBorder = 'rgba(217, 39, 46, 0.3)';
-    hostLabel = 'Mega';
-  } else if (url.includes('mediafire.com')) {
-    fileIconClass = 'fa-solid fa-fire';
-    fileIconColor = '#1299F3';
-    fileIconBg = 'rgba(18, 153, 243, 0.12)';
-    fileIconBorder = 'rgba(18, 153, 243, 0.3)';
-    hostLabel = 'MediaFire';
-  } else if (url.includes('onedrive') || url.includes('1drv.ms')) {
-    fileIconClass = 'fa-brands fa-microsoft';
-    fileIconColor = '#0078D4';
-    fileIconBg = 'rgba(0, 120, 212, 0.12)';
-    fileIconBorder = 'rgba(0, 120, 212, 0.3)';
-    hostLabel = 'OneDrive';
-  } else if (url.includes('icloud.com')) {
-    fileIconClass = 'fa-brands fa-apple';
-    fileIconColor = '#3693F3';
-    fileIconBg = 'rgba(54, 147, 243, 0.12)';
-    fileIconBorder = 'rgba(54, 147, 243, 0.3)';
-    hostLabel = 'iCloud';
+  if (isExternal) {
+    const hostInfo = detectHostLucide(url);
+    iconName = hostInfo.icon;
+    iconColor = hostInfo.color;
+    hostLabel = hostInfo.name;
+  } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
+    const h = FILE_HOST_LUCIDE.youtube;
+    iconName = h.icon; iconColor = h.color; hostLabel = h.name;
   }
+
+  const iconBg = hexToRgba(iconColor, 0.15);
+  const iconBorder = hexToRgba(iconColor, 0.35);
 
   // زر الفتح
   const openBtnClass = isExternal ? 'link-open' : 'primary';
-  const openBtnIcon = isExternal ? 'fa-arrow-up-right-from-square' : 'fa-eye';
+  const openBtnIcon = isExternal ? 'external-link' : 'eye';
   const openBtnText = isExternal ? 'فتح الرابط' : 'فتح';
 
   // زر التحميل / نسخ
   const downloadBtnHTML = isExternal
     ? `<button class="action-btn-lg" onclick="event.stopPropagation(); copyLink('${file.id}')">
-         <i class="fa-solid fa-copy"></i>
+         <i data-lucide="copy"></i>
          <span>نسخ الرابط</span>
        </button>`
     : `<button class="action-btn-lg ${isDownloaded ? 'downloaded' : ''}"
               id="download-btn-${file.id}"
               onclick="event.stopPropagation(); downloadFile('${file.id}')">
-         <i class="fa-solid ${isDownloaded ? 'fa-check' : 'fa-download'}"></i>
+         <i data-lucide="${isDownloaded ? 'check' : 'download'}"></i>
          <span>${isDownloaded ? 'محمّل' : 'تحميل'}</span>
        </button>`;
 
   // شارة المصدر
   const sourceBadgeHTML = isExternal
-    ? `<span class="source-badge"><i class="fa-solid fa-link"></i>${hostLabel}</span>`
+    ? `<span class="source-badge"><i data-lucide="link"></i>${hostLabel || 'رابط'}</span>`
     : '';
 
   // شريحة الحجم
   const sizeChipHTML = !isExternal && file.file_size
-    ? `<span class="info-chip"><i class="fa-solid fa-database"></i>${formatFileSize(file.file_size)}</span>`
+    ? `<span class="info-chip"><i data-lucide="database"></i>${formatFileSize(file.file_size)}</span>`
     : '';
 
   // شريحة المصدر
   const sourceChipHTML = isExternal
-    ? `<span class="info-chip"><i class="fa-solid fa-cloud"></i>${hostLabel}</span>`
+    ? `<span class="info-chip"><i data-lucide="cloud"></i>${hostLabel || 'رابط'}</span>`
     : '';
 
   item.innerHTML = `
     <div class="file-header" onclick="toggleFileExpand('${file.id}')">
       ${isDownloaded && !isExternal ? `
         <div class="downloaded-badge">
-          <i class="fa-solid fa-circle-check"></i>
+          <i data-lucide="check-circle-2"></i>
           <span>محمّل</span>
         </div>
       ` : ''}
-      <div class="file-type-icon" style="background: ${fileIconBg}; border: 1px solid ${fileIconBorder}; color: ${fileIconColor};">
-        <i class="${fileIconClass}"></i>
+      <div class="file-type-icon" style="background: ${iconBg}; border: 1px solid ${iconBorder}; color: ${iconColor};">
+        <i data-lucide="${iconName}"></i>
       </div>
       <div class="file-basic">
         <div class="file-basic-title">${file.title}</div>
@@ -1438,7 +1564,7 @@ function createFileItem(file, index) {
         </div>
       </div>
       <div class="file-arrow">
-        <i class="fa-solid fa-chevron-down"></i>
+        <i data-lucide="chevron-down"></i>
       </div>
     </div>
 
@@ -1448,18 +1574,18 @@ function createFileItem(file, index) {
 
         <div class="file-info-row">
           <span class="info-chip">
-            <i class="${fileIconClass}"></i>
+            <i data-lucide="${iconName}"></i>
             ${typeInfo.label}
           </span>
           ${sizeChipHTML}
           ${sourceChipHTML}
           <span class="info-chip">
-            <i class="fa-solid fa-calendar"></i>
+            <i data-lucide="calendar"></i>
             ${formatDate(file.created_at)}
           </span>
           ${isDownloaded && !isExternal ? `
             <span class="info-chip" style="color: var(--accent-light); border-color: var(--accent-emerald);">
-              <i class="fa-solid fa-download"></i>
+              <i data-lucide="download"></i>
               محمّل
             </span>
           ` : ''}
@@ -1467,14 +1593,14 @@ function createFileItem(file, index) {
 
         <div class="file-actions-row">
           <button class="action-btn-lg ${openBtnClass}" onclick="event.stopPropagation(); openFile('${file.id}')">
-            <i class="fa-solid ${openBtnIcon}"></i>
+            <i data-lucide="${openBtnIcon}"></i>
             <span>${openBtnText}</span>
           </button>
           ${downloadBtnHTML}
           <button class="action-btn-lg icon-only fav-btn"
                   id="fav-btn-${file.id}"
                   onclick="event.stopPropagation(); toggleFav('${file.id}')">
-            <i class="fa-regular fa-bookmark"></i>
+            <i data-lucide="bookmark"></i>
           </button>
         </div>
       </div>
@@ -1487,7 +1613,6 @@ function createFileItem(file, index) {
     const favBtn = item.querySelector(`#fav-btn-${file.id}`);
     if (favBtn) {
       favBtn.classList.add('fav-active');
-      favBtn.querySelector('i').className = 'fa-solid fa-bookmark';
     }
   });
 
@@ -1522,7 +1647,6 @@ function openFile(fileId) {
 
   incrementFileViews(file.id).catch(() => {});
 
-  // رابط خارجي
   if (file.source === 'link') {
     const url = file.external_url || file.file_url;
     if (!url) {
@@ -1533,8 +1657,7 @@ function openFile(fileId) {
     return;
   }
 
-  // PDF → viewer
-  const typeInfo = detectFileType(file);
+  const typeInfo = detectFileTypeLucide(file);
   if (typeInfo.viewer) {
     const params = new URLSearchParams({
       id: file.id,
@@ -1550,7 +1673,6 @@ function openFile(fileId) {
     return;
   }
 
-  // أنواع أخرى → تبويب جديد
   window.open(file.file_url, '_blank', 'noopener,noreferrer');
 }
 
@@ -1592,9 +1714,10 @@ async function downloadFile(fileId) {
 
   try {
     btn.innerHTML = `
-      <i class="fa-solid fa-circle-notch fa-spin"></i>
+      <i data-lucide="loader-2" class="spin"></i>
       <span>جاري...</span>
     `;
+    lucide.createIcons();
 
     const result = await downloadAndSaveFile({
       id: file.id,
@@ -1606,10 +1729,8 @@ async function downloadFile(fileId) {
       file_url: file.file_url,
       file_path: file.file_path,
       created_at: file.created_at
-    }, (percent, received, total) => {
-      if (btn) {
-        btn.innerHTML = `<span>${percent}%</span>`;
-      }
+    }, (percent) => {
+      if (btn) btn.innerHTML = `<span>${percent}%</span>`;
     });
 
     if (!result.success) throw new Error(result.error);
@@ -1618,16 +1739,17 @@ async function downloadFile(fileId) {
     state.downloadedIds.add(file.id);
 
     btn.classList.add('downloaded');
-    btn.innerHTML = `<i class="fa-solid fa-check"></i><span>محمّل</span>`;
+    btn.innerHTML = `<i data-lucide="check"></i><span>محمّل</span>`;
+    lucide.createIcons();
 
-    // شارة
     const item = document.querySelector(`[data-file-id="${fileId}"]`);
     const header = item.querySelector('.file-header');
     if (!header.querySelector('.downloaded-badge')) {
       const badge = document.createElement('div');
       badge.className = 'downloaded-badge';
-      badge.innerHTML = `<i class="fa-solid fa-circle-check"></i><span>محمّل</span>`;
+      badge.innerHTML = `<i data-lucide="check-circle-2"></i><span>محمّل</span>`;
       header.appendChild(badge);
+      lucide.createIcons();
     }
 
     showToast('تم التحميل والحفظ', 'success');
@@ -1635,6 +1757,7 @@ async function downloadFile(fileId) {
   } catch (err) {
     console.error(err);
     btn.innerHTML = originalHTML;
+    lucide.createIcons();
     showToast('تعذّر التحميل', 'error');
   }
 }
@@ -1653,11 +1776,9 @@ async function toggleFav(fileId) {
 
   if (result.added) {
     btn.classList.add('fav-active');
-    btn.innerHTML = '<i class="fa-solid fa-bookmark"></i>';
     showToast('أضيف للمفضلة', 'success');
   } else {
     btn.classList.remove('fav-active');
-    btn.innerHTML = '<i class="fa-regular fa-bookmark"></i>';
     showToast('أزيل من المفضلة', 'info');
   }
 }
@@ -1677,7 +1798,8 @@ function showError(title, message) {
 
   const iconWrapper = empty.querySelector('.empty-icon');
   if (iconWrapper) {
-    iconWrapper.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i>';
+    iconWrapper.innerHTML = '<i data-lucide="alert-circle"></i>';
+    lucide.createIcons();
   }
 
   document.getElementById('emptyTitle').textContent = title;
@@ -1699,6 +1821,16 @@ document.addEventListener('keydown', (e) => {
 });
 
 /* ═══════════════════════════════════════════════════════
+   style للـ spin
+   ═══════════════════════════════════════════════════════ */
+const styleSheet = document.createElement('style');
+styleSheet.textContent = `
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { animation: spin 1s linear infinite; }
+`;
+document.head.appendChild(styleSheet);
+
+/* ═══════════════════════════════════════════════════════
    التشغيل
    ═══════════════════════════════════════════════════════ */
 async function init() {
@@ -1708,11 +1840,14 @@ async function init() {
   if (session) state.currentUser = session.user;
 
   await loadSubject();
+
+  // إعادة رسم الأيقونات بعد كل شيء
+  lucide.createIcons();
 }
 
 init();
 
-console.log('✅ subject.html ready — Font Awesome');
+console.log('✅ subject.html ready — Lucide');
 </script>
 
 <script>
