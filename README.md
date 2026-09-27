@@ -10,7 +10,7 @@
 
 <br>
 
-![Version](https://img.shields.io/badge/version-1.5.0-10b981?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.8-10b981?style=for-the-badge)
 ![PWA](https://img.shields.io/badge/PWA-Ready-8b5cf6?style=for-the-badge)
 ![Offline](https://img.shields.io/badge/Offline-Supported-3b82f6?style=for-the-badge)
 ![License](https://img.shields.io/badge/license-Free-10b981?style=for-the-badge)
