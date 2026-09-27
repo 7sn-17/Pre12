@@ -697,6 +697,8 @@ const BUCKET = 'schedule-images';
 const MAX_FILES = 10;
 const MAX_FILE_SIZE = 8 * 1024 * 1024;
 const LONG_PRESS_MS = 600;
+const CACHE_NAME = 'medfav-lectures-v1';         // ⭐ جديد
+const META_CACHE_KEY = 'medfav_lectures_meta_v1'; // ⭐ جديد
 
 /* ═══════════════════════════════════════════════════
    State
@@ -812,6 +814,70 @@ async function initUser() {
 }
 
 /* ═══════════════════════════════════════════════════
+   ⭐ Offline Cache (Level 1)
+   ═══════════════════════════════════════════════════ */
+
+// خزّن صورة في Cache API
+async function cacheImage(url) {
+  if (!('caches' in window) || !url) return;
+  try {
+    const cache = await caches.open(CACHE_NAME);
+    const exists = await cache.match(url);
+    if (!exists) await cache.add(url);
+  } catch (e) { /* silent */ }
+}
+
+// اقرأ الصورة من Cache (أو أرجع الرابط الأصلي)
+async function getCachedImageURL(url) {
+  if (!url) return url;
+  if (!('caches' in window)) return url;
+  try {
+    const cache = await caches.open(CACHE_NAME);
+    const cached = await cache.match(url);
+    if (cached) {
+      const blob = await cached.blob();
+      return URL.createObjectURL(blob);
+    }
+  } catch (e) {}
+  return url;
+}
+
+// خزّن الميتاداتا في localStorage
+function saveMetaCache() {
+  try {
+    const data = {
+      items: state.all.slice(0, 80).map(i => ({
+        id: i.id, user_id: i.user_id, title: i.title,
+        description: i.description, image_url: i.image_url,
+        image_path: i.image_path, is_public: i.is_public,
+        likes_count: i.likes_count, saves_count: i.saves_count,
+        author_name: i.author_name, university: i.university,
+        subject_key: i.subject_key, created_at: i.created_at
+      })),
+      likedIds: [...state.likedIds],
+      savedIds: [...state.savedIds],
+      at: Date.now()
+    };
+    localStorage.setItem(META_CACHE_KEY, JSON.stringify(data));
+  } catch (e) { console.warn('saveMetaCache:', e); }
+}
+
+// اقرأ الميتاداتا من localStorage
+function loadMetaCache() {
+  try {
+    const raw = localStorage.getItem(META_CACHE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    // صلاحية 7 أيام
+    if (data.at && Date.now() - data.at > 7 * 24 * 60 * 60 * 1000) {
+      localStorage.removeItem(META_CACHE_KEY);
+      return null;
+    }
+    return data;
+  } catch (e) { return null; }
+}
+
+/* ═══════════════════════════════════════════════════
    Load
    ═══════════════════════════════════════════════════ */
 async function loadAll() {
@@ -821,8 +887,13 @@ async function loadAll() {
       <div class="sk-card"></div><div class="sk-card"></div>
     </div>`;
 
+  // ⭐ أوفلاين → اعرض الكاش مباشرة
+  if (!navigator.onLine) {
+    loadFromCache();
+    return;
+  }
+
   try {
-    // اجلب كل الصور العامة + صورتي
     const { data, error } = await supabaseClient
       .from('schedule_images')
       .select('*')
@@ -831,6 +902,14 @@ async function loadAll() {
     if (error) throw error;
 
     state.all = data || [];
+
+    // احفظ في الكاش المحلي
+    saveMetaCache();
+
+    // ⭐ خزّن كل الصور في Cache API في الخلفية
+    state.all.forEach(it => {
+      if (it.image_url) cacheImage(it.image_url);
+    });
 
     if (state.all.length > 0 && state.user) {
       const ids = state.all.map(i => i.id);
@@ -845,18 +924,40 @@ async function loadAll() {
       state.savedIds = new Set();
     }
 
+    // احفظ الإعجابات/الحفظ في الكاش أيضاً
+    saveMetaCache();
+
     updateSubtitle();
     render();
   } catch (err) {
     console.error('loadAll:', err);
-    $('content').innerHTML = `
-      <div class="empty">
-        <div class="empty-icon"><i data-lucide="wifi-off"></i></div>
-        <h3>تعذر التحميل</h3>
-        <p>تحقق من الاتصال بالإنترنت</p>
-      </div>`;
-    refreshIcons();
+    // شبكة فشلت → جرّب الكاش
+    loadFromCache();
   }
+}
+
+// ⭐ تحميل من الكاش (بدون إنترنت)
+function loadFromCache() {
+  const cached = loadMetaCache();
+  if (cached && cached.items?.length > 0) {
+    state.all = cached.items;
+    state.likedIds = new Set(cached.likedIds || []);
+    state.savedIds = new Set(cached.savedIds || []);
+    updateSubtitle();
+    render();
+    toast('أنت غير متصل — يتم عرض المحتوى المحفوظ', 'info');
+    return true;
+  }
+
+  // لا يوجد كاش
+  $('content').innerHTML = `
+    <div class="empty">
+      <div class="empty-icon"><i data-lucide="wifi-off"></i></div>
+      <h3>لا يوجد اتصال</h3>
+      <p>افتح الصفحة مرة واحدة بالإنترنت لتحميل المحتوى أوفلاين</p>
+    </div>`;
+  refreshIcons();
+  return false;
 }
 
 function updateSubtitle() {
@@ -954,7 +1055,7 @@ function loadCardImages() {
     });
     return;
   }
-  imgObserver = new IntersectionObserver((entries) => {
+  imgObserver = new IntersectionObserver(async (entries) => {
     for (const entry of entries) {
       if (!entry.isIntersecting) continue;
       const img = entry.target;
@@ -962,11 +1063,27 @@ function loadCardImages() {
       if (!url || img.dataset.loaded) continue;
       img.dataset.loaded = '1';
       imgObserver.unobserve(img);
-      img.src = url;  // رابط مباشر — لا blob
-      img.addEventListener('load', () => img.classList.add('loaded'), { once: true });
-      img.addEventListener('error', () => {
-        img.classList.add('loaded');
-      }, { once: true });
+
+      try {
+        // ⭐ جرّب الكاش أولاً
+        const finalUrl = await getCachedImageURL(url);
+        img.src = finalUrl;
+
+        if (img.complete && img.naturalHeight > 0) {
+          img.classList.add('loaded');
+        } else {
+          img.addEventListener('load', () => img.classList.add('loaded'), { once: true });
+          img.addEventListener('error', () => {
+            if (img.src !== url) img.src = url;
+            img.addEventListener('load', () => img.classList.add('loaded'), { once: true });
+          }, { once: true });
+        }
+
+        // ⭐ خزّن الصورة في الكاش للمرة القادمة
+        cacheImage(url);
+      } catch (e) {
+        img.src = url;
+      }
     }
   }, { rootMargin: '300px 0px' });
 
@@ -1549,9 +1666,12 @@ async function startUpload() {
           author_name: authorName,
           university: uni
         });
-      if (dbErr) throw dbErr;
+if (dbErr) throw dbErr;
 
-      successCount++;
+// ⭐ خزّن الصورة في الكاش فوراً
+cacheImage(publicUrl);
+
+successCount++;
     } catch (err) {
       console.error(`Upload ${i + 1} failed:`, err);
       failedCount++;
