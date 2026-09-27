@@ -1,9 +1,9 @@
 // ============================================
 // sw.js — Service Worker
-// Version 3.0.0 — إصلاح الخطأ النحوي + دعم كامل لصور الجداول
+// Version 3.1.0 — إصلاح الخطأ النحوي + دعم كامل لصور الجداول
 // ============================================
 
-const CACHE_VERSION = 'v3.0.0';
+const CACHE_VERSION = 'v3.1.0';
 const STATIC_CACHE  = `medfav-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `medfav-runtime-${CACHE_VERSION}`;
 const PDF_CACHE     = `medfav-pdf-${CACHE_VERSION}`;
