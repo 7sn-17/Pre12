@@ -89,6 +89,23 @@ body {
 .top-title h1 { font-size: 1.05rem; font-weight: 800; }
 .top-title p { font-size: 0.7rem; color: var(--accent-light); font-weight: 600; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* ══ Offline bar ══ */
+.offline-bar {
+  display: none;
+  padding: 8px 16px;
+  background: rgba(245, 158, 11, 0.15);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+}
+.offline-bar.visible { display: flex; }
+.offline-bar svg { width: 14px; height: 14px; }
+
 /* ══ Tabs ══ */
 .tabs-wrap {
   position: sticky; top: 67px; z-index: 90;
@@ -182,17 +199,51 @@ body {
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 .card-img.loaded ~ .card-img-skeleton { display: none; }
 
-/* Overlay image counter on multi-image */
-.subject-badge {
-  position: absolute; bottom: 8px; inset-inline-end: 8px;
-  padding: 3px 9px; border-radius: 8px;
-  font-size: 0.62rem; font-weight: 800;
-  backdrop-filter: blur(8px); color: white;
-  background: rgba(16, 185, 129, 0.9);
-  z-index: 2;
+/* ⭐ زر العين — أيقونة عائمة أعلى يمين الصورة */
+.eye-btn {
+  position: absolute;
+  top: 8px;
+  inset-inline-end: 8px;
+  width: 34px; height: 34px;
+  border-radius: 11px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: white;
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  cursor: pointer;
+  z-index: 3;
+  transition: all var(--t);
+  padding: 0;
 }
+.eye-btn:hover { background: rgba(16, 185, 129, 0.9); border-color: var(--accent); transform: scale(1.08); }
+.eye-btn svg { width: 16px; height: 16px; stroke-width: 2.4; }
 
-.card-body { padding: 10px 12px 12px; flex: 1; display: flex; flex-direction: column; }
+/* شارة "لي" للصورة الخاصة */
+.mine-badge {
+  position: absolute;
+  top: 8px;
+  inset-inline-start: 8px;
+  padding: 3px 9px; border-radius: 8px;
+  background: rgba(16, 185, 129, 0.92);
+  color: white; font-size: 0.62rem; font-weight: 800;
+  display: flex; align-items: center; gap: 3px;
+  backdrop-filter: blur(8px);
+  z-index: 3;
+}
+.mine-badge svg { width: 11px; height: 11px; }
+
+/* ⭐ Card body — قابل للنقر */
+.card-body {
+  padding: 10px 12px 12px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  transition: background var(--t);
+}
+.card-body:hover { background: rgba(128,128,128,0.04); }
 .card-title {
   font-size: 0.84rem; font-weight: 800;
   line-height: 1.35; margin-bottom: 4px;
@@ -314,12 +365,115 @@ body {
 .sheet-title svg { width: 22px; height: 22px; color: var(--accent-light); }
 .sheet-sub { font-size: 0.78rem; color: var(--text-2); margin-bottom: 16px; line-height: 1.5; }
 
+/* ⭐ Detail Sheet */
+.detail-thumb {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  max-height: 45vh;
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+  cursor: zoom-in;
+  position: relative;
+}
+.detail-thumb img {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  display: block;
+  background: #000;
+}
+.detail-thumb .expand-hint {
+  position: absolute;
+  bottom: 10px; inset-inline-end: 10px;
+  padding: 5px 12px; border-radius: 10px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  font-size: 0.68rem; font-weight: 700;
+  display: flex; align-items: center; gap: 5px;
+  backdrop-filter: blur(10px);
+}
+.detail-thumb .expand-hint svg { width: 12px; height: 12px; }
+
+.detail-title {
+  font-size: 1.15rem;
+  font-weight: 900;
+  line-height: 1.35;
+  margin-bottom: 8px;
+}
+.detail-meta {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.78rem; color: var(--text-2); font-weight: 600;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.detail-meta svg { width: 13px; height: 13px; }
+.detail-meta .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--text-3); }
+
+.detail-desc {
+  font-size: 0.88rem; color: var(--text-2);
+  line-height: 1.65;
+  padding: 14px; border-radius: 14px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  margin-bottom: 16px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.detail-stats {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  margin-bottom: 16px;
+}
+.big-stat {
+  padding: 14px 10px; border-radius: 14px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  cursor: pointer; transition: all var(--t);
+  font-family: inherit;
+}
+.big-stat:active { transform: scale(0.97); }
+.big-stat:hover { border-color: var(--border-hover); }
+.big-stat svg { width: 22px; height: 22px; color: var(--text-2); transition: all var(--t); }
+.big-stat span { font-size: 1.1rem; font-weight: 900; }
+.big-stat small { font-size: 0.66rem; color: var(--text-3); font-weight: 700; }
+.big-stat.liked { border-color: var(--pink); background: rgba(236,72,153,0.08); }
+.big-stat.liked svg { color: var(--pink); fill: var(--pink); }
+.big-stat.liked span { color: var(--pink); }
+.big-stat.saved { border-color: var(--gold); background: rgba(251,191,36,0.08); }
+.big-stat.saved svg { color: var(--gold); fill: var(--gold); }
+.big-stat.saved span { color: var(--gold); }
+
+.detail-actions {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  margin-bottom: 10px;
+}
+.action-btn {
+  padding: 13px 6px; border-radius: 13px;
+  border: 1px solid var(--border); background: var(--bg-card);
+  color: var(--text); font-family: inherit;
+  font-size: 0.78rem; font-weight: 800;
+  cursor: pointer; transition: all var(--t);
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+}
+.action-btn svg { width: 18px; height: 18px; }
+.action-btn:hover { border-color: var(--accent); color: var(--accent-light); }
+.action-btn:active { transform: scale(0.96); }
+.action-btn.danger { color: var(--danger); border-color: rgba(239, 68, 68, 0.3); }
+.action-btn.danger:hover { background: rgba(239, 68, 68, 0.08); }
+.action-btn.primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  border-color: transparent; color: white;
+}
+.action-btn.primary:hover { color: white; box-shadow: 0 6px 16px var(--glow); }
+
+/* ══ Upload form ══ */
 .field { margin-bottom: 13px; }
 .field label {
   display: block; font-size: 0.78rem; font-weight: 700;
   color: var(--text-2); margin-bottom: 6px;
 }
-.input, .select, .textarea {
+.input, .textarea {
   width: 100%; padding: 12px 14px; border-radius: 12px;
   background: var(--bg-card); border: 1px solid var(--border);
   color: var(--text); font-family: inherit; font-size: 0.88rem;
@@ -327,11 +481,10 @@ body {
   -webkit-appearance: none; appearance: none;
 }
 .textarea { min-height: 60px; resize: vertical; }
-.input:focus, .select:focus, .textarea:focus {
+.input:focus, .textarea:focus {
   border-color: var(--accent); box-shadow: 0 0 0 3px var(--glow);
 }
 
-/* Upload zone */
 .upload-zone {
   border: 2px dashed var(--border); border-radius: 16px;
   padding: 34px 20px; text-align: center;
@@ -356,7 +509,6 @@ body {
   overflow: hidden;
 }
 
-/* Per-image editor list */
 .edit-list {
   display: flex; flex-direction: column; gap: 10px;
   margin: 12px 0;
@@ -407,7 +559,7 @@ body {
 .loading-files svg { width: 36px; height: 36px; color: var(--accent-light); }
 .loading-files p { margin-top: 10px; font-size: 0.82rem; color: var(--text-2); }
 
-/* Buttons */
+/* ══ Buttons ══ */
 .btn {
   padding: 13px 18px; border-radius: 13px;
   border: 1px solid var(--border); background: var(--bg-card);
@@ -425,13 +577,10 @@ body {
   box-shadow: 0 6px 16px var(--glow);
 }
 .btn.primary:hover { color: white; transform: translateY(-1px); box-shadow: 0 10px 24px var(--glow-strong); }
-.btn.danger { color: var(--danger); border-color: rgba(239, 68, 68, 0.3); }
-.btn.danger:hover { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
 .btn.ghost { background: transparent; }
 .btn.full { width: 100%; }
 .row2 { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }
 
-/* Toggle */
 .toggle-row {
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px 14px; border-radius: 12px;
@@ -455,7 +604,7 @@ body {
 .toggle.on { background: var(--accent); }
 .toggle.on::after { background: white; right: calc(100% - 23px); }
 
-/* ══ Fullscreen viewer (image only) ══ */
+/* ══ Fullscreen viewer ══ */
 .fullscreen {
   position: fixed; inset: 0; z-index: 5000;
   background: #000;
@@ -473,11 +622,23 @@ body {
   user-select: none;
   -webkit-user-drag: none;
   pointer-events: none;
-  transition: transform 0.3s ease;
 }
-.fullscreen.zoomed img { transform: scale(2); }
+.fullscreen .close-hint {
+  position: absolute;
+  top: 16px; inset-inline-end: 16px;
+  width: 42px; height: 42px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  z-index: 2;
+}
+.fullscreen .close-hint svg { width: 20px; height: 20px; }
 
-/* ══ Action sheet (long press) ══ */
+/* ══ Actions Sheet ══ */
 .action-list { display: flex; flex-direction: column; gap: 6px; }
 .action-item {
   display: flex; align-items: center; gap: 12px;
@@ -494,7 +655,7 @@ body {
 .action-item.danger { color: var(--danger); }
 .action-item.danger:hover { background: rgba(239,68,68,0.08); border-color: var(--danger); }
 
-/* ══ Toast ══ */
+/* ══ Toast (only for actions) ══ */
 .toast-wrap {
   position: fixed; top: 78px; left: 50%; transform: translateX(-50%);
   z-index: 9999; display: flex; flex-direction: column; gap: 8px;
@@ -545,6 +706,8 @@ body {
   .card-title { font-size: 0.76rem; }
   .edit-item { grid-template-columns: 70px 1fr; }
   .edit-thumb { width: 70px; height: 70px; }
+  .detail-actions { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .action-btn { padding: 11px 4px; font-size: 0.72rem; }
 }
 </style>
 </head>
@@ -563,13 +726,19 @@ body {
   </button>
 </header>
 
+<!-- شريط عدم الاتصال -->
+<div class="offline-bar" id="offlineBar">
+  <i data-lucide="wifi-off"></i>
+  <span>أنت غير متصل — عرض المحتوى المحفوظ</span>
+</div>
+
 <div class="tabs-wrap">
   <div class="tabs">
-    <button class="tab active" data-f="explore">
-      <i data-lucide="compass"></i><span>استكشاف</span>
-    </button>
-    <button class="tab" data-f="mine">
+    <button class="tab active" data-f="mine">
       <i data-lucide="user"></i><span>جدولي</span>
+    </button>
+    <button class="tab" data-f="explore">
+      <i data-lucide="compass"></i><span>استكشاف</span>
     </button>
     <button class="tab" data-f="saved">
       <i data-lucide="bookmark"></i><span>محفوظاتي</span>
@@ -596,7 +765,6 @@ body {
 
     <input type="file" id="fileInput" class="file-input-hidden" accept="image/*" multiple>
 
-    <!-- Step 1 -->
     <div id="uploadEmpty">
       <div class="upload-zone" id="uploadZone" role="button" tabindex="0">
         <i data-lucide="upload-cloud"></i>
@@ -605,7 +773,6 @@ body {
       </div>
     </div>
 
-    <!-- Step 2 -->
     <div id="uploadForm" style="display:none">
       <div id="loadingFiles" class="loading-files" style="display:none">
         <i data-lucide="loader-2" class="spin"></i>
@@ -645,12 +812,20 @@ body {
   </div>
 </div>
 
+<!-- ═══ Detail Sheet ═══ -->
+<div class="overlay" id="m-detail">
+  <div class="sheet" id="detailBody"></div>
+</div>
+
 <!-- ═══ Fullscreen Viewer ═══ -->
 <div class="fullscreen" id="fullscreen">
+  <div class="close-hint" id="fullscreenClose">
+    <i data-lucide="x"></i>
+  </div>
   <img id="fullscreenImg" src="" alt="">
 </div>
 
-<!-- ═══ Action Sheet (long press) ═══ -->
+<!-- ═══ Actions Sheet (long press) ═══ -->
 <div class="overlay" id="m-actions">
   <div class="sheet">
     <div class="handle"></div>
@@ -697,8 +872,8 @@ const BUCKET = 'schedule-images';
 const MAX_FILES = 10;
 const MAX_FILE_SIZE = 8 * 1024 * 1024;
 const LONG_PRESS_MS = 600;
-const CACHE_NAME = 'medfav-lectures-v1';         // ⭐ جديد
-const META_CACHE_KEY = 'medfav_lectures_meta_v1'; // ⭐ جديد
+const CACHE_NAME = 'medfav-lectures-v1';
+const META_CACHE_KEY = 'medfav_lectures_meta_v1';
 
 /* ═══════════════════════════════════════════════════
    State
@@ -709,16 +884,18 @@ const state = {
   all: [],
   likedIds: new Set(),
   savedIds: new Set(),
-  filter: 'explore',
-  files: [],           // { file, preview, title, description }
+  filter: 'mine',
+  files: [],
   isPublic: true,
   uploading: false,
   preparing: false,
-  current: null,       // opened image
+  current: null,
   shareTarget: null,
   actionTarget: null,
+  detailTarget: null,
   longPressTimer: null,
-  longPressTriggered: false
+  longPressTriggered: false,
+  imgObserver: null
 };
 
 const $ = id => document.getElementById(id);
@@ -760,7 +937,7 @@ function toast(msg, type = 'success', title = null) {
       t.remove();
       if (wrap.children.length === 0) wrap.remove();
     }, 300);
-  }, 3000);
+  }, 2500);
 }
 
 /* ═══════════════════════════════════════════════════
@@ -814,20 +991,17 @@ async function initUser() {
 }
 
 /* ═══════════════════════════════════════════════════
-   ⭐ Offline Cache (Level 1)
+   Offline: Cache helpers
    ═══════════════════════════════════════════════════ */
-
-// خزّن صورة في Cache API
 async function cacheImage(url) {
   if (!('caches' in window) || !url) return;
   try {
     const cache = await caches.open(CACHE_NAME);
     const exists = await cache.match(url);
     if (!exists) await cache.add(url);
-  } catch (e) { /* silent */ }
+  } catch (e) {}
 }
 
-// اقرأ الصورة من Cache (أو أرجع الرابط الأصلي)
 async function getCachedImageURL(url) {
   if (!url) return url;
   if (!('caches' in window)) return url;
@@ -842,33 +1016,22 @@ async function getCachedImageURL(url) {
   return url;
 }
 
-// خزّن الميتاداتا في localStorage
 function saveMetaCache() {
   try {
-    const data = {
-      items: state.all.slice(0, 80).map(i => ({
-        id: i.id, user_id: i.user_id, title: i.title,
-        description: i.description, image_url: i.image_url,
-        image_path: i.image_path, is_public: i.is_public,
-        likes_count: i.likes_count, saves_count: i.saves_count,
-        author_name: i.author_name, university: i.university,
-        subject_key: i.subject_key, created_at: i.created_at
-      })),
+    localStorage.setItem(META_CACHE_KEY, JSON.stringify({
+      items: state.all.slice(0, 80),
       likedIds: [...state.likedIds],
       savedIds: [...state.savedIds],
       at: Date.now()
-    };
-    localStorage.setItem(META_CACHE_KEY, JSON.stringify(data));
-  } catch (e) { console.warn('saveMetaCache:', e); }
+    }));
+  } catch (e) {}
 }
 
-// اقرأ الميتاداتا من localStorage
 function loadMetaCache() {
   try {
     const raw = localStorage.getItem(META_CACHE_KEY);
     if (!raw) return null;
     const data = JSON.parse(raw);
-    // صلاحية 7 أيام
     if (data.at && Date.now() - data.at > 7 * 24 * 60 * 60 * 1000) {
       localStorage.removeItem(META_CACHE_KEY);
       return null;
@@ -878,38 +1041,67 @@ function loadMetaCache() {
 }
 
 /* ═══════════════════════════════════════════════════
-   Load
+   Offline bar
    ═══════════════════════════════════════════════════ */
-async function loadAll() {
-  $('content').innerHTML = `
-    <div class="grid">
-      <div class="sk-card"></div><div class="sk-card"></div>
-      <div class="sk-card"></div><div class="sk-card"></div>
-    </div>`;
+function updateOfflineBar() {
+  const bar = $('offlineBar');
+  if (!bar) return;
+  bar.classList.toggle('visible', !navigator.onLine);
+}
 
-  // ⭐ أوفلاين → اعرض الكاش مباشرة
+window.addEventListener('online', () => {
+  updateOfflineBar();
+  // مزامنة صامتة (بدون toast)
+  setTimeout(silentRefresh, 800);
+});
+
+window.addEventListener('offline', () => {
+  updateOfflineBar();
+});
+
+async function silentRefresh() {
+  if (!navigator.onLine) return;
+  await loadAll(true);
+}
+
+/* ═══════════════════════════════════════════════════
+   Load — Instant offline detection
+   ═══════════════════════════════════════════════════ */
+async function loadAll(isSilent = false) {
+  // ⭐ إذا كنا أوفلاين → اعرض الكاش فوراً بدون انتظار
   if (!navigator.onLine) {
     loadFromCache();
     return;
   }
 
+  if (!isSilent) {
+    $('content').innerHTML = `
+      <div class="grid">
+        <div class="sk-card"></div><div class="sk-card"></div>
+        <div class="sk-card"></div><div class="sk-card"></div>
+      </div>`;
+  }
+
   try {
-    const { data, error } = await supabaseClient
+    // ⭐ timeout قصير (5 ثوان) — لا ننتظر دقيقة
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('timeout')), 5000)
+    );
+
+    const fetchPromise = supabaseClient
       .from('schedule_images')
       .select('*')
       .order('created_at', { ascending: false })
       .limit(80);
+
+    const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
     if (error) throw error;
 
     state.all = data || [];
-
-    // احفظ في الكاش المحلي
     saveMetaCache();
 
-    // ⭐ خزّن كل الصور في Cache API في الخلفية
-    state.all.forEach(it => {
-      if (it.image_url) cacheImage(it.image_url);
-    });
+    // خزّن الصور في Cache API (في الخلفية)
+    state.all.forEach(it => { if (it.image_url) cacheImage(it.image_url); });
 
     if (state.all.length > 0 && state.user) {
       const ids = state.all.map(i => i.id);
@@ -924,19 +1116,15 @@ async function loadAll() {
       state.savedIds = new Set();
     }
 
-    // احفظ الإعجابات/الحفظ في الكاش أيضاً
     saveMetaCache();
-
     updateSubtitle();
     render();
   } catch (err) {
-    console.error('loadAll:', err);
-    // شبكة فشلت → جرّب الكاش
+    console.warn('loadAll failed → fallback to cache:', err.message);
     loadFromCache();
   }
 }
 
-// ⭐ تحميل من الكاش (بدون إنترنت)
 function loadFromCache() {
   const cached = loadMetaCache();
   if (cached && cached.items?.length > 0) {
@@ -945,11 +1133,9 @@ function loadFromCache() {
     state.savedIds = new Set(cached.savedIds || []);
     updateSubtitle();
     render();
-    toast('أنت غير متصل — يتم عرض المحتوى المحفوظ', 'info');
     return true;
   }
 
-  // لا يوجد كاش
   $('content').innerHTML = `
     <div class="empty">
       <div class="empty-icon"><i data-lucide="wifi-off"></i></div>
@@ -967,7 +1153,7 @@ function updateSubtitle() {
 }
 
 /* ═══════════════════════════════════════════════════
-   Filter (3 tabs)
+   Tabs
    ═══════════════════════════════════════════════════ */
 function setFilter(f) {
   state.filter = f;
@@ -979,7 +1165,6 @@ function getFilteredItems() {
   const uid = state.user?.id;
   if (state.filter === 'mine') return state.all.filter(i => i.user_id === uid);
   if (state.filter === 'saved') return state.all.filter(i => state.savedIds.has(i.id));
-  // explore: صور الآخرين العامة فقط
   return state.all.filter(i => i.user_id !== uid && i.is_public);
 }
 
@@ -1013,6 +1198,7 @@ function render() {
 }
 
 function renderCard(it, i) {
+  const isMine = it.user_id === state.user?.id;
   const liked = state.likedIds.has(it.id);
   const saved = state.savedIds.has(it.id);
 
@@ -1021,8 +1207,12 @@ function renderCard(it, i) {
       <div class="card-img-wrap" data-img-id="${it.id}">
         <img class="card-img" data-src="${esc(it.image_url)}" alt="${esc(it.title)}" loading="lazy" decoding="async">
         <div class="card-img-skeleton"></div>
+        ${isMine ? `<div class="mine-badge"><i data-lucide="user-check"></i>لي</div>` : ''}
+        <button class="eye-btn" data-eye-id="${it.id}" type="button" aria-label="عرض الصورة" title="عرض الصورة">
+          <i data-lucide="eye"></i>
+        </button>
       </div>
-      <div class="card-body">
+      <div class="card-body" data-detail-id="${it.id}">
         <div class="card-title">${esc(it.title)}</div>
         <div class="card-author">
           <i data-lucide="user"></i><span>${esc(it.author_name || 'مستخدم')}</span>
@@ -1043,11 +1233,10 @@ function renderCard(it, i) {
 }
 
 /* ═══════════════════════════════════════════════════
-   Lazy load — direct URLs (no blob issues!)
+   Lazy load images (with cache)
    ═══════════════════════════════════════════════════ */
-let imgObserver = null;
 function loadCardImages() {
-  if (imgObserver) imgObserver.disconnect();
+  if (state.imgObserver) state.imgObserver.disconnect();
   if (!('IntersectionObserver' in window)) {
     document.querySelectorAll('.card-img[data-src]').forEach(img => {
       img.src = img.dataset.src;
@@ -1055,20 +1244,18 @@ function loadCardImages() {
     });
     return;
   }
-  imgObserver = new IntersectionObserver(async (entries) => {
+  state.imgObserver = new IntersectionObserver(async (entries) => {
     for (const entry of entries) {
       if (!entry.isIntersecting) continue;
       const img = entry.target;
       const url = img.dataset.src;
       if (!url || img.dataset.loaded) continue;
       img.dataset.loaded = '1';
-      imgObserver.unobserve(img);
+      state.imgObserver.unobserve(img);
 
       try {
-        // ⭐ جرّب الكاش أولاً
         const finalUrl = await getCachedImageURL(url);
         img.src = finalUrl;
-
         if (img.complete && img.naturalHeight > 0) {
           img.classList.add('loaded');
         } else {
@@ -1078,8 +1265,6 @@ function loadCardImages() {
             img.addEventListener('load', () => img.classList.add('loaded'), { once: true });
           }, { once: true });
         }
-
-        // ⭐ خزّن الصورة في الكاش للمرة القادمة
         cacheImage(url);
       } catch (e) {
         img.src = url;
@@ -1087,8 +1272,307 @@ function loadCardImages() {
     }
   }, { rootMargin: '300px 0px' });
 
-  document.querySelectorAll('.card-img[data-src]').forEach(img => imgObserver.observe(img));
+  document.querySelectorAll('.card-img[data-src]').forEach(img => state.imgObserver.observe(img));
 }
+
+/* ═══════════════════════════════════════════════════
+   Event delegation — click
+   ═══════════════════════════════════════════════════ */
+document.addEventListener('click', (e) => {
+  // ⭐ 1) أزرار الإعجاب/الحفظ/المشاركة — الأولوية القصوى (لأنها داخل card-body)
+  const actionBtn = e.target.closest('[data-action]');
+  if (actionBtn) {
+    e.stopPropagation();
+    e.preventDefault();
+    if (state.longPressTriggered) return;
+    const id = actionBtn.dataset.id;
+    const action = actionBtn.dataset.action;
+    if (action === 'like') toggleLike(id);
+    else if (action === 'save') toggleSave(id);
+    else if (action === 'share') openShare(id);
+    return;
+  }
+
+  // ⭐ 2) زر العين → عرض كامل
+  const eye = e.target.closest('[data-eye-id]');
+  if (eye) {
+    e.stopPropagation();
+    if (state.longPressTriggered) return;
+    openFullscreen(eye.dataset.eyeId);
+    return;
+  }
+
+  // ⭐ 3) الصورة نفسها → عرض كامل
+  const imgWrap = e.target.closest('[data-img-id]');
+  if (imgWrap) {
+    e.stopPropagation();
+    if (state.longPressTriggered) return;
+    openFullscreen(imgWrap.dataset.imgId);
+    return;
+  }
+
+  // ⭐ 4) جسم البطاقة (العنوان/الاسم) → تفاصيل
+  const detailBtn = e.target.closest('[data-detail-id]');
+  if (detailBtn) {
+    e.stopPropagation();
+    if (state.longPressTriggered) return;
+    openDetail(detailBtn.dataset.detailId);
+    return;
+  }
+});
+
+// reset flag after click
+document.addEventListener('click', () => {
+  setTimeout(() => { state.longPressTriggered = false; }, 50);
+}, true);
+
+/* ═══════════════════════════════════════════════════
+   Long press (only on image)
+   ═══════════════════════════════════════════════════ */
+function startLongPress(e) {
+  const imgWrap = e.target.closest('[data-img-id]');
+  if (!imgWrap) return;
+  const id = imgWrap.dataset.imgId;
+  state.longPressTriggered = false;
+
+  const card = imgWrap.closest('.card');
+  if (card) card.classList.add('pressing');
+
+  state.longPressTimer = setTimeout(() => {
+    state.longPressTriggered = true;
+    if (card) card.classList.remove('pressing');
+    if (navigator.vibrate) navigator.vibrate(40);
+    openActions(id);
+  }, LONG_PRESS_MS);
+}
+
+function cancelLongPress() {
+  if (state.longPressTimer) {
+    clearTimeout(state.longPressTimer);
+    state.longPressTimer = null;
+  }
+  document.querySelectorAll('.card.pressing').forEach(c => c.classList.remove('pressing'));
+}
+
+document.addEventListener('touchstart', startLongPress, { passive: true });
+document.addEventListener('touchend', cancelLongPress);
+document.addEventListener('touchmove', cancelLongPress);
+document.addEventListener('touchcancel', cancelLongPress);
+document.addEventListener('mousedown', startLongPress);
+document.addEventListener('mouseup', cancelLongPress);
+document.addEventListener('mouseleave', cancelLongPress);
+
+/* ═══════════════════════════════════════════════════
+   Fullscreen
+   ═══════════════════════════════════════════════════ */
+async function openFullscreen(id) {
+  const item = state.all.find(x => x.id === id);
+  if (!item) return;
+  state.current = item;
+
+  const img = $('fullscreenImg');
+  try {
+    img.src = await getCachedImageURL(item.image_url);
+  } catch (e) {
+    img.src = item.image_url;
+  }
+  $('fullscreen').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeFullscreen() {
+  $('fullscreen').classList.remove('active');
+  document.body.style.overflow = '';
+  setTimeout(() => { $('fullscreenImg').src = ''; }, 300);
+  state.current = null;
+}
+
+$('fullscreen').addEventListener('click', (e) => {
+  if (e.target.closest('.close-hint') || e.target === e.currentTarget) {
+    closeFullscreen();
+  }
+});
+
+/* ═══════════════════════════════════════════════════
+   Detail Sheet
+   ═══════════════════════════════════════════════════ */
+async function openDetail(id) {
+  const item = state.all.find(x => x.id === id);
+  if (!item) return;
+  state.detailTarget = item;
+
+  const liked = state.likedIds.has(item.id);
+  const saved = state.savedIds.has(item.id);
+  const isMine = item.user_id === state.user?.id;
+
+  // حمّل الصورة بالكاش
+  let imgUrl = item.image_url;
+  try { imgUrl = await getCachedImageURL(item.image_url); } catch (e) {}
+
+  $('detailBody').innerHTML = `
+    <div class="handle"></div>
+
+    <div class="detail-thumb" id="detailThumb">
+      <img src="${esc(imgUrl)}" alt="${esc(item.title)}">
+      <div class="expand-hint">
+        <i data-lucide="expand"></i>
+        اضغط للعرض الكامل
+      </div>
+    </div>
+
+    <h2 class="detail-title">${esc(item.title)}</h2>
+
+    <div class="detail-meta">
+      <i data-lucide="user"></i>
+      <span>${esc(item.author_name || 'مستخدم')}</span>
+      ${item.university ? `<span class="dot"></span><span>${esc(item.university)}</span>` : ''}
+    </div>
+
+    ${item.description ? `
+      <div class="detail-desc">${esc(item.description)}</div>
+    ` : `
+      <div class="detail-desc" style="opacity: 0.6; text-align: center;">
+        لا يوجد وصف لهذه الصورة
+      </div>
+    `}
+
+    <div class="detail-stats">
+      <button class="big-stat ${liked ? 'liked' : ''}" data-detail-action="like" data-id="${item.id}">
+        <i data-lucide="heart"></i>
+        <span>${item.likes_count || 0}</span>
+        <small>إعجاب</small>
+      </button>
+      <button class="big-stat ${saved ? 'saved' : ''}" data-detail-action="save" data-id="${item.id}">
+        <i data-lucide="bookmark"></i>
+        <span>${item.saves_count || 0}</span>
+        <small>حفظ</small>
+      </button>
+    </div>
+
+    <div class="detail-actions">
+      <button class="action-btn" data-detail-action="download" data-id="${item.id}">
+        <i data-lucide="download"></i>
+        <span>تنزيل</span>
+      </button>
+      <button class="action-btn" data-detail-action="share" data-id="${item.id}">
+        <i data-lucide="share-2"></i>
+        <span>مشاركة</span>
+      </button>
+      ${isMine ? `
+        <button class="action-btn danger" data-detail-action="delete" data-id="${item.id}">
+          <i data-lucide="trash-2"></i>
+          <span>حذف</span>
+        </button>
+      ` : `
+        <button class="action-btn" data-detail-action="open" data-id="${item.id}">
+          <i data-lucide="external-link"></i>
+          <span>فتح</span>
+        </button>
+      `}
+    </div>
+  `;
+
+  refreshIcons();
+  openM('m-detail');
+
+  // thumbnail click → fullscreen
+  const thumb = $('detailThumb');
+  if (thumb) {
+    thumb.addEventListener('click', () => {
+      closeM('m-detail');
+      setTimeout(() => openFullscreen(item.id), 250);
+    });
+  }
+}
+
+// Detail actions
+$('detailBody').addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-detail-action]');
+  if (!btn) return;
+  const action = btn.dataset.detailAction;
+  const id = btn.dataset.id;
+  const item = state.all.find(x => x.id === id);
+  if (!item) return;
+
+  if (action === 'like') {
+    await toggleLike(id);
+    openDetail(id);
+  } else if (action === 'save') {
+    await toggleSave(id);
+    openDetail(id);
+  } else if (action === 'download') {
+    downloadImage(item);
+  } else if (action === 'share') {
+    closeM('m-detail');
+    setTimeout(() => openShare(id), 250);
+  } else if (action === 'delete') {
+    closeM('m-detail');
+    setTimeout(() => deleteImage(item), 250);
+  } else if (action === 'open') {
+    window.open(item.image_url, '_blank', 'noopener,noreferrer');
+  }
+});
+
+$('m-detail').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeM('m-detail');
+});
+
+/* ═══════════════════════════════════════════════════
+   Actions Sheet (long press)
+   ═══════════════════════════════════════════════════ */
+function openActions(id) {
+  const item = state.all.find(x => x.id === id);
+  if (!item) return;
+  state.actionTarget = item;
+
+  const isMine = item.user_id === state.user?.id;
+  const saved = state.savedIds.has(id);
+  const liked = state.likedIds.has(id);
+
+  const items = [
+    { icon: 'eye', label: 'عرض الصورة', action: 'view' },
+    { icon: 'info', label: 'التفاصيل', action: 'detail' },
+    { icon: 'download', label: 'تنزيل الصورة', action: 'download' },
+    { icon: saved ? 'bookmark-minus' : 'bookmark-plus', label: saved ? 'إزالة من المحفوظات' : 'حفظ', action: 'save' },
+    { icon: 'heart', label: liked ? 'إزالة الإعجاب' : 'إعجاب', action: 'like' },
+    { icon: 'share-2', label: 'مشاركة', action: 'share' }
+  ];
+
+  if (isMine) {
+    items.push({ icon: 'trash-2', label: 'حذف', action: 'delete', danger: true });
+  }
+
+  $('actionsTitle').innerHTML = `<i data-lucide="settings-2"></i><span>${esc(item.title)}</span>`;
+  $('actionsList').innerHTML = items.map(x => `
+    <button class="action-item ${x.danger ? 'danger' : ''}" data-action-sheet="${x.action}" type="button">
+      <i data-lucide="${x.icon}"></i><span>${x.label}</span>
+    </button>
+  `).join('');
+
+  refreshIcons();
+  openM('m-actions');
+}
+
+$('actionsList').addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-action-sheet]');
+  if (!btn) return;
+  const action = btn.dataset.actionSheet;
+  const item = state.actionTarget;
+  if (!item) return;
+  closeM('m-actions');
+
+  if (action === 'view') openFullscreen(item.id);
+  else if (action === 'detail') openDetail(item.id);
+  else if (action === 'download') downloadImage(item);
+  else if (action === 'save') await toggleSave(item.id);
+  else if (action === 'like') await toggleLike(item.id);
+  else if (action === 'share') openShare(item.id);
+  else if (action === 'delete') await deleteImage(item);
+});
+
+$('m-actions').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeM('m-actions');
+});
 
 /* ═══════════════════════════════════════════════════
    Like / Save
@@ -1105,7 +1589,13 @@ async function toggleLike(id) {
     state.likedIds.add(id);
     item.likes_count = (item.likes_count || 0) + 1;
   }
+  saveMetaCache();
   render();
+
+  if (!navigator.onLine) {
+    toast('سيتم المزامنة عند الاتصال', 'info');
+    return;
+  }
 
   try {
     if (liked) {
@@ -1142,7 +1632,13 @@ async function toggleSave(id) {
     item.saves_count = (item.saves_count || 0) + 1;
   }
   updateSubtitle();
+  saveMetaCache();
   render();
+
+  if (!navigator.onLine) {
+    toast('سيتم المزامنة عند الاتصال', 'info');
+    return;
+  }
 
   try {
     if (saved) {
@@ -1156,8 +1652,13 @@ async function toggleSave(id) {
     }
   } catch (err) {
     console.error(err);
-    if (saved) { state.savedIds.add(id); item.saves_count = (item.saves_count || 0) + 1; }
-    else { state.savedIds.delete(id); item.saves_count = Math.max(0, (item.saves_count || 0) - 1); }
+    if (saved) {
+      state.savedIds.add(id);
+      item.saves_count = (item.saves_count || 0) + 1;
+    } else {
+      state.savedIds.delete(id);
+      item.saves_count = Math.max(0, (item.saves_count || 0) - 1);
+    }
     updateSubtitle();
     render();
     toast('تعذر التحديث', 'error');
@@ -1165,168 +1666,58 @@ async function toggleSave(id) {
 }
 
 /* ═══════════════════════════════════════════════════
-   Card Image: single tap → fullscreen, long press → actions
-   ═══════════════════════════════════════════════════ */
-document.addEventListener('click', (e) => {
-  // Image wrapper click
-  const imgWrap = e.target.closest('[data-img-id]');
-  if (imgWrap && !state.longPressTriggered) {
-    e.stopPropagation();
-    openFullscreen(imgWrap.dataset.imgId);
-    return;
-  }
-
-  // Stat buttons
-  const btn = e.target.closest('[data-action]');
-  if (btn) {
-    e.stopPropagation();
-    const id = btn.dataset.id;
-    if (btn.dataset.action === 'like') toggleLike(id);
-    else if (btn.dataset.action === 'save') toggleSave(id);
-    else if (btn.dataset.action === 'share') openShare(id);
-  }
-});
-
-// Reset flag after click
-document.addEventListener('click', () => {
-  setTimeout(() => { state.longPressTriggered = false; }, 50);
-}, true);
-
-// Long press handler (touch + mouse)
-function startLongPress(e) {
-  const imgWrap = e.target.closest('[data-img-id]');
-  if (!imgWrap) return;
-  const id = imgWrap.dataset.imgId;
-  state.longPressTriggered = false;
-
-  const card = imgWrap.closest('.card');
-  state.longPressTimer = setTimeout(() => {
-    state.longPressTriggered = true;
-    if (card) card.classList.remove('pressing');
-    if (navigator.vibrate) navigator.vibrate(40);
-    openActions(id);
-  }, LONG_PRESS_MS);
-
-  if (card) card.classList.add('pressing');
-}
-
-function cancelLongPress(e) {
-  if (state.longPressTimer) {
-    clearTimeout(state.longPressTimer);
-    state.longPressTimer = null;
-  }
-  document.querySelectorAll('.card.pressing').forEach(c => c.classList.remove('pressing'));
-}
-
-document.addEventListener('touchstart', startLongPress, { passive: true });
-document.addEventListener('touchend', cancelLongPress);
-document.addEventListener('touchmove', cancelLongPress);
-document.addEventListener('touchcancel', cancelLongPress);
-document.addEventListener('mousedown', startLongPress);
-document.addEventListener('mouseup', cancelLongPress);
-document.addEventListener('mouseleave', cancelLongPress);
-
-/* ═══════════════════════════════════════════════════
-   Fullscreen viewer (image only)
-   ═══════════════════════════════════════════════════ */
-function openFullscreen(id) {
-  const item = state.all.find(x => x.id === id);
-  if (!item) return;
-  state.current = item;
-
-  const fs = $('fullscreen');
-  const img = $('fullscreenImg');
-  img.src = item.image_url;
-  fs.classList.remove('zoomed');
-  fs.classList.add('active');
-  document.body.style.overflow = 'hidden';
-}
-
-function closeFullscreen() {
-  $('fullscreen').classList.remove('active', 'zoomed');
-  document.body.style.overflow = '';
-  setTimeout(() => { $('fullscreenImg').src = ''; }, 300);
-  state.current = null;
-}
-
-$('fullscreen').addEventListener('click', function () {
-  // Toggle zoom or close? → close for simplicity
-  closeFullscreen();
-});
-
-/* ═══════════════════════════════════════════════════
-   Actions Sheet (long press)
-   ═══════════════════════════════════════════════════ */
-function openActions(id) {
-  const item = state.all.find(x => x.id === id);
-  if (!item) return;
-  state.actionTarget = item;
-
-  const isMine = item.user_id === state.user?.id;
-  const saved = state.savedIds.has(id);
-  const liked = state.likedIds.has(id);
-
-  const items = [
-    { icon: 'download', label: 'تنزيل الصورة', action: 'download' },
-    { icon: saved ? 'bookmark-minus' : 'bookmark-plus', label: saved ? 'إزالة من المحفوظات' : 'حفظ', action: 'save' },
-    { icon: 'heart', label: liked ? 'إزالة الإعجاب' : 'إعجاب', action: 'like' },
-    { icon: 'share-2', label: 'مشاركة', action: 'share' },
-  ];
-
-  if (isMine) {
-    items.push({ icon: 'trash-2', label: 'حذف', action: 'delete', danger: true });
-  }
-
-  $('actionsTitle').innerHTML = `<i data-lucide="settings-2"></i><span>${esc(item.title)}</span>`;
-  $('actionsList').innerHTML = items.map(x => `
-    <button class="action-item ${x.danger ? 'danger' : ''}" data-action-sheet="${x.action}" type="button">
-      <i data-lucide="${x.icon}"></i><span>${x.label}</span>
-    </button>
-  `).join('');
-
-  refreshIcons();
-  openM('m-actions');
-}
-
-$('actionsList').addEventListener('click', async (e) => {
-  const btn = e.target.closest('[data-action-sheet]');
-  if (!btn) return;
-  const action = btn.dataset.actionSheet;
-  const item = state.actionTarget;
-  if (!item) return;
-  closeM('m-actions');
-
-  if (action === 'download') downloadImage(item);
-  else if (action === 'save') await toggleSave(item.id);
-  else if (action === 'like') await toggleLike(item.id);
-  else if (action === 'share') openShare(item.id);
-  else if (action === 'delete') await deleteImage(item);
-});
-
-/* ═══════════════════════════════════════════════════
    Download
    ═══════════════════════════════════════════════════ */
 async function downloadImage(item) {
+  if (!item) return;
   toast('جاري التحضير...', 'info');
+
+  let ext = 'jpg';
   try {
-    const response = await fetch(item.image_url);
+    const urlPath = new URL(item.image_url).pathname;
+    const m = urlPath.match(/\.([a-z0-9]+)$/i);
+    if (m) {
+      const e = m[1].toLowerCase();
+      if (['jpg','jpeg','png','webp','gif','avif'].includes(e)) ext = e;
+    }
+  } catch (e) {}
+
+  const safeTitle = (item.title || 'image').replace(/[\\/:*?"<>|]/g, '_').trim().slice(0, 60) || 'image';
+  const fileName = `${safeTitle}.${ext}`;
+
+  try {
+    const response = await fetch(item.image_url, { mode: 'cors' });
     if (!response.ok) throw new Error('fetch failed');
     const blob = await response.blob();
+    const file = new File([blob], fileName, { type: blob.type || 'image/jpeg' });
+
+    // Web Share على الموبايل
+    if (navigator.canShare && navigator.canShare({ files: [file] }) &&
+        /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
+      try {
+        await navigator.share({ files: [file], title: item.title || 'صورة الجدول' });
+        toast('اختر "حفظ الصورة" من القائمة');
+        return;
+      } catch (shareErr) {
+        if (shareErr && shareErr.name === 'AbortError') return;
+      }
+    }
+
+    // عادي
     const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = blobUrl;
-    const safeTitle = (item.title || 'image').replace(/[\\/:*?"<>|]/g, '_').slice(0, 60);
-    a.download = `${safeTitle}.jpg`;
+    a.download = fileName;
+    a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 3000);
     toast('تم التنزيل');
   } catch (err) {
-    console.error(err);
-    // fallback: open in new tab
+    console.error('download failed:', err);
     window.open(item.image_url, '_blank', 'noopener,noreferrer');
-    toast('تم فتح الصورة — احفظها يدوياً', 'info');
+    toast('اضغط مطولاً على الصورة ثم "حفظ"', 'info');
   }
 }
 
@@ -1337,12 +1728,18 @@ async function deleteImage(item) {
   if (!item || item.user_id !== state.user?.id) return;
   if (!confirm('حذف هذه الصورة نهائياً؟')) return;
 
+  if (!navigator.onLine) {
+    toast('يجب الاتصال بالإنترنت للحذف', 'warning');
+    return;
+  }
+
   try {
     if (item.image_path) {
       await supabaseClient.storage.from(BUCKET).remove([item.image_path]).catch(() => {});
     }
     await supabaseClient.from('schedule_images').delete().eq('id', item.id);
     state.all = state.all.filter(x => x.id !== item.id);
+    saveMetaCache();
     updateSubtitle();
     render();
     toast('تم الحذف', 'info');
@@ -1422,7 +1819,6 @@ $('shareCopyImageBtn').addEventListener('click', async () => {
 
 $('shareCloseBtn').addEventListener('click', () => closeM('m-share'));
 $('m-share').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeM('m-share'); });
-$('m-actions').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeM('m-actions'); });
 
 /* ═══════════════════════════════════════════════════
    Upload
@@ -1446,6 +1842,10 @@ function fileToDataURL(file) {
 }
 
 function openUpload() {
+  if (!navigator.onLine) {
+    toast('يجب الاتصال بالإنترنت لرفع الصور', 'warning');
+    return;
+  }
   cleanupFiles();
   state.isPublic = true;
   state.uploading = false;
@@ -1571,7 +1971,6 @@ function renderEditList() {
   refreshIcons();
 }
 
-// Input events for edit list
 $('editList').addEventListener('input', (e) => {
   const t = e.target;
   if (t.dataset.title !== undefined) {
@@ -1583,7 +1982,6 @@ $('editList').addEventListener('input', (e) => {
   }
 });
 
-// Remove button
 $('editList').addEventListener('click', (e) => {
   const btn = e.target.closest('[data-remove]');
   if (!btn) return;
@@ -1609,7 +2007,6 @@ async function startUpload() {
   if (state.uploading) return;
   if (!state.files.length) return toast('اختر صوراً أولاً', 'warning');
 
-  // تحقق من كل صورة لها عنوان
   for (let i = 0; i < state.files.length; i++) {
     if (!state.files[i].title.trim()) {
       return toast(`الصورة ${i + 1} بدون عنوان`, 'warning');
@@ -1666,12 +2063,10 @@ async function startUpload() {
           author_name: authorName,
           university: uni
         });
-if (dbErr) throw dbErr;
+      if (dbErr) throw dbErr;
 
-// ⭐ خزّن الصورة في الكاش فوراً
-cacheImage(publicUrl);
-
-successCount++;
+      cacheImage(publicUrl);
+      successCount++;
     } catch (err) {
       console.error(`Upload ${i + 1} failed:`, err);
       failedCount++;
@@ -1710,7 +2105,7 @@ function setProgress(pct, text) {
 async function handleDeepLink() {
   const id = new URLSearchParams(location.search).get('id');
   if (!id) return;
-  await new Promise(r => setTimeout(r, 500));
+  await new Promise(r => setTimeout(r, 300));
   const item = state.all.find(x => x.id === id);
   if (item) {
     openFullscreen(id);
@@ -1719,19 +2114,12 @@ async function handleDeepLink() {
 }
 
 /* ═══════════════════════════════════════════════════
-   Online/Offline
-   ═══════════════════════════════════════════════════ */
-window.addEventListener('online', () => {
-  toast('عاد الاتصال', 'info');
-  setTimeout(loadAll, 500);
-});
-
-/* ═══════════════════════════════════════════════════
    Keyboard
    ═══════════════════════════════════════════════════ */
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if ($('fullscreen').classList.contains('active')) return closeFullscreen();
+    if ($('m-detail').classList.contains('active')) return closeM('m-detail');
     if ($('m-actions').classList.contains('active')) return closeM('m-actions');
     if ($('m-share').classList.contains('active')) return closeM('m-share');
     if ($('m-upload').classList.contains('active') && !state.uploading && !state.preparing) return closeUpload();
@@ -1749,21 +2137,17 @@ document.querySelectorAll('.tab').forEach(tab => {
 
 $('fabBtn').addEventListener('click', openUpload);
 
-// Upload zone — direct click
 $('uploadZone').addEventListener('click', triggerFileSelect);
 $('uploadZone').addEventListener('keydown', (e) => {
   if (e.key === 'Enter' || e.key === ' ') triggerFileSelect(e);
 });
 
-// File input
 $('fileInput').addEventListener('change', handleFiles);
 
-// Upload controls
 $('cancelUploadBtn').addEventListener('click', closeUpload);
 $('uploadBtn').addEventListener('click', startUpload);
 $('publicToggleRow').addEventListener('click', togglePublic);
 
-// Close upload on backdrop (if not uploading)
 $('m-upload').addEventListener('click', (e) => {
   if (e.target === e.currentTarget && !state.uploading && !state.preparing) closeUpload();
 });
@@ -1772,10 +2156,20 @@ $('m-upload').addEventListener('click', (e) => {
    Init
    ═══════════════════════════════════════════════════ */
 async function init() {
+  updateOfflineBar();
   refreshIcons();
-  const ok = await initUser();
+
+  // ⭐ ابدأ التحميل بالتوازي — لا ننتظر تسجيل الدخول
+  const userPromise = initUser();
+
+  // ⭐ اعرض الكاش فوراً (فوري!)
+  loadFromCache();
+
+  const ok = await userPromise;
   if (!ok) return;
-  await loadAll();
+
+  // ثم حدّث من الشبكة
+  await loadAll(true);
   await handleDeepLink();
   refreshIcons();
   console.log('✅ my-lectures ready');
@@ -1787,15 +2181,7 @@ init();
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    // أولاً: ألغِ أي Service Worker قديم يجلب نسخة قديمة
-    navigator.serviceWorker.getRegistrations().then(regs => {
-      regs.forEach(reg => {
-        // إذا كان SW من نسخة قديمة، ألغيه
-        if (reg.active && reg.active.scriptURL.includes('sw.js')) {
-          // سنتركه يعمل — لكن امسح الكاش القديم
-        }
-      });
-    });
+    navigator.serviceWorker.register('sw.js').catch(() => {});
   });
 }
 </script>
