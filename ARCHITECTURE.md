@@ -1561,6 +1561,28 @@ The four secrets live in **GitHub → Settings → Secrets**: `KEYSTORE_BASE64`,
 `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`. The keystore file itself
 is git-ignored (`*.keystore`) and never leaves the runner.
 
+> ⚠️ **احتفظ بمفتاح التوقيع في مكان آمن!** المفتاح الحالي:
+>
+> | | |
+> |---|---|
+> | الملف | `~/Pre12-release.keystore` (خارج المستودع) |
+> | كلمة السر | `~/.pre12-release-password` |
+> | الاسم (alias) | `pre12` |
+> | الصلاحية | 10950 يوماً (30 سنة) |
+>
+> هذا **مفتاح رفع المتجر** — لا تحذفه ولا تغيّره، وإلا لن تستطيع نشر
+> تحديثات التطبيق على Google Play. للتحويل إلى متجر استخدم نفس
+> `signingConfigs.release` دائماً.
+
+#### تشخيص مشاكل فكّ التوقيع
+
+| الرسالة | السبب | الحل |
+|---|---|---|
+| `base64: invalid input` | طول السلسلة ليس من مضاعفات 4 (حشو `=` ناقص) | خطوة `🩹 Self-heal` تضيف الحشو تلقائياً |
+| `java.io.EOFException` | بنية ASN.1 مبتورة (السر ناقص بايتات) | يجب إعادة رفع `KEYSTORE_BASE64` كاملاً |
+| `keystore was tampered with` | كلمة السر غير مطابقة | تحقق من `KEYSTORE_PASSWORD` / `KEY_PASSWORD` |
+| `jar is unsigned` (من jarsigner) | **ليس خطأً** — jarsigner لا يرى توقيع v2/v3 | تحقّق بـ `apksigner` (وهو ما يفعله الـ CI) |
+
 > ⚠️ **Version pinning:** the first CI run failed on Node 18 / JDK 17 with
 > *"The Capacitor CLI requires NodeJS >=22.0.0"*. Capacitor 8 needs **both**
 > Node 22 and JDK 21 — the workflow is pinned to those versions.

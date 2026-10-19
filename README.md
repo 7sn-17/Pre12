@@ -238,7 +238,7 @@ admin · plans · progress`.
 | 🧊 شاشة البدء | تظهر بلون الهوية وتختفي بعد أول رسم |
 | 📡 حالة الشبكة | تُطلق أحداث `online` / `offline` داخل التطبيق |
 | 🔔 إشعارات Firebase (FCM) | التوكن يُحفظ في `profiles.fcm_token` والنقر على الإشعار ينقلك للمقصد |
-| 🔏 توقيع الإنتاج | مفتاح التوقيع يأتي من GitHub Secrets ويُفكّ داخل الـ CI فقط |
+| 🔏 توقيع الإنتاج | نسخة موقّعة (APK Signature Scheme v2) — المفتاح في GitHub Secrets ويُفكّ داخل الـ CI فقط |
 
 ### بناء الـ APK
 
@@ -252,6 +252,10 @@ cd android && ./gradlew assembleRelease # نسخة موقّعة (يتطلب Andr
 
 > **المتطلبات:** Node.js **22+** (Capacitor 8 يرفض الإصدارات الأقدم) و
 > **JDK 21** — والبناء على GitHub Actions مضبوط عليهما تلقائياً.
+>
+> 🔐 **مفتاح التوقيع** محفوظ في GitHub Secrets
+> (`KEYSTORE_BASE64` · `KEYSTORE_PASSWORD` · `KEY_ALIAS` · `KEY_PASSWORD`)،
+> والـ CI يفكّه ويبني نسخة **موقّعة** يتحقق منها بـ `apksigner` قبل النشر.
 
 > على GitHub كل ذلك يتم تلقائياً: workflow
 > [`.github/workflows/build-apk.yml`](.github/workflows/build-apk.yml) يبني
