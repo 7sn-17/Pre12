@@ -184,43 +184,227 @@ async function signIn(email, password) {
   }
 }
 
+
 // ============================================
-// 6.5. تسجيل الدخول عبر Google (OAuth)
+// 6.5. تسجيل الدخول عبر Google
+// ------------------------------------------------------------
+// مساران:
+//   • Native (داخل التطبيق): SocialLogin (Credential Manager) ← لا متصفح
+//   • Web   (المتصفح)     : signInWithOAuth (إعادة توجيه)
 // ============================================
 
+/** هل نعمل داخل التطبيق الأصلي؟ */
+function isNativeApp() {
+  try {
+    return !!(window.Capacitor && window.Capacitor.isNativePlatform &&
+      window.Capacitor.isNativePlatform());
+  } catch (e) {
+    return false;
+  }
+}
+
+/** Web Client ID الخاص بتطبيق Google. */
+function getGoogleWebClientId() {
+  try {
+    if (typeof GOOGLE_WEB_CLIENT_ID !== 'undefined' && GOOGLE_WEB_CLIENT_ID) {
+      return String(GOOGLE_WEB_CLIENT_ID).trim();
+    }
+  } catch (e) {}
+  return '';
+}
+
+/** رابط العودة: Deep Link داخل التطبيق، أو الموقع على الويب. */
+function getAuthRedirectUrl() {
+  if (isNativeApp()) {
+    try {
+      if (typeof APP_AUTH_REDIRECT_URL !== 'undefined' && APP_AUTH_REDIRECT_URL) {
+        return APP_AUTH_REDIRECT_URL;
+      }
+    } catch (e) {}
+    return 'com.pre12.medical://login-callback';
+  }
+  return window.location.origin + '/index.html';
+}
+
+/** ترميز base64url (بدون + / =) */
+function base64UrlEncode(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/** 🔒 nonce عشوائي (raw) — يُرسَل للمضيف بصيغة SHA-256 */
+function generateRawNonce() {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return base64UrlEncode(bytes.buffer);
+}
+
+/** 🔒 بصمة SHA-256 للـ nonce */
+async function hashNonceWithSha256(text) {
+  const data = new TextEncoder().encode(text);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return base64UrlEncode(digest);
+}
+
+/** ⭐ تدفّق Google الأصلي (بلا متصفح) */
+async function signInWithGoogleNative() {
+  const SocialLogin = window.Capacitor && window.Capacitor.Plugins
+    ? window.Capacitor.Plugins.SocialLogin
+    : null;
+  if (!SocialLogin || typeof SocialLogin.login !== 'function') {
+    return { success: false, error: 'SocialLogin غير متوفر في هذا التطبيق' };
+  }
+
+  const clientId = getGoogleWebClientId();
+  if (!clientId) {
+    return {
+      success: false,
+      error: 'لم يُضبط Web Client ID لتطبيق Google (GOOGLE_WEB_CLIENT_ID)'
+    };
+  }
+
+  // 1) التهيئة
+  await SocialLogin.initialize({
+    google: { webClientId: clientId, mode: 'online' }
+  });
+
+  // 2) nonce خام + بصمته
+  const rawNonce = generateRawNonce();
+  const hashedNonce = await hashNonceWithSha256(rawNonce);
+
+  // 3) طلب الدخول من Google أصلياً
+  const result = await SocialLogin.login({
+    provider: 'google',
+    options: { scopes: ['email', 'profile'], nonce: hashedNonce }
+  });
+
+  const idToken = result && result.response ? result.response.idToken : null;
+  if (!idToken) {
+    throw new Error('لم يُرجع Google مُعرّف هوية');
+  }
+
+  // 4) مبادلة الرمز مع Supabase
+  const { data, error } = await supabaseClient.auth.signInWithIdToken({
+    provider: 'google',
+    token: idToken,
+    nonce: rawNonce
+  });
+  if (error) throw error;
+
+  return { success: true, user: data.user, session: data.session };
+}
+
+/** تدفّق الويب: إعادة توجيه إلى Google (للمتصفح فقط) */
+async function signInWithGoogleWeb() {
+  try {
+    const { error } = await supabaseClient.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: getAuthRedirectUrl() }
+    });
+    if (error) throw error;
+    return { success: true, pending: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: translateAuthError(err && err.message ? err.message : 'فشل تسجيل الدخول عبر Google')
+    };
+  }
+}
+
 /**
- * ⭐ تسجيل الدخول عبر Google.
- * Supabase يعيد التوجيه إلى `redirectTo` بعد المصادقة، والجلسة
- * تُلتقط هناك تلقائياً (detectSessionInUrl).
- *
- * ملاحظة: يجب إضافة `redirectTo` إلى "Redirect URLs" في لوحة Supabase.
+ * ⭐ نقطة الدخول الموحّدة لزر Google.
+ * في التطبيق الأصلي نستخدم تدفّق Google الأصلي، وإن فشل نعود
+ * لتدفّق الويب حتى لا يبقى المستخدم بلا طريقة للدخول.
  */
 async function signInWithGoogle(options) {
   options = options || {};
 
-  const redirectTo = options.redirectTo ||
-    (window.location.origin + '/index.html');
-
-  if (typeof supabaseClient === 'undefined' || !supabaseClient) {
-    return { success: false, error: 'تعذّر الاتصال بخدمة تسجيل الدخول' };
+  if (isNativeApp()) {
+    try {
+      const result = await signInWithGoogleNative();
+      if (result.success) {
+        // ⭐ أغلق أي تبويب متصفح بقي مفتوحاً من تدفّق سابق.
+        try {
+          if (typeof closeNativeBrowser === 'function') closeNativeBrowser();
+        } catch (e) {}
+        if (typeof runFullUserSync === 'function' && result.user) {
+          try { await runFullUserSync(result.user, { force: true }); } catch (e) {}
+        }
+      }
+      return result;
+    } catch (err) {
+      console.warn('[auth] native Google sign-in failed:', err);
+      if (options.allowFallback === false) {
+        return {
+          success: false,
+          error: translateAuthError(err && err.message ? err.message : 'فشل تسجيل الدخول عبر Google')
+        };
+      }
+      // ⭐ بديل: تدفّق الويب (يفتح تبويباً — ونغلقه بعد العودة).
+      return signInWithGoogleWeb();
+    }
   }
 
+  return signInWithGoogleWeb();
+}
+
+// ============================================
+// 6.6. الروابط العميقة (Deep Links) للتطبيق الأصلي
+// ------------------------------------------------------------
+// com.pre12.medical://login-callback?code=...
+// ============================================
+
+/** ⭐ يستبدل كود PKCE بجلسة في Supabase */
+async function handleAuthDeepLink(url) {
+  if (!url) return false;
   try {
-    const { data, error } = await supabaseClient.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: redirectTo }
-    });
+    const codeMatch = /[?&#]code=([^&#]+)/.exec(url);
+    const tokenMatch = /[?&#]access_token=([^&#]+)/.exec(url);
+    const errorMatch = /[?&#]error=([^&#]+)/.exec(url);
 
-    if (error) throw error;
+    if (errorMatch) {
+      console.warn('[auth] deep link error:', decodeURIComponent(errorMatch[1]));
+      try {
+        window.dispatchEvent(new CustomEvent('medapp:auth-error', {
+          detail: { error: decodeURIComponent(errorMatch[1]) }
+        }));
+      } catch (e) {}
+      return false;
+    }
 
-    // ⭐ نجاح: المتصفح ينتقل الآن إلى صفحة Google.
-    // نُبقي الزر في حالة التحميل حتى لا يتكرر النقر.
-    return { success: true, data: data };
+    const client = window.supabaseClient;
+    if (!client || !client.auth) return false;
+
+    if (codeMatch && typeof client.auth.exchangeCodeForSession === 'function') {
+      const { error } = await client.auth.exchangeCodeForSession(decodeURIComponent(codeMatch[1]));
+      if (error) throw error;
+      try { if (typeof closeNativeBrowser === 'function') closeNativeBrowser(); } catch (e) {}
+      try {
+        window.dispatchEvent(new CustomEvent('medapp:auth-success', { detail: { source: 'deep-link' } }));
+      } catch (e) {}
+      // ⭐ استعادة كلمة المرور → صفحة تعيين كلمة المرور، غيرها → الرئيسية
+      const isRecovery = /type=recovery/.test(url);
+      if (isRecovery) {
+        setTimeout(function () { window.location.href = 'reset-password.html'; }, 150);
+      }
+      return true;
+    }
+
+    if (tokenMatch && typeof client.auth.setSession === 'function') {
+      const { error } = await client.auth.setSession({
+        access_token: decodeURIComponent(tokenMatch[1]),
+        refresh_token: ''
+      });
+      if (error) throw error;
+      try { if (typeof closeNativeBrowser === 'function') closeNativeBrowser(); } catch (e) {}
+      return true;
+    }
   } catch (err) {
-    const message = err && err.message ? err.message : 'فشل تسجيل الدخول عبر Google';
-    console.error('signInWithGoogle error:', err);
-    return { success: false, error: translateAuthError(message) };
+    console.warn('[auth] deep link handling failed:', err);
   }
+  return false;
 }
 
 // ============================================
@@ -237,7 +421,8 @@ async function signUp(email, password, fullName) {
         data: {
           full_name: fullName.trim()
         },
-        emailRedirectTo: window.location.origin + '/confirm.html'
+        // ⭐ داخل التطبيق: رابط عميق يعيدنا إلى التطبيق بدل المتصفح
+        emailRedirectTo: getAuthRedirectUrl()
       }
     });
     
@@ -330,7 +515,8 @@ async function resetPassword(email) {
     const { error } = await supabaseClient.auth.resetPasswordForEmail(
       email.trim().toLowerCase(),
       {
-        redirectTo: window.location.origin + '/reset-password.html'
+        // ⭐ داخل التطبيق: رابط عميق — وليس المتصفح
+        redirectTo: getAuthRedirectUrl()
       }
     );
     

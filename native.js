@@ -296,7 +296,70 @@
   }
 
   // ─────────────────────────────────────────────
-  // 6) مساعدات صغيرة
+  // 6) الروابط العميقة (Deep Links)
+  // ─────────────────────────────────────────────
+  // com.pre12.medical://login-callback?code=… → نبدّل الكود بجلسة
+  // ونغلق تبويب المتصفح.
+  function bindDeepLinks() {
+    var App = plugin('App');
+    if (!App || typeof App.addListener !== 'function') return;
+
+    try {
+      App.addListener('appUrlOpen', function (data) {
+        var url = (data && data.url) || '';
+        if (!url) return;
+        if (typeof handleAuthDeepLink === 'function') {
+          handleAuthDeepLink(url);
+        }
+      });
+
+      // تشغيل بارد: التطبيق فُتح عبر رابط
+      if (typeof App.getLaunchUrl === 'function') {
+        App.getLaunchUrl().then(function (data) {
+          if (data && data.url && typeof handleAuthDeepLink === 'function') {
+            handleAuthDeepLink(data.url);
+          }
+        }).catch(function () {});
+      }
+    } catch (e) {
+      console.warn('[native] deep link binding failed:', e);
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // 7) إغلاق تبويب المتصفح
+  // ─────────────────────────────────────────────
+  function closeNativeBrowser() {
+    var Browser = plugin('Browser');
+    if (!Browser || typeof Browser.close !== 'function') return;
+    try { Browser.close(); } catch (e) {}
+  }
+
+  // ─────────────────────────────────────────────
+  // 8) المنطقة الآمنة وأشرطة النظام (Safe Area)
+  // ─────────────────────────────────────────────
+  // ⭐ القيم الفعلية للمنطقة الآمنة يصلنا من CSS:
+  //    env(safe-area-inset-top) — يعمل في WebView لأن
+  //    Capacitor يفعّل viewport-fit=cover (initialViewportFitCover).
+  //    وده_PLUGIN يضبط نمط أشرطة النظام (فاتح/داكن) حسب الثيم.
+  function syncSafeArea() {
+    var SafeArea = plugin('SafeArea');
+    if (!SafeArea) return;
+    try {
+      if (typeof SafeArea.setSystemBarsStyle === 'function') {
+        // ⭐ DARK = محتوى فاتح على خلفية داكنة (وضع ليلي)
+        SafeArea.setSystemBarsStyle({
+          style: isDarkTheme() ? 'DARK' : 'LIGHT',
+          type: 'STATUS_BAR'
+        });
+      }
+    } catch (e) {
+      console.warn('[native] safe area sync failed:', e);
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // 9) أدوات مساعدة صغيرة
   // ─────────────────────────────────────────────
   function toast(message) {
     try {
@@ -305,7 +368,7 @@
   }
 
   // ─────────────────────────────────────────────
-  // 7) الإقلاع
+  // 10) الإقلاع
   // ─────────────────────────────────────────────
   function initNative() {
     nativeState.ready = true;
@@ -313,6 +376,14 @@
     bindBackButton();
     bindNetwork();
     bindFirebase();
+    bindDeepLinks();
+
+    // ⭐ منع قائمة الضغط المطوّل (Context Menu) على الصور
+    try {
+      document.addEventListener('contextmenu', function (event) {
+        event.preventDefault();
+      });
+    } catch (e) {}
 
     // مزامنة شريط الحالة مع الثيم
     syncStatusBar();
@@ -321,6 +392,10 @@
       var observer = new MutationObserver(function () { syncStatusBar(); });
       observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     } catch (e) {}
+
+    // المنطقة الآمنة (Notch / شريط الحالة)
+    syncSafeArea();
+    global.addEventListener('resize', syncSafeArea);
 
     // إخفاء شاشة البدء بعد أول رسم
     if (document.readyState === 'complete') {
@@ -341,7 +416,10 @@
     state: nativeState,
     isNative: function () { return isNative; },
     syncStatusBar: syncStatusBar,
+    syncSafeArea: syncSafeArea,
     hideSplash: hideSplash,
-    saveFcmToken: saveFcmToken
+    saveFcmToken: saveFcmToken,
+    closeBrowser: closeNativeBrowser
   };
+  global.closeNativeBrowser = closeNativeBrowser;
 })(window);

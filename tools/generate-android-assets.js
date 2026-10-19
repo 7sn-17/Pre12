@@ -246,14 +246,18 @@ function flatten(image, background) {
   return { width: image.width, height: image.height, data: out };
 }
 
-/** يضع الصورة في وسط لوحة بلون خلفية */
-function placeOnCanvas(image, canvasSize, background, scale) {
+/**
+ * يضع الصورة في وسط لوحة.
+ * @param {boolean} opaque  false ⇒ لوحة شفافة تماماً (للأيقونة التكيّفية)
+ */
+function placeOnCanvas(image, canvasSize, background, scale, opaque) {
   const canvas = Buffer.alloc(canvasSize * canvasSize * 4);
+  const alpha = opaque === false ? 0 : 255;
   for (let i = 0; i < canvasSize * canvasSize; i++) {
     canvas[i * 4] = background[0];
     canvas[i * 4 + 1] = background[1];
     canvas[i * 4 + 2] = background[2];
-    canvas[i * 4 + 3] = 255;
+    canvas[i * 4 + 3] = alpha;
   }
   const size = Math.round(canvasSize * scale);
   const logo = resize(image, size, size);
@@ -266,7 +270,7 @@ function placeOnCanvas(image, canvasSize, background, scale) {
       canvas[dst] = Math.round(logo.data[src] * a + canvas[dst] * (1 - a));
       canvas[dst + 1] = Math.round(logo.data[src + 1] * a + canvas[dst + 1] * (1 - a));
       canvas[dst + 2] = Math.round(logo.data[src + 2] * a + canvas[dst + 2] * (1 - a));
-      canvas[dst + 3] = 255;
+      canvas[dst + 3] = Math.max(canvas[dst + 3], Math.round(logo.data[src + 3] * a + canvas[dst + 3] * (1 - a)));
     }
   }
   return { width: canvasSize, height: canvasSize, data: canvas };
@@ -334,7 +338,8 @@ function main() {
   const background = placeOnCanvas(solid, 1024, BRAND_BG, 1);
   write(path.join(ROOT, 'assets', 'icon-background.png'), encodePNG(1024, 1024, background.data));
 
-  const foreground = placeOnCanvas(source, 1024, [0, 0, 0], 0.62);
+  // ⭐ الطبقة الأمامية: الشعار داخل المنطقة الآمنة (66dp من 108dp).
+  const foreground = placeOnCanvas(source, 1024, [0, 0, 0], 66 / 108, false);
   write(path.join(ROOT, 'assets', 'icon-foreground.png'), encodePNG(1024, 1024, foreground.data));
 
   const splash = placeOnCanvas(solid, 2732, BRAND_BG, 0.34);
@@ -343,14 +348,26 @@ function main() {
   write(path.join(ROOT, 'assets', 'logo.png'), encodePNG(1024, 1024, iconOnly.data));
 
   /* ── 2) أيقونات المشغّل في android/ ── */
+  // ⭐ المنطقة الآمنة: في الأيقونة التكيّفية يكون الرسم 108×108dp
+  //    والمنطقة الآمنة دائرة قطرها 66dp — أي 66/108 ≈ 61% من اللوحة.
+  //    لذلك نُصغّر الشعار مع هامش شفاف (~33% نسبةً إلى حجم الشعار)
+  //    حتى لا يُقصّ الشعار أبداً عند تطبيق قناع أندرويد.
+  const SAFE_ZONE_RATIO = 66 / 108;   // 0.611 — المنطقة الآمنة
+  const LEGACY_LOGO_RATIO = 0.60;      // الأيقونة القديمة (مقنّعة)
+
   console.log('▶ android launcher icons');
   for (const [density, size] of DENSITIES) {
-    const icon = resize(source, size, size);
-    const png = encodePNG(size, size, icon.data);
+    // الطبقة الأمامية: الشعار داخل المنطقة الآمنة على خلفية شفافة.
+    const foreground = placeOnCanvas(source, size, [0, 0, 0], SAFE_ZONE_RATIO, false);
+    const fgPng = encodePNG(size, size, foreground.data);
     const dir = path.join(ROOT, 'android', 'app', 'src', 'main', 'res', 'mipmap-' + density);
-    write(path.join(dir, 'ic_launcher.png'), png);
-    write(path.join(dir, 'ic_launcher_round.png'), png);
-    write(path.join(dir, 'ic_launcher_foreground.png'), png);
+    write(path.join(dir, 'ic_launcher_foreground.png'), fgPng);
+
+    // الأيقونة القديمة: خلفية الهوية + الشعار داخل المنطقة الآمنة.
+    const legacy = placeOnCanvas(solid, size, BRAND_BG, LEGACY_LOGO_RATIO);
+    const legacyPng = encodePNG(size, size, legacy.data);
+    write(path.join(dir, 'ic_launcher.png'), legacyPng);
+    write(path.join(dir, 'ic_launcher_round.png'), legacyPng);
   }
 
   /* ── 3) أيقونة الإشعارات ── */

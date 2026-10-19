@@ -25,6 +25,16 @@
       "backgroundColor": "#06110d",
       "overlaysWebView": false
     },
+    "SafeArea": {
+      "initialViewportFitCover": true,
+      "contentMargins": "auto"
+    },
+    "SocialLogin": {
+      "google": {
+        "webClientId": "",
+        "mode": "online"
+      }
+    },
     "CapacitorHttp": {
       "enabled": false
     },

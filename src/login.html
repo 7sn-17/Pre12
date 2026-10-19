@@ -1658,9 +1658,9 @@ sw: true
       });
 
       try {
-        const result = await signInWithGoogle({
-          redirectTo: window.location.origin + '/index.html'
-        });
+        // ⭐ المسار الموحّد: داخل التطبيق نستخدم تدفّق Google الأصلي
+        //    (بلا متصفح)، وعلى الويب نعيد التوجيه كما كان.
+        const result = await signInWithGoogle();
 
         if (!result || !result.success) {
           showToast((result && result.error) || 'تعذّر تسجيل الدخول عبر Google', 'error');
@@ -1672,7 +1672,18 @@ sw: true
           return;
         }
 
-        // ⭐ عند النجاح ينتقل المتصفح إلى Google — بصمت، بلا أي رسالة.
+        if (result.pending) {
+          // ⭐ الويب: المتصفح يخرج الآن — بصمت، بلا رسائل.
+          return;
+        }
+
+        // ⭐ التطبيق: الجلسة جاهزة — ننتقل للرئيسية.
+        try {
+          if (typeof runFullUserSync === 'function' && result.user) {
+            await runFullUserSync(result.user, { force: true });
+          }
+        } catch (e) {}
+        window.location.href = 'index.html';
       } catch (err) {
         console.error('handleGoogleLogin error:', err);
         showToast('حدث خطأ غير متوقع — حاول مرة أخرى', 'error');

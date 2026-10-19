@@ -176,6 +176,62 @@
   }
 
   /* ============================================================
+     ⭐ المنطقة الآمنة + أداء التطبيق الأصلي (Phase 13)
+     ------------------------------------------------------------
+     • --safe-area-inset-top: يحدّثه @capacitor-community/safe-area
+       في التطبيق، و env() في المتصفحات التي تدعم النوتش.
+     • الشريط العلوي يبدأ تحته فلا يختفي تحت النوتش أو شريط الحالة.
+     • overscroll-behavior + user-select: تمنع "الاهتزاز" عند السحب
+       والاختيار العشوائي للنص باللمس.
+     ============================================================ */
+  :root {
+    --safe-area-inset-top: env(safe-area-inset-top, 0px);
+    --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-inset-left: env(safe-area-inset-left, 0px);
+    --safe-area-inset-right: env(safe-area-inset-right, 0px);
+    --app-header-pad: 14px;
+  }
+
+  html, body {
+    overscroll-behavior-y: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  /* ⭐ لكن حقول الإدخال تبقى قابلة للتحديد والنسخ */
+  input,
+  textarea,
+  select,
+  [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  /* ⭐ الشريط العلوي لا يختفي تحت النوتش / شريط الحالة */
+  body > header,
+  body > .ml-topbar {
+    padding-top: calc(var(--app-header-pad) + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
+  }
+
+  @media (max-width: 480px) {
+    :root { --app-header-pad: 12px; }
+    body > .ml-topbar { --app-header-pad: 10px; }
+  }
+
+  /* ⭐ حاويات التطبيق تحترم المنطقة الآمنة من الأسفل أيضاً */
+  body > main,
+  body > .container,
+  .app-container {
+    padding-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  }
+
+  /* ============================================================
      Premium file visual — shared by every file surface.
      The helper `getFileIconMarkup()` in files.js supplies the
      colour tokens; page classes (mini-file-icon, file-icon,
@@ -1247,7 +1303,7 @@ header {
 <script src="native.js"></script>
 
 
-<script src="app.js?v=2.2.0"></script>
+<script src="app.js?v=2.5.0"></script>
 <script>
 
 /* ═══════════════════════════════════════════════════════

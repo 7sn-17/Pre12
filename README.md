@@ -239,6 +239,10 @@ admin · plans · progress`.
 | 📡 حالة الشبكة | تُطلق أحداث `online` / `offline` داخل التطبيق |
 | 🔔 إشعارات Firebase (FCM) | التوكن يُحفظ في `profiles.fcm_token` والنقر على الإشعار ينقلك للمقصد |
 | 🔏 توقيع الإنتاج | نسخة موقّعة (APK Signature Scheme v2) — المفتاح في GitHub Secrets ويُفكّ داخل الـ CI فقط |
+| 🔐 دخول Google أصلي | Credential Manager عبر SocialLogin — بلا متصفح وبلا إعادة توجيه |
+| 📨 روابط عميقة | تأكيد البريد واستعادة كلمة المرور يعودان إلى التطبيق مباشرةً |
+| 🧭 منطقة آمنة | الشريط العلوي لا يختفي تحت النوتش أو شريط الحالة |
+| 🚫 أداء أصلي | لا اهتزاز عند السحب، ولا قائمة ضغط مطوّل على الصور |
 
 ### بناء الـ APK
 
@@ -252,6 +256,10 @@ cd android && ./gradlew assembleRelease # نسخة موقّعة (يتطلب Andr
 
 > **المتطلبات:** Node.js **22+** (Capacitor 8 يرفض الإصدارات الأقدم) و
 > **JDK 21** — والبناء على GitHub Actions مضبوط عليهما تلقائياً.
+>
+> 🔑 **لتفعيل دخول Google الأصلي** ضع الـ **Web Client ID** في
+> `supabase-config.js` → `GOOGLE_WEB_CLIENT_ID` (نفس المعرّف المسجّل في
+> Supabase). بدونه يعمل التطبيق تلقائياً بتدفّق الويب.
 >
 > 🔐 **مفتاح التوقيع** محفوظ في GitHub Secrets
 > (`KEYSTORE_BASE64` · `KEYSTORE_PASSWORD` · `KEY_ALIAS` · `KEY_PASSWORD`)،

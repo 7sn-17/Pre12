@@ -22,6 +22,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- ⭐ روابط تسجيل الدخول (تأكيد البريد / استعادة كلمة المرور).
+                 com.pre12.medical://login-callback -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="com.pre12.medical"
+                    android:host="login-callback" />
+            </intent-filter>
+
         </activity>
 
         <provider
