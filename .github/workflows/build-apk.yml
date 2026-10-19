@@ -6,10 +6,9 @@
 # ✅ يرفع الـ APK كـ artifact
 # ✅ ينشئ GitHub Release تلقائياً مع الـ APK
 #
-# المتطلبات:
-#   • Node.js 18
-#   • JDK 17
-#   • Android SDK (مضبوطة مسبقاً في الـ runner)
+# المتطلبات (مُثبَّتة على runner ubuntu-latest):
+#   • Node.js 22  ← الـ Capacitor 8 CLI يتطلب Node >= 22
+#   • JDK 21      ← Capacitor 8 يستخدم sourceCompatibility = VERSION_21
 # =============================================================================
 name: Build Android APK
 
@@ -38,17 +37,17 @@ jobs:
       - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: 🧰 Set up Node.js 18
+      - name: 🧰 Set up Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
           cache: npm
 
-      - name: ☕ Set up JDK 17
+      - name: ☕ Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
       - name: 📦 Install dependencies
         run: npm install

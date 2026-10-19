@@ -8,7 +8,7 @@
     "dev": "node build.js && node -e \"console.log('root + dist/ built - serve either with any static server')\""
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "dependencies": {
     "@capacitor-firebase/messaging": "^8.5.2",
