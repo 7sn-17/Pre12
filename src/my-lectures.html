@@ -2,7 +2,7 @@
 title: محاضراتي — المنصة الطبية
 fontWeights: 400;600;700;800;900
 libs: fontawesome, supabase
-scripts: supabase-config, auth, native
+scripts: supabase-config, auth, native, notifications
 sw: true
 backHref: index.html
 backIcon: fa
@@ -1362,6 +1362,7 @@ body {
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<!-- @include partials/auth-prompt.html -->
 <!-- @include partials/scripts.html -->
 
 <script>
@@ -3860,8 +3861,16 @@ async function initLecturePage() {
   }
 
   try {
-    const user = await requireAuth('login.html');
-    if (!user) return;
+    // ⭐ وضع الزائر: نعرض نافذة "سجّل الدخول" بدل إعادة التوجيه.
+    const user = await getSessionUser();
+    if (!user) {
+      if (typeof showAuthPrompt === 'function') {
+        showAuthPrompt('سجّل الدخول لإدارة ألبوماتك وصورك ومشاركتها مع زملائك.');
+      } else {
+        window.location.href = 'login.html';
+      }
+      return;
+    }
     lectureState.user = user;
     lectureState.profile = await getProfile(user.id);
 

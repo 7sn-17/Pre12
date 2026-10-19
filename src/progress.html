@@ -2,7 +2,7 @@
 title: تقدمي — المنصة الطبية
 fontWeights: 400;600;700;800;900
 libs: fontawesome, supabase
-scripts: supabase-config, auth, db, files, sync, streak, native
+scripts: supabase-config, auth, db, files, sync, streak, native, notifications
 sw: true
 backHref: index.html
 backIcon: fa
@@ -724,6 +724,7 @@ body {
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<!-- @include partials/auth-prompt.html -->
 <!-- @include partials/scripts.html -->
 
 <script>
@@ -1160,6 +1161,20 @@ listenForTaskUpdates();
 async function initProgress() {
   const loading = document.getElementById('loadingState');
   const content = document.getElementById('progressContent');
+
+  // ⭐ وضع الزائر: صفحة التقدّم تتطلّب حساباً — نعرض نافذة تسجيل
+  //    الدخول (يمكن إغلاقها والاستمرار في التصفح).
+  if (typeof getSessionUser === 'function') {
+    try {
+      const guest = await getSessionUser();
+      if (!guest && typeof showAuthPrompt === 'function') {
+        setTimeout(function () {
+          showAuthPrompt('سجّل الدخول لمتابعة تقدّمك في المواد — يمكنك الإغلاق ومتابعة التصفح.');
+        }, 600);
+      }
+    } catch (e) {}
+  }
+
   try {
     updateProgressSyncNote();
     progressState.tasks = await loadPlanTasks();

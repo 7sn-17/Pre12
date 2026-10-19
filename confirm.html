@@ -175,23 +175,31 @@
   }
 
   /* ============================================================
-     ⭐ المنطقة الآمنة + أداء التطبيق الأصلي (Phase 13)
+     ⭐ المنطقة الآمنة + الشريط العلوي الثابت (Phase 14)
      ------------------------------------------------------------
-     • --safe-area-inset-top: يحدّثه @capacitor-community/safe-area
-       في التطبيق، و env() في المتصفحات التي تدعم النوتش.
-     • الشريط العلوي يبدأ تحته فلا يختفي تحت النوتش أو شريط الحالة.
-     • overscroll-behavior + user-select: تمنع "الاهتزاز" عند السحب
-       والاختيار العشوائي للنص باللمس.
+     • الشريط العلوي fixed ⇒ لا يختفي تحت شريط الحالة عند السحب
+       (الـ rubber-band كان يُظهره خلف الشريط).
+     • جسم الصفحة يحمل padding-top بمقدار ارتفاع الشريط حتى
+       لا يختفي المحتوى تحته.
+     • overscroll-behavior: لا اهتزاز عند السحب إلى ما بعد الحواف.
      ============================================================ */
   :root {
     --safe-area-inset-top: env(safe-area-inset-top, 0px);
     --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
     --safe-area-inset-left: env(safe-area-inset-left, 0px);
     --safe-area-inset-right: env(safe-area-inset-right, 0px);
-    --app-header-pad: 14px;
+    --app-header-h: 72px;
+    --app-header-pad-x: 20px;
   }
 
-  html, body {
+  @media (max-width: 480px) {
+    :root {
+      --app-header-h: 68px;
+      --app-header-pad-x: 16px;
+    }
+  }
+
+  html, body, main {
     overscroll-behavior-y: none;
     -webkit-user-select: none;
     user-select: none;
@@ -212,23 +220,357 @@
     padding: 0;
   }
 
-  /* ⭐ الشريط العلوي لا يختفي تحت النوتش / شريط الحالة */
+  /* ⭐ الشريط العلوي: ثابت في الأعلى، فوق كل شيء، ويحترم النوتش */
   body > header,
   body > .ml-topbar {
-    padding-top: calc(var(--app-header-pad) + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    z-index: 9999;
+    box-sizing: border-box;
+    min-height: calc(var(--app-header-h) + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
+    padding-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) !important;
+    padding-bottom: 0 !important;
+    padding-left: var(--app-header-pad-x) !important;
+    padding-right: var(--app-header-pad-x) !important;
   }
 
-  @media (max-width: 480px) {
-    :root { --app-header-pad: 12px; }
-    body > .ml-topbar { --app-header-pad: 10px; }
+  /* حالة "مُمرَّر" لا يجب أن تكسر الارتفاع ولا المنطقة الآمنة */
+  body > header.scrolled,
+  body > .ml-topbar {
+    padding-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) !important;
   }
 
-  /* ⭐ حاويات التطبيق تحترم المنطقة الآمنة من الأسفل أيضاً */
+  /* ⭐ جسم الصفحة يتزحزح بمقدار الشريط حتى لا يختفي تحته */
+  body:has(> header),
+  body:has(> .ml-topbar) {
+    padding-top: calc(var(--app-header-h) + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
+  }
+
+  /* ⭐ حاويات التطبيق تحترم المنطقة الآمنة من الأسفل */
   body > main,
   body > .container,
   .app-container {
     padding-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
   }
+
+  /* ============================================================
+     نافذة "سجّل الدخول" (وضع الزائر) — مشتركة بين كل الصفحات
+     ============================================================ */
+    .auth-required-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 10, 8, 0.9);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      z-index: 4000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition-smooth);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    [data-theme="light"] .auth-required-overlay { background: rgba(248, 250, 251, 0.9); }
+
+    .auth-required-overlay.active { opacity: 1; pointer-events: auto; }
+
+    .auth-required-card {
+      background: var(--bg-solid);
+      border: 1px solid var(--border-card-hover);
+      border-radius: 24px;
+      padding: 28px 24px;
+      max-width: 380px;
+      width: 100%;
+      text-align: center;
+      transform: translateY(20px) scale(0.96);
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 40px var(--accent-glow);
+    }
+
+    [data-theme="light"] .auth-required-card {
+      box-shadow:
+        0 20px 60px rgba(15, 23, 42, 0.16),
+        0 0 40px var(--accent-glow);
+    }
+
+    .auth-required-overlay.active .auth-required-card { transform: translateY(0) scale(1); }
+
+    .auth-required-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.15));
+      border: 1px solid var(--accent-emerald);
+      color: var(--accent-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 18px;
+      box-shadow: 0 8px 24px var(--accent-glow);
+      position: relative;
+    }
+
+    .auth-required-icon::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 26px;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+
+    .auth-required-title {
+      font-size: 1.2rem;
+      font-weight: 900;
+      color: var(--text-primary);
+      margin-bottom: 10px;
+    }
+
+    .auth-required-message {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      margin-bottom: 22px;
+    }
+
+    .auth-required-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .auth-required-btn {
+      padding: 13px 20px;
+      border-radius: 14px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-decoration: none;
+      transition: all var(--transition-fast);
+      border: 1px solid transparent;
+    }
+
+    .auth-required-btn i { width: 16px; height: 16px; }
+
+    .auth-required-btn.primary {
+      background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+      color: white;
+      box-shadow: 0 8px 20px var(--accent-glow);
+    }
+
+    .auth-required-btn.primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px var(--accent-glow-strong);
+    }
+
+    .auth-required-btn.secondary {
+      background: rgba(128, 128, 128, 0.08);
+      border-color: var(--border-card);
+      color: var(--text-secondary);
+    }
+
+    .auth-required-btn.secondary:hover {
+      background: rgba(128, 128, 128, 0.15);
+      border-color: var(--border-card-hover);
+      color: var(--text-primary);
+    }
+
+    /* ============================================ */
+    /* Responsive */
+    /* ============================================ */
+    @media (max-width: 640px) {
+      .container { padding: 16px 14px; }
+      header { padding: 12px 16px; }
+      .brand-title { font-size: 1rem; }
+      .brand-icon { width: 40px; height: 40px; }
+      .welcome-header { padding: 16px; }
+      .welcome-greeting { font-size: 1.05rem; }
+      .welcome-icon-wrap { width: 48px; height: 48px; }
+      .welcome-icon-wrap i { width: 22px; height: 22px; }
+      .subject-icon-box { width: 46px; height: 46px; }
+      .floating-nav { max-width: 100%; }
+      .toast { top: 78px; padding: 12px 18px; font-size: 0.84rem;
+      z-index: 2147483647;
+    }
+      .files-horizontal { margin: 0 -14px; padding-left: 14px; padding-right: 14px; }
+      .user-name { display: none; }
+      .user-avatar-btn { padding: 6px; }
+      .file-mini-card { min-width: 260px; max-width: 260px; }
+      .skeleton-mini { min-width: 260px; }
+      .search-modal-close { width: 42px; height: 42px; }
+      .icon-btn { width: 38px; height: 38px; }
+      .icon-btn i { width: 18px; height: 18px; }
+      .nav-btn-center { width: 54px; height: 54px; margin-top: -22px; }
+      .nav-btn-center i { width: 22px; height: 22px; }
+      .quick-access-grid { gap: 8px; }
+      .quick-access-btn { padding: 12px 6px; }
+      .qa-icon { width: 40px; height: 40px; }
+      .qa-icon i { width: 20px; height: 20px; }
+      .qa-label { font-size: 0.68rem; }
+      .study-card-icon { width: 46px; height: 46px; }
+      .study-card-icon i { width: 22px; height: 22px; }
+    }
+
+    @media (max-width: 380px) {
+      .toast { top: 72px; font-size: 0.8rem; padding: 10px 16px;
+      z-index: 2147483647;
+    }
+      .file-mini-card { min-width: 240px; max-width: 240px; }
+      .nav-btn-center { width: 50px; height: 50px; margin-top: -20px; }
+      .nav-btn span { font-size: 0.6rem; }
+      .quick-access-grid { gap: 6px; }
+      .quick-access-btn { padding: 10px 4px; }
+      .qa-icon { width: 36px; height: 36px; }
+      .qa-icon i { width: 18px; height: 18px; }
+      .qa-label { font-size: 0.62rem; }
+    }
+
+    @supports (padding: env(safe-area-inset-bottom)) {
+      .floating-nav-wrapper { bottom: calc(20px + env(safe-area-inset-bottom)); }
+    }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+  /* ============================================================
+     نافذة "سجّل الدخول" (وضع الزائر) — مشتركة بين كل الصفحات
+     ============================================================ */
+    .auth-required-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 10, 8, 0.9);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      z-index: 4000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition-smooth);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    [data-theme="light"] .auth-required-overlay { background: rgba(248, 250, 251, 0.9); }
+
+    .auth-required-overlay.active { opacity: 1; pointer-events: auto; }
+
+    .auth-required-card {
+      background: var(--bg-solid);
+      border: 1px solid var(--border-card-hover);
+      border-radius: 24px;
+      padding: 28px 24px;
+      max-width: 380px;
+      width: 100%;
+      text-align: center;
+      transform: translateY(20px) scale(0.96);
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 40px var(--accent-glow);
+    }
+
+    [data-theme="light"] .auth-required-card {
+      box-shadow:
+        0 20px 60px rgba(15, 23, 42, 0.16),
+        0 0 40px var(--accent-glow);
+    }
+
+    .auth-required-overlay.active .auth-required-card { transform: translateY(0) scale(1); }
+
+    .auth-required-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.15));
+      border: 1px solid var(--accent-emerald);
+      color: var(--accent-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 18px;
+      box-shadow: 0 8px 24px var(--accent-glow);
+      position: relative;
+    }
+
+    .auth-required-icon::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 26px;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+
+    .auth-required-title {
+      font-size: 1.2rem;
+      font-weight: 900;
+      color: var(--text-primary);
+      margin-bottom: 10px;
+    }
+
+    .auth-required-message {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      margin-bottom: 22px;
+    }
+
+    .auth-required-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .auth-required-btn {
+      padding: 13px 20px;
+      border-radius: 14px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-decoration: none;
+      transition: all var(--transition-fast);
+      border: 1px solid transparent;
+    }
+
+    .auth-required-btn i { width: 16px; height: 16px; }
+
+    .auth-required-btn.primary {
+      background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+      color: white;
+      box-shadow: 0 8px 20px var(--accent-glow);
+    }
+
+    .auth-required-btn.primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px var(--accent-glow-strong);
+    }
+
+    .auth-required-btn.secondary {
+      background: rgba(128, 128, 128, 0.08);
+      border-color: var(--border-card);
+      color: var(--text-secondary);
+    }
+
+    .auth-required-btn.secondary:hover {
+      background: rgba(128, 128, 128, 0.15);
+      border-color: var(--border-card-hover);
+      color: var(--text-primary);
+    }
 
   /* ============================================================
      Premium file visual — shared by every file surface.

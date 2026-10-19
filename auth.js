@@ -18,12 +18,69 @@ async function getCurrentUser() {
 }
 
 // ============================================
+// 1.5 حالة الجلسة المشتركة + نافذة طلب تسجيل الدخول
+// ------------------------------------------------------------
+// ⭐ وضع الزائر: التصفح والمعاينة متاحان بلا حساب،
+//   والحساب يُطلب فقط عند تنفيذ إجراء (مفضّلة · تنزيل).
+// ============================================
+
+var AUTH_USER = null;
+
+function setAuthUser(user) {
+  AUTH_USER = user || null;
+  return AUTH_USER;
+}
+
+function getAuthUser() {
+  return AUTH_USER;
+}
+
+/** هل المستخدم مسجّل الدخول؟ (متزامن — اعتماداً على آخر جلسة) */
+function isUserLoggedIn() {
+  return !!AUTH_USER;
+}
+
+/** ⭐ يعرض نافذة "سجّل الدخول" بدل إعادة التوجيه الفوري */
+function showAuthPrompt(message) {
+  var modal = document.getElementById('authRequiredModal');
+  if (!modal) {
+    // لا توجد نافذة في هذه الصفحة → نوجّه إلى صفحة الدخول.
+    window.location.href = 'login.html';
+    return;
+  }
+  var text = modal.querySelector('[data-auth-message]');
+  if (text && message) text.textContent = message;
+  modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function closeAuthPrompt() {
+  var modal = document.getElementById('authRequiredModal');
+  if (modal) modal.classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+/**
+ * ⭐ بوابة كل إجراء يحتاج حساباً (مفضّلة · تنزيل للقراءة بلا إنترنت …).
+ * @returns {boolean} true = مسموح بالمتابعة
+ */
+function requireLoginAction(message) {
+  if (isUserLoggedIn()) return true;
+  showAuthPrompt(message || 'سجّل الدخول للمتابعة — يمكنك التصفح كمشاهد بلا حساب.');
+  return false;
+}
+
+// ============================================
 // 2. الحصول على الجلسة الحالية
 // ============================================
 async function getSession() {
   try {
     const { data: { session }, error } = await supabaseClient.auth.getSession();
     if (error) throw error;
+
+    // ⭐ نحفظ المستخدم في متغيّر مشترك — كل الصفحات تعرف حالته.
+    setAuthUser(session ? session.user : null);
 
     // Full account sync before callers read their local caches. The sync
     // module deduplicates calls, so multiple getSession() calls on one page
@@ -38,6 +95,18 @@ async function getSession() {
     return session;
   } catch (err) {
     console.error('getSession error:', err);
+    return null;
+  }
+}
+
+/**
+ * ⭐ يعيد المستخدم الحالي (أو null) — لصفحات وضع الزائر.
+ */
+async function getSessionUser() {
+  try {
+    const session = await getSession();
+    return session ? session.user : null;
+  } catch (e) {
     return null;
   }
 }
@@ -315,8 +384,11 @@ async function signInWithGoogleWeb() {
 
 /**
  * ⭐ نقطة الدخول الموحّدة لزر Google.
- * في التطبيق الأصلي نستخدم تدفّق Google الأصلي، وإن فشل نعود
- * لتدفّق الويب حتى لا يبقى المستخدم بلا طريقة للدخول.
+ *
+ * ⭐ داخل التطبيق: المسار الأصلي **فقط** — لا نعود أبداً إلى تدفّق
+ *   الويب (كان يفتح المتصفح ويعلق على التحميل).
+ *   إن لم يكن هناك Web Client ID نُبلغ المستخدم برسالة واضحة.
+ * ⭐ على الويب: تدفّق إعادة التوجيه كما كان.
  */
 async function signInWithGoogle(options) {
   options = options || {};
@@ -336,14 +408,11 @@ async function signInWithGoogle(options) {
       return result;
     } catch (err) {
       console.warn('[auth] native Google sign-in failed:', err);
-      if (options.allowFallback === false) {
-        return {
-          success: false,
-          error: translateAuthError(err && err.message ? err.message : 'فشل تسجيل الدخول عبر Google')
-        };
-      }
-      // ⭐ بديل: تدفّق الويب (يفتح تبويباً — ونغلقه بعد العودة).
-      return signInWithGoogleWeb();
+      // ⭐ لا نعود إلى الويب داخل التطبيق.
+      return {
+        success: false,
+        error: translateAuthError(err && err.message ? err.message : 'فشل تسجيل الدخول عبر Google')
+      };
     }
   }
 
@@ -360,15 +429,24 @@ async function signInWithGoogle(options) {
 async function handleAuthDeepLink(url) {
   if (!url) return false;
   try {
-    const codeMatch = /[?&#]code=([^&#]+)/.exec(url);
-    const tokenMatch = /[?&#]access_token=([^&#]+)/.exec(url);
-    const errorMatch = /[?&#]error=([^&#]+)/.exec(url);
+    // ⭐ التوكن قد يكون في الاستعلام (?...) أو في الجزء (#...)
+    const parts = String(url).split('#');
+    const queryPart = parts[0].split('?').slice(1).join('?');
+    const fragmentPart = parts.slice(1).join('#');
+    const params = new URLSearchParams(queryPart + '&' + fragmentPart);
 
-    if (errorMatch) {
-      console.warn('[auth] deep link error:', decodeURIComponent(errorMatch[1]));
+    const code = params.get('code');
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    const errorCode = params.get('error_code') || params.get('error');
+    const errorDescription = params.get('error_description');
+    const type = params.get('type') || '';
+
+    if (errorCode) {
+      console.warn('[auth] deep link error:', errorCode, errorDescription || '');
       try {
         window.dispatchEvent(new CustomEvent('medapp:auth-error', {
-          detail: { error: decodeURIComponent(errorMatch[1]) }
+          detail: { error: errorCode, description: errorDescription || '' }
         }));
       } catch (e) {}
       return false;
@@ -377,34 +455,48 @@ async function handleAuthDeepLink(url) {
     const client = window.supabaseClient;
     if (!client || !client.auth) return false;
 
-    if (codeMatch && typeof client.auth.exchangeCodeForSession === 'function') {
-      const { error } = await client.auth.exchangeCodeForSession(decodeURIComponent(codeMatch[1]));
-      if (error) throw error;
-      try { if (typeof closeNativeBrowser === 'function') closeNativeBrowser(); } catch (e) {}
-      try {
-        window.dispatchEvent(new CustomEvent('medapp:auth-success', { detail: { source: 'deep-link' } }));
-      } catch (e) {}
-      // ⭐ استعادة كلمة المرور → صفحة تعيين كلمة المرور، غيرها → الرئيسية
-      const isRecovery = /type=recovery/.test(url);
-      if (isRecovery) {
-        setTimeout(function () { window.location.href = 'reset-password.html'; }, 150);
-      }
-      return true;
+    let session = null;
+
+    if (code && typeof client.auth.exchangeCodeForSession === 'function') {
+      const result = await client.auth.exchangeCodeForSession(code);
+      if (result && result.error) throw result.error;
+      session = result && result.data ? result.data.session : null;
+    } else if (accessToken && typeof client.auth.setSession === 'function') {
+      // ⭐ التدفّق الضمني: التوكن في الرابط مباشرة.
+      const result = await client.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken || ''
+      });
+      if (result && result.error) throw result.error;
+      session = result && result.data ? result.data.session : null;
     }
 
-    if (tokenMatch && typeof client.auth.setSession === 'function') {
-      const { error } = await client.auth.setSession({
-        access_token: decodeURIComponent(tokenMatch[1]),
-        refresh_token: ''
-      });
-      if (error) throw error;
-      try { if (typeof closeNativeBrowser === 'function') closeNativeBrowser(); } catch (e) {}
-      return true;
-    }
+    if (!session) return false;
+
+    // ⭐ أغلق المتصفح ثم انتقل.
+    try { if (typeof closeNativeBrowser === 'function') closeNativeBrowser(); } catch (e) {}
+    try {
+      window.dispatchEvent(new CustomEvent('medapp:auth-success', {
+        detail: { source: 'deep-link', type: type || 'signin' }
+      }));
+    } catch (e) {}
+
+    // ⭐ استعادة كلمة المرور → صفحة تعيين كلمة المرور، غيرها → الرئيسية
+    const isRecovery = type === 'recovery';
+    setTimeout(function () {
+      window.location.href = isRecovery ? 'reset-password.html' : 'index.html';
+    }, 150);
+
+    return true;
   } catch (err) {
     console.warn('[auth] deep link handling failed:', err);
+    try {
+      window.dispatchEvent(new CustomEvent('medapp:auth-error', {
+        detail: { error: 'deep-link-failed' }
+      }));
+    } catch (e) {}
+    return false;
   }
-  return false;
 }
 
 // ============================================

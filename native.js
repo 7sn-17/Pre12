@@ -397,6 +397,15 @@
     syncSafeArea();
     global.addEventListener('resize', syncSafeArea);
 
+    // ⭐ محرّك الإشعارات الذكي — يجدول إشعاراً مناسباً لحالة المستخدم.
+    try {
+      if (global.MedAppNotifications && typeof global.MedAppNotifications.init === 'function') {
+        global.MedAppNotifications.init();
+      }
+    } catch (e) {
+      console.warn('[native] notification engine failed to start:', e);
+    }
+
     // إخفاء شاشة البدء بعد أول رسم
     if (document.readyState === 'complete') {
       setTimeout(hideSplash, 120);

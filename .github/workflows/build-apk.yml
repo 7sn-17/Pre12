@@ -62,9 +62,6 @@ jobs:
       - name: 🏗️ Build the web app
         run: npm run build
 
-      - name: 🎨 Generate Android assets (icons + splash)
-        run: node tools/generate-android-assets.js
-
       - name: 🔗 Sync Capacitor
         run: npx cap sync android
 

@@ -2,7 +2,7 @@
 title: معاينة الملف — المنصة الطبية
 themeColor: #f8fafb
 libs: pdfjs, supabase, lucide
-scripts: supabase-config, auth, db, files, native
+scripts: supabase-config, auth, db, files, native, notifications
 sw: true
 -->
 <!DOCTYPE html>
@@ -599,6 +599,7 @@ body {
 </div>
 
 <!-- السكربتات -->
+<!-- @include partials/auth-prompt.html -->
 <!-- @include partials/scripts.html -->
 
 <script>
@@ -696,6 +697,10 @@ function hideLoading() {
 
 /* ═══ تحميل الملف كامل ═══ */
 async function downloadPdf(fileId, fileUrl) {
+  // ⭐ وضع الزائر: حفظ الملف للقراءة دون إنترنت يحتاج حساباً.
+  if (typeof requireLoginAction === 'function' &&
+      !requireLoginAction('سجّل الدخول لحفظ هذا الملف وقراءته دون إنترنت.')) return;
+
   // 1) IndexedDB
   try {
     const cached = await getDownloadedFile(fileId);

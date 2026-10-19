@@ -32,7 +32,7 @@ const DIST = path.join(ROOT, 'dist');
 
 // Bumped whenever app.js changes. The query string is what makes returning
 // visitors pick up the new router even though static JS is served immutable.
-const APP_VERSION = '2.5.0';
+const APP_VERSION = '2.6.0';
 const APP_JS = `app.js?v=${APP_VERSION}`;
 
 // ------------------------------------------------------------------
@@ -312,6 +312,11 @@ const EXCLUDE_TOP = new Set([
   'dist', 'node_modules',
   // Sources (they are compiled into the root pages)
   'src', 'partials',
+  // ⭐ The native Android project — it must NEVER be copied into dist/,
+  //    otherwise it lands inside the APK (and inside itself, recursively).
+  'android',
+  // Icon/splash sources for the native build
+  'assets',
   // Tooling / deployment config
   'build.js', 'package.json', 'package-lock.json', 'vercel.json',
   '.git', '.gitignore',

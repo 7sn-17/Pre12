@@ -1,7 +1,7 @@
 <!--@
 title: المواد — المنصة الطبية
 libs: fontawesome, supabase, lucide
-scripts: supabase-config, auth, db, files, sync, native
+scripts: supabase-config, auth, db, files, sync, native, notifications
 sw: true
 headerCenter: true
 titleAttrs: id="headerTitle"
@@ -973,6 +973,7 @@ header {
   <i data-lucide="plus"></i>
 </a>
 
+<!-- @include partials/auth-prompt.html -->
 <!-- @include partials/scripts.html -->
 
 <script>
@@ -1697,6 +1698,10 @@ async function copyLink(fileId) {
    تحميل ملف
    ═══════════════════════════════════════════════════════ */
 async function downloadFile(fileId) {
+  // ⭐ وضع الزائر: التنزيل للقراءة بلا إنترنت يحتاج حساباً.
+  if (typeof requireLoginAction === 'function' &&
+      !requireLoginAction('سجّل الدخول لتحميل هذا الملف وقراءته دون إنترنت.')) return;
+
   const file = state.allFiles.find(f => f.id === fileId);
   if (!file) return;
 
@@ -1759,6 +1764,10 @@ async function downloadFile(fileId) {
    المفضلة
    ═══════════════════════════════════════════════════════ */
 async function toggleFav(fileId) {
+  // ⭐ وضع الزائر: المفضّلة تحتاج حساباً.
+  if (typeof requireLoginAction === 'function' &&
+      !requireLoginAction('سجّل الدخول لحفظ الملفات في المفضّلة.')) return;
+
   const file = state.allFiles.find(f => f.id === fileId);
   if (!file) return;
 
