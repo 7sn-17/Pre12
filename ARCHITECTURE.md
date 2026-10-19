@@ -2,11 +2,11 @@
 
 **Medical Platform — architecture & maintenance guide**
 
-- SPA router: `app.js` **v4.7.0**
-- Service worker: `sw.js` **v4.7.0**
+- SPA router: `app.js` **v2.0.0**
+- Service worker: `sw.js` **v2.0.0**
 - Build: `build.js` (Node.js ≥ 18, `acorn` ^8.19.0)
 - Visual / behavioural baseline: `tools/_orig/` (read-only reference)
-- Last updated: 2026-10-19 (Phase 8 — login polish, isolated top bar, streak pro)
+- Last updated: 2026-10-19 (**v2.0.0 release** — toasts, streak freezes, native share)
 
 > This document describes the current architecture. It does **not** change any
 > code. All commands below are safe to run from the project root
@@ -1020,11 +1020,11 @@ offline  → loadLocalData()  →  render          (ZERO network requests)
 | `sw.js` logic or `PRECACHE_URLS` | `CACHE_VERSION` | `sw.js` |
 | Any HTML/CSS/JS deployment | Recommended: `CACHE_VERSION` | `sw.js` |
 
-**Version bump checklist (current: 4.7.0):**
+**Version bump checklist (current: 2.0.0):**
 
-1. `build.js`: `const APP_VERSION = '4.7.0';`
-2. `sw.js`: `const CACHE_VERSION = 'v4.7.0';`
-3. `sw.js`: `'/app.js?v=4.7.0',` in `PRECACHE_URLS`
+1. `build.js`: `const APP_VERSION = '2.0.0';`
+2. `sw.js`: `const CACHE_VERSION = 'v2.0.0';`
+3. `sw.js`: `'/app.js?v=2.0.0',` in `PRECACHE_URLS`
 4. `sw.js`: update the version comments/logs (optional but useful)
 5. `npm run build`
 
@@ -1282,8 +1282,52 @@ Two local keys per task now carry both facts:
 - `index.html` `streakLocalData()` paints the counter from
   `getLocalActiveDates()` — no network, no plan-day carry-over.
 
-### 5.8 The streak sheet — "Duolingo Pro" (Phase 8)
+### 5.10 Toasts, freezes and native sharing (v2.0.0)
 
+#### 5.10.1 Toast z-index
+
+A toast is `position: fixed`, so it is painted in the **root** stacking
+context — but only if nothing above it creates a stacking context of its
+own. Two things used to break that:
+
+- the toast rule had a *low* `z-index` (9999) while the streak sheet is
+  **10050** → the toast was hidden behind the sheet;
+- the `.toast-container` (the positioned wrapper used by `all-files`,
+  `subject` and `upload`) had the same problem.
+
+**The rule:** every `.toast` **and** every `.toast-container` uses
+`z-index: 2147483647`, and the toast is always mounted on `document.body`
+(either directly or through a container that is on the body).
+
+#### 5.10.2 Streak freezes (تجميد السلسلة)
+
+A freeze protects **one missed day** so the chain is not broken — Duolingo
+style. **Two freezes per calendar month.**
+
+| Piece | Where |
+|---|---|
+| Table | `public.streak_freezes` (`user_id`, `day_key`, `month_key`) |
+| Migration | `supabase/migrations/20261019_phase10_freeze.sql` |
+| Read / consume | `getStreakFreezes()`, `consumeStreakFreeze()` in `sync.js` |
+| Guest fallback | `medapp_streak_freezes_v1` in localStorage |
+| UI | the snowflake button in the streak sheet shows the remaining count |
+
+- `streak.js` `compute(dates, today, frozenDays)` treats a frozen day as an
+  active day and returns `breakDay` — the first day that cut the chain.
+- `getStudyStreak()` consumes a freeze automatically when the chain was
+  broken by a **gap inside the chain** (the day before the gap was
+  active). A gap that simply ends the chain is *not* frozen, and freezes
+  are never spent on days older than a week.
+- Freezes are per month, so the allowance resets with the calendar.
+
+#### 5.10.3 Native sharing
+
+`shareStreak()` uses `navigator.share({ title, text, url })` with a
+formatted Arabic message ("🔥 أنا في سلسلة إنجاز لمدة X أيام على المنصة
+الطبية!"). If the API is missing, or the share is rejected, it falls back
+to `navigator.clipboard` and then to a hidden `<textarea>`.
+
+### 5.8 The streak sheet — "Duolingo Pro" (Phase 8)
 The bottom sheet has **three tabs** and never cuts its content off.
 
 | Tab | id | Content |

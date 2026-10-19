@@ -485,6 +485,7 @@ body {
 .detail-cover {
   width: 92px; height: 92px; border-radius: 18px;
   flex-shrink: 0; overflow: hidden;
+  position: relative;
   display: flex; align-items: center; justify-content: center;
   background: linear-gradient(135deg, #123a2b, #0a1f17);
   color: rgba(255, 255, 255, 0.35);
@@ -1031,9 +1032,26 @@ body {
 }
 .crop-hint { color: rgba(255, 255, 255, 0.5); font-size: 0.66rem; text-align: center; margin-top: -8px; }
 
+/* ═══ بديل الصورة المكسورة ═══ */
+.image-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted, #64748b);
+  font-size: 1.5rem;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(236, 72, 153, 0.12), transparent 62%),
+    var(--bg-elevated, #102a22);
+  pointer-events: none;
+}
+.image-placeholder i { opacity: 0.6; }
+.image-fallback { background: var(--bg-elevated, #102a22); }
+
 .toast {
   position: fixed; bottom: 24px; left: 50%; transform: translate(-50%, 24px);
-  z-index: 5000; display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 8px;
   max-width: calc(100vw - 32px);
   padding: 12px 17px; border-radius: 14px;
   background: var(--bg-solid); border: 1px solid var(--border-card-hover);
@@ -1041,6 +1059,8 @@ body {
   opacity: 0; pointer-events: none;
   transition: opacity var(--t), transform var(--t);
   box-shadow: 0 18px 44px -16px rgba(0, 0, 0, 0.4);
+  /* ⭐ أعلى من كل النوافذ والأوراق السفلية */
+  z-index: 2147483647;
 }
 .toast.visible { opacity: 1; transform: translate(-50%, 0); }
 .toast i { color: var(--accent-light); flex-shrink: 0; }
@@ -1430,6 +1450,29 @@ function lectureAuthorName() {
   return 'طالب';
 }
 
+/**
+ * ⭐ بديل أنيق للصورة المكسورة: نخفي <img> ونعرض شعاراً بدل أيقونة
+ * المتصفح المكسورة. يُستدعى من onerror.
+ */
+function lectureImageFallback(img) {
+  if (!img) return;
+  const parent = img.parentElement;
+  try { img.style.display = 'none'; } catch (e) {}
+  if (!parent) return;
+  parent.classList.add('image-fallback');
+  let placeholder = parent.querySelector('.image-placeholder');
+  if (!placeholder) {
+    placeholder = document.createElement('span');
+    placeholder.className = 'image-placeholder';
+    placeholder.innerHTML = '<i class="fa-solid fa-image"></i>';
+    parent.appendChild(placeholder);
+  }
+  try { placeholder.style.display = ''; } catch (e) {}
+  if (window.lucide) {
+    try { window.lucide.createIcons(); } catch (e) {}
+  }
+}
+
 function lectureSetBodyLock(locked) {
   document.body.style.overflow = locked ? 'hidden' : '';
 }
@@ -1660,11 +1703,24 @@ function normalizeCloudAlbum(row) {
 }
 
 function normalizeCloudImage(row) {
+  // ⭐ رابط الصورة: نستخدم image_url، وإن لم يوجد نولّده من image_path
+  //    (حالات قديمة أو صفوف أُدخلت بمسار فقط فتظهر الصورة مكسورة).
+  let url = row.image_url || '';
+  if (!url && row.image_path) {
+    try {
+      const { data: urlData } = supabaseClient.storage
+        .from(LECTURE_BUCKET)
+        .getPublicUrl(row.image_path);
+      if (urlData && urlData.publicUrl) url = urlData.publicUrl;
+    } catch (e) {
+      console.warn('Could not build the public URL for image', row.id, e);
+    }
+  }
   return {
     id: row.id,
     album_id: row.album_id || '',
     title: row.title || 'صورة محاضرة',
-    url: row.image_url || '',
+    url: url,
     image_path: row.image_path || '',
     created_at: row.created_at || '',
     is_public: !!row.is_public,
@@ -1711,6 +1767,11 @@ async function loadCloudData() {
       user_id: lectureState.user.id,
       author_name: lectureAuthorName(),
       virtual: true
+    });
+    // ⭐ ربط الصور اليتيمة بالألبوم الافتراضي — بدون ذلك تبقى
+    //    محفوظة في السحابة لكن لا تظهر في أي مكان.
+    lectureState.images.forEach(function (image) {
+      if (!image.album_id) image.album_id = UNCATEGORIZED_ID;
     });
   }
 
@@ -1896,6 +1957,24 @@ async function loadLocalData() {
     .filter(function (row) { return row.scope === 'explore'; })
     .map(normalizeImage)
     .sort(function (a, b) { return String(b.created_at).localeCompare(String(a.created_at)); });
+
+  // ⭐ نفس المعالجة للصور المحلية اليتيمة: اربطها بالألبوم الافتراضي.
+  const localOrphans = lectureState.images.some(function (image) { return !image.album_id; });
+  if (localOrphans) {
+    lectureState.albums.push({
+      id: UNCATEGORIZED_ID,
+      name: 'غير مصنف',
+      visibility: 'private',
+      created_at: '',
+      user_id: owner,
+      author_name: lectureAuthorName(),
+      virtual: true,
+      scope: 'mine'
+    });
+    lectureState.images.forEach(function (image) {
+      if (!image.album_id) image.album_id = UNCATEGORIZED_ID;
+    });
+  }
 }
 
 /**
@@ -1973,7 +2052,7 @@ function albumCardMarkup(album, explore) {
   return '<button type="button" class="album-card" onclick="openAlbum(\'' + lectureEscape(album.id) + '\', ' + (explore ? 'true' : 'false') + ')">' +
     '<span class="album-cover">' +
       (cover
-        ? '<img src="' + lectureEscape(cover) + '" alt="' + lectureEscape(album.name) + '" loading="lazy">'
+        ? '<img src="' + lectureEscape(cover) + '" alt="' + lectureEscape(album.name) + '" loading="lazy" referrerpolicy="no-referrer" onerror="lectureImageFallback(this)">'
         : '<span class="album-cover-placeholder"><i class="fa-solid fa-images"></i></span>') +
       privacy +
       '<span class="album-cover-count"><i class="fa-solid fa-image"></i> ' + count + '</span>' +
@@ -2087,7 +2166,7 @@ function renderAlbumDetail() {
 
   hero.innerHTML =
     '<div class="detail-cover">' +
-      (cover ? '<img src="' + lectureEscape(cover) + '" alt="' + lectureEscape(album.name) + '">' : '<i class="fa-solid fa-images"></i>') +
+      (cover ? '<img src="' + lectureEscape(cover) + '" alt="' + lectureEscape(album.name) + '" referrerpolicy="no-referrer" onerror="lectureImageFallback(this)">' : '<i class="fa-solid fa-images"></i>') +
     '</div>' +
     '<div class="detail-copy">' +
       '<div class="detail-title">' + lectureEscape(album.name) + '</div>' +
@@ -2111,7 +2190,7 @@ function renderAlbumDetail() {
         '</span>'
       : '';
     return '<div class="image-tile" role="button" tabindex="0" onclick="openGallery(\'' + lectureEscape(image.id) + '\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openGallery(\'' + lectureEscape(image.id) + '\');}">' +
-      '<img src="' + lectureEscape(image.url) + '" alt="' + lectureEscape(image.title) + '" loading="lazy">' +
+      '<img src="' + lectureEscape(image.url) + '" alt="' + lectureEscape(image.title) + '" loading="lazy" referrerpolicy="no-referrer" onerror="lectureImageFallback(this)">' +
       actionButtons +
       '<span class="image-tile-overlay">' + lectureEscape(image.title) + '</span>' +
     '</div>';
@@ -2825,7 +2904,7 @@ function galleryBuildSlides() {
   if (!track) return;
   track.innerHTML = galleryState.images.map(function (image) {
     return '<div class="gallery-slide">' +
-      '<img src="' + lectureEscape(image.url) + '" alt="' + lectureEscape(image.title || 'صورة محاضرة') + '" draggable="false">' +
+      '<img src="' + lectureEscape(image.url) + '" alt="' + lectureEscape(image.title || 'صورة محاضرة') + '" draggable="false" referrerpolicy="no-referrer" onerror="lectureImageFallback(this)">' +
     '</div>';
   }).join('');
 }
@@ -3505,7 +3584,7 @@ function renderAlbumRequests() {
     const who = isRequestAuthor(request) ? 'أنت' : (request.author_name || 'زميل');
 
     return '<div class="request-card" onclick="openRequestImage(\'' + lectureEscape(request.id) + '\')">' +
-      '<img class="request-thumb" src="' + lectureEscape(request.image_url) + '" alt="' + lectureEscape(request.title) + '" loading="lazy">' +
+      '<img class="request-thumb" src="' + lectureEscape(request.image_url) + '" alt="' + lectureEscape(request.title) + '" loading="lazy" referrerpolicy="no-referrer" onerror="lectureImageFallback(this)">' +
       '<div class="request-body">' +
         '<div class="request-title">' + lectureEscape(request.title) + '</div>' +
         '<div class="request-meta">' +

@@ -756,29 +756,64 @@ sw: true
     .streak-share-btn {
       width: 100%;
       margin-top: 14px;
-      padding: 13px 18px;
+      padding: 15px 20px;
       border-radius: 999px;
-      border: none;
-      background: linear-gradient(135deg, var(--medapp-orange, #fb923c), #ea580c);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: linear-gradient(135deg, #fb923c 0%, #f97316 45%, #ea580c 100%);
       color: #fff;
       font-family: inherit;
-      font-size: 0.86rem;
+      font-size: 0.9rem;
       font-weight: 900;
+      letter-spacing: 0.2px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 9px;
-      box-shadow: 0 12px 26px -14px rgba(249, 115, 22, 0.9);
-      transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+      gap: 10px;
+      box-shadow:
+        0 14px 30px -14px rgba(249, 115, 22, 0.95),
+        inset 0 1px 0 rgba(255, 255, 255, 0.28);
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast), filter var(--transition-fast);
+      position: relative;
+      overflow: hidden;
     }
-    .streak-share-btn:hover { transform: translateY(-1px); }
-    .streak-share-btn i { width: 17px; height: 17px; }
 
-    /* ⭐ زر التجميد (مفهوم بصري فقط) */
+    /* ⭐ لمعة خفيفة تمرّ فوق الزر */
+    .streak-share-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -60%;
+      width: 45%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.32), transparent);
+      transform: skewX(-18deg);
+      animation: streak-share-sheen 3.6s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes streak-share-sheen {
+      0%, 62% { left: -60%; }
+      100% { left: 130%; }
+    }
+
+    .streak-share-btn:hover {
+      transform: translateY(-2px);
+      filter: saturate(1.1);
+      box-shadow:
+        0 18px 38px -14px rgba(249, 115, 22, 1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.34);
+    }
+
+    .streak-share-btn:active { transform: translateY(0) scale(0.985); }
+    .streak-share-btn i { width: 18px; height: 18px; }
+
+    /* ⭐ زر التجميد (مفهوم بصري + رصيد) */
     .streak-freeze {
-      width: 40px;
+      width: auto;
+      min-width: 52px;
       height: 40px;
+      padding: 0 10px;
       border-radius: 13px;
       border: 1px solid rgba(56, 189, 248, 0.28);
       background: rgba(56, 189, 248, 0.1);
@@ -786,12 +821,38 @@ sw: true
       display: flex;
       align-items: center;
       justify-content: center;
+      gap: 5px;
       cursor: pointer;
       flex-shrink: 0;
       transition: all var(--transition-fast);
     }
     .streak-freeze:hover { background: rgba(56, 189, 248, 0.18); transform: scale(1.05); }
-    .streak-freeze i { width: 19px; height: 19px; }
+    .streak-freeze i { width: 17px; height: 17px; }
+
+    .streak-freeze-count {
+      font-size: 0.76rem;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+
+    .streak-freeze.is-empty {
+      border-color: rgba(148, 163, 184, 0.22);
+      background: rgba(148, 163, 184, 0.08);
+      color: var(--text-muted, #64748b);
+    }
+
+    /* ⭐ اليوم المجمَّد (ثلج) في التقويم */
+    .streak-day.is-frozen {
+      background: linear-gradient(180deg, rgba(56, 189, 248, 0.24), rgba(14, 165, 233, 0.08));
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+
+    .streak-day.is-frozen .streak-day-flame {
+      color: #7dd3fc;
+      opacity: 1;
+      filter: drop-shadow(0 0 7px rgba(56, 189, 248, 0.55));
+    }
 
     .user-avatar-btn {
       display: flex; align-items: center; gap: 8px;
@@ -3745,7 +3806,7 @@ i.fab {
       font-size: 0.88rem;
       font-weight: 700;
       box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 0 20px var(--accent-glow);
-      z-index: 9999;
+      /* ⭐ أعلى من كل النوافذ والأوراق السفلية (streak sheet = 10050) */
       opacity: 0;
       transition: all var(--transition-smooth);
       border: 1px solid rgba(255, 255, 255, 0.15);
@@ -3753,6 +3814,7 @@ i.fab {
       display: flex; align-items: center; gap: 10px;
       max-width: calc(100vw - 40px);
       pointer-events: none;
+      z-index: 2147483647;
     }
 
     .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -4336,7 +4398,9 @@ i.fab {
       .welcome-icon-wrap i { width: 22px; height: 22px; }
       .subject-icon-box { width: 46px; height: 46px; }
       .floating-nav { max-width: 100%; }
-      .toast { top: 78px; padding: 12px 18px; font-size: 0.84rem; }
+      .toast { top: 78px; padding: 12px 18px; font-size: 0.84rem;
+      z-index: 2147483647;
+    }
       .files-horizontal { margin: 0 -14px; padding-left: 14px; padding-right: 14px; }
       .user-name { display: none; }
       .user-avatar-btn { padding: 6px; }
@@ -4357,7 +4421,9 @@ i.fab {
     }
 
     @media (max-width: 380px) {
-      .toast { top: 72px; font-size: 0.8rem; padding: 10px 16px; }
+      .toast { top: 72px; font-size: 0.8rem; padding: 10px 16px;
+      z-index: 2147483647;
+    }
       .file-mini-card { min-width: 240px; max-width: 240px; }
       .nav-btn-center { width: 50px; height: 50px; margin-top: -20px; }
       .nav-btn span { font-size: 0.6rem; }
@@ -4422,6 +4488,7 @@ i.fab {
         </div>
         <button type="button" class="streak-freeze" id="streakFreezeBtn" onclick="showStreakFreezeHint()" title="تجميد السلسلة" aria-label="تجميد السلسلة">
           <i data-lucide="snowflake"></i>
+          <span class="streak-freeze-count" id="streakFreezeCount">0</span>
         </button>
       </div>
 
@@ -4946,7 +5013,7 @@ i.fab {
             <div class="settings-icon"><i data-lucide="info"></i></div>
             <div class="settings-text">
               <h4>حول التطبيق</h4>
-              <p>النسخة 1.8 • السنة التحضيرية</p>
+              <p>النسخة 2.0.0 • السنة التحضيرية</p>
             </div>
           </div>
           <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
@@ -7635,7 +7702,15 @@ function showAbout() {
           }
         }
 
-        return window.MedAppStreakCore.compute(dates, streakTodayKey());
+        // ⭐ الأيام المحمية بتجميد (المحفوظة محلياً — للزائر أو دون اتصال)
+        var frozen = [];
+        try {
+          var raw = localStorage.getItem('medapp_streak_freezes_v1');
+          var parsed = raw ? JSON.parse(raw) : [];
+          if (Array.isArray(parsed)) frozen = parsed;
+        } catch (e) {}
+
+        return window.MedAppStreakCore.compute(dates, streakTodayKey(), frozen);
       } catch (e) {
         return null;
       }
@@ -7677,6 +7752,8 @@ function showAbout() {
       var milestoneNote = document.getElementById('streakMilestoneNote');
       var tasksValue = document.getElementById('streakTasksValue');
       var daysValue = document.getElementById('streakDaysValue');
+      var freezeCount = document.getElementById('streakFreezeCount');
+      var freezeBtn = document.getElementById('streakFreezeBtn');
 
       var streakDays = Number(data.current || 0);
       if (current) current.textContent = String(streakDays);
@@ -7705,6 +7782,12 @@ function showAbout() {
 
       if (emoji) emoji.classList.toggle('is-lit', streakDays > 0);
 
+      // ⭐ رصيد التجميد
+      var freezeRemaining = Number(data.freezeRemaining || 0);
+      var freezeLimit = Number(data.freezeLimit || 2);
+      if (freezeCount) freezeCount.textContent = String(freezeRemaining);
+      if (freezeBtn) freezeBtn.classList.toggle('is-empty', freezeRemaining <= 0);
+
       // ⭐ الهدف الأسبوعي (الضرب في 7)
       var cycle = Math.floor(streakDays / 7);
       var milestone = (cycle + 1) * 7;
@@ -7728,7 +7811,12 @@ function showAbout() {
         var days = [];
         try {
           if (window.MedAppStreakCore) {
-            days = window.MedAppStreakCore.week(data.todayKey || streakTodayKey(), 7, data.activeDates);
+            days = window.MedAppStreakCore.week(
+              data.todayKey || streakTodayKey(),
+              7,
+              data.activeDates,
+              data.frozenDays
+            );
           }
         } catch (e) {}
 
@@ -7756,8 +7844,9 @@ function showAbout() {
 
         week.innerHTML = days.map(function (day) {
           return '<div class="streak-day' + (day.active ? ' is-active' : '') +
+            (day.frozen ? ' is-frozen' : '') +
             (day.isToday ? ' is-today' : '') + '" title="' + day.key + '">' +
-            '<i data-lucide="flame" class="streak-day-flame"></i>' +
+            '<i data-lucide="' + (day.frozen ? 'snowflake' : 'flame') + '" class="streak-day-flame"></i>' +
             '<span class="streak-day-name">' + day.weekday + '</span>' +
             '<span class="streak-day-num">' + day.dayNumber + '</span>' +
           '</div>';
@@ -7861,19 +7950,51 @@ function showAbout() {
        ⭐ التجميد (مفهوم بصري) + المشاركة
        ═══════════════════════════════════════════════════ */
     function showStreakFreezeHint() {
-      if (typeof showToast === 'function') {
-        showToast('🧊 تجميد السلسلة — قريباً! سيحمي يوماً فائتاً', 'info');
-      }
+      var data = streakState.data;
+      var remaining = data ? Number(data.freezeRemaining || 0) : 0;
+      var limit = data ? Number(data.freezeLimit || 2) : 2;
+      var message = remaining > 0
+        ? '🧊 لديك ' + remaining + ' تجميد من ' + limit + ' هذا الشهر — يُستهلك تلقائياً إذا فاتتك يوم في السلسلة.'
+        : '🧊 استهلكت تجميدات هذا الشهر — ستعود في الشهر القادم.';
+      if (typeof showToast === 'function') showToast(message, 'info');
+    }
+
+    /* ═══════════════════════════════════════════════════
+       ⭐ المشاركة — Web Share API مع بديل نسخ
+       ═══════════════════════════════════════════════════ */
+    function streakShareText() {
+      var data = streakState.data;
+      var days = data ? Number(data.current || 0) : 0;
+      var word = days === 1 ? 'يوم' : (days === 2 ? 'يومان' : 'أيام');
+      return '🔥 أنا في سلسلة إنجاز لمدة ' + days + ' ' + word + ' على المنصة الطبية!';
     }
 
     function shareStreak() {
-      var data = streakState.data;
-      if (!data) return;
-      var days = Number(data.current || 0);
-      var text = '🔥 سلسلتي على المنصة الطبية: ' + days + ' ' +
-        (days === 1 ? 'يوم' : (days === 2 ? 'يومان' : 'أيام')) +
-        ' متتالية من الالتزام!';
+      var text = streakShareText();
 
+      // ⭐ المشاركة الأصلية إن كان الجهاز يدعمها
+      if (navigator.share) {
+        try {
+          navigator.share({
+            title: 'سلسلة إنجازي — المنصة الطبية',
+            text: text,
+            url: window.location.origin + '/index.html'
+          }).catch(function (err) {
+            // إلغاء المستخدم لا يُعتبر خطأً
+            if (err && err.name === 'AbortError') return;
+            copyStreakText(text);
+          });
+          return;
+        } catch (e) {
+          copyStreakText(text);
+          return;
+        }
+      }
+
+      copyStreakText(text);
+    }
+
+    function copyStreakText(text) {
       var done = function () {
         if (typeof showToast === 'function') showToast('تم نسخ نص السلسلة — شاركها مع زملائك!', 'success');
       };

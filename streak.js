@@ -121,18 +121,37 @@
    *    مهمة اليوم بعد، نحتسب السلسلة من أمس (سلوك Duolingo).
    *  - longest: أطول سلسلة في كامل السجل.
    *  - todayActive: هل أُنجزت مهمة اليوم؟
+   *  - frozenDays: الأيام المحمية بتجميد (لا تكسر السلسلة).
+   *  - breakDay: اليوم الذي قاطعت عنده السلسلة (إن وُجد) — يستخدم
+   *    لاستهلاك التجميد تلقائياً.
+   *
+   * @param {string[]} dateKeys   الأيام النشطة
+   * @param {string}   todayKey   مفتاح اليوم
+   * @param {string[]} frozenDays أيام محمية بتجميد
    */
-  function compute(dateKeys, todayKey) {
+  function compute(dateKeys, todayKey, frozenDays) {
     var today = isValidDateKey(todayKey) ? todayKey : todayKeyLocal();
     var active = normalizeDates(dateKeys, today);
+    var frozen = normalizeDates(frozenDays || [], today);
+
     var set = Object.create(null);
     active.forEach(function (key) { set[key] = true; });
+
+    // ⭐ الأيام المحمية بتجميد تُعامل كأيام نشطة: هي التي تمنع انقطاع السلسلة.
+    var effective = active.slice();
+    frozen.forEach(function (key) {
+      if (!set[key]) {
+        set[key] = true;
+        effective.push(key);
+      }
+    });
+    effective.sort();
 
     // أطول سلسلة
     var longest = 0;
     var run = 0;
     var prev = '';
-    active.forEach(function (key) {
+    effective.forEach(function (key) {
       if (prev && diffDays(prev, key) === 1) {
         run++;
       } else {
@@ -146,30 +165,44 @@
     var anchor = set[today] ? today : addDays(today, -1);
     var current = 0;
     var cursor = anchor;
+    var breakDay = '';
     while (cursor && set[cursor]) {
       current++;
       cursor = addDays(cursor, -1);
     }
+    // ⭐ أول يوم فائت قاطعت عنده السلسلة (وليس "اليوم" الذي لم يُنجز بعد)
+    if (cursor && current > 0) breakDay = cursor;
 
     return {
       todayKey: today,
       current: current,
       longest: longest,
-      todayActive: !!set[today],
+      todayActive: !!activeSet(today, active),
       activeDates: active,
+      frozenDates: frozen,
       lastActiveDate: active.length ? active[active.length - 1] : '',
-      totalActiveDays: active.length
+      totalActiveDays: active.length,
+      breakDay: breakDay
     };
+  }
+
+  function activeSet(day, list) {
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] === day) return true;
+    }
+    return false;
   }
 
   /**
    * يبني نافذة الأيام (مثلاً آخر 7 أيام) مع يوم الأسبوع وحالة النشاط.
    */
-  function week(todayKey, count, activeDates) {
+  function week(todayKey, count, activeDates, frozenDates) {
     var today = isValidDateKey(todayKey) ? todayKey : todayKeyLocal();
     var days = count || 7;
     var set = Object.create(null);
     (activeDates || []).forEach(function (key) { set[key] = true; });
+    var frozenSet = Object.create(null);
+    (frozenDates || []).forEach(function (key) { frozenSet[key] = true; });
 
     var out = [];
     for (var i = days - 1; i >= 0; i--) {
@@ -181,6 +214,7 @@
         weekday: WEEKDAYS_AR[new Date(stamp).getUTCDay()],
         dayNumber: new Date(stamp).getUTCDate(),
         active: !!set[key],
+        frozen: !!frozenSet[key],
         isToday: key === today
       });
     }

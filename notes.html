@@ -1473,7 +1473,6 @@ header {
       font-size: 0.88rem;
       font-weight: 700;
       box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
-      z-index: 9999;
       opacity: 0;
       visibility: hidden;
       transition: all 0.3s ease;
@@ -1484,6 +1483,7 @@ header {
       gap: 10px;
       max-width: calc(100vw - 40px);
       pointer-events: none;
+      z-index: 2147483647;
     }
 
     .toast.visible { 
@@ -1692,7 +1692,7 @@ header {
 <script src="sync.js"></script>
 
 
-  <script src="app.js?v=4.7.0"></script>
+  <script src="app.js?v=2.0.0"></script>
 <script>
 
     lucide.createIcons();

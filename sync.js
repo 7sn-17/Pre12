@@ -672,63 +672,41 @@
    * ⭐ يجمع كل ما تحتاجه ورقة السلسلة:
    *   dates         → الأيام التي عمل فيها المستخدم فعلاً
    *   tasksCompleted→ عدد المهام المنجزة إجمالاً
-   * السحابة هي المصدر الأدق للعدد (الملفات المحلية نسخة منه).
+   *
+   * ⭐ القاعدة: الحالة تُحسب لكل مهمة على حدة ("date|task_id"):
+   *   • إذا كانت المهمة ملغاة محلياً (tombstone) → لا تُحتسب إطلاقاً.
+   *   • إذا كانت منجزة → يُحتسب يوم إنجازها الحقيقي.
+   *   • الحالة المحلية (الطابور) تتقدّم على السحابة دائماً.
    */
   async function collectStreakData() {
-    var dates = Object.create(null);
-    var tasksCompleted = 0;
+    var states = new Map();
 
-    // 1) الأيام النشطة المحلية (فورية، تعمل بلا شبكة).
+    // 1) الحالة المحلية — الطابور + الختم المحلي (الأحدث).
     try {
-      if (typeof getLocalActiveDates === 'function') {
-        var localDates = getLocalActiveDates();
-        if (localDates && typeof localDates.forEach === 'function') {
-          localDates.forEach(function (day) { if (day) dates[day] = true; });
+      if (typeof getLocalTaskStates === 'function') {
+        var localStates = getLocalTaskStates();
+        if (localStates && typeof localStates.forEach === 'function') {
+          localStates.forEach(function (state, id) { states.set(id, state); });
         }
-      } else if (typeof getLocalCompletedTaskKeys === 'function') {
-        // ⭐ احتياط: بدون الدالة الجديدة نستخدم مفاتيح الخطة القديمة.
-        getLocalCompletedTaskKeys().forEach(function (key) {
-          var date = String(key).split('|')[0];
-          if (date) dates[date] = true;
-        });
       }
     } catch (e) {}
 
-    // 2) عدد المهام المنجزة محلياً (احتياط عند عدم الاتصال).
-    try {
-      if (typeof getLocalCompletedTaskKeys === 'function') {
-        tasksCompleted = getLocalCompletedTaskKeys().size;
-      }
-    } catch (e) {}
-
-    // 3) السحابة: المصدر الأدق — وقت الإجازة الحقيقي + العدد الإجمالي.
+    // 2) السحابة — مصدر إضافي للأجهزة الأخرى.
     if (navigator.onLine && typeof supabaseClient !== 'undefined' && supabaseClient) {
       try {
         var userId = await directUserId();
         if (userId) {
           var result = await supabaseClient
             .from('task_progress')
-            .select('plan_date,completed,completed_at')
+            .select('plan_date,task_id,completed,completed_at')
             .eq('user_id', userId)
             .eq('completed', true);
           if (!result.error && result.data) {
-            tasksCompleted = result.data.length;
             result.data.forEach(function (row) {
-              if (!row) return;
-              var day = '';
-              if (row.completed_at) {
-                try {
-                  var stamp = new Date(row.completed_at);
-                  if (!isNaN(stamp.getTime())) {
-                    // ⭐ التوقيت المحلي للمستخدم — هو من يعمل في يومه.
-                    day = stamp.getFullYear() + '-' +
-                      String(stamp.getMonth() + 1).padStart(2, '0') + '-' +
-                      String(stamp.getDate()).padStart(2, '0');
-                  }
-                } catch (e) {}
-              }
-              if (!day && row.plan_date) day = String(row.plan_date).slice(0, 10);
-              if (day) dates[day] = true;
+              if (!row || !row.plan_date || !row.task_id) return;
+              var id = String(row.plan_date) + '|' + String(row.task_id);
+              if (states.has(id)) return;   // ⭐ المحلي يتقدّم
+              states.set(id, { done: true, at: row.completed_at || '' });
             });
           }
         }
@@ -736,6 +714,27 @@
         console.warn('collectStreakData (cloud) failed:', err && err.message ? err.message : err);
       }
     }
+
+    // 3) تحويل الحالات إلى أيام.
+    var dates = Object.create(null);
+    var tasksCompleted = 0;
+    states.forEach(function (state, id) {
+      if (!state || !state.done) return;   // ⭐ المُلغاة لا تُحتسب
+      tasksCompleted++;
+      var day = '';
+      if (state.at) {
+        try {
+          var stamp = new Date(state.at);
+          if (!isNaN(stamp.getTime())) {
+            day = stamp.getFullYear() + '-' +
+              String(stamp.getMonth() + 1).padStart(2, '0') + '-' +
+              String(stamp.getDate()).padStart(2, '0');
+          }
+        } catch (e) {}
+      }
+      if (!day) day = String(id).split('|')[0];
+      if (day) dates[day] = true;
+    });
 
     return {
       dates: Object.keys(dates),
@@ -749,6 +748,130 @@
   async function collectActiveTaskDates() {
     var data = await collectStreakData();
     return data.dates;
+  }
+
+  // ----------------------------------------------------------
+  // Streak freezes (تجميد السلسلة) — نمط Duolingo
+  // ----------------------------------------------------------
+  // تجميدان لكل شهر تقويمي. عند فوات يوم داخل السلسلة، يُستهلك
+  // تجميد تلقائياً فلا تنقطع السلسلة.
+
+  var STREAK_FREEZES_TABLE = 'streak_freezes';
+  var STREAK_FREEZE_LIMIT = 2;
+  var STREAK_FREEZE_LOCAL_KEY = 'medapp_streak_freezes_v1';
+  var STREAK_FREEZE_WINDOW_DAYS = 7;   // لا نُجمّد فوات أقدم من أسبوع
+
+  function streakMonthKey(dayKey) {
+    return String(dayKey || '').slice(0, 7);
+  }
+
+  function streakCurrentMonthKey() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  }
+
+  function readLocalFreezes() {
+    try {
+      var raw = localStorage.getItem(STREAK_FREEZE_LOCAL_KEY);
+      var parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function writeLocalFreezes(days) {
+    try {
+      localStorage.setItem(STREAK_FREEZE_LOCAL_KEY, JSON.stringify(days));
+    } catch (e) {}
+  }
+
+  /**
+   * ⭐-days المحمية بتجميد + المتبقّي لهذا الشهر.
+   */
+  async function getStreakFreezes() {
+    var days = [];
+    var userId = '';
+
+    if (navigator.onLine && typeof supabaseClient !== 'undefined' && supabaseClient) {
+      try {
+        userId = await directUserId();
+        if (userId) {
+          var result = await supabaseClient
+            .from(STREAK_FREEZES_TABLE)
+            .select('day_key,month_key')
+            .eq('user_id', userId);
+          if (!result.error && result.data) {
+            result.data.forEach(function (row) {
+              if (row && row.day_key) days.push(String(row.day_key).slice(0, 10));
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('getStreakFreezes failed:', err && err.message ? err.message : err);
+      }
+    }
+
+    // ⭐ الزائر أو وضع عدم الاتصال: تجميدات محلية.
+    if (!days.length) {
+      var local = readLocalFreezes();
+      if (local.length) days = local;
+    }
+
+    var month = streakCurrentMonthKey();
+    var used = days.filter(function (day) { return streakMonthKey(day) === month; }).length;
+
+    return {
+      days: days,
+      used: used,
+      remaining: Math.max(0, STREAK_FREEZE_LIMIT - used),
+      limit: STREAK_FREEZE_LIMIT
+    };
+  }
+
+  /**
+   * ⭐ استهلاك تجميد ليوم فائت. يُرجع false إن لم يبقَ رصيد.
+   */
+  async function consumeStreakFreeze(dayKey) {
+    if (!dayKey) return false;
+    var day = String(dayKey).slice(0, 10);
+    var month = streakMonthKey(day);
+
+    var current = await getStreakFreezes();
+    var usedInMonth = current.days.filter(function (item) {
+      return streakMonthKey(item) === month;
+    }).length;
+    if (usedInMonth >= STREAK_FREEZE_LIMIT) return false;
+
+    var userId = '';
+    try {
+      if (navigator.onLine && typeof supabaseClient !== 'undefined' && supabaseClient) {
+        userId = await directUserId();
+      }
+    } catch (e) {}
+
+    if (userId) {
+      try {
+        var result = await supabaseClient
+          .from(STREAK_FREEZES_TABLE)
+          .insert({ user_id: userId, day_key: day, month_key: month });
+        if (result.error) {
+          // قد يكون اليوم مجمَّداً مسبقاً (تعارض فريد) — نعتبره محمياً.
+          if (result.error.code !== '23505') throw result.error;
+        }
+        return true;
+      } catch (err) {
+        console.warn('consumeStreakFreeze failed:', err && err.message ? err.message : err);
+      }
+    }
+
+    // احتياطي محلي (زائر أو تعذّر الحفظ)
+    var local = readLocalFreezes();
+    if (local.indexOf(day) === -1) {
+      local.push(day);
+      writeLocalFreezes(local);
+    }
+    return true;
   }
 
   /**
@@ -776,22 +899,76 @@
       tasksCompleted = streakData.tasksCompleted;
     } catch (e) {}
 
+    // ⭐ التجميدات المحمية (تُستهلك تلقائياً عند فوات يوم).
+    var freezes = { days: [], used: 0, remaining: STREAK_FREEZE_LIMIT, limit: STREAK_FREEZE_LIMIT };
+    try { freezes = await getStreakFreezes(); } catch (e) {}
+
+    var result;
     if (window.MedAppStreakCore && typeof window.MedAppStreakCore.compute === 'function') {
-      var result = window.MedAppStreakCore.compute(dates, todayKey);
-      result.tasksCompleted = tasksCompleted;
-      return result;
+      result = window.MedAppStreakCore.compute(dates, todayKey, freezes.days);
+
+      // ⭐ استهلاك تلقائي: إن انقطعت السلسلة وكان في رصيد تجميد،
+      //    نحمي اليوم الفائت حتى لا تنقطع السلسلة.
+      var guard = 0;
+      while (result.breakDay && guard < STREAK_FREEZE_LIMIT) {
+        guard++;
+        if (!streakFreezeCanCover(result.breakDay, todayKey, dates)) break;
+        var consumed = false;
+        try { consumed = await consumeStreakFreeze(result.breakDay); } catch (e) {}
+        if (!consumed) break;
+        if (freezes.days.indexOf(result.breakDay) === -1) freezes.days.push(result.breakDay);
+        result = window.MedAppStreakCore.compute(dates, todayKey, freezes.days);
+      }
+
+      try {
+        var refreshed = await getStreakFreezes();
+        freezes.remaining = refreshed.remaining;
+        freezes.used = refreshed.used;
+        freezes.days = refreshed.days.length ? refreshed.days : freezes.days;
+      } catch (e) {}
+    } else {
+      result = {
+        todayKey: todayKey,
+        current: 0,
+        longest: 0,
+        todayActive: false,
+        activeDates: dates,
+        frozenDates: freezes.days,
+        lastActiveDate: '',
+        totalActiveDays: dates.length,
+        breakDay: ''
+      };
     }
 
-    return {
-      todayKey: todayKey,
-      current: 0,
-      longest: 0,
-      todayActive: false,
-      activeDates: dates,
-      lastActiveDate: '',
-      totalActiveDays: dates.length,
-      tasksCompleted: tasksCompleted
-    };
+    result.tasksCompleted = tasksCompleted;
+    result.frozenDays = freezes.days;
+    result.freezeRemaining = freezes.remaining;
+    result.freezeLimit = freezes.limit;
+    result.freezeUsed = freezes.used;
+    return result;
+  }
+
+  /**
+   * ⭐ هل يجوز تجميد هذا اليوم؟
+   * • لا يجوز تجميد اليوم (لم يُنجز بعد — هذا طبيعي).
+   * • لا نُجمّد فوات أقدم من أسبوع (حماية رصيد المستخدم).
+   * • ⭐ ولا نُجمّد إلا فجوة "داخل" السلسلة: يجب أن يكون اليوم
+   *   قبلها نشطاً — وإلا فالسلسلة كانت قد انتهت أصلاً ولا داعي للتجميد.
+   */
+  function streakFreezeCanCover(dayKey, todayKey, activeDates) {
+    if (!dayKey || !todayKey) return false;
+    var core = window.MedAppStreakCore;
+    if (!core || typeof core.diffDays !== 'function') return false;
+
+    var ago = core.diffDays(dayKey, todayKey);
+    if (!ago || ago < 1 || ago > STREAK_FREEZE_WINDOW_DAYS) return false;
+
+    var previous = core.addDays(dayKey, -1);
+    var list = activeDates || [];
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] === previous) return true;
+    }
+    return false;
   }
 
   // ----------------------------------------------------------
@@ -885,6 +1062,8 @@
     if (typeof clearAllFavorites === 'function') {
       try { await clearAllFavorites(); } catch (e) {}
     }
+    // ⭐ تجميدات السلسلة محلية — تُمسح مع الحساب حتى لا تنتقل لآخر.
+    try { localStorage.removeItem('medapp_streak_freezes_v1'); } catch (e) {}
   }
 
   global.syncNotesFromCloud = syncNotesFromCloud;
@@ -900,6 +1079,8 @@
   global.collectActiveTaskDates = collectActiveTaskDates;
   global.collectStreakData = collectStreakData;
   global.getStudyStreak = getStudyStreak;
+  global.getStreakFreezes = getStreakFreezes;
+  global.consumeStreakFreeze = consumeStreakFreeze;
 
   global.MedAppSync = {
     runFullUserSync: runFullUserSync,
@@ -910,6 +1091,8 @@
     collectActiveTaskDates: collectActiveTaskDates,
     collectStreakData: collectStreakData,
     getStudyStreak: getStudyStreak,
+    getStreakFreezes: getStreakFreezes,
+    consumeStreakFreeze: consumeStreakFreeze,
     notesKeys: {
       mine: NOTES_MY_KEY,
       pending: NOTES_PENDING_KEY,

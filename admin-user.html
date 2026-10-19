@@ -662,13 +662,15 @@ body {
 .toast {
   position: fixed; bottom: 24px; left: 50%;
   transform: translate(-50%, 24px);
-  z-index: 5000; display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 8px;
   padding: 12px 18px; border-radius: 14px;
   background: var(--bg-solid); border: 1px solid var(--border-card-hover);
   color: var(--text-primary); font-size: 0.78rem; font-weight: 700;
   opacity: 0; pointer-events: none;
   transition: opacity var(--t), transform var(--t);
   box-shadow: 0 18px 44px -16px rgba(0, 0, 0, 0.35);
+  /* ⭐ أعلى من كل النوافذ والأوراق السفلية */
+  z-index: 2147483647;
 }
 .toast.visible { opacity: 1; transform: translate(-50%, 0); }
 .toast i { color: var(--accent-light); }

@@ -951,22 +951,32 @@ async function syncTaskProgressFromCloud(userId) {
       if (row.completed_at) {
         localStorage.setItem(
           TASK_DONE_AT_PREFIX + String(row.plan_date) + '_' + String(row.task_id),
-          new Date(row.completed_at).toISOString()
+          JSON.stringify({ done: true, at: new Date(row.completed_at).toISOString() })
         );
       }
     } catch (e) {}
   });
 
-  // A change made while the download was in flight must win over the row we
-  // just fetched.
+  // ⭐ التغييرات المحلية الأحدث (مثل إلغاء مهمة) تُطبَّق بعد المزامنة،
+  //    ومعها شاهد الإلغاء حتى لا تعود المهمة محسوبة في السلسلة.
   const overrides = getLocalTaskProgressOverrides(userId);
   Object.keys(overrides).forEach(function (key) {
     const split = key.indexOf('|');
     if (split < 1) return;
-    const storageKey = 'task_' + key.slice(0, split) + '_' + key.slice(split + 1);
+    const date = key.slice(0, split);
+    const taskId = key.slice(split + 1);
+    const storageKey = 'task_' + date + '_' + taskId;
+    const stampKey = TASK_DONE_AT_PREFIX + date + '_' + taskId;
     try {
-      if (overrides[key]) localStorage.setItem(storageKey, '1');
-      else localStorage.removeItem(storageKey);
+      if (overrides[key]) {
+        localStorage.setItem(storageKey, '1');
+        if (!localStorage.getItem(stampKey)) {
+          localStorage.setItem(stampKey, JSON.stringify({ done: true, at: new Date().toISOString() }));
+        }
+      } else {
+        localStorage.removeItem(storageKey);
+        localStorage.setItem(stampKey, JSON.stringify({ done: false, at: new Date().toISOString() }));
+      }
     } catch (e) {}
   });
 
@@ -1047,6 +1057,12 @@ function toLocalDayKey(value) {
 
 /**
  * ⭐ يحفظ حالة إكمال المهمة + وقت الإجازة المحلي.
+ *
+ * القيمة المخزّنة في `task_at_*` هي كائن JSON:
+ *   { "done": true|false, "at": "<ISO>" }
+ * `done:false` هي "شاهد إلغاء" (tombstone): يعني أن المهمة أُلغيت
+ * محلياً، فلا يجوز أن تُحتسب في السلسلة حتى لو كان الطابور
+ * أو السحابة ما زالا يعرضانها كمنجزة.
  */
 function setLocalTaskCompletion(planDate, taskId, completed) {
   const date = String(planDate || '');
@@ -1055,15 +1071,13 @@ function setLocalTaskCompletion(planDate, taskId, completed) {
   const key = 'task_' + date + '_' + id;
   const stampKey = TASK_DONE_AT_PREFIX + date + '_' + id;
   try {
+    const stamp = JSON.stringify({ done: !!completed, at: new Date().toISOString() });
     if (completed) {
       localStorage.setItem(key, '1');
-      if (!localStorage.getItem(stampKey)) {
-        localStorage.setItem(stampKey, new Date().toISOString());
-      }
     } else {
       localStorage.removeItem(key);
-      localStorage.removeItem(stampKey);
     }
+    localStorage.setItem(stampKey, stamp);
     return true;
   } catch (e) {
     return false;
@@ -1071,49 +1085,87 @@ function setLocalTaskCompletion(planDate, taskId, completed) {
 }
 
 /**
- * ⭐ الأيام التي أنجز فيها المستخدم مهمة فعلاً — هذه هي أيام السلسلة.
+ * ⭐ يقرأ ختم الإجازة (يدعم الصيغة القديمة النصية).
  */
-function getLocalActiveDates() {
-  const dates = new Set();
+function parseTaskStamp(raw) {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && 'done' in parsed) {
+      return { done: !!parsed.done, at: parsed.at || '' };
+    }
+  } catch (e) {}
+  // صيغة قديمة: طابع ISO فقط = مهمة منجزة
+  return { done: true, at: String(raw) };
+}
 
-  // 1) الطابور (للمهام المعلّمة الآن).
+/**
+ * ⭐ حالة كل مهمة: "date|task_id" → { done, at }
+ *
+ * ترتيب الأولوية:
+ *   1) الطابور (أحدث نية، لم تُرفع بعد) — يتقدّم على كل شيء.
+ *   2) الختم المحلي `task_at_*` (آخر حالة مُزامنة).
+ *   3) المفتاح القديم `task_*` = '1' (بلا ختم) → منجزة بلا وقت دقيق.
+ */
+function getLocalTaskStates() {
+  const states = new Map();
+
+  // 1) الختم والمفاتيح المحلية
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+
+      if (key.indexOf(TASK_DONE_AT_PREFIX) === 0) {
+        const m = key.match(/^task_at_(\d{4}-\d{2}-\d{2})_(.+)$/);
+        if (!m) continue;
+        const parsed = parseTaskStamp(localStorage.getItem(key));
+        if (!parsed) continue;
+        states.set(m[1] + '|' + m[2], parsed);
+        continue;
+      }
+
+      if (key.indexOf('task_') === 0) {
+        const m = key.match(/^task_(\d{4}-\d{2}-\d{2})_(.+)$/);
+        if (!m) continue;
+        if (localStorage.getItem(key) !== '1') continue;
+        const id = m[1] + '|' + m[2];
+        if (states.has(id)) continue;   // الختم الدقيق يتقدّم
+        states.set(id, { done: true, at: '' });
+      }
+    }
+  } catch (e) {}
+
+  // 2) الطابور يتقدّم على كل شيء (أحدث نية)
   try {
     readTaskProgressQueue().forEach(function (row) {
-      if (!row || !row.completed) return;
-      const stamp = row.completed_at || row.updated_at;
-      const day = stamp ? toLocalDayKey(stamp) : '';
-      if (day) dates.add(day);
+      if (!row || !row.plan_date || !row.task_id) return;
+      states.set(String(row.plan_date) + '|' + String(row.task_id), {
+        done: !!row.completed,
+        at: row.completed ? (row.completed_at || row.updated_at || '') : ''
+      });
     });
   } catch (e) {}
 
-  // 2) مفاتيح ذات وقت إجازة محفوظ — اليوم الدقيق.
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (!key || key.indexOf(TASK_DONE_AT_PREFIX) !== 0) continue;
-      const stamp = localStorage.getItem(key);
-      if (!stamp) continue;
-      const day = toLocalDayKey(stamp);
-      if (day) dates.add(day);
-    }
-  } catch (e) {}
+  return states;
+}
 
-  // 3) مفاتيح قديمة بلا وقت إجازة → نستخدم يوم المهمة كتقدير فقط،
-  //    وبعدها بس إن لم يكن هناك وقت دقيق لنفس المهمة.
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (!key || key.indexOf('task_') !== 0) continue;
-      if (key.indexOf(TASK_DONE_AT_PREFIX) === 0) continue;
-      if (localStorage.getItem(key) !== '1') continue;
-      const match = key.match(/^task_(\d{4}-\d{2}-\d{2})_(.+)$/);
-      if (!match) continue;
-      let hasExact = false;
-      try { hasExact = !!localStorage.getItem(TASK_DONE_AT_PREFIX + match[1] + '_' + match[2]); } catch (e) {}
-      if (hasExact) continue;
-      dates.add(match[1]);
-    }
-  } catch (e) {}
+/**
+ * ⭐ الأيام التي أنجز فيها المستخدم مهمة فعلاً — هذه هي أيام السلسلة.
+ *
+ * ⭐ القاعدة: اليوم يُحتسب فقط إذا كانت هناك مهمة واحدة على الأقل
+ * حالتها "منجزة" في ذلك اليوم. فإذا ألغى المستخدم كل مهام اليوم
+ * يختفي اليوم من السلسلة فوراً.
+ */
+function getLocalActiveDates() {
+  const dates = new Set();
+  const states = getLocalTaskStates();
+
+  states.forEach(function (state, id) {
+    if (!state || !state.done) return;         // ⭐ مُلغاة → لا تُحتسب
+    const day = state.at ? toLocalDayKey(state.at) : String(id).split('|')[0];
+    if (day) dates.add(day);
+  });
 
   return dates;
 }

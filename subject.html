@@ -1059,13 +1059,13 @@ header {
   top: 80px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 9999;
   display: flex;
   flex-direction: column;
   gap: 8px;
   width: calc(100% - 24px);
   max-width: 400px;
   pointer-events: none;
+  z-index: 2147483647;
 }
 
 .toast {
@@ -1083,6 +1083,7 @@ header {
   animation: toastIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   pointer-events: auto;
   border-right: 4px solid #10b981;
+  z-index: 2147483647;
 }
 
 @keyframes toastIn {
@@ -1245,7 +1246,7 @@ header {
 <script src="sync.js"></script>
 
 
-<script src="app.js?v=4.7.0"></script>
+<script src="app.js?v=2.0.0"></script>
 <script>
 
 /* ═══════════════════════════════════════════════════════

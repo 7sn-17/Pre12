@@ -10,12 +10,11 @@
 
 <br>
 
-![Version](https://img.shields.io/badge/version-4.7.0-10b981?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-2.0.0-10b981?style=for-the-badge)
 ![PWA](https://img.shields.io/badge/PWA-Ready-8b5cf6?style=for-the-badge)
 ![Offline](https://img.shields.io/badge/Offline-First-3b82f6?style=for-the-badge)
 ![SPA](https://img.shields.io/badge/SPA-a78bfa?style=for-the-badge)
 ![License](https://img.shields.io/badge/license-Free-10b981?style=for-the-badge)
-
 <br>
 
 ### 🚀 [**افتح المنصة**](https://pre-three-pearl.vercel.app/)
@@ -44,6 +43,8 @@
 | 📖 **قراءة بدون إنترنت** | حمّل الملفات واقرأها في أي وقت (PWA) |
 | ⚡ **فتح فوري دون إنترنت** | البنية تعمل بالكامل بلا شبكة — لا هياكل تحميل ولا انتظار |
 | 🔥 **سلسلة الأيام (Streak)** | عدّاد نار + ورقة إحصائيات بنمط Duolingo (أسبوع · شهر · الكل) |
+| 🧊 **تجميد السلسلة** | تجميدان لكل شهر يحميان يوماً فائتاً فلا تنقطع سلسلتك |
+| 📤 **مشاركة أصلية** | زر "شارك سلسلتك" يستخدم Web Share API (نسخ احتياطي) |
 | 🔑 **دخول سريع بـ Google** | زر "المتابعة باستخدام Google" بنسخة رسمية (OAuth) |
 | 📝 **ملاحظات ذكية** | خاصة (محلياً) + مشتركة (سحابياً) |
 | 🎯 **أهداف دراسية** | تابع إنجازك بمؤشر بصري |
@@ -67,8 +68,8 @@ Pre12/
 ├── build.js             # 🏗️  مُولِّد الموقع (Node.js) — يدمج partials ويكتب الجذر + dist/
 ├── sw.js                # 🛡️  Service Worker (Network-First للـ HTML · Cache-First للـ JSON)
 ├── auth.js              # 🔐 المصادقة + كاش الملف الشخصي
-├── db.js                # 💾 IndexedDB + طابور مزامنة المهام
-├── sync.js              # 🔄 المزامنة بين الأجهزة
+├── db.js                # 💾 IndexedDB + طابور مزامنة المهام + حالات السلسلة
+├── sync.js              # 🔄 المزامنة بين الأجهزة + تجميد السلسلة
 ├── files.js             # 📚 جلب البيانات + منطق "رابط أم ملف"
 ├── streak.js            # 🔥 نواة حساب سلسلة الأيام (منطق نقي)
 │
