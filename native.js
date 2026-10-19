@@ -23,7 +23,9 @@
     isNative: isNative,
     backButtonBound: false,
     fcmToken: '',
-    lastNotificationTap: null
+    lastNotificationTap: null,
+    permissionRequested: false,
+    notificationPermission: null
   };
 
   function plugin(name) {
@@ -406,11 +408,42 @@
       console.warn('[native] notification engine failed to start:', e);
     }
 
+    // ⭐ أذونات الإشعارات: نطلبها بعد تسجيل الدخول (وليس قبله)
+    //    حتى لا نُزعج الزائر.
+    try {
+      global.addEventListener('medapp:auth-success', function () {
+        requestNotificationPermissionOnce();
+      });
+      global.addEventListener('medapp:notification-permission', function (event) {
+        global.MedAppNative.state.notificationPermission = (event && event.detail) || null;
+      });
+      // إن كان المستخدم مسجّلاً بالفعل → نطلب الإذن بهدوء.
+      if (typeof global.getAuthUser === 'function' && global.getAuthUser()) {
+        requestNotificationPermissionOnce();
+      }
+    } catch (e) {}
+
     // إخفاء شاشة البدء بعد أول رسم
     if (document.readyState === 'complete') {
       setTimeout(hideSplash, 120);
     } else {
       global.addEventListener('load', function () { setTimeout(hideSplash, 120); });
+    }
+  }
+
+  /**
+   * ⭐ يطلب إذن الإشعارات مرة واحدة فقط (لا نُزعج المستخدم).
+   */
+  function requestNotificationPermissionOnce() {
+    if (nativeState.permissionRequested) return;
+    nativeState.permissionRequested = true;
+    try {
+      if (global.MedAppNotifications &&
+          typeof global.MedAppNotifications.requestNotificationPermission === 'function') {
+        global.MedAppNotifications.requestNotificationPermission();
+      }
+    } catch (e) {
+      console.warn('[native] notification permission failed:', e);
     }
   }
 

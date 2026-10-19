@@ -4854,6 +4854,20 @@ i.fab {
           <div class="toggle-switch" id="themeToggle"></div>
         </div>
 
+        <!-- ⭐⭐ الإشعارات — مفتاح + وضع بديل (إعدادات الهاتف) -->
+        <div class="settings-item" id="notificationSettingsItem" style="cursor: default;">
+          <div class="settings-item-left">
+            <div class="settings-icon" style="background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.25); color: var(--medapp-emerald);">
+              <i data-lucide="bell"></i>
+            </div>
+            <div class="settings-text">
+              <h4>الإشعارات</h4>
+              <p id="notificationStatusText">تذكير بالمهام وحماية سلسلتك</p>
+            </div>
+          </div>
+          <div class="toggle-switch" id="notificationToggle" role="switch" aria-checked="false" aria-label="تفعيل الإشعارات" onclick="toggleNotifications(event)"></div>
+        </div>
+
         <!-- حالة الاتصال -->
         <div class="settings-item" style="cursor: default;">
           <div class="settings-item-left">
@@ -5201,6 +5215,69 @@ i.fab {
       } else {
         paint();
       }
+    }
+
+    // ============================================
+    // ⭐⭐ الإشعارات — المفتاح + الوضع البديل
+    // ============================================
+    // Logic (prompt26 Task 2):
+    //   • granted → المفتاح مفعّل
+    //   • denied  → المفتاح متوقف + نفتح إعدادات الهاتف
+    //   • prompt  → نطلب الإذن
+    async function refreshNotificationToggle() {
+      const toggle = document.getElementById('notificationToggle');
+      const text = document.getElementById('notificationStatusText');
+      if (!toggle || typeof MedAppNotifications === 'undefined') return;
+
+      let status = 'unknown';
+      try {
+        status = await MedAppNotifications.getPermissionStatus();
+      } catch (e) {}
+
+      const granted = status === 'granted';
+      toggle.classList.toggle('active', granted);
+      toggle.setAttribute('aria-checked', granted ? 'true' : 'false');
+
+      if (text) {
+        if (status === 'granted') text.textContent = 'مفعّلة — تذكير بالمهام والسلسلة';
+        else if (status === 'denied') text.textContent = 'محظورة — فعّلها من إعدادات الهاتف';
+        else if (status === 'unsupported') text.textContent = 'غير متاحة على الويب';
+        else text.textContent = 'اضغط للتفعيل';
+      }
+    }
+
+    async function toggleNotifications(event) {
+      if (event) event.stopPropagation();
+      const toggle = document.getElementById('notificationToggle');
+      const text = document.getElementById('notificationStatusText');
+      if (typeof MedAppNotifications === 'undefined') return;
+
+      let status = 'unknown';
+      try { status = await MedAppNotifications.getPermissionStatus(); } catch (e) {}
+
+      // ⭐ المفعّل → الإيقاف يتم من إعدادات الهاتف فقط
+      if (status === 'granted') {
+        if (text) text.textContent = 'تعطيل الإشعارات من إعدادات الهاتف';
+        showToast('يمكنك تعطيل الإشعارات من إعدادات الهاتف', 'info');
+        MedAppNotifications.openAppSettings();
+        return;
+      }
+
+      const result = await MedAppNotifications.requestNotificationPermission();
+
+      if (result && result.granted) {
+        if (toggle) { toggle.classList.add('active'); toggle.setAttribute('aria-checked', 'true'); }
+        if (text) text.textContent = 'مفعّلة — تذكير بالمهام والسلسلة';
+        showToast('تم تفعيل الإشعارات بنجاح ✅', 'success');
+        MedAppNotifications.init();
+        return;
+      }
+
+      // ⭐⭐ الوضع البديل: النظام منع الطلب → نفتح إعدادات التطبيق
+      if (toggle) { toggle.classList.remove('active'); toggle.setAttribute('aria-checked', 'false'); }
+      if (text) text.textContent = 'محظورة — فعّلها من إعدادات الهاتف';
+      showToast('الإشعارات محظورة — سَنفتح إعدادات التطبيق', 'info');
+      MedAppNotifications.openAppSettings();
     }
 
     function toggleTheme() {
@@ -6185,6 +6262,7 @@ function openRecentFile(fileId) {
       lucide.createIcons();
 
       if (viewName === 'favorites') loadFavorites();
+      if (viewName === 'settings') refreshNotificationToggle();
       if (viewName === 'home') {
         loadLastActivity();
         loadRandomTip();

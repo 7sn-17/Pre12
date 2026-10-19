@@ -1737,9 +1737,95 @@ header {
     </div>
   </div>
 
-</div>
+  <!-- ═══ إرسال إشعار ═══ -->
+  <div id="notificationsView" class="tab-view">
+    <h2 class="section-header-title">
+      <i class="fa-solid fa-bell"></i>
+      <span>إرسال إشعار</span>
+    </h2>
 
-<!-- شريط الإجراءات الجماعية -->
+    <p style="color: var(--text-secondary); font-size: 0.9rem; margin: 0 0 18px; line-height: 1.6;">
+      أرسل إشعاراً فورياً لكل المستخدمين أو لمجموعة محدّدة. يعمل عبر
+      <strong>Firebase Cloud Messaging</strong> — يظهر للمستخدمين على أجهزتهم.
+    </p>
+
+    <div class="form-group">
+      <label class="form-label">
+        <span class="form-label-text">
+          <i class="fa-solid fa-heading"></i>
+          <span>العنوان</span>
+        </span>
+        <span class="form-label-hint">مطلوب</span>
+      </label>
+      <input type="text" id="pushTitle" class="form-input" placeholder="مثال: ملف جديد في مادة التشريح" maxlength="100">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">
+        <span class="form-label-text">
+          <i class="fa-solid fa-align-right"></i>
+          <span>نص الإشعار</span>
+        </span>
+        <span class="form-label-hint">مطلوب</span>
+      </label>
+      <textarea id="pushBody" class="form-textarea" placeholder="اكتب رسالة الإشعار هنا..." maxlength="400" style="min-height: 100px;"></textarea>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">
+        <span class="form-label-text">
+          <i class="fa-solid fa-bullseye"></i>
+          <span>الجمهور</span>
+        </span>
+      </label>
+      <select id="pushTargetType" class="filter-select" style="width: 100%;" onchange="updatePushTargetFields()">
+        <option value="all">كل المستخدمين</option>
+        <option value="subject">مادة محدّدة</option>
+        <option value="email">بريد إلكتروني محدّد</option>
+      </select>
+    </div>
+
+    <div class="form-group" id="pushSubjectGroup" style="display: none;">
+      <label class="form-label">
+        <span class="form-label-text">
+          <i class="fa-solid fa-book"></i>
+          <span>المادة</span>
+        </span>
+      </label>
+      <select id="pushSubject" class="filter-select" style="width: 100%;">
+        <option value="">— اختر المادة —</option>
+      </select>
+    </div>
+
+    <div class="form-group" id="pushEmailGroup" style="display: none;">
+      <label class="form-label">
+        <span class="form-label-text">
+          <i class="fa-solid fa-envelope"></i>
+          <span>البريد الإلكتروني</span>
+        </span>
+      </label>
+      <input type="email" id="pushEmail" class="form-input" placeholder="user@example.com" dir="ltr">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">
+        <span class="form-label-text">
+          <i class="fa-solid fa-link"></i>
+          <span>رابط عند الضغط (اختياري)</span>
+        </span>
+      </label>
+      <input type="text" id="pushUrl" class="form-input" placeholder="index.html" dir="ltr">
+    </div>
+
+    <button class="btn primary" id="pushSendBtn" onclick="sendAdminNotification()" style="width: 100%;">
+      <i class="fa-solid fa-paper-plane"></i>
+      <span>إرسال الإشعار</span>
+    </button>
+
+    <div id="pushResult" style="margin-top: 16px; font-size: 0.85rem; color: var(--text-secondary);"></div>
+  </div>
+
+</div>
 <div class="bulk-bar" id="bulkBar">
   <div class="bulk-info">
     <strong id="bulkCount">0</strong> محدد
@@ -1781,6 +1867,10 @@ header {
     <button class="admin-nav-btn" data-view="notes" onclick="switchView('notes')">
       <i class="fa-solid fa-note-sticky"></i>
       <span>الملاحظات</span>
+    </button>
+    <button class="admin-nav-btn" data-view="notifications" onclick="switchView('notifications')">
+      <i class="fa-solid fa-bell"></i>
+      <span>إشعار</span>
     </button>
   </nav>
 </div>
@@ -3687,8 +3777,106 @@ function switchView(viewName) {
   if (viewName === 'notes' && adminState.notes.length === 0) {
     loadNotes();
   }
+  if (viewName === 'notifications') {
+    loadPushSubjects();
+  }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ═══════════════════════════════════════════════════════
+   ⭐⭐ إرسال إشعار (FCM) — لوحة التحكم
+   ═══════════════════════════════════════════════════════ */
+
+function updatePushTargetFields() {
+  const type = document.getElementById('pushTargetType').value;
+  document.getElementById('pushSubjectGroup').style.display = type === 'subject' ? '' : 'none';
+  document.getElementById('pushEmailGroup').style.display = type === 'email' ? '' : 'none';
+}
+
+/** ⭐ يحمّل المواد لاختيار الجمهور */
+async function loadPushSubjects() {
+  const select = document.getElementById('pushSubject');
+  if (!select || select.dataset.loaded === '1') return;
+  try {
+    const { data, error } = await supabaseClient
+      .from('subjects')
+      .select('id, name')
+      .order('name');
+    if (error) throw error;
+    select.innerHTML = '<option value="">— اختر المادة —</option>' +
+      (data || []).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    select.dataset.loaded = '1';
+  } catch (e) {
+    console.warn('[admin] could not load the subjects:', e);
+  }
+}
+
+/** ⭐ يرسل الإشعار عبر Edge Function */
+async function sendAdminNotification() {
+  const btn = document.getElementById('pushSendBtn');
+  const result = document.getElementById('pushResult');
+  const title = (document.getElementById('pushTitle').value || '').trim();
+  const body = (document.getElementById('pushBody').value || '').trim();
+  const targetType = document.getElementById('pushTargetType').value;
+  const url = (document.getElementById('pushUrl').value || '').trim();
+
+  if (!title || !body) {
+    result.innerHTML = '<span style="color: var(--medapp-red);">⚠️ العنوان ونص الإشعار مطلوبان.</span>';
+    return;
+  }
+
+  let target = { type: targetType };
+  if (targetType === 'subject') {
+    const subjectId = document.getElementById('pushSubject').value;
+    if (!subjectId) {
+      result.innerHTML = '<span style="color: var(--medapp-red);">⚠️ اختر المادة.</span>';
+      return;
+    }
+    target.subjectId = subjectId;
+  } else if (targetType === 'email') {
+    const email = (document.getElementById('pushEmail').value || '').trim().toLowerCase();
+    if (!email) {
+      result.innerHTML = '<span style="color: var(--medapp-red);">⚠️ اكتب البريد الإلكتروني.</span>';
+      return;
+    }
+    target.email = email;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>جارٍ الإرسال…</span>';
+  result.innerHTML = '';
+
+  try {
+    const { data: sessionData } = await supabaseClient.auth.getSession();
+    const accessToken = sessionData && sessionData.session ? sessionData.session.access_token : '';
+
+    const response = await supabaseClient.functions.invoke('send-admin-notification', {
+      body: { title, body, target, url }
+    });
+
+    const error = response && response.error;
+    if (error) throw error;
+
+    const payload = response.data || {};
+    const sent = payload.sent || 0;
+    const failed = payload.failed || 0;
+
+    result.innerHTML = sent
+      ? `<span style="color: var(--medapp-emerald);">✅ تم الإرسال إلى ${sent} جهاز${failed ? ` (فشل ${failed})` : ''}.</span>`
+      : `<span style="color: var(--medapp-amber);">⚠️ لم يتم العثور على أجهزة.</span>`;
+
+    if (sent) {
+      document.getElementById('pushTitle').value = '';
+      document.getElementById('pushBody').value = '';
+    }
+  } catch (e) {
+    console.error('[admin] the notification could not be sent:', e);
+    result.innerHTML = `<span style="color: var(--medapp-red);">❌ فشل الإرسال: ${(e && e.message) || e}</span>`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i><span>إرسال الإشعار</span>';
+  }
 }
 
 /* ═══════════════════════════════════════════════════════

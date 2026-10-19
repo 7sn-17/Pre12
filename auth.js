@@ -344,9 +344,12 @@ async function signInWithGoogleNative() {
   const hashedNonce = await hashNonceWithSha256(rawNonce);
 
   // 3) طلب الدخول من Google أصلياً
+  // ⭐ بدون `scopes`: المُزوّد يضيف النطاقات الافتراضية
+  //    (email · profile · openid) تلقائياً، وتمرير نطاق مخصّص
+  //    كان يرفض الطلب برسالة "You CANNOT use scopes…".
   const result = await SocialLogin.login({
     provider: 'google',
-    options: { scopes: ['email', 'profile'], nonce: hashedNonce }
+    options: { nonce: hashedNonce }
   });
 
   const idToken = result && result.response ? result.response.idToken : null;

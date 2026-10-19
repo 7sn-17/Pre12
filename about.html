@@ -189,8 +189,45 @@
     --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
     --safe-area-inset-left: env(safe-area-inset-left, 0px);
     --safe-area-inset-right: env(safe-area-inset-right, 0px);
+
+    /* ⭐⭐ رموز احتياطية — الصفحات التي تعرّف رموزها الخاصة تتجاوزها،
+       والصفحات التي لا تعرّفها تحصل على قيم سليمة.
+       بدونها كان زر "تسجيل الدخول" بلا خلفية (لأن --accent-emerald
+       غير معرّف) فيظهر النص الأبيض على خلفية شفافة = نص غير مرئي. */
+    --accent-emerald: #10b981;
+    --accent-light: #34d399;
+    --accent-dark: #059669;
+    --accent-glow: rgba(16, 185, 129, 0.25);
+    --accent-glow-strong: rgba(16, 185, 129, 0.42);
+    --bg-main: #06110d;
+    --bg-card: rgba(16, 34, 27, 0.68);
+    --bg-card-hover: rgba(22, 48, 38, 0.92);
+    --bg-solid: #0d221a;
+    --bg-elevated: #102a22;
+    --border-card: rgba(16, 185, 129, 0.18);
+    --border-card-hover: rgba(16, 185, 129, 0.46);
+    --text-primary: #f0fdf4;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --transition-fast: 0.18s ease;
+    --transition-smooth: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
     --app-header-h: 72px;
     --app-header-pad-x: 20px;
+  }
+
+  [data-theme="light"] {
+    --accent-emerald: #059669;
+    --bg-main: #f8fafb;
+    --bg-card: rgba(255, 255, 255, 0.9);
+    --bg-card-hover: #ffffff;
+    --bg-solid: #ffffff;
+    --bg-elevated: #f1f5f9;
+    --border-card: rgba(16, 185, 129, 0.24);
+    --border-card-hover: rgba(16, 185, 129, 0.55);
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
   }
 
   @media (max-width: 480px) {
@@ -1369,7 +1406,7 @@
       <div class="app-tagline-large">رفيقك في السنة التحضيرية</div>
       <div class="version-badge">
         <i data-lucide="git-branch"></i>
-        <span>الإصدار 2.6.0</span>
+        <span>الإصدار 2.7.0</span>
       </div>
     </div>
 

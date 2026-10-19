@@ -1,86 +1,127 @@
 // ============================================================
-// notifications.js — محرّك الإشعارات الذكي (Smart Notification Engine)
+// notifications.js — محرّك الإشعارات الذكي + أذونات الإشعارات
 // ------------------------------------------------------------
-// ⭐ 6 فئات، لكل فئة عدة قوالب عربية، والاختيار عشوائي weighted
-//    حسب حالة المستخدم (السلسلة، المهام المعلّقة، الإنجازات).
+// ⭐ Phase 15/16 — Universal Notification Engine
 //
-// ⭐ يعمل على الويب بلا أثر (لا نطلب إذن الإشعارات إلا في التطبيق).
+//  • أذونات الإشعارات (Android 13+) عبر @capacitor/push-notifications
+//  • الإعداد البديل: فتح إعدادات التطبيق عبر capacitor-native-settings
+//  • محرّك من 6 فئات، قوالب عربية ضخمة، اختيار عشوائي موزون
+//  • جدولة محلية عبر @capacitor/local-notifications
+//
+// ⭐ يعمل على الويب بلا أثر — كل شيء يتحقق من Capacitor.isNativePlatform().
 // ============================================================
 (function (global) {
   'use strict';
 
   var STORAGE_KEY = 'medapp_notification_state_v1';
   var LAST_TEMPLATE_KEY = 'medapp_notification_last_v1';
+  var PERMISSION_KEY = 'medapp_notification_permission_v1';
 
-  // ─────────────────────────────────────────────
-  // الفئات الست
-  // ─────────────────────────────────────────────
+  /* ══════════════════════════════════════════════════════════
+     1. الفئات الست — قوالب ضخمة (prompt26 Task 4)
+     ══════════════════════════════════════════════════════════ */
+
   var CATEGORIES = [
     {
-      id: 'task',
-      weight: 5,
-      titles: ['مهمة اليوم', 'مهمة بانتظارك', 'خطوة واحدة فقط'],
+      id: 'onboarding',
+      label: 'البداية والخطوات الأولى',
+      weight: 2,
+      titles: ['أهلاً بك في المنصة الطبية', 'رحلتك بدأت', 'خطوة أولى'],
       bodies: [
-        'لديك مهمة اليوم: {task}. خمس دقائق تكفي للبداية.',
-        'بقيت عليك مهمة واحدة: {task}. لا تتركها untuk الغد!',
-        'مهمة اليوم جاهزة: {task}. ابدأ الآن وأنجزها في أقل من ربع ساعة.'
+        'أهلاً بك يا {name} في المنصة الطبية! رحلتك تبدأ الآن 👨‍⚕️.',
+        'خطوتك الأولى نحو التفوق بدأت. لنضع خطة اليوم!',
+        'مرحباً {name}! سجّل أول مهمة لك ولنبدأ بناء سلسلتك 💪.',
+        'معنا نتعلّم بانتظام: مهام صغيرة كل يوم = منافسة تفوز.',
+        'خطوة اليوم: افتح أول مادة وابدأ مهمة واحدة فقط ✅.',
+        'أنت الآن في بداية طريق التفوق — وكل يوم هنا يصنع الفرق 🎯.'
+      ]
+    },
+    {
+      id: 'agenda',
+      label: 'المتابعة اليومية',
+      weight: 5,
+      titles: ['صباح الخير', 'مهام اليوم', 'لنبدأ', 'تذكير سريع', 'وقت الانطلاق'],
+      bodies: [
+        'صباح الخير يا {name} ☀️! لديك {task_count} مهام اليوم. لنبدأ بنشاط!',
+        'يوم جديد، فرصة جديدة للتفوق. مهامك بانتظارك 📚.',
+        'طالب الطب لا ينام على مهامه! ابدأ يومك الآن 💪.',
+        'مر الوقت ولم تبدأ بعد! تذكّر هدفك، ابدأ بمهمة واحدة الآن ⏳.',
+        'أنت في منتصف الطريق! أنجزت نصف المهام. واصل التقدم 🚀.',
+        'رائع يا {name}! أكملت جميع مهام اليوم. أنت أسطورة 🏆.',
+        'مهمة واحدة الآن تكفي لتُكمل يومك بنجاح — خلّينا نبدأ.',
+        'جدولك جاهز: {task_count} مهام. أتمم واحدة منهم وابدأ.',
+        'قاعدة اليوم: الأهم أولاً، ثم الباقي. ابدأ بالمهمة الأهم 🎯.'
       ]
     },
     {
       id: 'streak',
+      label: 'حماية السلسلة',
       weight: 5,
-      titles: ['حافظ على سلسلتك', 'سلسلتك تنتظرك', 'يوم واحد ويكفي'],
+      titles: ['حافظ على سلسلتك', 'سلسلتك في خطر!', 'يوم واحد يحميك', 'وسام الأسبوع'],
       bodies: [
-        'سلسلتك {days} أيام — أنجز مهمة اليوم حتى لا تنقطع!',
-        'سلسلة {days} أيام من الالتزام. لا تكسرها اليوم!',
-        'يوم واحد يحمي سلسلة {days} أيام. أنجز أي مهمة الآن.'
+        '🔥 انتبه! سلسلتك ({streak} أيام) في خطر. أنجز مهمة سريعة قبل منتصف الليل!',
+        'لا تدع تعب اليوم يضيع إنجاز الأمس. مهمة واحدة تنقذ سلسلتك ⏰.',
+        'سلسلتك {streak} أيام — لا تكسرها اليوم!',
+        'غداً هو اليوم السابع! حافظ على حماسك لتحصل على شارة الأسبوع 🔥.',
+        'يوم واحد يحمي سلسلة {streak} أيام. أنجز أي مهمة الآن.',
+        'أنجزت {streak} يوماً متتالياً — هل تحطّمها اليوم؟ لا!',
+        'السلسلة كنز: احمِ {streak} يوماً بتعبير بسيط اليوم 💎.'
       ]
     },
     {
-      id: 'motivation',
-      weight: 3,
-      titles: ['بالتدريج تنجح', 'كل يوم أفضل', 'استمر!'],
+      id: 'reengagement',
+      label: 'إعادة التفاعل',
+      weight: 4,
+      titles: ['افتقدناك', 'أين أنت؟', 'عد إلينا', 'المكان ينتظرك'],
       bodies: [
-        'أنجزت {count} مهمة حتى الآن. الاستمرارية هي سر النجاح.',
-        '{count} مهمة منجزة — أنت تتقدم أكثر مما تظن. واصل!',
-        'المثابرة تصنع الفرق. أنجزت {count} مهمة، فلماذا تتوقف؟'
+        'افتقدناك اليوم يا {name}! لديك مهام تنتظرك 📖.',
+        '👋 أين أنت يا {name}؟ زملاؤك يتقدمون، لا تتأخر. لديك {missed_count} مهام فائتة.',
+        'هل تواجه صعوبة؟ تذكّر لماذا بدأت. نحن هنا لدعمك 🤝.',
+        '🚀 {name}، عودتك ستصنع الفارق! لنعوّض ما فات معاً.',
+        'النجاح ليس ألا تسقط، بل أن تنهض بعد السقوط. عد الآن!',
+        'مهمة واحدة اليوم تكفي لعودة القاع. لنبدأ من جديد 🌱.',
+        'المهمة اليوم أهم من الكمال — عودتك تكفي.'
+      ]
+    },
+    {
+      id: 'content',
+      label: 'محتوى جديد',
+      weight: 3,
+      titles: ['محتوى جديد', 'محتوى جديد', 'ملف جديد بانتظارك'],
+      bodies: [
+        '📚 تمت إضافة ملخص/ملف جديد في مادة {subject}. كن أول من يطّلع عليه!',
+        '🆕 محتوى جديد بانتظارك في {subject}. لا تفوّته!',
+        'ملخص {subject} وصل حديثاً — خمس دقائق تكفي لتعرف الجديد.',
+        'أضفنا مادة إلى {subject}. راجعها قبل أن تتراكم.'
       ]
     },
     {
       id: 'achievement',
+      label: 'الإنجازات',
       weight: 2,
-      titles: ['إنجاز جديد!', 'مبروك!', 'وسام جديد'],
+      titles: ['إنجاز جديد!', 'مبروك!', 'وسام جديد', 'أداء رائع'],
       bodies: [
         'أكملت {count} مهمة 🎉 استمر في هذا الإيقاع!',
         'ممتاز! {count} مهمة منجزة — كل واحدة تقرّبك من هدفك.',
-        'رائع! عدد مهامك المنجزة وصل إلى {count}. استمدّ هذا الإنجاز!'
-      ]
-    },
-    {
-      id: 'review',
-      weight: 2,
-      titles: ['وقت المراجعة', 'راجع ما فاتك', 'حصاد اليوم'],
-      bodies: [
-        'عندك {pending} مهمة معلّقة من الأيام الماضية. راجع واحدة الآن وابدأ يومك مرتاحاً.',
-        'ما زالت {pending} مهمة في انتظارك. عشر دقائق تكفي لمراجعة واحدة.',
-        'راجع مهامك المعلّقة ({pending}) قبل أن تكبر — مراجعة سريعة اليوم أفضل من تراكم كبير.'
-      ]
-    },
-    {
-      id: 'welcome',
-      weight: 1,
-      titles: ['أهلاً بك', 'المنصة الطبية', 'يوم جديد'],
-      bodies: [
-        'أهلاً {name}! جاهز لدرس اليوم؟ خمس دقائق تكفي للبداية.',
-        'مرحباً {name} — ابدأ بمهمة واحدة، والباقي يأتي بسهولة.',
-        'يوم جديد يا {name}! تذكّر أن الالتزام القصير أفضل من التأجيل الطويل.'
+        'رائع! عدد مهامك المنجزة وصل إلى {count}. استمدّ هذا الإنجاز!',
+        'أنجزت {count} مهمة — الفارق بين طالب وطالب متفوق هو الاستمرارية.',
+        'وسام جديد باسمك 🏅 — استمر، القمة أقرب مما تظن.'
       ]
     }
   ];
 
-  // ─────────────────────────────────────────────
-  // مساعدات
-  // ─────────────────────────────────────────────
+  /* ══════════════════════════════════════════════════════════
+     2. مساعدات
+     ══════════════════════════════════════════════════════════ */
+
+  function plugin(name) {
+    return (global.Capacitor && global.Capacitor.Plugins && global.Capacitor.Plugins[name]) || null;
+  }
+
+  function isNative() {
+    return !!(global.Capacitor && global.Capacitor.isNativePlatform && global.Capacitor.isNativePlatform());
+  }
+
   function readState() {
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
@@ -119,11 +160,13 @@
 
   function firstName() {
     try {
-      var user = (global.MedAppAuthUser && global.MedAppAuthUser()) || null;
+      var user = null;
+      if (typeof global.getAuthUser === 'function') user = global.getAuthUser();
+      if (!user && global.MedAppAuthUser) user = global.MedAppAuthUser();
       if (user) {
-        if (user.user_metadata && user.user_metadata.full_name) {
-          return String(user.user_metadata.full_name).split(' ')[0];
-        }
+        var meta = user.user_metadata || {};
+        if (meta.full_name) return String(meta.full_name).split(' ')[0];
+        if (meta.name) return String(meta.name).split(' ')[0];
         if (user.email) return String(user.email).split('@')[0];
       }
     } catch (e) {}
@@ -132,22 +175,20 @@
 
   /**
    * ⭐ يختار فئة + قالب عشوائي حسب حالة المستخدم.
-   * @param {object} state {streak, completed, pending, task, subject}
+   * @param {object} state {streak, completed, pending, task, subject, name}
    */
   function pick(state) {
     state = state || {};
 
     var pool = CATEGORIES.filter(function (category) {
-      if (category.id === 'task') return !!state.task;
       if (category.id === 'streak') return Number(state.streak || 0) > 0;
       if (category.id === 'achievement') return Number(state.completed || 0) >= 3;
-      if (category.id === 'review') return Number(state.pending || 0) > 0;
+      if (category.id === 'content') return !!state.subject;
       return true;
     });
 
     if (!pool.length) pool = [CATEGORIES[0]];
 
-    // ⭐ اختيار موزون (weighted) — مع تفضيل فئة تختلف عن آخر مرة.
     var last = readLastTemplate();
     var totalWeight = 0;
     pool.forEach(function (category) { totalWeight += category.weight; });
@@ -159,12 +200,10 @@
       if (roll <= 0) { chosen = pool[i]; break; }
     }
     if (pool.length > 1 && chosen.id === last) {
-      // ⭐ لا نكرّر نفس الفئة مرتين متتاليتين
       var alternatives = pool.filter(function (c) { return c.id !== last; });
       if (alternatives.length) chosen = alternatives[Math.floor(Math.random() * alternatives.length)];
     }
 
-    // ⭐ قالب عشوائي من قوالب الفئة (لا نكرّر آخر قالب).
     var bodies = chosen.bodies || [''];
     var index = Math.floor(Math.random() * bodies.length);
     var lastBody = readLastTemplate();
@@ -174,7 +213,10 @@
     writeLastTemplate(bodies[index]);
 
     var title = chosen.titles[Math.floor(Math.random() * chosen.titles.length)];
-    var payload = Object.assign({}, state, { name: firstName() });
+    var payload = {};
+    Object.keys(state).forEach(function (k) { payload[k] = state[k]; });
+    payload.name = firstName();
+    if (payload.count === undefined || payload.count === null) payload.count = payload.completed || 0;
 
     return {
       category: chosen.id,
@@ -183,16 +225,256 @@
     };
   }
 
+  /* ══════════════════════════════════════════════════════════
+     3. الأذونات (Android 13+)
+     ══════════════════════════════════════════════════════════ */
+
+  function emitPermission(state) {
+    try {
+      global.dispatchEvent(new CustomEvent('medapp:notification-permission', { detail: state }));
+    } catch (e) {}
+  }
+
+  /**
+   * ⭐ يطلب إذن الإشعارات ويتصرّف حسب النتيجة.
+   * @returns {Promise<{granted:boolean, status:string, token?:string, reason?:string}>}
+   */
+  function requestNotificationPermission() {
+    var PushNotifications = plugin('PushNotifications');
+
+    if (!isNative()) {
+      // على الويب: لا إذن نظام — نعتبرها "غير متاحة" بهدوء.
+      return Promise.resolve({ granted: false, status: 'unsupported', reason: 'web' });
+    }
+
+    if (!PushNotifications || typeof PushNotifications.checkPermissions !== 'function') {
+      return Promise.resolve({ granted: false, status: 'unavailable', reason: 'plugin-missing' });
+    }
+
+    ensureChannel();
+
+    return Promise.resolve(PushNotifications.checkPermissions())
+      .then(function (result) {
+        var status = (result && (result.receive || result.status)) || 'prompt';
+
+        if (status === 'granted') {
+          return registerForPush().then(function (token) {
+            var state = { granted: true, status: 'granted', token: token || '' };
+            rememberPermission(state);
+            emitPermission(state);
+            return state;
+          });
+        }
+
+        if (status === 'denied') {
+          // ⭐ لا نعيد الطلب — نفتح إعدادات التطبيق بدلاً منه.
+          var denied = { granted: false, status: 'denied', reason: 'blocked' };
+          rememberPermission(denied);
+          emitPermission(denied);
+          return denied;
+        }
+
+        // 'prompt' → نطلب الآن
+        return Promise.resolve(PushNotifications.requestPermissions())
+          .then(function (result2) {
+            var status2 = (result2 && (result2.receive || result2.status)) || 'denied';
+            if (status2 === 'granted') {
+              return registerForPush().then(function (token) {
+                var state = { granted: true, status: 'granted', token: token || '' };
+                rememberPermission(state);
+                emitPermission(state);
+                return state;
+              });
+            }
+            var refused = { granted: false, status: 'denied', reason: 'refused' };
+            rememberPermission(refused);
+            emitPermission(refused);
+            return refused;
+          });
+      })
+      .catch(function (err) {
+        console.warn('[notifications] permission request failed:', err);
+        var failed = { granted: false, status: 'error', reason: String(err && err.message || err) };
+        emitPermission(failed);
+        return failed;
+      });
+  }
+
+  /** ⭐ يسجّل الجهاز في FCM ويحفظ التوكن في Supabase */
+  function registerForPush() {
+    var PushNotifications = plugin('PushNotifications');
+    if (!PushNotifications || typeof PushNotifications.registerForPushNotifications !== 'function') {
+      return Promise.resolve('');
+    }
+
+    return new Promise(function (resolve) {
+      var settled = false;
+      function done(token) {
+        if (settled) return;
+        settled = true;
+        if (token) saveFcmToken(token);
+        resolve(token || '');
+      }
+
+      try {
+        if (typeof PushNotifications.addListener === 'function') {
+          PushNotifications.addListener('registration', function (token) {
+            done((token && token.value) || token || '');
+          });
+        }
+      } catch (e) {}
+
+      try {
+        var result = PushNotifications.registerForPushNotifications();
+        if (result && typeof result.then === 'function') {
+          result.then(function () { /* التوكن يصل عبر حدث registration */ })
+            .catch(function (e) { console.warn('[notifications] registration failed:', e); done(''); });
+        }
+      } catch (e) {
+        done('');
+      }
+
+      // ⭐ حماية: لا ننتظر طويلاً لو لم يصل التوكن
+      setTimeout(function () { done(''); }, 8000);
+    });
+  }
+
+  /** ⭐ يحفظ توكن الإشعارات في جدول profiles */
+  function saveFcmToken(token) {
+    if (!token) return Promise.resolve(false);
+    var client = global.supabaseClient;
+    if (!client || !client.from) return Promise.resolve(false);
+
+    function userId() {
+      try {
+        if (typeof global.getAuthUser === 'function') {
+          var user = global.getAuthUser();
+          if (user && user.id) return Promise.resolve(user.id);
+        }
+      } catch (e) {}
+      if (!client.auth || typeof client.auth.getUser !== 'function') return Promise.resolve('');
+      try {
+        return client.auth.getUser()
+          .then(function (r) { return (r && r.data && r.data.user && r.data.user.id) || ''; })
+          .catch(function () { return ''; });
+      } catch (e) {
+        return Promise.resolve('');
+      }
+    }
+
+    return userId().then(function (id) {
+      if (!id) return false;
+      return client.from('profiles')
+        .update({ fcm_token: token })
+        .eq('id', id)
+        .then(function (result) {
+          if (result && result.error) {
+            console.warn('[notifications] could not save the token:', result.error.message);
+            return false;
+          }
+          return true;
+        })
+        .catch(function (e) {
+          console.warn('[notifications] token save failed:', e);
+          return false;
+        });
+    });
+  }
+
+  function rememberPermission(state) {
+    try {
+      localStorage.setItem(PERMISSION_KEY, JSON.stringify({
+        status: state.status,
+        at: Date.now()
+      }));
+    } catch (e) {}
+  }
+
+  /** ⭐ حالة الإذن المحفوظة (لعرض المفتاح في الإعدادات) */
+  function getStoredPermission() {
+    try {
+      var raw = localStorage.getItem(PERMISSION_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /**
+   * ⭐ الحالة الحالية للإذن — 'granted' | 'denied' | 'prompt' | 'unsupported'
+   */
+  function getPermissionStatus() {
+    var PushNotifications = plugin('PushNotifications');
+    if (!isNative()) return Promise.resolve('unsupported');
+    if (!PushNotifications || typeof PushNotifications.checkPermissions !== 'function') {
+      return Promise.resolve('unavailable');
+    }
+    return Promise.resolve(PushNotifications.checkPermissions())
+      .then(function (result) {
+        return (result && (result.receive || result.status)) || 'prompt';
+      })
+      .catch(function () { return 'unknown'; });
+  }
+
+  /**
+   * ⭐ الوضع البديل: فتح إعدادات التطبيق في الهاتف.
+   */
+  function openAppSettings() {
+    var NativeSettings = plugin('NativeSettings');
+    if (NativeSettings && typeof NativeSettings.openAndroid === 'function') {
+      try {
+        var result = NativeSettings.openAndroid({ option: 'app' });
+        if (result && typeof result.then === 'function') {
+          return result.then(function () { return true; }).catch(function () { return false; });
+        }
+        return Promise.resolve(true);
+      } catch (e) {}
+    }
+    // ⭐ بديل عند غياب الإضافة
+    try {
+      if (global.Capacitor && global.Capacitor.Plugins && global.Capacitor.Plugins.App) {
+        global.Capacitor.Plugins.App.openUrl({ url: 'app-settings:' });
+        return Promise.resolve(true);
+      }
+    } catch (e) {}
+    return Promise.resolve(false);
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     4. الجدولة المحلية
+     ══════════════════════════════════════════════════════════ */
+
+  /**
+   * ⭐ ينشئ قناة الإشعارات ("medapp_reminders") — بدونها تُسقط الإشعارات
+   *   على أندرويد 8+ إذا لم تكن موجودة.
+   */
+  function ensureChannel() {
+    var LocalNotifications = plugin('LocalNotifications');
+    if (!LocalNotifications || typeof LocalNotifications.createChannel !== 'function') return;
+    try {
+      LocalNotifications.createChannel({
+        id: 'medapp_reminders',
+        name: 'تذكيرات المنصة',
+        description: 'تذكير بالمهام وحماية سلسلة الدراسة',
+        importance: 4,
+        visibility: 1,
+        vibration: true,
+      });
+    } catch (e) {
+      console.warn('[notifications] could not create the channel:', e);
+    }
+  }
+
   /**
    * ⭐ يجدول إشعاراً محلياً (في التطبيق) — صامت بلا أثر على الويب.
    */
   function schedule(state, delayMinutes) {
-    var LocalNotifications = global.Capacitor && global.Capacitor.Plugins
-      ? global.Capacitor.Plugins.LocalNotifications
-      : null;
+    var LocalNotifications = plugin('LocalNotifications');
     if (!LocalNotifications || typeof LocalNotifications.schedule !== 'function') {
       return Promise.resolve(null);
     }
+
+    ensureChannel();
 
     var message = pick(state);
     var delay = Math.max(1, delayMinutes || 60) * 60 * 1000;
@@ -211,6 +493,7 @@
         title: message.title,
         body: message.body,
         smallIcon: 'ic_stat_icon',
+        channelId: 'medapp_reminders',
         schedule: { at: new Date(Date.now() + delay) },
         extra: { category: message.category }
       }]
@@ -227,13 +510,7 @@
    * ⭐ يجمع حالة المستخدم لاختيار الرسالة المناسبة.
    */
   function collectState() {
-    var state = {
-      streak: 0,
-      completed: 0,
-      pending: 0,
-      task: '',
-      subject: ''
-    };
+    var state = { streak: 0, completed: 0, pending: 0, task: '', subject: '' };
 
     try {
       if (typeof global.getStudyStreak === 'function') {
@@ -255,49 +532,56 @@
     return Promise.resolve(state);
   }
 
-  /**
-   * ⭐ يقرأ الخطة ليعرف مهمة اليوم والمهام المعلّقة.
-   */
+  /** ⭐ يقرأ الخطة ليعرف مهمة اليوم والمهام المعلّقة */
   function loadPlan() {
     if (typeof global.fetchPlanData !== 'function') return Promise.resolve(null);
-    return global.fetchPlanData().catch(function () { return null; });
+    try {
+      return global.fetchPlanData().catch(function () { return null; });
+    } catch (e) {
+      return Promise.resolve(null);
+    }
   }
 
-  function init() {
-    var isNative = !!(global.Capacitor && global.Capacitor.isNativePlatform &&
-      global.Capacitor.isNativePlatform());
-    if (!isNative) return Promise.resolve(null);
+  function todayKey() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  /**
+   * ⭐ يجمع كل الحالة ثم يجدول إشعاراً مناسباً.
+   */
+  function init(options) {
+    if (!isNative()) return Promise.resolve(null);
+    options = options || {};
 
     return Promise.all([collectState(), loadPlan()]).then(function (results) {
       var state = results[0] || {};
       var plan = results[1];
 
       if (plan) {
-        var todayKey = (function () {
-          var d = new Date();
-          return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-        })();
-        var todayTasks = Array.isArray(plan[todayKey]) ? plan[todayKey] : [];
+        var today = todayKey();
+        var todayTasks = Array.isArray(plan[today]) ? plan[today] : [];
         var pending = 0;
         Object.keys(plan).forEach(function (date) {
-          if (date >= todayKey) return;
+          if (date >= today) return;
           (plan[date] || []).forEach(function (task) {
-            if (task && task.id) pending++;
+            if (task && (task.id || task.task)) pending++;
           });
         });
         state.pending = pending;
         if (todayTasks.length) {
           var task = todayTasks[0];
           state.task = task.task || task.title || '';
-          state.subject = task.subject || '';
+          state.subject = task.subject || task.subject_name || '';
         }
       }
 
-      // ⭐ نُجدول إشعاراً بعد ساعتين (وليس كل يوم — لا نُزعج المستخدم).
+      // ⭐ لا نُزعج المستخدم: إشعار واحد كل 6 ساعات على الأكثر.
       var last = readState();
       var hoursSince = (Date.now() - (last.lastScheduledAt || 0)) / 3600000;
       if (hoursSince < 6) return null;
-      return schedule(state, 120);
+
+      return schedule(state, options.delayMinutes || 120);
     }).catch(function (err) {
       console.warn('[notifications] init failed:', err);
       return null;
@@ -310,6 +594,11 @@
     schedule: schedule,
     init: init,
     collectState: collectState,
+    requestNotificationPermission: requestNotificationPermission,
+    getPermissionStatus: getPermissionStatus,
+    getStoredPermission: getStoredPermission,
+    openAppSettings: openAppSettings,
+    saveFcmToken: saveFcmToken,
     readState: readState
   };
 })(window);

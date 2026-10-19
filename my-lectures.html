@@ -188,8 +188,45 @@
     --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
     --safe-area-inset-left: env(safe-area-inset-left, 0px);
     --safe-area-inset-right: env(safe-area-inset-right, 0px);
+
+    /* ⭐⭐ رموز احتياطية — الصفحات التي تعرّف رموزها الخاصة تتجاوزها،
+       والصفحات التي لا تعرّفها تحصل على قيم سليمة.
+       بدونها كان زر "تسجيل الدخول" بلا خلفية (لأن --accent-emerald
+       غير معرّف) فيظهر النص الأبيض على خلفية شفافة = نص غير مرئي. */
+    --accent-emerald: #10b981;
+    --accent-light: #34d399;
+    --accent-dark: #059669;
+    --accent-glow: rgba(16, 185, 129, 0.25);
+    --accent-glow-strong: rgba(16, 185, 129, 0.42);
+    --bg-main: #06110d;
+    --bg-card: rgba(16, 34, 27, 0.68);
+    --bg-card-hover: rgba(22, 48, 38, 0.92);
+    --bg-solid: #0d221a;
+    --bg-elevated: #102a22;
+    --border-card: rgba(16, 185, 129, 0.18);
+    --border-card-hover: rgba(16, 185, 129, 0.46);
+    --text-primary: #f0fdf4;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --transition-fast: 0.18s ease;
+    --transition-smooth: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
     --app-header-h: 72px;
     --app-header-pad-x: 20px;
+  }
+
+  [data-theme="light"] {
+    --accent-emerald: #059669;
+    --bg-main: #f8fafb;
+    --bg-card: rgba(255, 255, 255, 0.9);
+    --bg-card-hover: #ffffff;
+    --bg-solid: #ffffff;
+    --bg-elevated: #f1f5f9;
+    --border-card: rgba(16, 185, 129, 0.24);
+    --border-card-hover: rgba(16, 185, 129, 0.55);
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
   }
 
   @media (max-width: 480px) {
@@ -1372,8 +1409,9 @@ body {
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ═══ المودالات ═══ */
+/* ⭐ فوق الشريط العلوي الثابت (9999) — وإلا تغطّاه الشريط */
 .lec-overlay {
-  position: fixed; inset: 0; z-index: 3800;
+  position: fixed; inset: 0; z-index: 10050;
   display: flex; align-items: center; justify-content: center;
   padding: 18px;
   background: rgba(3, 10, 8, 0.62);
@@ -1446,8 +1484,9 @@ body {
 .modal-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
 /* ═══ معرض الصور الاحترافي (Gallery) ═══ */
+/* ⭐ فوق الشريط العلوي (9999) */
 .gallery {
-  position: fixed; inset: 0; z-index: 4200;
+  position: fixed; inset: 0; z-index: 10100;
   background: rgba(2, 8, 6, 0.94);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -1605,8 +1644,9 @@ body {
 .rename-overlay.open { opacity: 1; pointer-events: auto; }
 
 /* ═══ أداة القص (Crop) ═══ */
+/* ⭐ فوق الشريط العلوي (9999) */
 .crop-overlay {
-  position: fixed; inset: 0; z-index: 4500;
+  position: fixed; inset: 0; z-index: 10150;
   background: rgba(2, 8, 6, 0.93);
   backdrop-filter: blur(6px);
   display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -1702,22 +1742,42 @@ body {
 .image-placeholder i { opacity: 0.6; }
 .image-fallback { background: var(--bg-elevated, #102a22); }
 
-.toast {
-  position: fixed; bottom: 24px; left: 50%; transform: translate(-50%, 24px);
+/* ⭐⭐ إشعار غير عالق (بدل الـ toast العائم الذي كان يغطّي النوافذ)
+   • إذا كانت هناك نافذة مفتوحة → تظهر الرسالة داخلها.
+   • وإلا → شريط صغير أسفل الشاشة، تحت مستوى النوافذ. */
+.ml-notice {
+  position: fixed; bottom: calc(18px + env(safe-area-inset-bottom)); left: 50%;
+  transform: translate(-50%, 18px);
   display: flex; align-items: center; gap: 8px;
-  max-width: calc(100vw - 32px);
+  width: max-content; max-width: calc(100vw - 32px);
   padding: 12px 17px; border-radius: 14px;
   background: var(--bg-solid); border: 1px solid var(--border-card-hover);
   color: var(--text-primary); font-size: 0.76rem; font-weight: 700;
   opacity: 0; pointer-events: none;
   transition: opacity var(--t), transform var(--t);
   box-shadow: 0 18px 44px -16px rgba(0, 0, 0, 0.4);
-  /* ⭐ أعلى من كل النوافذ والأوراق السفلية */
-  z-index: 2147483647;
+  /* ⭐ تحت النوافذ (10050+) حتى لا يغطيها */
+  z-index: 10010;
 }
-.toast.visible { opacity: 1; transform: translate(-50%, 0); }
-.toast i { color: var(--accent-light); flex-shrink: 0; }
-.toast.error i { color: var(--danger); }
+.ml-notice.visible { opacity: 1; transform: translate(-50%, 0); }
+.ml-notice i { color: var(--accent-light); flex-shrink: 0; }
+.ml-notice.error i { color: var(--danger); }
+
+/* ⭐ الرسالة داخل النافذة المفتوحة */
+.modal-error {
+  margin-top: 14px; padding: 10px 13px; border-radius: 12px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  color: var(--accent-light);
+  font-size: 0.74rem; font-weight: 700; line-height: 1.6;
+}
+.modal-error.error {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+[data-theme="light"] .modal-error { color: var(--accent-dark); }
+[data-theme="light"] .modal-error.error { color: #b91c1c; }
 
 @media (max-width: 840px) {
   .albums-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -2013,7 +2073,7 @@ body {
   </div>
 </div>
 
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="ml-notice" id="mlNotice" role="status" aria-live="polite"></div>
 
 <!-- ⭐ نافذة "سجّل الدخول" (وضع الزائر) -->
 <div class="auth-required-overlay" id="authRequiredModal" onclick="closeAuthPrompt()">
@@ -2042,7 +2102,7 @@ body {
 <script src="notifications.js"></script>
 
 
-<script src="app.js?v=2.6.0"></script>
+<script src="app.js?v=2.7.0"></script>
 <script>
 
 var LECTURE_BUCKET = 'schedule-images';
@@ -2115,13 +2175,36 @@ function lectureDefaultImageTitle(file) {
 }
 
 function lectureShowToast(message, error) {
-  const toast = document.getElementById('toast');
-  if (!toast) return;
-  toast.className = 'toast' + (error ? ' error' : '');
-  toast.innerHTML = '<i class="fa-solid ' + (error ? 'fa-circle-exclamation' : 'fa-circle-check') + '"></i><span>' + lectureEscape(message) + '</span>';
-  toast.classList.add('visible');
+  const text = String(message || '');
+  const openOverlay = document.querySelector('.lec-overlay.open, .rename-overlay.open');
+
+  // ⭐ داخل النافذة: تظهر الرسالة في داخلها (لا طبقة عائمة فوقها)
+  if (openOverlay) {
+    const modal = openOverlay.querySelector('.lec-modal') || openOverlay;
+    let box = modal.querySelector('.modal-error');
+    if (!box) {
+      box = document.createElement('div');
+      box.className = 'modal-error';
+      box.setAttribute('role', 'status');
+      modal.appendChild(box);
+    }
+    box.className = 'modal-error' + (error ? ' error' : '');
+    box.textContent = text;
+    clearTimeout(lectureShowToast.timer);
+    lectureShowToast.timer = setTimeout(function () {
+      if (box && box.parentNode) box.remove();
+    }, 4000);
+    return;
+  }
+
+  // ⭐ خارج النافذة: شريط صغير أسفل الشاشة (تحت مستوى النوافذ)
+  const notice = document.getElementById('mlNotice');
+  if (!notice) return;
+  notice.className = 'ml-notice' + (error ? ' error' : '');
+  notice.innerHTML = '<i class="fa-solid ' + (error ? 'fa-circle-exclamation' : 'fa-circle-check') + '"></i><span>' + lectureEscape(text) + '</span>';
+  notice.classList.add('visible');
   clearTimeout(lectureShowToast.timer);
-  lectureShowToast.timer = setTimeout(function () { toast.classList.remove('visible'); }, 3000);
+  lectureShowToast.timer = setTimeout(function () { notice.classList.remove('visible'); }, 3000);
 }
 
 function lectureAuthorName() {
