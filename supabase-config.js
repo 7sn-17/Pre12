@@ -12,7 +12,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // يجب أن يطابق نفس الـ client id المسجّل في Supabase
 // (Authentication → Providers → Google).
 // اتركه فارغاً لتدفّق الويب (المتصفح).
-const GOOGLE_WEB_CLIENT_ID = '';
+const GOOGLE_WEB_CLIENT_ID = '537816557648-1lu9etodpb39afdaieisl2mevm6pdluk.apps.googleusercontent.com';
 
 // رابط العودة داخل التطبيق (Deep Link) لتأكيد البريد واستعادة كلمة المرور.
 const APP_AUTH_REDIRECT_URL = 'com.pre12.medical://login-callback';
