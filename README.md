@@ -10,7 +10,7 @@
 
 <br>
 
-![Version](https://img.shields.io/badge/version-2.0.0-10b981?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-2.0.1-10b981?style=for-the-badge)
 ![PWA](https://img.shields.io/badge/PWA-Ready-8b5cf6?style=for-the-badge)
 ![Offline](https://img.shields.io/badge/Offline-First-3b82f6?style=for-the-badge)
 ![SPA](https://img.shields.io/badge/SPA-a78bfa?style=for-the-badge)
@@ -51,6 +51,7 @@
 | 📊 **تقدمي** | بطاقة لكل مادة تفتح نافذة مهامها (منجزة / متبقية) |
 | 📸 **محاضراتي** | معرض بالسحب والقرص والتكبير + قص + طلبات مشاركة + يعمل بلا إنترنت |
 | 🗂️ **مزامنة بين الأجهزة** | المهام والملاحظات والمفضّلة تتزامن مع حسابك |
+| 🔄 **مزامنة لحظية** | تغيير أي مهمة في "تقدمي" ينعكس فوراً على "بطاقة اليوم" وعدّاد السلسلة — بلا إعادة تحميل |
 | 🛡️ **لوحة تحكم** | إحصائيات الطلاب وتقدّمهم |
 | 🎨 **تصميم عصري** | وضع نهاري/ليلي بانتقال ناعم · عربي RTL · Mobile-First |
 

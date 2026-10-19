@@ -2,7 +2,7 @@
 title: تقدمي — المنصة الطبية
 fontWeights: 400;600;700;800;900
 libs: fontawesome, supabase
-scripts: supabase-config, auth, db, files
+scripts: supabase-config, auth, db, files, sync, streak
 sw: true
 backHref: index.html
 backIcon: fa
@@ -302,6 +302,27 @@ body {
   border: 1px solid rgba(148, 163, 184, 0.12);
 }
 .task-detail-row.done { background: rgba(16, 185, 129, 0.07); border-color: rgba(16, 185, 129, 0.2); }
+
+/* ⭐ المهمة قابلة للنقر لتبديل حالتها */
+.task-detail-row.is-clickable {
+  cursor: pointer;
+  transition: background var(--t), border-color var(--t), transform var(--t);
+  -webkit-tap-highlight-color: transparent;
+}
+.task-detail-row.is-clickable:hover {
+  background: rgba(16, 185, 129, 0.06);
+  border-color: var(--border-card-hover);
+  transform: translateY(-1px);
+}
+.task-detail-row.is-clickable:active { transform: scale(0.995); }
+.task-detail-row.is-clickable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.task-detail-row.is-clickable .task-status-icon {
+  transition: transform var(--t), background var(--t), color var(--t);
+}
+.task-detail-row.is-clickable:hover .task-status-icon { transform: scale(1.12); }
 .task-status-icon {
   width: 25px;
   height: 25px;
@@ -980,7 +1001,14 @@ function subjectTasksMarkup(subjectKey, filter) {
       state = 'متأخرة';
       stateClass = 'late';
     }
-    return '<div class="task-detail-row' + (done ? ' done' : '') + '">' +
+    // ⭐ المهمة قابلة للنقر: النقر يبدّل حالتها فوراً (منجزة ↔ متبقية)
+    const action = done ? 'إلغاء الإنجاز' : 'وضع علامة منجزة';
+    return '<div class="task-detail-row is-clickable' + (done ? ' done' : '') + '" ' +
+      'role="button" tabindex="0" ' +
+      'aria-pressed="' + (done ? 'true' : 'false') + '" ' +
+      'title="' + action + '" ' +
+      'onclick="toggleProgressTask(\'' + progressEscape(task.date) + '\', \'' + progressEscape(task.id) + '\')" ' +
+      'onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleProgressTask(\'' + progressEscape(task.date) + '\', \'' + progressEscape(task.id) + '\');}">' +
       '<span class="task-status-icon">' + (done ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-regular fa-circle"></i>') + '</span>' +
       '<span class="task-detail-copy">' +
         '<span class="task-detail-title">' + progressEscape(task.task) + '</span>' +
@@ -1069,6 +1097,65 @@ function renderProgress() {
     openSubjectModal(progressState.activeSubject);
   }
 }
+
+/* ============================================
+   ⭐ تبديل حالة المهمة (المصدر: sync.js)
+   ============================================ */
+function findProgressTask(planDate, taskId) {
+  return progressState.tasks.find(function (task) {
+    return String(task.id) === String(taskId) && String(task.date) === String(planDate);
+  }) || null;
+}
+
+async function toggleProgressTask(planDate, taskId) {
+  if (!planDate || !taskId) return;
+  const key = String(planDate) + '|' + String(taskId);
+  const wasDone = progressState.completed.has(key);
+  const next = !wasDone;
+
+  // 1) تحديث متفائل فوري — الواجهة تتغيّر قبل أي شبكة.
+  if (next) progressState.completed.add(key);
+  else progressState.completed.delete(key);
+  renderProgress();
+
+  // 2) المصدر الوحيد: يكتب محلياً، يحدّث الطابور، يرفع السحابة،
+  //    ويوزّع 'taskUpdated' على كل الواجهات.
+  const task = findProgressTask(planDate, taskId);
+  if (typeof setTaskCompleted === 'function') {
+    try {
+      await setTaskCompleted(planDate, taskId, next, task, 'progress');
+    } catch (err) {
+      console.error('toggleProgressTask error:', err);
+      showProgressToast('تعذّر حفظ التغيير — حاول مجدداً');
+      // تراجع عند الفشل
+      if (next) progressState.completed.delete(key);
+      else progressState.completed.add(key);
+      renderProgress();
+    }
+  } else {
+    // احتياط
+    if (typeof setLocalTaskCompletion === 'function') setLocalTaskCompletion(planDate, taskId, next);
+    renderProgress();
+  }
+}
+
+/* ============================================
+   ⭐ الاستماع لتغيّر المهام من بقية التطبيق
+   ============================================ */
+function listenForTaskUpdates() {
+  function apply(detail) {
+    progressState.completed = readLocalCompletion();
+    renderProgress();
+  }
+
+  if (window.MedAppStreakCore && typeof window.MedAppStreakCore.onTaskUpdate === 'function') {
+    window.MedAppStreakCore.onTaskUpdate(apply);
+    return;
+  }
+  document.addEventListener('taskUpdated', apply);
+}
+
+listenForTaskUpdates();
 
 async function initProgress() {
   const loading = document.getElementById('loadingState');

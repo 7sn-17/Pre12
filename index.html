@@ -5285,7 +5285,7 @@ i.fab {
             <div class="settings-icon"><i data-lucide="info"></i></div>
             <div class="settings-text">
               <h4>حول التطبيق</h4>
-              <p>النسخة 2.0.0 • السنة التحضيرية</p>
+              <p>النسخة 2.0.1 • السنة التحضيرية</p>
             </div>
           </div>
           <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
@@ -5523,7 +5523,7 @@ i.fab {
 <script src="streak.js"></script>
 
 
-  <script src="app.js?v=2.0.0"></script>
+  <script src="app.js?v=2.0.1"></script>
 <script>
 
     lucide.createIcons();
@@ -7128,7 +7128,14 @@ function showAbout() {
     }
 
     function todaySetTaskDone(task, done) {
-      // ⭐ نحفظ وقت الإجازة أيضاً — به تُحسب أيام السلسلة بدقة.
+      // ⭐ المصدر الوحيد: sync.js يتكفّل بالحالة المحلية + الطابور +
+      //    الحدث العام 'taskUpdated' (فتتحدّث كل الواجهات) + الرفع السحابي.
+      if (typeof setTaskCompleted === 'function') {
+        setTaskCompleted(task.date || todayPlanState.dateKey, task.id, done, task, 'today-card');
+        return;
+      }
+
+      // ⭐ احتياط (لو لم يُحمَّل sync.js): السلوك القديم.
       const planDate = task.date || todayPlanState.dateKey;
       try {
         if (typeof setLocalTaskCompletion === 'function') {
@@ -7141,13 +7148,11 @@ function showAbout() {
       } catch (e) {
         console.warn('تعذّر حفظ حالة المهمة:', e);
       }
-      // Offline-first: احفظ التغيير في الطابور ثم ارفعه عند توفر الاتصال.
       try {
         if (typeof queueTaskProgressSync === 'function') {
           queueTaskProgressSync(task, done);
         }
       } catch (e) {}
-      // ⭐ حدّث عدّاد السلسلة فوراً.
       try { if (typeof updateStreakCounter === 'function') updateStreakCounter(); } catch (e) {}
     }
 
@@ -8245,8 +8250,8 @@ function showAbout() {
     function streakShareText() {
       var data = streakState.data;
       var days = data ? Number(data.current || 0) : 0;
-      var word = days === 1 ? 'يوم' : (days === 2 ? 'يومان' : 'أيام');
-      return '🔥 أنا في سلسلة إنجاز لمدة ' + days + ' ' + word + ' على المنصة الطبية!';
+      return '🔥 حماسي يشتعل! أنا الآن في سلسلة إنجاز لمدة ' + days +
+        ' أيام على المنصة الطبية 📚. انضم إليّ وذاكر معي! 👇';
     }
 
     function shareStreak() {
@@ -8258,7 +8263,7 @@ function showAbout() {
           navigator.share({
             title: 'سلسلة إنجازي — المنصة الطبية',
             text: text,
-            url: window.location.origin + '/index.html'
+            url: window.location.origin
           }).catch(function (err) {
             // إلغاء المستخدم لا يُعتبر خطأً
             if (err && err.name === 'AbortError') return;
@@ -8329,6 +8334,45 @@ function showAbout() {
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && streakState.open) closeStreakSheet();
     });
+
+    /* ═══════════════════════════════════════════════════
+       ⭐ الاستماع لتغيّر حالة المهام في أي مكان
+       ------------------------------------------------------------
+       عند تغيير مهمة من "تقدمي" (أو من أي واجهة أخرى) تصلنا
+       هذه الرسالة فنحدّث بطاقة اليوم وعدّاد السلسلة فوراً —
+       دون أي إعادة تحميل للصفحة.
+       ═══════════════════════════════════════════════════ */
+    function listenForTaskUpdates() {
+      if (window.MedAppStreakCore && typeof window.MedAppStreakCore.onTaskUpdate === 'function') {
+        window.MedAppStreakCore.onTaskUpdate(function (detail) {
+          if (detail && detail.source === 'today-card') {
+            // التغيير جاء من هذه الصفحة — نُحدّث السلسلة فقط
+            // (البطاقة تُعاد رسمها أصلاً في toggleTodayTask).
+            try { updateStreakCounter(); } catch (e) {}
+            return;
+          }
+
+          // ⭐ تغيير من واجهة أخرى (مثل "تقدمي")
+          try { renderTodayCard(); } catch (e) {}
+          if (todayPlanState.open) {
+            try { renderTodaySheet(); } catch (e) {}
+          }
+          try { updateStreakCounter(); } catch (e) {}
+        });
+        return;
+      }
+
+      // احتياطي: بدون streak.js
+      document.addEventListener('taskUpdated', function () {
+        try { renderTodayCard(); } catch (e) {}
+        try { updateStreakCounter(); } catch (e) {}
+      });
+    }
+
+    // ============================================
+    // ⭐ تشغيل الاستماع (مرة واحدة)
+    // ============================================
+    listenForTaskUpdates();
 
     // ============================================
     // ⭐ العودة من Google OAuth — معالجة الأخطاء

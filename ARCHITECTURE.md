@@ -2,11 +2,11 @@
 
 **Medical Platform — architecture & maintenance guide**
 
-- SPA router: `app.js` **v2.0.0**
-- Service worker: `sw.js` **v2.0.0**
+- SPA router: `app.js` **v2.0.1**
+- Service worker: `sw.js` **v2.0.1**
 - Build: `build.js` (Node.js ≥ 18, `acorn` ^8.19.0)
 - Visual / behavioural baseline: `tools/_orig/` (read-only reference)
-- Last updated: 2026-10-19 (**v2.0.0 release** — toasts, streak freezes, native share)
+- Last updated: 2026-10-19 (v2.0.1 — the master sync: one source of truth)
 
 > This document describes the current architecture. It does **not** change any
 > code. All commands below are safe to run from the project root
@@ -1020,11 +1020,11 @@ offline  → loadLocalData()  →  render          (ZERO network requests)
 | `sw.js` logic or `PRECACHE_URLS` | `CACHE_VERSION` | `sw.js` |
 | Any HTML/CSS/JS deployment | Recommended: `CACHE_VERSION` | `sw.js` |
 
-**Version bump checklist (current: 2.0.0):**
+**Version bump checklist (current: 2.0.1):**
 
-1. `build.js`: `const APP_VERSION = '2.0.0';`
-2. `sw.js`: `const CACHE_VERSION = 'v2.0.0';`
-3. `sw.js`: `'/app.js?v=2.0.0',` in `PRECACHE_URLS`
+1. `build.js`: `const APP_VERSION = '2.0.1';`
+2. `sw.js`: `const CACHE_VERSION = 'v2.0.1';`
+3. `sw.js`: `'/app.js?v=2.0.1',` in `PRECACHE_URLS`
 4. `sw.js`: update the version comments/logs (optional but useful)
 5. `npm run build`
 
@@ -1185,8 +1185,8 @@ from `file://`, but SPA navigation falls back to full loads.
 | A Font Awesome icon is invisible | The icon does not exist in FA 6.5.1 | Check the class against the 6.5.1 list (e.g. `fa-folder-arrow-up` does not exist) |
 | The tool icons do not show | The file name did not match the real format, or it is not precached | `icons/*.jpg` are real JPEGs and are listed in `sw.js` `PRECACHE_URLS` |
 | The streak lights up days the user did nothing | The active day was taken from the task's *plan* date | Use the completion day — `completed_at` (cloud) / `task_at_*` (local). See §5.7 |
-| The streak days are cut off | The sheet content was taller than the viewport | `.streak-panels` scrolls and the day cells have no fixed aspect ratio. See §5.8 |
-| The My Lectures back button only answers in one spot | A shared `header` rule overlapped the button | Use the isolated `.ml-topbar` / `.ml-back` (never the shared partial). See §5.9 |
+| The streak days are cut off | The sheet content was taller than the viewport | `.streak-panels` scrolls and the day cells have no fixed aspect ratio. See §5.10 |
+| The My Lectures back button only answers in one spot | A shared `header` rule overlapped the button | Use the isolated `.ml-topbar` / `.ml-back` (never the shared partial). See §5.11 |
 | "المتابعة باستخدام Google" does not log in | The redirect URL is not in Supabase's allow-list | Add `https://<domain>/index.html` to *Authentication → URL Configuration → Redirect URLs* |
 | The Google button spins forever | `signInWithOAuth` succeeded but the browser was not redirected | Check the console; make sure the button calls `signInWithGoogle()` from `auth.js` |
 | SPA works but direct page load is broken | Page relies on the shell (app.js) for something it should do itself | Initialise standalone in the page script; test by URL |
@@ -1213,8 +1213,9 @@ Where each Phase 5 feature lives:
 | **Google OAuth** | `auth.js` + `src/login.html` | `signInWithGoogle()` — see §5.6 |
 | **Crop tool** | `src/my-lectures.html` | `openCropTool()` / `applyCrop()` / `setCropAspect()` |
 | **Streak completion day** | `db.js` + `sync.js` | `setLocalTaskCompletion()` / `getLocalActiveDates()` — see §5.7 |
-| **Streak pro sheet** | `src/index.html` | Tabs: week / month / all-time · `shareStreak()` — see §5.8 |
-| **Isolated top bar** | `src/my-lectures.html` | `.ml-topbar` / `.ml-back` — see §5.9 |
+| **Streak pro sheet** | `src/index.html` | Tabs: week / month / all-time · `shareStreak()` — see §5.10 |
+| **Master sync** | `sync.js` | `setTaskCompleted()` + the `taskUpdated` event — see §5.9 |
+| **Isolated top bar** | `src/my-lectures.html` | `.ml-topbar` / `.ml-back` — see §5.11 |
 | **Link vs file** | `files.js` + `src/index.html` | `isExternalLinkFile()` → copy-link, else download |
 | Empty states | `src/index.html`, `src/my-lectures.html` | `.empty-state-v2` component |
 | Theme transition | `partials/head.html` + `app.js` | `html.theme-transition` + `MedApp.withThemeTransition()` |
@@ -1282,7 +1283,7 @@ Two local keys per task now carry both facts:
 - `index.html` `streakLocalData()` paints the counter from
   `getLocalActiveDates()` — no network, no plan-day carry-over.
 
-### 5.10 Toasts, freezes and native sharing (v2.0.0)
+### 5.8 Toasts, freezes and native sharing (v2.0.0)
 
 #### 5.10.1 Toast z-index
 
@@ -1327,7 +1328,55 @@ formatted Arabic message ("🔥 أنا في سلسلة إنجاز لمدة X أ�
 الطبية!"). If the API is missing, or the share is rejected, it falls back
 to `navigator.clipboard` and then to a hidden `<textarea>`.
 
-### 5.8 The streak sheet — "Duolingo Pro" (Phase 8)
+### 5.9 The master sync — one source of truth (v2.0.1)
+
+Every place in the app that changes a task goes through **one** function, so
+the pages can never disagree.
+
+```js
+// sync.js
+await setTaskCompleted(planDate, taskId, completed, task, source);
+```
+
+| Step | What happens | Where |
+|---|---|---|
+| 1 | The local state is written **synchronously** — `task_<date>_<id>` and the `task_at_*` stamp | `db.js` `setLocalTaskCompletion()` |
+| 2 | The sync queue is updated (it always wins over an older local mirror) | `db.js` `queueTaskProgressSync()` |
+| 3 | The global event `taskUpdated` is dispatched | `sync.js` `dispatch()` |
+| 4 | The row is upserted into `task_progress` **in the background** | `db.js` `flushTaskProgressQueue()` |
+
+The event payload is `{ planDate, taskId, completed, source }`.
+
+**Who listens**
+
+| Page | Reaction |
+|---|---|
+| `index.html` | re-renders the Today card, the open Today sheet, and the streak counter |
+| `progress.html` | re-reads the completion state and re-renders the subject cards, the bars and the open modal |
+| `streak.js` | exposes `MedAppStreakCore.onTaskUpdate(handler)` — the shared subscription helper every page uses |
+
+Because the event fires **after** the local write but **before** the network
+call, the UI reacts instantly while the upload continues in the background.
+
+**Scenario A — the Progress page is interactive**
+
+The task rows in the subject modal are now buttons
+(`role="button"`, `tabindex`, Enter/Space). Clicking one:
+
+1. updates the UI optimistically (`renderProgress()`),
+2. calls `setTaskCompleted()`,
+3. moves the task between the "المتبقية" / "المكتملة" filters and updates
+   the subject progress bars.
+
+**Scenario B — the domino effect**
+
+| Change | Today card | Streak | `task_at_*` | Supabase |
+|---|---|---|---|---|
+| check in Progress | ✔ re-rendered | ✔ flame lights up if it is the first task of the day | ✔ written | ✔ upserted |
+| uncheck in Progress | ✔ reverts | ✔ the flame goes out if no task is left that day | ✔ tombstone written | ✔ `completed = false` |
+| check in the Today sheet | ✔ re-rendered | ✔ updated | ✔ written | ✔ upserted |
+
+### 5.10 The streak sheet — "Duolingo Pro" (Phase 8)
 The bottom sheet has **three tabs** and never cuts its content off.
 
 | Tab | id | Content |
@@ -1352,7 +1401,7 @@ The bottom sheet has **three tabs** and never cuts its content off.
 - `sync.js` `collectStreakData()` also returns `tasksCompleted` (the number
   of finished tasks) so the stats tab can show it.
 
-### 5.9 The My Lectures top bar (Phase 8)
+### 5.11 The My Lectures top bar (Phase 8)
 
 `my-lectures.html` does **not** use `partials/header.html` any more. It has
 its own isolated bar so that no shared `header {}` rule (for example

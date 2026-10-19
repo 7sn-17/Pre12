@@ -231,6 +231,35 @@
     return 'ممتاز! أنت مستمر منذ ' + data.current + ' أيام متتالية.';
   }
 
+  /**
+   * ⭐ الاشتراك في تغيّر حالة المهام.
+   *
+   * `streak.js` يبقى منطقاً نقياً بلا DOM، لكنه يوفّر واجهة بسيطة
+   * تتيح لكل صفحة (الرئيسية · تقدمي) إعادة حساب السلسلة فوراً
+   * عند تغيير أي مهمة — دون إعادة تحميل الصفحة.
+   *
+   * @param {function} handler  يُستدعى مع تفاصيل التغيير
+   * @returns {function} دالة لإلغاء الاشتراك
+   */
+  function onTaskUpdate(handler) {
+    if (typeof window === 'undefined' || !window.addEventListener) {
+      return function () {};
+    }
+    var listener = function (event) {
+      try {
+        handler(event && event.detail ? event.detail : {});
+      } catch (e) {
+        if (typeof console !== 'undefined' && console.error) {
+          console.error('[streak] taskUpdated handler failed:', e);
+        }
+      }
+    };
+    window.addEventListener('taskUpdated', listener);
+    return function () {
+      try { window.removeEventListener('taskUpdated', listener); } catch (e) {}
+    };
+  }
+
   return {
     isValidDateKey: isValidDateKey,
     todayKeyLocal: todayKeyLocal,
@@ -240,6 +269,7 @@
     compute: compute,
     week: week,
     streakMessage: streakMessage,
+    onTaskUpdate: onTaskUpdate,
     WEEKDAYS_AR: WEEKDAYS_AR
   };
 });

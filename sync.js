@@ -1076,11 +1076,90 @@
   global.queueNoteDelete = queueNoteDelete;
   global.runFullUserSync = runFullUserSync;
   global.clearCloudLocalCaches = clearCloudLocalCaches;
+  // ----------------------------------------------------------
+  // ⭐ المصدر الوحيد لحالة المهام (Single Source of Truth)
+  // ----------------------------------------------------------
+  // كل مكان في التطبيق يبدّل حالة مهمة يمرّ من هنا:
+  //   1) تُكتب الحالة محلياً فوراً (task_* + task_at_*) — بلا شبكة.
+  //   2) تُحدَّث طابور المزامنة (فيتجاوز الطابور أي نسخة أقدم).
+  //   3) يُوزَّع الحدث العام 'taskUpdated' → تتحدّث كل الواجهات
+  //      فوراً: بطاقة اليوم، عدّاد السلسلة، وصفحة "تقدمي".
+  //   4) يُرفع التغيير إلى Supabase في الخلفية.
+
+  /**
+   * @param {string} planDate  تاريخ المهمة (YYYY-MM-DD)
+   * @param {string} taskId    معرّف المهمة
+   * @param {boolean} completed الحالة الجديدة
+   * @param {object} [task]    تفاصيل المهمة (subject, task, instructor, type)
+   * @param {string} [source]  مصدر التغيير (progress / today-card …)
+   */
+  async function setTaskCompleted(planDate, taskId, completed, task, source) {
+    var date = String(planDate || '');
+    var id = String(taskId || '');
+    if (!date || !id) return { ok: false, error: 'missing task reference' };
+
+    var done = !!completed;
+
+    // 1) الحالة المحلية — فورية.
+    if (typeof setLocalTaskCompletion === 'function') {
+      try { setLocalTaskCompletion(date, id, done); } catch (e) {}
+    }
+
+    // 2) الطابور (محلي، سريع) — نجعل الرفع في الخلفية.
+    if (typeof queueTaskProgressSync === 'function') {
+      try {
+        var payload = Object.assign({}, task || {});
+        payload.id = id;
+        payload.date = date;
+        await queueTaskProgressSync(payload, done, { deferFlush: true });
+      } catch (e) {}
+    }
+
+    // 3) ⭐ الحدث العام — كل الواجهات تتحدّث في اللحظة نفسها.
+    dispatch('taskUpdated', {
+      planDate: date,
+      taskId: id,
+      completed: done,
+      source: source || 'unknown'
+    });
+
+    // 4) الرفع إلى Supabase في الخلفية.
+    if (navigator.onLine) {
+      try {
+        if (typeof flushTaskProgressQueue === 'function') {
+          flushTaskProgressQueue().catch(function () {});
+        }
+      } catch (e) {}
+    }
+
+    return { ok: true, planDate: date, taskId: id, completed: done };
+  }
+
+  /**
+   * ⭐ قراءة حالة مجموعة مهام (تُستخدم بعد أي حدث تغيير).
+   */
+  function getTaskCompletionMap() {
+    var map = Object.create(null);
+    try {
+      if (typeof getLocalTaskStates === 'function') {
+        var states = getLocalTaskStates();
+        states.forEach(function (state, id) {
+          map[id] = !!(state && state.done);
+        });
+      } else if (typeof getLocalCompletedTaskKeys === 'function') {
+        getLocalCompletedTaskKeys().forEach(function (key) { map[key] = true; });
+      }
+    } catch (e) {}
+    return map;
+  }
+
   global.collectActiveTaskDates = collectActiveTaskDates;
   global.collectStreakData = collectStreakData;
   global.getStudyStreak = getStudyStreak;
   global.getStreakFreezes = getStreakFreezes;
   global.consumeStreakFreeze = consumeStreakFreeze;
+  global.setTaskCompleted = setTaskCompleted;
+  global.getTaskCompletionMap = getTaskCompletionMap;
 
   global.MedAppSync = {
     runFullUserSync: runFullUserSync,
@@ -1093,6 +1172,8 @@
     getStudyStreak: getStudyStreak,
     getStreakFreezes: getStreakFreezes,
     consumeStreakFreeze: consumeStreakFreeze,
+    setTaskCompleted: setTaskCompleted,
+    getTaskCompletionMap: getTaskCompletionMap,
     notesKeys: {
       mine: NOTES_MY_KEY,
       pending: NOTES_PENDING_KEY,

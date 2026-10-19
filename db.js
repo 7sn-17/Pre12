@@ -766,7 +766,15 @@ function writeTaskProgressQueue(queue) {
   }
 }
 
-async function queueTaskProgressSync(task, done) {
+/**
+ * ⭐ يضع المهمة في طابور الرفع.
+ * @param {object} task  المهمة (id · date · subject · task · instructor · type)
+ * @param {boolean} done الحالة الجديدة
+ * @param {object} [options] { deferFlush: true } → لا ترفع الآن (يتكفّل به
+ *        المصدر المركزي في sync.js حتى لا يتأخر الحدث العام).
+ */
+async function queueTaskProgressSync(task, done, options) {
+  options = options || {};
   if (!task || !task.id) return false;
 
   const session = await getDbSession();
@@ -799,7 +807,7 @@ async function queueTaskProgressSync(task, done) {
   else queue.push(row);
   writeTaskProgressQueue(queue);
 
-  if (navigator.onLine) await flushTaskProgressQueue();
+  if (navigator.onLine && !options.deferFlush) await flushTaskProgressQueue();
   return true;
 }
 
