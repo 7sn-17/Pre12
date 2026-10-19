@@ -76,6 +76,18 @@ jobs:
         id: version
         run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
 
+      - name: 🔎 Inspect the signing secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "KEYSTORE_BASE64 length : ${#KEYSTORE_BASE64}"
+          echo "KEYSTORE_PASSWORD len  : ${#KEYSTORE_PASSWORD}"
+          echo "KEY_ALIAS length       : ${#KEY_ALIAS}"
+          echo "KEY_PASSWORD length    : ${#KEY_PASSWORD}"
+
       - name: 🔑 Decode the release keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
