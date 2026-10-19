@@ -10,7 +10,7 @@
 
 <br>
 
-![Version](https://img.shields.io/badge/version-2.0.1-10b981?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-2.1.0-10b981?style=for-the-badge)
 ![PWA](https://img.shields.io/badge/PWA-Ready-8b5cf6?style=for-the-badge)
 ![Offline](https://img.shields.io/badge/Offline-First-3b82f6?style=for-the-badge)
 ![SPA](https://img.shields.io/badge/SPA-a78bfa?style=for-the-badge)
@@ -222,6 +222,36 @@ admin · plans · progress`.
 
 ⚛️ الفيزياء الطبية · 🧪 الكيمياء الطبية · 🧬 بيولوجيا الخلية · 📜 تاريخ الطب ·
 🌐 اللغة الإنجليزية
+
+---
+
+## 📱 تطبيق الأندرويد (APK)
+
+المنصة مبنية كـ **PWA** وتعمل على كل المتصفحات، وأيضاً كتطبيق أندرويد أصلي
+عبر **Capacitor** (نفس كود الواجهة داخل WebView + طبقة أصلية).
+
+| الميزة | التفاصيل |
+|:---|---|
+| 🔙 زر الرجوع الأصلي | يغلق النافذة المفتوحة، ثم يرجع للصفحة السابقة، ثم يطلب التأكيد قبل الخروج |
+| 🎨 شريط الحالة | لونه يتابع الوضع النهاري/الليلي تلقائياً |
+| 🧊 شاشة البدء | تظهر بلون الهوية وتختفي بعد أول رسم |
+| 📡 حالة الشبكة | تُطلق أحداث `online` / `offline` داخل التطبيق |
+| 🔔 إشعارات Firebase (FCM) | التوكن يُحفظ في `profiles` والنقر على الإشعار ينقلك للمقصد |
+
+### بناء الـ APK
+
+```bash
+npm install
+npm run build
+npx cap sync android          # ينسخ نسخة الويب داخل التطبيق
+node tools/generate-android-assets.js   # أيقونة + شاشة بدء (بلا اعتماديات)
+cd android && ./gradlew assembleDebug   # (يتطلب Android SDK)
+```
+
+> على GitHub كل ذلك يتم تلقائياً: workflow
+> [`.github/workflows/build-apk.yml`](.github/workflows/build-apk.yml) يبني
+> الـ APK ويرفعه كـ artifact **وينشئ Release** — نزّل `app-debug.apk` وثبّته
+> مباشرةً على هاتفك.
 
 ---
 

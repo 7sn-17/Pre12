@@ -1,9 +1,9 @@
 // ============================================
 // sw.js — Service Worker
-// Version 2.0.1 — SPA shell + network-first HTML + cache-first JSON
+// Version 2.1.0 — SPA shell + network-first HTML + cache-first JSON
 // ============================================
 
-const CACHE_VERSION = 'v2.0.1';
+const CACHE_VERSION = 'v2.1.0';
 const STATIC_CACHE  = `medfav-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `medfav-runtime-${CACHE_VERSION}`;
 const PDF_CACHE     = `medfav-pdf-${CACHE_VERSION}`;
@@ -48,8 +48,9 @@ const PRECACHE_URLS = [
   '/supabase-config.js',
   '/theme-init.js',
   '/app.js',
-  '/app.js?v=2.0.1',
+  '/app.js?v=2.1.0',
   '/streak.js',
+  '/native.js',
 
   // ⭐ أيقونات صندوق الأدوات (JPG فعلياً — كانت مسماة .png فلا يعمل فحص النوع)
   '/icons/flipclock.jpg',
@@ -369,4 +370,4 @@ self.addEventListener('message', (event) => {
   }
 });
 
-console.log('✅ sw.js v2.0.1 loaded');
+console.log('✅ sw.js v2.1.0 loaded');

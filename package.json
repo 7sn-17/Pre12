@@ -1,6 +1,6 @@
 {
   "name": "medical-year-platform",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "private": true,
   "description": "المنصة الطبية — السنة التحضيرية (static site + partials build)",
   "scripts": {
@@ -11,7 +11,16 @@
     "node": ">=18"
   },
   "dependencies": {
-    "acorn": "^8.19.0"
+    "@capacitor-firebase/messaging": "^8.5.2",
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/cli": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/network": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.4",
+    "acorn": "^8.19.0",
+    "firebase": "^12.19.0"
   },
   "devDependencies": {
     "@modelcontextprotocol/node": "^2.1.1",

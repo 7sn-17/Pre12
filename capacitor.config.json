@@ -1,0 +1,39 @@
+{
+  "appId": "com.pre12.medical",
+  "appName": "المنصة الطبية",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "launchAutoHide": true,
+      "backgroundColor": "#06110d",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false,
+      "splashFullScreen": true,
+      "splashImmersive": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#06110d",
+      "overlaysWebView": false
+    },
+    "CapacitorHttp": {
+      "enabled": false
+    },
+    "FirebaseMessaging": {
+      "icon": "ic_stat_icon",
+      "color": "#10b981"
+    },
+    "Keyboard": {
+      "resize": "native"
+    }
+  }
+}

@@ -75,3 +75,20 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
+
+# ── Android / Capacitor ────────────────────────────────────
+# نرفع مشروع الأندرويد كاملاً (كي يبني GitHub Actions الـ APK)،
+# لكن بلا مخرجات البناء ولا ملفات Gradle المؤقتة.
+android/.gradle/
+android/build/
+android/app/build/
+android/capacitor-cordova-android-plugins/build/
+android/local.properties
+android/.idea/
+android/*.iml
+android/app/*.iml
+android/app/release/
+android/app/debug/
+*.keystore
+!debug.keystore
+android/app/google-services.json.enc

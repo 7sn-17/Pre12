@@ -1,0 +1,103 @@
+# self-heal: true
+# =============================================================================
+# بناء تطبيق Android (APK) — المنصة الطبية
+# -----------------------------------------------------------------------------
+# ✅ يبني التطبيق على كل push إلى main
+# ✅ يرفع الـ APK كـ artifact
+# ✅ ينشئ GitHub Release تلقائياً مع الـ APK
+#
+# المتطلبات:
+#   • Node.js 18
+#   • JDK 17
+#   • Android SDK (مضبوطة مسبقاً في الـ runner)
+# =============================================================================
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write   # لإنشاء الـ Release
+  actions: read
+
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    name: Build APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🧰 Set up Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: npm
+
+      - name: ☕ Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: 📦 Install dependencies
+        run: npm install
+
+      - name: 🏗️ Build the web app
+        run: npm run build
+
+      - name: 🎨 Generate Android assets (icons + splash)
+        run: node tools/generate-android-assets.js
+
+      - name: 🔗 Sync Capacitor
+        run: npx cap sync android
+
+      - name: 🏛️ Make gradlew executable
+        working-directory: android
+        run: chmod +x gradlew
+
+      - name: 📦 Build the debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: 📤 Upload the APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: 🚀 Publish the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+          name: المنصة الطبية — ${{ github.ref_name }}
+          body: |
+            ## 📱 المنصة الطبية — نسخة Android
+
+            تطبيق أندرويد مبني من نفس كود الواجهة (WebView + Capacitor).
+
+            | الملف | الوصف |
+            |---|---|
+            | `app-debug.apk` | نسخة التثبيت (debug) — فعّل "تثبيت من مصدر غير معروف" عند التثبيت |
+
+            **التثبيت على الهاتف:**
+            1. نزّل `app-debug.apk` إلى جهازك.
+            2. افتحه من مدير الملفات.
+            3. اسمح للتثبيت من هذا المصدر، ثم أكّد التثبيت.
+
+            ---
+            بُني تلقائياً عبر [GitHub Actions](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).
+          fail_on_unmatched_files: true
+          draft: false
+          prerelease: ${{ !startsWith(github.ref, 'refs/tags/v') }}

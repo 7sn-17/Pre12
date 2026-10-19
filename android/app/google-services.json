@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "21831772653",
+    "project_id": "pre12-medical",
+    "storage_bucket": "pre12-medical.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:21831772653:android:3ff1955d03c28118561fe4",
+        "android_client_info": {
+          "package_name": "com.pre12.medical"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCM1WBDwKsUPvRTqZ6VkcYPZ6J_Q4EUCrM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
