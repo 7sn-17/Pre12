@@ -94,44 +94,34 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
-          if [ -z "$KEYSTORE_BASE64" ]; then
-            echo "::error::KEYSTORE_BASE64 secret is missing — cannot sign the release."
-            exit 1
-          fi
-          # ⭐ فكّ base64 بشكل متسامح: نُزيل أي محرف خارج الأبجدية
-          #    (أسطر جديدة، مسافات، \r) ونصلح الحشو (padding) — فالسر
-          #    قد يكون ملصوقاً يدوياً بترميز مختلف.
-          python3 - <<'PY'
-          import base64, os, re, sys
-          raw = os.environ.get('KEYSTORE_BASE64', '')
-          clean = re.sub(r'[^A-Za-z0-9+/=]', '', raw)
-          if not clean:
-              print('::error::KEYSTORE_BASE64 contains no base64 data.')
-              sys.exit(1)
-          clean = clean.rstrip('=')
-          clean += '=' * (-len(clean) % 4)
-          try:
-              data = base64.b64decode(clean, validate=False)
-          except Exception as exc:
-              print('::error::Could not decode KEYSTORE_BASE64: %s' % exc)
-              sys.exit(1)
-          if len(data) < 512:
-              print('::error::The decoded keystore is too small (%d bytes).' % len(data))
-              sys.exit(1)
-          with open('android/app/release.keystore', 'wb') as fh:
-              fh.write(data)
-          print('keystore decoded: %d bytes, magic %s' % (len(data), data[:4].hex()))
-          PY
-          echo "keystore file: $(stat -c %s android/app/release.keystore) bytes"
+          # ⭐ printf وليس echo: echo يضيف سطراً جديداً إلى المخرجات،
+          #    وهذا ما يُفسد بنية ملف التوقيع (ASN.1) فيحسبه keytool
+          #    ملفاً مبتوراً (java.io.EOFException).
+          printf "%s" "$KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
 
-          # ⭐ نتحقق أن الملف مفتاح توقيع صالح وأن كلمة السر والاسم صحيحان،
-          #    حتى نفشل برسالة واضحة بدل خطأ غامض داخل Gradle.
+          # ⭐ بديل احتياطي: لو كان الترميز base64 الآمن (URL-safe)
+          #    (أي - و _ بدل + و /) فسيرفض keytool الملف — فنجرّب الشكل الآخر.
           if ! keytool -list -keystore android/app/release.keystore -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" > /dev/null 2>&1; then
-            echo "::error::The decoded file is not a valid keystore for the given alias — check KEYSTORE_BASE64 / KEYSTORE_PASSWORD / KEY_ALIAS."
-            keytool -list -keystore android/app/release.keystore -storepass "$KEYSTORE_PASSWORD" 2>&1 | head -10 || true
-            exit 1
+            echo "::warning::The standard base64 form was rejected — trying the URL-safe form."
+            printf "%s" "$KEYSTORE_BASE64" | tr -- '-_' '+/' | base64 -d > android/app/release.keystore.alt || true
+            if keytool -list -keystore android/app/release.keystore.alt -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" > /dev/null 2>&1; then
+              mv android/app/release.keystore.alt android/app/release.keystore
+              echo "✅ the URL-safe form is the correct one."
+            else
+              rm -f android/app/release.keystore.alt
+              echo "::error::The decoded file is not a valid keystore for alias '$KEY_ALIAS' — check KEYSTORE_BASE64 / KEYSTORE_PASSWORD / KEY_ALIAS."
+              exit 1
+            fi
           fi
-          echo "✅ keystore verified (alias: $KEY_ALIAS)"
+
+      - name: ✅ Verify the keystore
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          ls -l android/app/release.keystore
+          file android/app/release.keystore
+          keytool -list -keystore android/app/release.keystore -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" | head -6
 
       - name: 📦 Build the signed release APK
         working-directory: android
