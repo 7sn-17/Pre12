@@ -125,7 +125,8 @@ npx serve .
 > افتح <http://localhost:8000/> — ولا تخدم `src/` أو `partials/` مباشرةً،
 > فهما قوالب خام تحتوي على `{{المتغيّرات}}`.
 
-**المتطلبات:** Node.js ≥ 18 (الاعتماد الوحيد هو `acorn`، محلّل JS وقت البناء).
+**المتطلبات:** Node.js ≥ 18 للبناء على الويب (الاعتماد الوحيد هو `acorn`)،
+و Node.js ≥ 22 لأدوات Capacitor الأصلية.
 
 ---
 
@@ -247,6 +248,9 @@ npx cap sync android          # ينسخ نسخة الويب داخل التطب
 node tools/generate-android-assets.js   # أيقونة + شاشة بدء (بلا اعتماديات)
 cd android && ./gradlew assembleDebug   # (يتطلب Android SDK)
 ```
+
+> **المتطلبات:** Node.js **22+** (Capacitor 8 يرفض الإصدارات الأقدم) و
+> **JDK 21** — والبناء على GitHub Actions مضبوط عليهما تلقائياً.
 
 > على GitHub كل ذلك يتم تلقائياً: workflow
 > [`.github/workflows/build-apk.yml`](.github/workflows/build-apk.yml) يبني

@@ -1517,12 +1517,17 @@ branded — even if someone forgets to run it locally.
 
 `.github/workflows/build-apk.yml` (marker: `# self-heal: true` at the top):
 
-1. Node.js 18 + JDK 17,
+1. **Node.js 22** (the Capacitor 8 CLI refuses to run on anything older)
+   + **JDK 21** (Capacitor 8 compiles with `sourceCompatibility = 21`),
 2. `npm install` → `npm run build` → generate the assets,
 3. `npx cap sync android`,
 4. `./gradlew assembleDebug` (never run locally — the runner has the SDK),
 5. upload the APK as an artifact **and** create a GitHub Release with
    `softprops/action-gh-release`.
+
+> ⚠️ **Version pinning:** the first CI run failed on Node 18 / JDK 17 with
+> *"The Capacitor CLI requires NodeJS >=22.0.0"*. Capacitor 8 needs **both**
+> Node 22 and JDK 21 — the workflow is pinned to those versions.
 
 > The `google-services.json` lives in `android/app/` so the
 > `com.google.gms.google-services` plugin enables FCM. It is a *client*
