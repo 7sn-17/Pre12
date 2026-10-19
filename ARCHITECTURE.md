@@ -1521,9 +1521,45 @@ branded — even if someone forgets to run it locally.
    + **JDK 21** (Capacitor 8 compiles with `sourceCompatibility = 21`),
 2. `npm install` → `npm run build` → generate the assets,
 3. `npx cap sync android`,
-4. `./gradlew assembleDebug` (never run locally — the runner has the SDK),
-5. upload the APK as an artifact **and** create a GitHub Release with
-   `softprops/action-gh-release`.
+4. decode the signing key:
+   `echo "$KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore`,
+5. `./gradlew assembleRelease` (never run locally — the runner has the SDK),
+6. verify the signature with `jarsigner -verify`,
+7. upload the APK as an artifact **and** create a GitHub Release with
+   `softprops/action-gh-release` (tag = `v<version>` from `package.json`).
+
+### Signing the release
+
+`android/app/build.gradle` reads the key from the environment and only
+signs when the key file is actually there — so a local build still works
+without any secret:
+
+```gradle
+def keystoreFile = file('release.keystore')
+
+signingConfigs {
+    release {
+        if (keystoreFile.exists()) {
+            storeFile     keystoreFile
+            storePassword System.getenv('KEYSTORE_PASSWORD')
+            keyAlias      System.getenv('KEY_ALIAS')
+            keyPassword   System.getenv('KEY_PASSWORD')
+        }
+    }
+}
+
+buildTypes {
+    release {
+        if (keystoreFile.exists()) { signingConfig signingConfigs.release }
+        minifyEnabled false
+        proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+    }
+}
+```
+
+The four secrets live in **GitHub → Settings → Secrets**: `KEYSTORE_BASE64`,
+`KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`. The keystore file itself
+is git-ignored (`*.keystore`) and never leaves the runner.
 
 > ⚠️ **Version pinning:** the first CI run failed on Node 18 / JDK 17 with
 > *"The Capacitor CLI requires NodeJS >=22.0.0"*. Capacitor 8 needs **both**
@@ -1533,6 +1569,95 @@ branded — even if someone forgets to run it locally.
 > `com.google.gms.google-services` plugin enables FCM. It is a *client*
 > configuration (not a secret) and is committed on purpose, as Google
 > documents.
+
+### Testing Push Notifications
+
+The push pipeline has three parts, and all three must be in place before a
+notification can arrive on a phone.
+
+```
+  phone (APK)                        Supabase                    Firebase
+  ───────────                        ────────                    ───────
+  FirebaseMessaging.getToken()
+        │
+        ├──► saved to profiles.fcm_token   (native.js → saveFcmToken)
+        │
+        └──► FCM registers the device ────► Cloud Messaging
+                                                │
+                                   admin sends a test message
+                                                │
+                                                └──► the device shows it ──► tapping it
+                                                     navigates to data.target
+```
+
+**1. The token must be stored**
+
+When the app is installed and the user **logs in**, `native.js` reads the
+registration token and stores it in the account:
+
+| Step | Code |
+|---|---|
+| read the token | `FirebaseMessaging.getToken()` in `native.js` |
+| store it | `profiles.fcm_token` (see `supabase/migrations/20261019_phase10_fcm_token.sql`) |
+| refresh it | `tokenReceived` listener (fires again if the token rotates) |
+
+Check it from the Supabase SQL editor:
+
+```sql
+select id, email, fcm_token, updated_at
+from public.profiles
+where fcm_token is not null;
+```
+
+An empty result means the token never arrived — check that the app is the
+**signed release build** (the FCM plugin needs `google-services.json`), that
+the device has network access, and that the user is signed in.
+
+**2. Send a test message**
+
+The admin (or any account with the token) sends a message from the
+**Firebase Console → Cloud Messaging → Create notification**:
+
+| Field | Value |
+|---|---|
+| Target | **FCM token** — paste the value of `profiles.fcm_token` |
+| Title | `اختبار إشعار` |
+| Body | `وصلتك رسالة من المنصة الطبية` |
+
+> ⚠️ The console sends to the **legacy** HTTP v1 API. If your project only
+> has the FCM HTTP v1 API enabled, use a small script with the Admin SDK
+> (`firebase-admin`) instead — the token and the device are the same.
+
+**3. Add the navigation payload**
+
+Optional extra keys let a notification deep-link into a page. `native.js`
+reads `data.target` (or `data.url` / `data.path`) and navigates there:
+
+```json
+{
+  "data": {
+    "target": "notes.html",
+    "title": "لديك ملاحظة جديدة"
+  },
+  "notification": {
+    "title": "ملاحظة جديدة",
+    "body": "someone shared a note with you"
+  }
+}
+```
+
+**Behaviour matrix**
+
+| Situation | What happens |
+|---|---|
+| App in the foreground | `messageReceived` fires → the page can listen for `medapp:notification` and show its own UI |
+| App in the background | The system notification is shown automatically |
+| User taps the notification | `notificationActionPerformed` → `medapp:notification-tap` → the app navigates to `data.target` |
+| App closed | Tapping the notification opens the app and navigates to `data.target` |
+
+> The `profiles.fcm_token` column holds **one token per account** (the last
+> device that signed in wins). For a multi-device account, use a separate
+> `device_tokens` table instead.
 
 ---
 

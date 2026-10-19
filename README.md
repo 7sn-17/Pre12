@@ -237,7 +237,8 @@ admin · plans · progress`.
 | 🎨 شريط الحالة | لونه يتابع الوضع النهاري/الليلي تلقائياً |
 | 🧊 شاشة البدء | تظهر بلون الهوية وتختفي بعد أول رسم |
 | 📡 حالة الشبكة | تُطلق أحداث `online` / `offline` داخل التطبيق |
-| 🔔 إشعارات Firebase (FCM) | التوكن يُحفظ في `profiles` والنقر على الإشعار ينقلك للمقصد |
+| 🔔 إشعارات Firebase (FCM) | التوكن يُحفظ في `profiles.fcm_token` والنقر على الإشعار ينقلك للمقصد |
+| 🔏 توقيع الإنتاج | مفتاح التوقيع يأتي من GitHub Secrets ويُفكّ داخل الـ CI فقط |
 
 ### بناء الـ APK
 
@@ -246,7 +247,7 @@ npm install
 npm run build
 npx cap sync android          # ينسخ نسخة الويب داخل التطبيق
 node tools/generate-android-assets.js   # أيقونة + شاشة بدء (بلا اعتماديات)
-cd android && ./gradlew assembleDebug   # (يتطلب Android SDK)
+cd android && ./gradlew assembleRelease # نسخة موقّعة (يتطلب Android SDK + المفتاح)
 ```
 
 > **المتطلبات:** Node.js **22+** (Capacitor 8 يرفض الإصدارات الأقدم) و
@@ -254,8 +255,9 @@ cd android && ./gradlew assembleDebug   # (يتطلب Android SDK)
 
 > على GitHub كل ذلك يتم تلقائياً: workflow
 > [`.github/workflows/build-apk.yml`](.github/workflows/build-apk.yml) يبني
-> الـ APK ويرفعه كـ artifact **وينشئ Release** — نزّل `app-debug.apk` وثبّته
-> مباشرةً على هاتفك.
+> **نسخة موقّعة (Production)**، يتحقق من التوقيع بـ `jarsigner`، يرفعها كـ
+> artifact **وينشئ Release** — نزّل `app-release.apk` وثبّته مباشرةً على
+> هاتفك.
 
 ---
 

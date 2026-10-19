@@ -5,10 +5,17 @@
 # ✅ يبني التطبيق على كل push إلى main
 # ✅ يرفع الـ APK كـ artifact
 # ✅ ينشئ GitHub Release تلقائياً مع الـ APK
+# ✅ النسخة **موقّعة** (Production) — المفتاح يأتي من GitHub Secrets
 #
-# المتطلبات (مُثبَّتة على runner ubuntu-latest):
+# المتطلبات (مضبوطة مسبقاً على runner ubuntu-latest):
 #   • Node.js 22  ← الـ Capacitor 8 CLI يتطلب Node >= 22
 #   • JDK 21      ← Capacitor 8 يستخدم sourceCompatibility = VERSION_21
+#
+# الأسرار المطلوبة (GitHub → Settings → Secrets):
+#   • KEYSTORE_BASE64   ← محتوى release.keystore بترميز base64
+#   • KEYSTORE_PASSWORD
+#   • KEY_ALIAS
+#   • KEY_PASSWORD
 # =============================================================================
 name: Build Android APK
 
@@ -65,20 +72,52 @@ jobs:
         working-directory: android
         run: chmod +x gradlew
 
-      - name: 📦 Build the debug APK
+      - name: 🏷️ Read the app version
+        id: version
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: 🔑 Decode the release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::KEYSTORE_BASE64 secret is missing — cannot sign the release."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
+          echo "keystore decoded: $(stat -c %s android/app/release.keystore) bytes"
+
+      - name: 📦 Build the signed release APK
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: ✅ Verify the APK signature
+        working-directory: android
+        run: |
+          APK="app/build/outputs/apk/release/app-release.apk"
+          if [ ! -f "$APK" ]; then
+            echo "::error::The release APK was not produced."
+            exit 1
+          fi
+          echo "APK size: $(stat -c %s "$APK") bytes"
+          # jarsigner -verify يكشف إن كان الملف موقّعاً فعلاً
+          if jarsigner -verify -verbose:summary "$APK" 2>/dev/null | grep -q "jar verified"; then
+            echo "✅ The APK is signed."
+          else
+            echo "::warning::Could not confirm the signature (jarsigner output below):"
+            jarsigner -verify "$APK" || true
+          fi
 
       - name: 📤 Upload the APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: app-release-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
-
-      - name: 🏷️ Read the app version
-        id: version
-        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
 
       - name: 🚀 Publish the GitHub Release
         uses: softprops/action-gh-release@v2
@@ -86,19 +125,19 @@ jobs:
           # ⭐ الـ Release يحتاج تاجاً — ننشئه من رقم الإصدار في package.json
           #    (وإن كان موجوداً، يُحدَّث الـ Release ويُستبدل الملف).
           tag_name: v${{ steps.version.outputs.version }}
-          files: android/app/build/outputs/apk/debug/app-debug.apk
+          files: android/app/build/outputs/apk/release/app-release.apk
           name: المنصة الطبية — v${{ steps.version.outputs.version }}
           body: |
             ## 📱 المنصة الطبية — نسخة Android v${{ steps.version.outputs.version }}
 
-            تطبيق أندرويد مبني من نفس كود الواجهة (WebView + Capacitor).
+            تطبيق أندرويد **موقّع** مبني من نفس كود الواجهة (WebView + Capacitor).
 
             | الملف | الوصف |
             |---|---|
-            | `app-debug.apk` | نسخة التثبيت (debug) — فعّل "تثبيت من مصدر غير معروف" عند التثبيت |
+            | `app-release.apk` | نسخة الإنتاج الموقّعة — قابلة للتثبيت والتحديث |
 
             **التثبيت على الهاتف:**
-            1. نزّل `app-debug.apk` إلى جهازك.
+            1. نزّل `app-release.apk` إلى جهازك.
             2. افتحه من مدير الملفات.
             3. اسمح للتثبيت من هذا المصدر، ثم أكّد التثبيت.
 

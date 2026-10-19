@@ -1,5 +1,8 @@
 apply plugin: 'com.android.application'
 
+// ⭐ ملف مفتاح التوقيع (يفكّه الـ CI من السر KEYSTORE_BASE64)
+def keystoreFile = file('release.keystore')
+
 android {
     namespace = "com.pre12.medical"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +10,8 @@ android {
         applicationId "com.pre12.medical"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "2.1.0"
+        versionCode 2
+        versionName "2.2.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,8 +19,26 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // ⭐ مفتاح التوقيع — comes from the GitHub Actions secrets:
+    //    KEYSTORE_BASE64 · KEYSTORE_PASSWORD · KEY_ALIAS · KEY_PASSWORD
+    //    الملف نفسه (release.keystore) يفكّه الـ CI قبل البناء.
+    signingConfigs {
+        release {
+            if (keystoreFile.exists()) {
+                storeFile keystoreFile
+                storePassword System.getenv('KEYSTORE_PASSWORD')
+                keyAlias System.getenv('KEY_ALIAS')
+                keyPassword System.getenv('KEY_PASSWORD')
+            }
+        }
+    }
     buildTypes {
         release {
+            // نوقّع فقط إذا كان المفتاح موجوداً — حتى يبقى البناء
+            // ممكناً محلياً (نسخة غير موقّعة) بدون أسرار.
+            if (keystoreFile.exists()) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

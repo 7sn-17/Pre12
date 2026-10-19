@@ -32,7 +32,7 @@ const DIST = path.join(ROOT, 'dist');
 
 // Bumped whenever app.js changes. The query string is what makes returning
 // visitors pick up the new router even though static JS is served immutable.
-const APP_VERSION = '2.1.0';
+const APP_VERSION = '2.2.0';
 const APP_JS = `app.js?v=${APP_VERSION}`;
 
 // ------------------------------------------------------------------
