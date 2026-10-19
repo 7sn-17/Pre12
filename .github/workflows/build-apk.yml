@@ -194,12 +194,21 @@ jobs:
             exit 1
           fi
           echo "APK size: $(stat -c %s "$APK") bytes"
-          # jarsigner -verify يكشف إن كان الملف موقّعاً فعلاً
-          if jarsigner -verify -verbose:summary "$APK" 2>/dev/null | grep -q "jar verified"; then
-            echo "✅ The APK is signed."
+          # ⭐ apksigner هو الأداة الرسمية — يدعم مخطّطي التوقيع v2/v3
+          #    (بينما jarsigner يرى توقيع JAR v1 فقط فيقول "unsigned" خطأً).
+          APKSIGNER=$(ls -1 "${ANDROID_HOME:-$ANDROID_SDK_ROOT}/build-tools/"*/apksigner 2>/dev/null | sort -V | tail -1)
+          if [ -n "$APKSIGNER" ]; then
+            echo "using $APKSIGNER"
+            "$APKSIGNER" verify --verbose --print-certs "$APK" | head -25
+            if "$APKSIGNER" verify "$APK"; then
+              echo "✅ the APK signature is valid (verified with apksigner)."
+            else
+              echo "::error::apksigner rejected the APK signature."
+              exit 1
+            fi
           else
-            echo "::warning::Could not confirm the signature (jarsigner output below):"
-            jarsigner -verify "$APK" || true
+            echo "::warning::apksigner not found — falling back to jarsigner (v1 only)."
+            jarsigner -verify -verbose:summary "$APK" | head -10 || true
           fi
 
       - name: 📤 Upload the APK artifact
