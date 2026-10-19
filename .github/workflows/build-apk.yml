@@ -98,10 +98,31 @@ jobs:
             echo "::error::KEYSTORE_BASE64 secret is missing — cannot sign the release."
             exit 1
           fi
-          # ⚠️ السر قد يحتوي أسطر جديدة (\r\n) — ننظّفها قبل الفك،
-          #    و--ignore-garbage يتجاهل أي مسافة زائدة.
-          printf '%s' "$KEYSTORE_BASE64" | tr -d '\r\n' | base64 --decode --ignore-garbage > android/app/release.keystore
-          echo "keystore decoded: $(stat -c %s android/app/release.keystore) bytes"
+          # ⭐ فكّ base64 بشكل متسامح: نُزيل أي محرف خارج الأبجدية
+          #    (أسطر جديدة، مسافات، \r) ونصلح الحشو (padding) — فالسر
+          #    قد يكون ملصوقاً يدوياً بترميز مختلف.
+          python3 - <<'PY'
+          import base64, os, re, sys
+          raw = os.environ.get('KEYSTORE_BASE64', '')
+          clean = re.sub(r'[^A-Za-z0-9+/=]', '', raw)
+          if not clean:
+              print('::error::KEYSTORE_BASE64 contains no base64 data.')
+              sys.exit(1)
+          clean = clean.rstrip('=')
+          clean += '=' * (-len(clean) % 4)
+          try:
+              data = base64.b64decode(clean, validate=False)
+          except Exception as exc:
+              print('::error::Could not decode KEYSTORE_BASE64: %s' % exc)
+              sys.exit(1)
+          if len(data) < 512:
+              print('::error::The decoded keystore is too small (%d bytes).' % len(data))
+              sys.exit(1)
+          with open('android/app/release.keystore', 'wb') as fh:
+              fh.write(data)
+          print('keystore decoded: %d bytes, magic %s' % (len(data), data[:4].hex()))
+          PY
+          echo "keystore file: $(stat -c %s android/app/release.keystore) bytes"
 
           # ⭐ نتحقق أن الملف مفتاح توقيع صالح وأن كلمة السر والاسم صحيحان،
           #    حتى نفشل برسالة واضحة بدل خطأ غامض داخل Gradle.
