@@ -1,0 +1,16 @@
+<!-- ============================================
+     Shell feature flag: browsers without the View Transitions API.
+     app.js picks the fallback animation itself; this class is exposed
+     for page CSS that may want to opt out of motion.
+     ============================================ -->
+<script data-shell>
+  (function () {
+    try {
+      if (!(window.CSS && CSS.supports && CSS.supports('view-transition-name', 'none'))) {
+        document.documentElement.classList.add('no-vt');
+      }
+    } catch (e) {
+      document.documentElement.classList.add('no-vt');
+    }
+  })();
+</script>

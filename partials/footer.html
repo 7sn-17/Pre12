@@ -1,0 +1,20 @@
+<div class="footer">
+{{#if footerAbout}}  <div class="footer-text">
+    <i data-lucide="heart"></i>
+    <span>صُنع بحب لطلاب السنة التحضيرية</span>
+    <i data-lucide="heart"></i>
+  </div>
+  <div class="legal-links">
+    <a href="privacy.html" class="legal-link">سياسة الخصوصية</a>
+    <span class="legal-separator">•</span>
+    <a href="terms.html" class="legal-link">شروط الخدمة</a>
+  </div>
+{{/if}}{{#unless footerAbout}}  <div class="footer-links">
+    <a href="about.html" class="footer-link">حول التطبيق</a>
+    <span class="footer-sep">•</span>
+    <a href="{{footerLinkHref}}" class="footer-link">{{footerLinkText}}</a>
+  </div>
+{{/unless}}  <div class="footer-copyright">
+    © 2026 المنصة الطبية — جميع الحقوق محفوظة
+  </div>
+</div>

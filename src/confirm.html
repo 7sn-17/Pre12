@@ -1,0 +1,870 @@
+<!--@
+title: تأكيد البريد - المنصة الطبية
+libs: supabase, lucide
+scripts: supabase-config, auth
+sw: true
+-->
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<!-- @include partials/head.html -->
+
+<style>
+    :root {
+      --bg-main: #06110d;
+      --bg-card: #102a22;
+      --border-card: rgba(16, 185, 129, 0.22);
+      --accent-emerald: #10b981;
+      --accent-light: #34d399;
+      --accent-dark: #059669;
+      --accent-glow: rgba(16, 185, 129, 0.3);
+      --text-primary: #f0fdf4;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --success: #10b981;
+      --info: #3b82f6;
+      --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    [data-theme="light"] {
+      --bg-main: #f8fafb;
+      --bg-card: #ffffff;
+      --border-card: rgba(16, 185, 129, 0.3);
+      --accent-emerald: #059669;
+      --accent-light: #10b981;
+      --accent-dark: #047857;
+      --accent-glow: rgba(16, 185, 129, 0.2);
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Cairo', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 24px 20px;
+      overflow-x: hidden;
+    }
+
+    /* الحاوية */
+    .auth-container {
+      width: 100%;
+      max-width: 440px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* شعار */
+    .brand-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .brand-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.15));
+      border: 1px solid var(--accent-emerald);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent-light);
+      box-shadow: 0 8px 24px var(--accent-glow);
+      flex-shrink: 0;
+    }
+
+    .brand-text {
+      font-size: 1.1rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--text-primary), var(--accent-light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* البطاقة */
+    .auth-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 24px;
+      padding: 36px 26px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+      text-align: center;
+    }
+
+    /* الشاشات */
+    .state-view {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+
+    .state-view.active {
+      display: flex;
+      animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* الأيقونة الكبيرة */
+    .state-icon {
+      width: 96px;
+      height: 96px;
+      border-radius: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 22px;
+      position: relative;
+    }
+
+    .state-icon i {
+      width: 46px;
+      height: 46px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .state-icon::after {
+      content: '';
+      position: absolute;
+      inset: -6px;
+      border-radius: 34px;
+      border: 1px solid;
+      opacity: 0.35;
+      animation: pulseRing 2.5s ease-in-out infinite;
+    }
+
+    @keyframes pulseRing {
+      0%, 100% { opacity: 0.35; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.04); }
+    }
+
+    /* حالة النجاح */
+    .state-icon.success {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.15));
+      border: 2px solid var(--accent-emerald);
+      color: var(--accent-light);
+      box-shadow: 0 12px 32px var(--accent-glow);
+    }
+
+    .state-icon.success::after {
+      border-color: var(--accent-emerald);
+    }
+
+    /* حالة الخطأ */
+    .state-icon.error {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(185, 28, 28, 0.15));
+      border: 2px solid var(--danger);
+      color: var(--medapp-red);
+      box-shadow: 0 12px 32px rgba(239, 68, 68, 0.25);
+    }
+
+    .state-icon.error::after {
+      border-color: var(--danger);
+    }
+
+    /* حالة التحميل */
+    .state-icon.loading {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.15));
+      border: 2px solid var(--info);
+      color: var(--medapp-blue);
+      box-shadow: 0 12px 32px rgba(59, 130, 246, 0.25);
+    }
+
+    .state-icon.loading::after {
+      border-color: var(--info);
+    }
+
+    .state-icon.loading i {
+      animation: spin 1.5s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* العنوان والنص */
+    .state-title {
+      font-size: 1.5rem;
+      font-weight: 900;
+      margin-bottom: 12px;
+      color: var(--text-primary);
+      line-height: 1.3;
+    }
+
+    .state-text {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.75;
+      margin-bottom: 26px;
+      max-width: 340px;
+    }
+
+    .state-text strong {
+      color: var(--accent-light);
+      font-weight: 700;
+    }
+
+    /* زر رئيسي */
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 14px 28px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+      border: none;
+      color: #ffffff;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 800;
+      cursor: pointer;
+      text-decoration: none;
+      box-shadow: 0 8px 24px var(--accent-glow);
+      transition: all var(--transition);
+      min-width: 220px;
+    }
+
+    .action-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px var(--accent-glow);
+    }
+
+    .action-btn:active {
+      transform: translateY(0) scale(0.98);
+    }
+
+    .action-btn i {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* زر ثانوي */
+    .secondary-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 22px;
+      border-radius: 12px;
+      background: transparent;
+      border: 1px solid var(--border-card);
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      margin-top: 12px;
+      transition: all var(--transition);
+    }
+
+    .secondary-btn:hover {
+      background: rgba(128, 128, 128, 0.1);
+      color: var(--text-primary);
+      border-color: var(--accent-emerald);
+    }
+
+    .secondary-btn i {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* صندوق العد التنازلي */
+    .countdown-box {
+      margin-top: 18px;
+      padding: 11px 16px;
+      background: rgba(6, 17, 13, 0.5);
+      border: 1px solid var(--border-card);
+      border-radius: 12px;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+    }
+
+    [data-theme="light"] .countdown-box {
+      background: rgba(241, 245, 249, 0.6);
+    }
+
+    .countdown-box i {
+      width: 14px;
+      height: 14px;
+      color: var(--accent-light);
+    }
+
+    .countdown-box strong {
+      color: var(--accent-light);
+      font-weight: 900;
+      min-width: 14px;
+      display: inline-block;
+      text-align: center;
+    }
+
+    /* معلومات إضافية */
+    .info-text {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 20px;
+      line-height: 1.6;
+      padding-top: 18px;
+      border-top: 1px solid var(--border-card);
+      width: 100%;
+    }
+
+    .info-text a {
+      color: var(--accent-light);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .info-text a:hover {
+      text-decoration: underline;
+    }
+
+    /* تحذير */
+    .warning-inline {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 12px 14px;
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      border-radius: 12px;
+      font-size: 0.78rem;
+      color: var(--medapp-amber);
+      line-height: 1.55;
+      text-align: right;
+      margin-bottom: 20px;
+      width: 100%;
+    }
+
+    .warning-inline i {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    /* تجاوب */
+    @media (max-width: 480px) {
+      body { padding: 16px 14px; }
+      .auth-card { padding: 30px 20px; border-radius: 20px; }
+      .state-icon { width: 84px; height: 84px; }
+      .state-icon i { width: 40px; height: 40px; }
+      .state-title { font-size: 1.3rem; }
+      .state-text { font-size: 0.86rem; }
+      .action-btn { padding: 13px 24px; font-size: 0.9rem; min-width: 200px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="auth-container">
+
+    <div class="brand-badge">
+      <div class="brand-icon">
+        <i data-lucide="stethoscope" style="width: 26px; height: 26px;"></i>
+      </div>
+      <div class="brand-text">السنة التحضيرية</div>
+    </div>
+
+    <div class="auth-card">
+
+      <!-- ========== حالة التحميل ========== -->
+      <div id="loadingState" class="state-view active">
+        <div class="state-icon loading">
+          <i data-lucide="loader-2"></i>
+        </div>
+        <h1 class="state-title">جاري التحقق...</h1>
+        <p class="state-text">
+          يتم التحقق من رابط التأكيد، لحظة من فضلك.
+        </p>
+      </div>
+
+      <!-- ========== حالة النجاح ========== -->
+      <div id="successState" class="state-view">
+        <div class="state-icon success">
+          <i data-lucide="check-circle-2"></i>
+        </div>
+        <h1 class="state-title" id="successTitle">🎉 تم تأكيد بريدك!</h1>
+        <p class="state-text" id="successText">
+          حسابك جاهز الآن للاستخدام.<br>
+          سيتم تحويلك لصفحة تسجيل الدخول تلقائياً.
+        </p>
+        
+        <a href="login.html" class="action-btn">
+          <i data-lucide="log-in"></i>
+          <span>تسجيل الدخول الآن</span>
+        </a>
+
+        <div class="countdown-box">
+          <i data-lucide="timer"></i>
+          <span>تحويل تلقائي بعد <strong id="countdownNum">5</strong> ثوان</span>
+        </div>
+      </div>
+
+      <!-- ========== حالة الخطأ ========== -->
+      <div id="errorState" class="state-view">
+        <div class="state-icon error">
+          <i data-lucide="alert-triangle"></i>
+        </div>
+        <h1 class="state-title" id="errorTitle">رابط غير صالح</h1>
+        
+        <div class="warning-inline" id="errorWarning" style="display: none;">
+          <i data-lucide="info"></i>
+          <span id="errorWarningText"></span>
+        </div>
+
+        <p class="state-text" id="errorText">
+          الرابط الذي استخدمته منتهي الصلاحية أو غير صحيح.<br>
+          يرجى طلب رابط جديد.
+        </p>
+        
+        <a href="login.html" class="action-btn">
+          <i data-lucide="arrow-right"></i>
+          <span>العودة لتسجيل الدخول</span>
+        </a>
+
+        <a href="login.html#register" class="secondary-btn" onclick="goToRegister(event)">
+          <i data-lucide="refresh-cw"></i>
+          <span>طلب رابط جديد</span>
+        </a>
+
+        <div class="info-text">
+          إذا كنت مسجلاً بالفعل، يمكنك <a href="login.html">تسجيل الدخول</a> مباشرة أو طلب <a href="#" onclick="goToResetPassword(event)">استعادة كلمة المرور</a>.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+<!-- @include partials/scripts.html -->
+
+  <script>
+    lucide.createIcons();
+
+    // ============================================
+    // إدارة الحالة
+    // ============================================
+    let countdownInterval = null;
+    const COUNTDOWN_SECONDS = 5;
+
+    // ============================================
+    // عرض حالة معينة
+    // ============================================
+    function showState(stateName) {
+      document.querySelectorAll('.state-view').forEach(v => {
+        v.classList.remove('active');
+      });
+      
+      const target = document.getElementById(stateName + 'State');
+      if (target) {
+        target.classList.add('active');
+      }
+      
+      lucide.createIcons();
+    }
+
+    // ============================================
+    // عرض خطأ
+    // ============================================
+    function showError(title, message, warning) {
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
+
+      const titleEl = document.getElementById('errorTitle');
+      const textEl = document.getElementById('errorText');
+      const warningEl = document.getElementById('errorWarning');
+      const warningTextEl = document.getElementById('errorWarningText');
+
+      if (titleEl) titleEl.textContent = title;
+      if (textEl) textEl.innerHTML = message;
+
+      if (warning && warningEl && warningTextEl) {
+        warningTextEl.textContent = warning;
+        warningEl.style.display = 'flex';
+      } else if (warningEl) {
+        warningEl.style.display = 'none';
+      }
+
+      showState('error');
+    }
+
+    // ============================================
+    // عرض نجاح مع عد تنازلي
+    // ============================================
+    function showSuccess(customTitle, customText, isResend) {
+      const titleEl = document.getElementById('successTitle');
+      const textEl = document.getElementById('successText');
+
+      if (customTitle && titleEl) titleEl.textContent = customTitle;
+      if (customText && textEl) textEl.innerHTML = customText;
+
+      showState('success');
+
+      // إذا كانت إعادة تعيين كلمة المرور، حوّل لصفحة أخرى
+      const redirectTarget = isResend ? 'login.html' : 'login.html';
+
+      // عد تنازلي
+      let remaining = COUNTDOWN_SECONDS;
+      const numEl = document.getElementById('countdownNum');
+
+      if (numEl) numEl.textContent = remaining;
+
+      if (countdownInterval) clearInterval(countdownInterval);
+
+      countdownInterval = setInterval(() => {
+        remaining--;
+        if (numEl) numEl.textContent = remaining;
+
+        if (remaining <= 0) {
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+          window.location.href = redirectTarget;
+        }
+      }, 1000);
+    }
+
+    // ============================================
+    // التحقق من الرابط عند فتح الصفحة
+    // ============================================
+    async function processConfirmation() {
+      try {
+        // استخراج كل المعاملات الممكنة
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const queryParams = new URLSearchParams(window.location.search);
+
+        // ترتيب البحث: hash أولاً ثم query
+        const get = (key) => hashParams.get(key) || queryParams.get(key);
+
+        const accessToken = get('access_token');
+        const refreshToken = get('refresh_token');
+        const tokenHash = get('token_hash');
+        const type = get('type');
+        const error = get('error');
+        const errorCode = get('error_code');
+        const errorDescription = get('error_description');
+
+        console.log('🔍 فحص الرابط:');
+        console.log('  type:', type);
+        console.log('  has access_token:', !!accessToken);
+        console.log('  has token_hash:', !!tokenHash);
+        console.log('  has error:', !!error);
+
+        // ═══════════════════════════════════════════
+        // الحالة 1: يوجد خطأ صريح في URL
+        // ═══════════════════════════════════════════
+        if (error) {
+          console.error('❌ URL Error:', { error, errorCode, errorDescription });
+          handleUrlError(error, errorCode, errorDescription);
+          return;
+        }
+
+        // ═══════════════════════════════════════════
+        // الحالة 2: token_hash (الطريقة الحديثة)
+        // ═══════════════════════════════════════════
+        if (tokenHash) {
+          console.log('✅ استخدام token_hash');
+          await handleTokenHash(tokenHash, type);
+          return;
+        }
+
+        // ═══════════════════════════════════════════
+        // الحالة 3: access_token (الطريقة القديمة)
+        // ═══════════════════════════════════════════
+        if (accessToken) {
+          console.log('✅ استخدام access_token');
+          await handleAccessToken(accessToken, refreshToken);
+          return;
+        }
+
+        // ═══════════════════════════════════════════
+        // الحالة 4: لا يوجد أي توكن
+        // ═══════════════════════════════════════════
+        console.warn('⚠️ لا يوجد توكن في الرابط');
+        showError(
+          'رابط غير صالح',
+          'لم نتمكن من العثور على رابط التأكيد.<br>تأكد من فتح الرابط الصحيح من بريدك الإلكتروني.',
+          'إذا نسخت الرابط يدوياً، تأكد من نسخه كاملاً دون قطع.'
+        );
+
+      } catch (err) {
+        console.error('❌ خطأ في processConfirmation:', err);
+        showError(
+          'حدث خطأ غير متوقع',
+          'واجهنا مشكلة أثناء التحقق من الرابط.<br>حاول مرة أخرى أو اطلب رابطاً جديداً.',
+          null
+        );
+      }
+    }
+
+    // ============================================
+    // معالجة token_hash
+    // ============================================
+    async function handleTokenHash(tokenHash, type) {
+      try {
+        // تحديد نوع التحقق
+        let verifyType = type || 'signup';
+        
+        // Supabase يقبل: signup, email, email_change, recovery, invite
+        const validTypes = ['signup', 'email', 'email_change', 'recovery', 'invite'];
+        if (!validTypes.includes(verifyType)) {
+          verifyType = 'signup';
+        }
+
+        console.log(`🔐 محاولة verifyOtp بنوع: ${verifyType}`);
+
+        const result = await verifyEmailOtp(tokenHash, verifyType);
+
+        if (result.success) {
+          console.log('✅ تم التحقق بنجاح:', result.user?.email);
+          
+          // حالة خاصة: إعادة تعيين كلمة المرور
+          if (verifyType === 'recovery') {
+            showSuccess(
+              '✅ رابط صالح!',
+              'تم التحقق من هويتك.<br>سيتم تحويلك لصفحة إعادة تعيين كلمة المرور.'
+            );
+            
+            // تأخير ثم التحويل
+            if (countdownInterval) clearInterval(countdownInterval);
+            countdownInterval = setInterval(() => {
+              window.location.href = 'reset-password.html';
+            }, 1000);
+            return;
+          }
+
+          // الحالة الطبيعية: تأكيد البريد
+          showSuccess(
+            '🎉 تم تأكيد بريدك!',
+            'حسابك جاهز الآن للاستخدام.<br>سيتم تحويلك لصفحة تسجيل الدخول تلقائياً.'
+          );
+        } else {
+          console.error('❌ فشل التحقق:', result.error);
+          
+          // تحليل نوع الخطأ
+          const errorMsg = result.error || '';
+          
+          if (errorMsg.includes('منتهي') || errorMsg.includes('expired')) {
+            showError(
+              'رابط منتهي الصلاحية',
+              'انتهت صلاحية رابط التأكيد.<br>اطلب رابطاً جديداً من صفحة تسجيل الدخول.',
+              'رابط التأكيد صالح لمدة ساعة واحدة فقط من إرساله.'
+            );
+          } else if (errorMsg.includes('مستخدم') || errorMsg.includes('already')) {
+            showError(
+              'تم التأكيد مسبقاً',
+              'بريدك الإلكتروني مؤكد بالفعل.<br>يمكنك تسجيل الدخول مباشرة.',
+              null
+            );
+          } else {
+            showError(
+              'تعذّر التحقق',
+              result.error || 'الرابط غير صحيح أو تم استخدامه مسبقاً.',
+              null
+            );
+          }
+        }
+      } catch (err) {
+        console.error('❌ handleTokenHash error:', err);
+        showError(
+          'حدث خطأ غير متوقع',
+          'واجهنا مشكلة أثناء التحقق.<br>حاول مرة أخرى لاحقاً.',
+          null
+        );
+      }
+    }
+
+    // ============================================
+    // معالجة access_token (الطريقة القديمة)
+    // ============================================
+    async function handleAccessToken(accessToken, refreshToken) {
+      try {
+        console.log('🔐 محاولة setSession');
+        
+        const { data, error } = await supabaseClient.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken || ''
+        });
+
+        if (error) {
+          console.error('❌ setSession error:', error);
+          
+          // تحليل الخطأ
+          const msg = (error.message || '').toLowerCase();
+          
+          if (msg.includes('expired')) {
+            showError(
+              'رابط منتهي الصلاحية',
+              'انتهت صلاحية رابط التأكيد.<br>اطلب رابطاً جديداً.',
+              null
+            );
+          } else if (msg.includes('invalid') || msg.includes('used')) {
+            showError(
+              'رابط مستخدم مسبقاً',
+              'تم استخدام هذا الرابط من قبل.<br>إذا كنت قد أكدت بريدك بالفعل، يمكنك تسجيل الدخول.',
+              null
+            );
+          } else {
+            showError(
+              'تعذّر التحقق',
+              'الرابط غير صحيح أو انتهت صلاحيته.<br>اطلب رابطاً جديداً من صفحة تسجيل الدخول.',
+              null
+            );
+          }
+          return;
+        }
+
+        console.log('✅ تم تعيين الجلسة:', data.user?.email);
+
+        // تحديد نوع العملية من معاملات URL
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const queryParams = new URLSearchParams(window.location.search);
+        const type = hashParams.get('type') || queryParams.get('type');
+
+        // حالة خاصة: إعادة تعيين كلمة المرور
+        if (type === 'recovery') {
+          showSuccess(
+            '✅ رابط صالح!',
+            'تم التحقق من هويتك.<br>سيتم تحويلك لصفحة إعادة تعيين كلمة المرور.'
+          );
+          
+          if (countdownInterval) clearInterval(countdownInterval);
+          setTimeout(() => {
+            window.location.href = 'reset-password.html';
+          }, 2000);
+          return;
+        }
+
+        // الحالة الطبيعية
+        showSuccess(
+          '🎉 تم تأكيد بريدك!',
+          'حسابك جاهز الآن للاستخدام.<br>سيتم تحويلك لصفحة تسجيل الدخول تلقائياً.'
+        );
+
+      } catch (err) {
+        console.error('❌ handleAccessToken error:', err);
+        showError(
+          'حدث خطأ غير متوقع',
+          'واجهنا مشكلة أثناء التحقق.<br>حاول مرة أخرى لاحقاً.',
+          null
+        );
+      }
+    }
+
+    // ============================================
+    // معالجة أخطاء URL
+    // ============================================
+    function handleUrlError(error, errorCode, errorDescription) {
+      const desc = (errorDescription || '').toLowerCase();
+      const code = (errorCode || '').toLowerCase();
+      const errType = (error || '').toLowerCase();
+
+      // حالة 1: رابط منتهي
+      if (code === 'otp_expired' || desc.includes('expired') || errType === 'access_denied') {
+        showError(
+          'رابط منتهي الصلاحية',
+          'انتهت صلاحية رابط التأكيد.<br>اطلب رابطاً جديداً من صفحة تسجيل الدخول.',
+          'صلاحية رابط التأكيد: ساعة واحدة من لحظة الإرسال.'
+        );
+        return;
+      }
+
+      // حالة 2: تم استخدامه مسبقاً
+      if (desc.includes('already') || code === 'email_exists' || desc.includes('used')) {
+        showError(
+          'تم التأكيد مسبقاً',
+          'بريدك الإلكتروني مؤكد بالفعل.<br>يمكنك تسجيل الدخول مباشرة.',
+          null
+        );
+        return;
+      }
+
+      // حالة 3: رابط غير صحيح
+      if (desc.includes('invalid') || code === 'invalid_request') {
+        showError(
+          'رابط غير صحيح',
+          'الرابط الذي استخدمته غير صحيح.<br>تأكد من فتح الرابط الصحيح من البريد.',
+          null
+        );
+        return;
+      }
+
+      // حالة 4: خطأ عام
+      showError(
+        'تعذّر التأكيد',
+        errorDescription || 'حدث خطأ أثناء معالجة رابط التأكيد.',
+        null
+      );
+    }
+
+    // ============================================
+    // زر "طلب رابط جديد" → يذهب للتسجيل
+    // ============================================
+    function goToRegister(e) {
+      e.preventDefault();
+      // حفظ علامة للعودة
+      sessionStorage.setItem('needs_verification', 'true');
+      window.location.href = 'login.html';
+    }
+
+    // ============================================
+    // زر "استعادة كلمة المرور"
+    // ============================================
+    function goToResetPassword(e) {
+      e.preventDefault();
+      window.location.href = 'login.html';
+    }
+
+    // ============================================
+    // تشغيل
+    // ============================================
+    processConfirmation();
+
+    // ============================================
+    // تنظيف عند مغادرة الصفحة
+    // ============================================
+    window.addEventListener('beforeunload', () => {
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+      }
+    });
+
+    console.log('✅ confirm.html v1.0 loaded');
+  </script>
+
+  <!-- @include partials/sw-register.html -->
+<!-- @include partials/perf.html -->
+</body>
+</html>

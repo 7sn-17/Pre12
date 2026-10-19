@@ -1,0 +1,259 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="{{themeColor}}">
+<title>{{title}}</title>
+
+<!-- الخطوط -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@{{fontWeights}}&display=swap" rel="stylesheet">
+{{libs}}
+{{#if themeInit}}<script src="theme-init.js"></script>{{/if}}
+{{pwa}}
+{{snippets}}
+<!-- Smooth page transitions (View Transitions API + fallback fade).
+     The fixed bottom navigation gets its own view-transition-name and is
+     frozen, so it can never move or fade while the page content changes. -->
+<style data-shell>
+  /* Global theme defaults. `data-theme` is always set by theme-init.js
+     (light or dark), so native controls and scrollbars follow the app. */
+  :root { color-scheme: light; --medapp-amber: #fbbf24; --medapp-orange: #fb923c; --medapp-blue: #93c5fd; --medapp-blue-soft: #bfdbfe; --medapp-violet: #c4b5fd; --medapp-green: #34d399; --medapp-red: #f87171; --medapp-pink: #f472b6; }
+  [data-theme="dark"] { color-scheme: dark; }
+  [data-theme="light"] { --medapp-amber: #b45309; --medapp-orange: #c2410c; --medapp-blue: #2563eb; --medapp-blue-soft: #1d4ed8; --medapp-violet: #6d28d9; --medapp-green: #047857; --medapp-red: #b91c1c; --medapp-pink: #be185d; }
+
+  /* Premium smooth scrolling. The SPA router temporarily disables this for
+     page swaps / Back restoration so navigation is instant, never animated. */
+  html { scroll-behavior: smooth; }
+  /* app.js sets this only for instant SPA swaps / Back restoration. */
+  html.medapp-scroll-jump { scroll-behavior: auto !important; }
+
+  html.medapp-navigating { cursor: progress; }
+
+  /* ⭐IMPORTANT: the `hidden` attribute must always win.
+     Author rules like `.detail-empty { display: flex }` beat the user-agent
+     `[hidden] { display: none }` rule, which made "empty" blocks stay on
+     screen on top of real content. */
+  [hidden] { display: none !important; }
+
+  /* ⭐ Tap targets: 44px minimum, no double-tap zoom, no grey flash. */
+  button,
+  a[role="button"],
+  [role="button"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ⭐ انتقال ناعم بين الوضعين النهاري والليلي.
+     يُفعَّل هذا الصنف لحظياً قبل تبديل الثيم (MedApp.withThemeTransition)
+     فيتحوّل لون الخلفية والنص والحدود تدريجياً بدل القفز المفاجئ. */
+  html.theme-transition,
+  html.theme-transition body,
+  html.theme-transition *,
+  html.theme-transition *::before,
+  html.theme-transition *::after {
+    transition:
+      background-color 0.34s ease,
+      color 0.34s ease,
+      border-color 0.34s ease,
+      fill 0.34s ease,
+      stroke 0.34s ease,
+      box-shadow 0.34s ease !important;
+    transition-delay: 0s !important;
+  }
+
+  /* Very thin top progress bar, shown by app.js during SPA navigation. */
+  #medapp-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    z-index: 2147483647;
+    pointer-events: none;
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  #medapp-loader::before {
+    content: '';
+    display: block;
+    width: 40%;
+    height: 100%;
+    border-radius: 0 999px 999px 0;
+    background: linear-gradient(90deg, transparent, #059669 18%, #10b981 52%, #34d399 82%, transparent);
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+    transform: translateX(-110%);
+    will-change: transform;
+  }
+
+  html.medapp-loading #medapp-loader { opacity: 1; }
+  html.medapp-loading #medapp-loader::before {
+    animation: medapp-loader-slide 1.05s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  @keyframes medapp-loader-slide {
+    0%   { transform: translateX(-110%); }
+    100% { transform: translateX(360%); }
+  }
+
+  /* Only same-document transitions (started by app.js). Cross-document
+     @view-transition is intentionally NOT enabled: full loads must behave
+     exactly like the original pages. */
+
+  .floating-nav-wrapper { view-transition-name: medapp-bottom-nav; }
+  ::view-transition-group(medapp-bottom-nav) { animation: none; }
+  ::view-transition-old(medapp-bottom-nav),
+  ::view-transition-new(medapp-bottom-nav) { animation: none; }
+
+  /* Keep the sticky header out of the root cross-fade. Otherwise the old and
+     new snapshots of a translucent, blurred header overlap and look frozen /
+     show a ghost shadow while the page changes. */
+  header { view-transition-name: medapp-header; }
+  ::view-transition-group(medapp-header) { animation: none; }
+  ::view-transition-old(medapp-header),
+  ::view-transition-new(medapp-header) { animation: none; }
+
+  /* Light mode: the header must use a soft neutral shadow, never the heavy
+     black shadow used by the dark theme. */
+  [data-theme="light"] header {
+    background: rgba(248, 250, 251, 0.92);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    border-bottom-color: rgba(15, 23, 42, 0.08);
+    box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+    color: var(--text-primary);
+  }
+
+  /* Wins over every page-level `header.scrolled` (higher specificity). */
+  [data-theme="light"] header.scrolled {
+    background: rgba(248, 250, 251, 0.97);
+    border-bottom-color: rgba(15, 23, 42, 0.1);
+    box-shadow:
+      0 4px 18px rgba(15, 23, 42, 0.08),
+      0 1px 0 rgba(15, 23, 42, 0.05);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    ::view-transition-old(root) { animation: pt-fade-out 0.14s cubic-bezier(0.4, 0, 0.2, 1) both; }
+    ::view-transition-new(root) { animation: pt-fade-in 0.2s cubic-bezier(0.4, 0, 0.2, 1) both; }
+  }
+
+  /* No body animation on browsers without View Transitions: the swap is
+     already synchronous, and fading the body element would also fade the
+     fixed bottom navigation. The nav must never move or fade. */
+
+  @keyframes pt-fade-in  { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes pt-fade-out { from { opacity: 1; } to { opacity: 0; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto !important; }
+    html.theme-transition,
+    html.theme-transition body,
+    html.theme-transition *,
+    html.theme-transition *::before,
+    html.theme-transition *::after {
+      transition: none !important;
+    }
+    #medapp-loader::before {
+      animation: none !important;
+      transform: none;
+      width: 60%;
+    }
+    ::view-transition-old(root), ::view-transition-new(root),
+    ::view-transition-old(medapp-bottom-nav), ::view-transition-new(medapp-bottom-nav),
+    ::view-transition-old(medapp-header), ::view-transition-new(medapp-header) { animation: none !important; }
+  }
+
+  /* ============================================================
+     Premium file visual — shared by every file surface.
+     The helper `getFileIconMarkup()` in files.js supplies the
+     colour tokens; page classes (mini-file-icon, file-icon,
+     file-type-icon, …) keep their existing dimensions.
+     ============================================================ */
+  .premium-file-icon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    flex-shrink: 0;
+    overflow: hidden;
+    isolation: isolate;
+    color: var(--pf-color, #94a3b8);
+    background:
+      linear-gradient(145deg, var(--pf-bg, rgba(148, 163, 184, 0.16)), rgba(255, 255, 255, 0.02)),
+      var(--bg-card, #0a1a14);
+    border: 1px solid var(--pf-border, rgba(148, 163, 184, 0.34));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.34),
+      0 6px 15px -9px var(--pf-glow, rgba(148, 163, 184, 0.24));
+    transition: transform 0.24s ease, box-shadow 0.24s ease, border-color 0.24s ease;
+  }
+
+  .premium-file-icon::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.32), transparent 46%);
+    opacity: 0.85;
+  }
+
+  .premium-file-icon::after {
+    content: '';
+    position: absolute;
+    top: -36%;
+    right: -30%;
+    width: 78%;
+    height: 78%;
+    z-index: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    background: var(--pf-glow, rgba(148, 163, 184, 0.24));
+    filter: blur(9px);
+  }
+
+  .premium-file-icon > i {
+    position: relative;
+    z-index: 2;
+    display: inline-block;
+    line-height: 1;
+    font-size: 1.14rem;
+    transform: translateY(-2px);
+    filter: drop-shadow(0 2px 3px var(--pf-glow, rgba(148, 163, 184, 0.24)));
+  }
+
+  .premium-file-icon__ext {
+    position: absolute;
+    left: 50%;
+    bottom: 2px;
+    z-index: 2;
+    transform: translateX(-50%);
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.39rem;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: 0.15px;
+    color: var(--pf-color, #94a3b8);
+    opacity: 0.92;
+    pointer-events: none;
+  }
+
+  [data-theme="light"] .premium-file-icon {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.78),
+      0 5px 13px -10px var(--pf-glow, rgba(148, 163, 184, 0.24));
+  }
+
+  [data-theme="light"] .premium-file-icon::before {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.55), transparent 48%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .premium-file-icon { transition: none; }
+  }
+</style>

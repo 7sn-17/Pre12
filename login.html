@@ -1,0 +1,2466 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#06110d">
+<title>تسجيل الدخول - المنصة الطبية</title>
+
+<!-- الخطوط -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="theme-init.js"></script>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="المنصة الطبية">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-512.png">
+
+<!-- Smooth page transitions (View Transitions API + fallback fade).
+     The fixed bottom navigation gets its own view-transition-name and is
+     frozen, so it can never move or fade while the page content changes. -->
+<style data-shell>
+  /* Global theme defaults. `data-theme` is always set by theme-init.js
+     (light or dark), so native controls and scrollbars follow the app. */
+  :root { color-scheme: light; --medapp-amber: #fbbf24; --medapp-orange: #fb923c; --medapp-blue: #93c5fd; --medapp-blue-soft: #bfdbfe; --medapp-violet: #c4b5fd; --medapp-green: #34d399; --medapp-red: #f87171; --medapp-pink: #f472b6; }
+  [data-theme="dark"] { color-scheme: dark; }
+  [data-theme="light"] { --medapp-amber: #b45309; --medapp-orange: #c2410c; --medapp-blue: #2563eb; --medapp-blue-soft: #1d4ed8; --medapp-violet: #6d28d9; --medapp-green: #047857; --medapp-red: #b91c1c; --medapp-pink: #be185d; }
+
+  /* Premium smooth scrolling. The SPA router temporarily disables this for
+     page swaps / Back restoration so navigation is instant, never animated. */
+  html { scroll-behavior: smooth; }
+  /* app.js sets this only for instant SPA swaps / Back restoration. */
+  html.medapp-scroll-jump { scroll-behavior: auto !important; }
+
+  html.medapp-navigating { cursor: progress; }
+
+  /* ⭐IMPORTANT: the `hidden` attribute must always win.
+     Author rules like `.detail-empty { display: flex }` beat the user-agent
+     `[hidden] { display: none }` rule, which made "empty" blocks stay on
+     screen on top of real content. */
+  [hidden] { display: none !important; }
+
+  /* ⭐ Tap targets: 44px minimum, no double-tap zoom, no grey flash. */
+  button,
+  a[role="button"],
+  [role="button"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ⭐ انتقال ناعم بين الوضعين النهاري والليلي.
+     يُفعَّل هذا الصنف لحظياً قبل تبديل الثيم (MedApp.withThemeTransition)
+     فيتحوّل لون الخلفية والنص والحدود تدريجياً بدل القفز المفاجئ. */
+  html.theme-transition,
+  html.theme-transition body,
+  html.theme-transition *,
+  html.theme-transition *::before,
+  html.theme-transition *::after {
+    transition:
+      background-color 0.34s ease,
+      color 0.34s ease,
+      border-color 0.34s ease,
+      fill 0.34s ease,
+      stroke 0.34s ease,
+      box-shadow 0.34s ease !important;
+    transition-delay: 0s !important;
+  }
+
+  /* Very thin top progress bar, shown by app.js during SPA navigation. */
+  #medapp-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    z-index: 2147483647;
+    pointer-events: none;
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  #medapp-loader::before {
+    content: '';
+    display: block;
+    width: 40%;
+    height: 100%;
+    border-radius: 0 999px 999px 0;
+    background: linear-gradient(90deg, transparent, #059669 18%, #10b981 52%, #34d399 82%, transparent);
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+    transform: translateX(-110%);
+    will-change: transform;
+  }
+
+  html.medapp-loading #medapp-loader { opacity: 1; }
+  html.medapp-loading #medapp-loader::before {
+    animation: medapp-loader-slide 1.05s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  @keyframes medapp-loader-slide {
+    0%   { transform: translateX(-110%); }
+    100% { transform: translateX(360%); }
+  }
+
+  /* Only same-document transitions (started by app.js). Cross-document
+     @view-transition is intentionally NOT enabled: full loads must behave
+     exactly like the original pages. */
+
+  .floating-nav-wrapper { view-transition-name: medapp-bottom-nav; }
+  ::view-transition-group(medapp-bottom-nav) { animation: none; }
+  ::view-transition-old(medapp-bottom-nav),
+  ::view-transition-new(medapp-bottom-nav) { animation: none; }
+
+  /* Keep the sticky header out of the root cross-fade. Otherwise the old and
+     new snapshots of a translucent, blurred header overlap and look frozen /
+     show a ghost shadow while the page changes. */
+  header { view-transition-name: medapp-header; }
+  ::view-transition-group(medapp-header) { animation: none; }
+  ::view-transition-old(medapp-header),
+  ::view-transition-new(medapp-header) { animation: none; }
+
+  /* Light mode: the header must use a soft neutral shadow, never the heavy
+     black shadow used by the dark theme. */
+  [data-theme="light"] header {
+    background: rgba(248, 250, 251, 0.92);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    border-bottom-color: rgba(15, 23, 42, 0.08);
+    box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+    color: var(--text-primary);
+  }
+
+  /* Wins over every page-level `header.scrolled` (higher specificity). */
+  [data-theme="light"] header.scrolled {
+    background: rgba(248, 250, 251, 0.97);
+    border-bottom-color: rgba(15, 23, 42, 0.1);
+    box-shadow:
+      0 4px 18px rgba(15, 23, 42, 0.08),
+      0 1px 0 rgba(15, 23, 42, 0.05);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    ::view-transition-old(root) { animation: pt-fade-out 0.14s cubic-bezier(0.4, 0, 0.2, 1) both; }
+    ::view-transition-new(root) { animation: pt-fade-in 0.2s cubic-bezier(0.4, 0, 0.2, 1) both; }
+  }
+
+  /* No body animation on browsers without View Transitions: the swap is
+     already synchronous, and fading the body element would also fade the
+     fixed bottom navigation. The nav must never move or fade. */
+
+  @keyframes pt-fade-in  { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes pt-fade-out { from { opacity: 1; } to { opacity: 0; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto !important; }
+    html.theme-transition,
+    html.theme-transition body,
+    html.theme-transition *,
+    html.theme-transition *::before,
+    html.theme-transition *::after {
+      transition: none !important;
+    }
+    #medapp-loader::before {
+      animation: none !important;
+      transform: none;
+      width: 60%;
+    }
+    ::view-transition-old(root), ::view-transition-new(root),
+    ::view-transition-old(medapp-bottom-nav), ::view-transition-new(medapp-bottom-nav),
+    ::view-transition-old(medapp-header), ::view-transition-new(medapp-header) { animation: none !important; }
+  }
+
+  /* ============================================================
+     Premium file visual — shared by every file surface.
+     The helper `getFileIconMarkup()` in files.js supplies the
+     colour tokens; page classes (mini-file-icon, file-icon,
+     file-type-icon, …) keep their existing dimensions.
+     ============================================================ */
+  .premium-file-icon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    flex-shrink: 0;
+    overflow: hidden;
+    isolation: isolate;
+    color: var(--pf-color, #94a3b8);
+    background:
+      linear-gradient(145deg, var(--pf-bg, rgba(148, 163, 184, 0.16)), rgba(255, 255, 255, 0.02)),
+      var(--bg-card, #0a1a14);
+    border: 1px solid var(--pf-border, rgba(148, 163, 184, 0.34));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.34),
+      0 6px 15px -9px var(--pf-glow, rgba(148, 163, 184, 0.24));
+    transition: transform 0.24s ease, box-shadow 0.24s ease, border-color 0.24s ease;
+  }
+
+  .premium-file-icon::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.32), transparent 46%);
+    opacity: 0.85;
+  }
+
+  .premium-file-icon::after {
+    content: '';
+    position: absolute;
+    top: -36%;
+    right: -30%;
+    width: 78%;
+    height: 78%;
+    z-index: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    background: var(--pf-glow, rgba(148, 163, 184, 0.24));
+    filter: blur(9px);
+  }
+
+  .premium-file-icon > i {
+    position: relative;
+    z-index: 2;
+    display: inline-block;
+    line-height: 1;
+    font-size: 1.14rem;
+    transform: translateY(-2px);
+    filter: drop-shadow(0 2px 3px var(--pf-glow, rgba(148, 163, 184, 0.24)));
+  }
+
+  .premium-file-icon__ext {
+    position: absolute;
+    left: 50%;
+    bottom: 2px;
+    z-index: 2;
+    transform: translateX(-50%);
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.39rem;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: 0.15px;
+    color: var(--pf-color, #94a3b8);
+    opacity: 0.92;
+    pointer-events: none;
+  }
+
+  [data-theme="light"] .premium-file-icon {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.78),
+      0 5px 13px -10px var(--pf-glow, rgba(148, 163, 184, 0.24));
+  }
+
+  [data-theme="light"] .premium-file-icon::before {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.55), transparent 48%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .premium-file-icon { transition: none; }
+  }
+</style>
+
+
+<style>
+    :root {
+      --bg-main: #06110d;
+      --bg-card: #102a22;
+      --border-card: rgba(16, 185, 129, 0.22);
+      --accent-emerald: #10b981;
+      --accent-light: #34d399;
+      --accent-dark: #059669;
+      --accent-glow: rgba(16, 185, 129, 0.3);
+      --text-primary: #f0fdf4;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --success: #10b981;
+      --info: #3b82f6;
+      --violet: #8b5cf6;
+      --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    [data-theme="light"] {
+      --bg-main: #f8fafb;
+      --bg-card: #ffffff;
+      --border-card: rgba(16, 185, 129, 0.3);
+      --accent-emerald: #059669;
+      --accent-light: #10b981;
+      --accent-dark: #047857;
+      --accent-glow: rgba(16, 185, 129, 0.2);
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Cairo', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 24px 20px;
+      overflow-x: hidden;
+    }
+
+    /* زر الإغلاق */
+    .close-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all var(--transition);
+      z-index: 100;
+    }
+
+    .close-btn:hover {
+      border-color: var(--accent-emerald);
+      color: var(--accent-light);
+      transform: rotate(90deg);
+    }
+
+    /* الحاوية */
+    .auth-container {
+      width: 100%;
+      max-width: 440px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* شعار */
+    .brand-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .brand-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.15));
+      border: 1px solid var(--accent-emerald);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent-light);
+      box-shadow: 0 8px 24px var(--accent-glow);
+      flex-shrink: 0;
+    }
+
+    .brand-text {
+      font-size: 1.1rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--text-primary), var(--accent-light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* البطاقة */
+    .auth-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 24px;
+      padding: 30px 26px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+    }
+
+    /* الشاشات */
+    .view-section {
+      display: none;
+    }
+
+    .view-section.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* العنوان */
+    .auth-header {
+      text-align: center;
+      margin-bottom: 22px;
+    }
+
+    .auth-title {
+      font-size: 1.55rem;
+      font-weight: 900;
+      margin-bottom: 6px;
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-light) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .auth-subtitle {
+      font-size: 0.86rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+      line-height: 1.5;
+    }
+
+    /* النموذج */
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 14px 46px 14px 46px;
+      border-radius: 14px;
+      background: rgba(6, 17, 13, 0.55);
+      border: 1px solid var(--border-card);
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      outline: none;
+      transition: all var(--transition);
+      font-family: inherit;
+    }
+
+    [data-theme="light"] .input-field {
+      background: rgba(241, 245, 249, 0.8);
+    }
+
+    .input-field::placeholder { color: var(--text-muted); }
+
+    .input-field:focus {
+      border-color: var(--accent-emerald);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .input-field.error {
+      border-color: var(--danger);
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+    }
+
+    .input-icon-right {
+      position: absolute;
+      right: 15px;
+      color: var(--text-muted);
+      pointer-events: none;
+      display: flex;
+    }
+
+    .input-icon-left {
+      position: absolute;
+      left: 12px;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      padding: 6px;
+      border-radius: 8px;
+      transition: all var(--transition);
+    }
+
+    .input-icon-left:hover {
+      color: var(--accent-light);
+    }
+
+    .error-message {
+      font-size: 0.75rem;
+      color: var(--danger);
+      font-weight: 600;
+      padding-right: 4px;
+      display: none;
+    }
+
+    .error-message.visible { display: block; }
+
+    /* قوة كلمة المرور */
+    .password-strength {
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 2px;
+    }
+
+    .password-strength.visible { display: flex; }
+
+    .strength-bars { display: flex; gap: 4px; }
+
+    .strength-bar {
+      flex: 1;
+      height: 4px;
+      border-radius: 4px;
+      background: rgba(128, 128, 128, 0.2);
+      transition: background var(--transition);
+    }
+
+    .strength-bar.weak { background: var(--danger); }
+    .strength-bar.medium { background: var(--warning); }
+    .strength-bar.strong { background: var(--success); }
+
+    .strength-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .strength-label.weak { color: var(--danger); }
+    .strength-label.medium { color: var(--warning); }
+    .strength-label.strong { color: var(--success); }
+
+    /* خيارات */
+    .form-extras {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+/* ============================================ */
+/* نظام صناديق الاختيار — جديد احترافي */
+/* ============================================ */
+
+/* الحاوية العامة (تذكرني + أوافق) */
+.checkbox-wrapper,
+.terms-agreement {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.checkbox-wrapper input,
+.terms-agreement input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+
+/* الصندوق الصغير */
+.checkbox-custom,
+.terms-check {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1.8px solid var(--text-muted);
+  background: rgba(6, 17, 13, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  position: relative;
+}
+
+[data-theme="light"] .checkbox-custom,
+[data-theme="light"] .terms-check {
+  background: rgba(241, 245, 249, 0.9);
+  border-color: #cbd5e1;
+}
+
+/* علامة الصح — مخفية بشكل مطلق */
+.checkbox-custom i,
+.terms-check i,
+.checkbox-custom svg,
+.terms-check svg {
+  width: 13px !important;
+  height: 13px !important;
+  color: white !important;
+  stroke-width: 4 !important;
+  opacity: 0;
+  transform: scale(0.3);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: block;
+}
+
+/* عند التحديد — يصير أخضر */
+.checkbox-wrapper input:checked + .checkbox-custom,
+.terms-agreement input:checked + .terms-check {
+  background: var(--accent-emerald);
+  border-color: var(--accent-emerald);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+/* عند التحديد — تظهر علامة الصح */
+.checkbox-wrapper input:checked + .checkbox-custom i,
+.checkbox-wrapper input:checked + .checkbox-custom svg,
+.terms-agreement input:checked + .terms-check i,
+.terms-agreement input:checked + .terms-check svg {
+  opacity: 1 !important;
+  transform: scale(1) !important;
+}
+
+/* عند hover */
+.checkbox-wrapper:hover .checkbox-custom,
+.terms-agreement:hover .terms-check {
+  border-color: var(--accent-emerald);
+}
+
+/* ============================================ */
+/* النص والعناصر داخل الحاويات */
+/* ============================================ */
+.terms-text {
+  line-height: 1.5;
+  flex: 1;
+}
+
+.terms-link {
+  color: var(--accent-light);
+  font-weight: 800;
+  text-decoration: none;
+  transition: all var(--transition);
+  cursor: pointer;
+}
+
+.terms-link:hover {
+  text-decoration: underline;
+}
+
+/* ============================================ */
+/* الاهتزاز عند عدم الموافقة */
+/* ============================================ */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-6px); }
+  30% { transform: translateX(6px); }
+  45% { transform: translateX(-5px); }
+  60% { transform: translateX(5px); }
+  75% { transform: translateX(-2px); }
+  90% { transform: translateX(2px); }
+}
+
+.terms-agreement.shake {
+  animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+.terms-agreement.shake .terms-check {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
+    .forgot-link {
+      font-size: 0.85rem;
+      color: var(--accent-light);
+      font-weight: 700;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all var(--transition);
+    }
+
+    .forgot-link:hover { text-decoration: underline; }
+
+    .forgot-link:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .forgot-link .spin {
+      width: 12px;
+      height: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: var(--accent-light);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    /* زر الإرسال */
+    .submit-btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+      border: none;
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 0.98rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 6px;
+      box-shadow: 0 6px 20px var(--accent-glow);
+      transition: all var(--transition);
+      font-family: inherit;
+    }
+
+    .submit-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 28px var(--accent-glow);
+    }
+
+    .submit-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+
+    /* ========== Google OAuth ========== */
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 18px 0 14px;
+      color: var(--text-muted);
+      font-size: 0.76rem;
+      font-weight: 700;
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border-card, rgba(148, 163, 184, 0.18));
+    }
+
+    /* ⭐ زر Google — كبسولة مضغوطة ومتوازنة عمودياً */
+    .google-btn {
+      width: 100%;
+      height: 46px;
+      padding: 0 18px;
+      border-radius: 999px;
+      border: 1px solid var(--border-card, rgba(148, 163, 184, 0.22));
+      background: var(--bg-card, rgba(255, 255, 255, 0.9));
+      color: var(--text-primary, #0f172a);
+      font-family: inherit;
+      font-size: 0.86rem;
+      font-weight: 800;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      transition: all var(--transition);
+      -webkit-tap-highlight-color: transparent;
+      position: relative;
+    }
+
+    .google-btn:hover:not(:disabled) {
+      border-color: var(--accent-emerald, #10b981);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 22px -12px rgba(0, 0, 0, 0.35);
+    }
+
+    .google-btn:active:not(:disabled) { transform: translateY(0) scale(0.99); }
+
+    .google-btn:disabled { opacity: 0.75; cursor: not-allowed; }
+
+    /* ⭐ الأيقونة في صندوق ثابت الارتفاع حتى تكون في المنتصف تماماً */
+    .google-btn .g-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      flex: 0 0 20px;
+      line-height: 0;
+    }
+
+    .google-btn .g-logo svg {
+      width: 20px;
+      height: 20px;
+      display: block;
+      flex-shrink: 0;
+    }
+
+    .google-btn .g-label {
+      display: flex;
+      align-items: center;
+      line-height: 1;
+      transform: translateY(0.5px);
+    }
+
+    .google-btn .g-loader {
+      display: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(120, 120, 120, 0.25);
+      border-top-color: var(--accent-emerald, #10b981);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+
+    .google-btn.loading .g-label { display: none; }
+    .google-btn.loading .g-loader { display: block; }
+    .google-btn.loading .g-logo { display: none; }
+
+    .google-note {
+      margin-top: 10px;
+      font-size: 0.66rem;
+      color: var(--text-muted);
+      text-align: center;
+      line-height: 1.7;
+    }
+
+    .submit-btn .btn-loader {
+      display: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .submit-btn.loading .btn-text,
+    .submit-btn.loading .btn-icon { display: none; }
+
+    .submit-btn.loading .btn-loader { display: block; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* رسالة النجاح */
+    .success-banner {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid var(--accent-emerald);
+      border-radius: 14px;
+      padding: 13px 16px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      color: var(--accent-light);
+      font-size: 0.86rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    .success-banner.visible { display: flex; }
+    .success-banner i { flex-shrink: 0; width: 18px; height: 18px; }
+
+    /* التبديل */
+    .toggle-box {
+      margin-top: 22px;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      text-align: center;
+      padding-top: 18px;
+      border-top: 1px solid var(--border-card);
+    }
+
+    .toggle-link {
+      color: var(--accent-light);
+      font-weight: 800;
+      cursor: pointer;
+      margin-right: 6px;
+      transition: all var(--transition);
+    }
+
+    .toggle-link:hover { text-decoration: underline; }
+
+    /* ========== شاشة التحقق ========== */
+    .verify-view {
+      text-align: center;
+    }
+
+    .verify-icon-wrapper {
+      width: 96px;
+      height: 96px;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .verify-icon-wrapper::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 30px;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.18), rgba(37, 99, 235, 0.12));
+      border: 2px solid rgba(59, 130, 246, 0.45);
+    }
+
+    .verify-icon {
+      position: relative;
+      z-index: 1;
+      width: 66px;
+      height: 66px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--medapp-blue);
+      box-shadow: 0 8px 32px rgba(59, 130, 246, 0.3);
+    }
+
+    .verify-icon i { width: 34px; height: 34px; }
+
+    .verify-title {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: var(--text-primary);
+      margin-bottom: 10px;
+    }
+
+    .verify-subtitle {
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      margin-bottom: 22px;
+    }
+
+    /* صندوق البريد */
+    .email-display {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      background: rgba(6, 17, 13, 0.55);
+      border: 1px solid var(--border-card);
+      border-radius: 14px;
+      margin-bottom: 18px;
+    }
+
+    [data-theme="light"] .email-display {
+      background: rgba(241, 245, 249, 0.7);
+    }
+
+    .email-display-text {
+      flex: 1;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      text-align: right;
+      direction: ltr;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .email-copy-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: var(--accent-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all var(--transition);
+      flex-shrink: 0;
+      font-family: inherit;
+    }
+
+    .email-copy-btn:hover {
+      background: rgba(16, 185, 129, 0.25);
+    }
+
+    .email-copy-btn.copied {
+      background: var(--accent-emerald);
+      color: white;
+    }
+
+    .email-copy-btn i { width: 16px; height: 16px; }
+
+    /* الخطوات */
+    .steps-list {
+      text-align: right;
+      background: rgba(6, 17, 13, 0.4);
+      border: 1px solid var(--border-card);
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    [data-theme="light"] .steps-list {
+      background: rgba(241, 245, 249, 0.5);
+    }
+
+    .step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.83rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .step-number {
+      width: 24px;
+      height: 24px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+      color: white;
+      font-size: 0.72rem;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .step-text { padding-top: 2px; }
+
+    /* الأزرار */
+    .verify-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .action-btn {
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border-card);
+      background: rgba(6, 17, 13, 0.55);
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all var(--transition);
+      text-decoration: none;
+    }
+
+    [data-theme="light"] .action-btn {
+      background: rgba(241, 245, 249, 0.9);
+    }
+
+    .action-btn:hover {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: var(--accent-emerald);
+      color: var(--accent-light);
+    }
+
+    .action-btn.primary {
+      background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+      border-color: transparent;
+      color: white;
+      box-shadow: 0 6px 16px var(--accent-glow);
+    }
+
+    .action-btn.primary:hover {
+      color: white;
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px var(--accent-glow);
+    }
+
+    .action-btn i { width: 16px; height: 16px; }
+
+    /* إعادة الإرسال */
+    .resend-section {
+      text-align: center;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-card);
+    }
+
+    .resend-text {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .resend-btn {
+      padding: 10px 20px;
+      border-radius: 12px;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: var(--medapp-blue);
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all var(--transition);
+    }
+
+    .resend-btn:hover:not(:disabled) {
+      background: rgba(59, 130, 246, 0.2);
+    }
+
+    .resend-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .resend-btn i { width: 14px; height: 14px; }
+
+/* ⚠️ تحذير Spam */
+.spam-alert {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  text-align: right;
+}
+
+.spam-alert-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--medapp-red);
+  font-weight: 800;
+  font-size: 0.88rem;
+  margin-bottom: 8px;
+}
+
+.spam-alert-header i {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.spam-alert-text {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+  margin: 0;
+}
+
+.spam-alert-text strong {
+  color: var(--medapp-red);
+  font-weight: 800;
+}
+
+
+.action-btn.spam-btn:hover {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: #f59e0b;
+  color: var(--medapp-amber);
+}
+
+
+.tip-box i {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--medapp-blue);
+}
+
+.tip-box-content {
+  flex: 1;
+}
+
+.tip-box-content strong {
+  color: var(--medapp-blue);
+  font-weight: 800;
+}
+
+.tip-box-content span[dir="ltr"] {
+  direction: ltr;
+  display: inline-block;
+  font-weight: 700;
+  color: var(--medapp-blue-soft);
+  background: rgba(59, 130, 246, 0.15);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: 'Cairo', monospace;
+  font-size: 0.74rem;
+}
+    /* تحذير */
+    .warning-box {
+      margin-top: 16px;
+      padding: 12px 14px;
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      border-radius: 12px;
+      font-size: 0.76rem;
+      color: var(--medapp-amber);
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      line-height: 1.55;
+      text-align: right;
+    }
+
+    .warning-box i {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+/* ============================================ */
+/* 🆕 الموافقة على الشروط — سطر واحد */
+/* ============================================ */
+.terms-agreement {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  padding: 6px 2px;
+  transition: all var(--transition);
+}
+
+.terms-agreement input { display: none; }
+
+/* المربع الصغير */
+.terms-agreement .terms-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid var(--border-card);
+  background: rgba(6, 17, 13, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+[data-theme="light"] .terms-agreement .terms-check {
+  background: rgba(241, 245, 249, 0.9);
+}
+
+/* أيقونة الصح — مخفية افتراضياً */
+.terms-agreement .terms-check i {
+  width: 12px;
+  height: 12px;
+  color: white;
+  opacity: 0;
+  transform: scale(0.4);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  stroke-width: 3.5;
+}
+
+/* عند الموافقة — المربع يصير أخضر */
+.terms-agreement input:checked + .terms-check {
+  background: var(--accent-emerald);
+  border-color: var(--accent-emerald);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+/* عند الموافقة — الصح يظهر */
+.terms-agreement input:checked + .terms-check i {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* النص */
+.terms-text {
+  line-height: 1.4;
+  flex: 1;
+}
+
+.terms-link {
+  color: var(--accent-light);
+  font-weight: 800;
+  text-decoration: none;
+  transition: all var(--transition);
+  cursor: pointer;
+}
+
+.terms-link:hover {
+  text-decoration: underline;
+}
+
+/* الاهتزاز */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-6px); }
+  30% { transform: translateX(6px); }
+  45% { transform: translateX(-5px); }
+  60% { transform: translateX(5px); }
+  75% { transform: translateX(-2px); }
+  90% { transform: translateX(2px); }
+}
+
+.terms-agreement.shake {
+  animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+.terms-agreement.shake .terms-check {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: rgba(16, 185, 129, 0.98);
+      color: white;
+      padding: 13px 22px;
+      border-radius: 14px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+      z-index: 9999;
+      opacity: 0;
+      visibility: hidden;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: calc(100vw - 40px);
+      pointer-events: none;
+    }
+
+    .toast.visible {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .toast.error { background: rgba(239, 68, 68, 0.98); }
+    .toast.info { background: rgba(59, 130, 246, 0.98); }
+    .toast i { flex-shrink: 0; width: 18px; height: 18px; }
+
+    /* تجاوب */
+    @media (max-width: 480px) {
+      body { padding: 16px 14px; }
+      .close-btn { top: 16px; right: 16px; width: 40px; height: 40px; }
+      .auth-card { padding: 24px 20px; border-radius: 20px; }
+      .auth-title { font-size: 1.35rem; }
+      .brand-icon { width: 46px; height: 46px; }
+      .verify-icon-wrapper { width: 86px; height: 86px; }
+      .verify-icon { width: 58px; height: 58px; }
+      .verify-icon i { width: 30px; height: 30px; }
+      .verify-title { font-size: 1.2rem; }
+      .verify-actions { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <a href="index.html" class="close-btn" aria-label="إغلاق">
+    <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+  </a>
+
+  <div class="auth-container">
+
+    <div class="brand-badge">
+      <div class="brand-icon">
+        <i data-lucide="stethoscope" style="width: 26px; height: 26px;"></i>
+      </div>
+      <div class="brand-text">السنة التحضيرية</div>
+    </div>
+
+    <div class="auth-card">
+
+      <!-- ========== تسجيل الدخول ========== -->
+      <div id="loginView" class="view-section active">
+        <div class="auth-header">
+          <h1 class="auth-title">تسجيل الدخول</h1>
+          <p class="auth-subtitle">أهلاً بك مجدداً! ادخل حسابك للمتابعة</p>
+        </div>
+
+        <div class="success-banner" id="successBanner">
+          <i data-lucide="check-circle-2"></i>
+          <span id="successMessage">تم بنجاح!</span>
+        </div>
+
+        <form class="auth-form" id="loginForm" novalidate>
+          
+          <div class="input-group">
+            <div class="input-wrapper">
+              <input 
+                type="email" 
+                id="loginEmail" 
+                class="input-field" 
+                placeholder="البريد الإلكتروني" 
+                autocomplete="email"
+                inputmode="email"
+              >
+              <span class="input-icon-right"><i data-lucide="mail" style="width: 18px; height: 18px;"></i></span>
+            </div>
+            <div class="error-message" id="loginEmailError">يرجى إدخال بريد إلكتروني صحيح</div>
+          </div>
+
+          <div class="input-group">
+            <div class="input-wrapper">
+              <input 
+                type="password" 
+                id="loginPassword" 
+                class="input-field" 
+                placeholder="كلمة المرور" 
+                autocomplete="current-password"
+              >
+              <span class="input-icon-right"><i data-lucide="lock" style="width: 18px; height: 18px;"></i></span>
+              <span class="input-icon-left" onclick="togglePassword('loginPassword', this)">
+                <i data-lucide="eye" style="width: 18px; height: 18px;"></i>
+              </span>
+            </div>
+            <div class="error-message" id="loginPasswordError">كلمة المرور مطلوبة</div>
+          </div>
+
+          <div class="form-extras">
+            <label class="checkbox-wrapper">
+              <input type="checkbox" id="rememberMe">
+              <span class="checkbox-custom">
+                <i data-lucide="check" style="width: 14px; height: 14px;"></i>
+              </span>
+              <span>تذكرني</span>
+            </label>
+            <button type="button" class="forgot-link" id="forgotBtn" onclick="handleForgotPassword()">
+              <span>نسيت كلمة المرور؟</span>
+            </button>
+          </div>
+
+          <button type="submit" class="submit-btn" id="loginBtn">
+            <span class="btn-loader"></span>
+            <span class="btn-text">تسجيل الدخول</span>
+            <i data-lucide="log-in" class="btn-icon" style="width: 20px; height: 20px;"></i>
+          </button>
+        </form>
+
+        <!-- ⭐ تسجيل الدخول عبر Google -->
+        <div class="auth-divider"><span>أو</span></div>
+
+        <button type="button" class="google-btn" id="googleLoginBtn" onclick="handleGoogleLogin()">
+          <span class="g-logo">
+            <svg width="24" height="24" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          </span>
+          <span class="g-loader"></span>
+          <span class="g-label">المتابعة باستخدام Google</span>
+        </button>
+
+        <div class="toggle-box">
+          <span>ليس لديك حساب؟</span>
+          <a class="toggle-link" onclick="showView('register')">سجل الآن</a>
+        </div>
+      </div>
+
+      <!-- ========== إنشاء حساب ========== -->
+      <div id="registerView" class="view-section">
+        <div class="auth-header">
+          <h1 class="auth-title">حساب جديد</h1>
+          <p class="auth-subtitle">أنشئ حسابك للوصول لجميع الملفات</p>
+        </div>
+
+        <form class="auth-form" id="registerForm" novalidate>
+          
+          <div class="input-group">
+            <div class="input-wrapper">
+              <input 
+                type="text" 
+                id="registerName" 
+                class="input-field" 
+                placeholder="الاسم الكامل" 
+                autocomplete="name"
+              >
+              <span class="input-icon-right"><i data-lucide="user" style="width: 18px; height: 18px;"></i></span>
+            </div>
+            <div class="error-message" id="registerNameError">الاسم مطلوب (3 أحرف على الأقل)</div>
+          </div>
+
+          <div class="input-group">
+            <div class="input-wrapper">
+              <input 
+                type="email" 
+                id="registerEmail" 
+                class="input-field" 
+                placeholder="البريد الإلكتروني" 
+                autocomplete="email"
+                inputmode="email"
+              >
+              <span class="input-icon-right"><i data-lucide="mail" style="width: 18px; height: 18px;"></i></span>
+            </div>
+            <div class="error-message" id="registerEmailError">يرجى إدخال بريد إلكتروني صحيح</div>
+          </div>
+
+          <div class="input-group">
+            <div class="input-wrapper">
+              <input 
+                type="password" 
+                id="registerPassword" 
+                class="input-field" 
+                placeholder="كلمة المرور" 
+                autocomplete="new-password"
+                oninput="checkPasswordStrength(this.value)"
+              >
+              <span class="input-icon-right"><i data-lucide="lock" style="width: 18px; height: 18px;"></i></span>
+              <span class="input-icon-left" onclick="togglePassword('registerPassword', this)">
+                <i data-lucide="eye" style="width: 18px; height: 18px;"></i>
+              </span>
+            </div>
+            <div class="password-strength" id="passwordStrength">
+              <div class="strength-bars">
+                <div class="strength-bar" id="bar1"></div>
+                <div class="strength-bar" id="bar2"></div>
+                <div class="strength-bar" id="bar3"></div>
+                <div class="strength-bar" id="bar4"></div>
+              </div>
+              <span class="strength-label" id="strengthLabel">قوة كلمة المرور</span>
+            </div>
+            <div class="error-message" id="registerPasswordError">كلمة المرور قصيرة جداً (6 أحرف على الأقل)</div>
+          </div>
+
+          <div class="input-group">
+            <div class="input-wrapper">
+              <input 
+                type="password" 
+                id="registerConfirm" 
+                class="input-field" 
+                placeholder="تأكيد كلمة المرور" 
+                autocomplete="new-password"
+              >
+              <span class="input-icon-right"><i data-lucide="shield-check" style="width: 18px; height: 18px;"></i></span>
+            </div>
+            <div class="error-message" id="registerConfirmError">كلمتا المرور غير متطابقتين</div>
+          </div>
+
+<!-- 🆕 الموافقة على الشروط -->
+<label class="terms-agreement" id="termsAgreement">
+  <input type="checkbox" id="agreeTerms">
+  <span class="terms-check">
+    <i data-lucide="check"></i>
+  </span>
+  <span class="terms-text">
+    أوافق على
+    <a href="terms.html" target="_blank" class="terms-link">شروط الخدمة</a>
+    و
+    <a href="privacy.html" target="_blank" class="terms-link">سياسة الخصوصية</a>
+  </span>
+</label>
+
+          <button type="submit" class="submit-btn" id="registerBtn">
+            <span class="btn-loader"></span>
+            <span class="btn-text">إنشاء الحساب</span>
+            <i data-lucide="user-plus" class="btn-icon" style="width: 20px; height: 20px;"></i>
+          </button>
+        </form>
+
+        <!-- ⭐ إنشاء حساب عبر Google -->
+        <div class="auth-divider"><span>أو</span></div>
+
+        <button type="button" class="google-btn" id="googleSignupBtn" onclick="handleGoogleLogin()">
+          <span class="g-logo">
+            <svg width="24" height="24" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          </span>
+          <span class="g-loader"></span>
+          <span class="g-label">المتابعة باستخدام Google</span>
+        </button>
+
+        <p class="google-note">باستخدام Google أنت توافق على شروط الخدمة وسياسة الخصوصية.</p>
+
+        <div class="toggle-box">
+          <span>لديك حساب بالفعل؟</span>
+          <a class="toggle-link" onclick="showView('login')">سجل الدخول</a>
+        </div>
+      </div>
+
+      <!-- ========== شاشة التحقق من البريد ========== -->
+<div id="verifyView" class="view-section">
+  <div class="verify-view">
+    
+    <div class="verify-icon-wrapper">
+      <div class="verify-icon">
+        <i data-lucide="mail-check"></i>
+      </div>
+    </div>
+
+    <h1 class="verify-title">تحقق من بريدك الإلكتروني</h1>
+    <p class="verify-subtitle">
+      أرسلنا رابط التأكيد إلى بريدك.<br>
+      افتح الرسالة واضغط على الرابط لتفعيل حسابك.
+    </p>
+
+    <div class="email-display">
+      <span class="email-display-text" id="verifyEmailText">user@example.com</span>
+      <button class="email-copy-btn" id="copyEmailBtn" onclick="copyEmail()" title="نسخ البريد">
+        <i data-lucide="copy"></i>
+      </button>
+    </div>
+
+    <!-- ⚠️ تحذير Spam — جديد -->
+    <div class="spam-alert">
+      <div class="spam-alert-header">
+        <i data-lucide="alert-circle"></i>
+        <span>تنبيه مهم</span>
+      </div>
+      <p class="spam-alert-text">
+        إذا لم تجد الرسالة في <strong>البريد الوارد</strong>،
+        افحص مجلد <strong>الرسائل المزعجة (Spam)</strong>.
+        في معظم الحالات، ستجدها هناك.
+      </p>
+    </div>
+
+    <!-- الخطوات — محدّثة -->
+    <div class="steps-list">
+      <div class="step-item">
+        <span class="step-number">1</span>
+        <span class="step-text">افتح تطبيق البريد الإلكتروني على جوالك</span>
+      </div>
+      <div class="step-item">
+        <span class="step-number">2</span>
+        <span class="step-text">ابحث عن رسالة من "المنصة الطبية" في <strong>البريد الوارد</strong></span>
+      </div>
+      <div class="step-item">
+        <span class="step-number">3</span>
+        <span class="step-text">إذا لم تجدها، افحص مجلد <strong>الرسائل المزعجة (Spam)</strong></span>
+      </div>
+      <div class="step-item">
+        <span class="step-number">4</span>
+        <span class="step-text">اضغط على رابط التأكيد لتفعيل حسابك</span>
+      </div>
+    </div>
+
+<!-- الأزرار -->
+<div class="verify-actions">
+  <a href="https://mail.google.com/mail/u/0/#inbox" target="_blank" rel="noopener" class="action-btn primary">
+    <i data-lucide="inbox"></i>
+    <span>فتح البريد</span>
+  </a>
+  <button class="action-btn" onclick="editEmail()">
+    <i data-lucide="pencil"></i>
+    <span>تعديل البريد</span>
+  </button>
+</div>
+
+<div class="resend-section">
+  <div class="resend-text">لم يصلك البريد؟</div>
+  <button class="resend-btn" id="resendBtn" onclick="handleResend()">
+    <i data-lucide="refresh-cw"></i>
+    <span id="resendBtnText">إعادة الإرسال</span>
+  </button>
+</div>
+
+<!-- تحذير البريد الخاطئ -->
+<div class="warning-box">
+  <i data-lucide="alert-triangle"></i>
+  <span>إذا كان البريد الذي أدخلته خاطئاً، لن تتمكن من تأكيد حسابك. اضغط "تعديل البريد" لتصحيحه.</span>
+</div>
+
+  </div>
+</div>
+
+<script src="supabase-config.js"></script>
+<script src="auth.js"></script>
+<script src="db.js"></script>
+<script src="sync.js"></script>
+
+  
+  <script>
+    lucide.createIcons();
+
+    // ============================================
+    // الحالة العامة
+    // ============================================
+    const state = {
+      pendingEmail: '',
+      pendingName: '',
+      pendingPassword: '',
+      resendInterval: null,
+      isResending: false,
+      isSubmitting: false
+    };
+
+    // ============================================
+    // التشغيل الأولي
+    // ============================================
+    async function init() {
+      try {
+        const isLoggedIn = await redirectIfLoggedIn();
+        if (isLoggedIn) return;
+
+        const savedEmail = localStorage.getItem('remembered_email');
+        if (savedEmail) {
+          document.getElementById('loginEmail').value = savedEmail;
+          document.getElementById('rememberMe').checked = true;
+        }
+
+        // إذا عاد من صفحة confirm.html بدون تأكيد
+        if (sessionStorage.getItem('needs_verification')) {
+          const email = sessionStorage.getItem('pending_email');
+          if (email) {
+            state.pendingEmail = email;
+            sessionStorage.removeItem('needs_verification');
+            showVerifyScreen(email);
+          }
+        }
+      } catch (err) {
+        console.error('Init error:', err);
+      }
+    }
+    init();
+
+    // ============================================
+    // إدارة الشاشات
+    // ============================================
+    function showView(viewName) {
+      // إخفاء كل الشاشات
+      document.querySelectorAll('.view-section').forEach(v => {
+        v.classList.remove('active');
+      });
+
+      // إظهار الشاشة المطلوبة
+      const target = document.getElementById(viewName + 'View');
+      if (target) {
+        target.classList.add('active');
+      }
+
+      // إخفاء رسالة النجاح عند التبديل
+      const banner = document.getElementById('successBanner');
+      if (banner) banner.classList.remove('visible');
+
+      // إيقاف cooldown عند مغادرة شاشة التحقق
+      if (viewName !== 'verify' && state.resendInterval) {
+        clearInterval(state.resendInterval);
+        state.resendInterval = null;
+      }
+
+      lucide.createIcons();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ============================================
+    // إظهار/إخفاء كلمة المرور
+    // ============================================
+    function togglePassword(inputId, iconEl) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+
+      const isPassword = input.type === 'password';
+      input.type = isPassword ? 'text' : 'password';
+
+      iconEl.innerHTML = isPassword
+        ? '<i data-lucide="eye-off" style="width: 18px; height: 18px;"></i>'
+        : '<i data-lucide="eye" style="width: 18px; height: 18px;"></i>';
+      lucide.createIcons();
+    }
+
+    // ============================================
+    // قوة كلمة المرور
+    // ============================================
+    function checkPasswordStrength(password) {
+      const wrapper = document.getElementById('passwordStrength');
+      const label = document.getElementById('strengthLabel');
+      const bars = [
+        document.getElementById('bar1'),
+        document.getElementById('bar2'),
+        document.getElementById('bar3'),
+        document.getElementById('bar4')
+      ];
+
+      if (!password) {
+        wrapper.classList.remove('visible');
+        bars.forEach(b => b.className = 'strength-bar');
+        return;
+      }
+
+      wrapper.classList.add('visible');
+
+      let strength = 0;
+      if (password.length >= 6) strength++;
+      if (password.length >= 10) strength++;
+      if (/[A-Z]/.test(password) && /[a-z]/.test(password)) strength++;
+      if (/\d/.test(password)) strength++;
+      if (/[^A-Za-z0-9]/.test(password)) strength++;
+
+      let level = 1;
+      let text = 'ضعيفة';
+
+      if (strength <= 2) { level = 1; text = 'ضعيفة'; }
+      else if (strength === 3) { level = 2; text = 'متوسطة'; }
+      else if (strength === 4) { level = 3; text = 'جيدة'; }
+      else { level = 4; text = 'قوية'; }
+
+      bars.forEach((bar, i) => {
+        bar.className = 'strength-bar';
+        if (i < level) {
+          if (level <= 1) bar.classList.add('weak');
+          else if (level === 2) bar.classList.add('medium');
+          else bar.classList.add('strong');
+        }
+      });
+
+      label.textContent = 'قوة كلمة المرور: ' + text;
+      label.className = 'strength-label ' + (level <= 1 ? 'weak' : level === 2 ? 'medium' : 'strong');
+    }
+
+    // ============================================
+    // إظهار/إخفاء رسائل الخطأ
+    // ============================================
+    function showError(fieldId, errorId, show = true) {
+      const field = document.getElementById(fieldId);
+      const error = document.getElementById(errorId);
+      if (!field || !error) return;
+
+      if (show) {
+        field.classList.add('error');
+        error.classList.add('visible');
+      } else {
+        field.classList.remove('error');
+        error.classList.remove('visible');
+      }
+    }
+
+    // تنظيف الأخطاء تلقائياً عند الكتابة
+    ['loginEmail', 'loginPassword', 'registerName', 'registerEmail', 'registerPassword', 'registerConfirm'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('input', () => {
+          el.classList.remove('error');
+          const errorEl = document.getElementById(id + 'Error');
+          if (errorEl) errorEl.classList.remove('visible');
+        });
+      }
+    });
+
+    // ============================================
+    // Toast
+    // ============================================
+    let toastTimeout;
+    function showToast(message, type = 'success') {
+      const existing = document.querySelector('.toast');
+      if (existing) existing.remove();
+      clearTimeout(toastTimeout);
+
+      const toast = document.createElement('div');
+      toast.className = 'toast' + (type === 'error' ? ' error' : type === 'info' ? ' info' : '');
+
+      const icon = type === 'error' ? 'alert-circle' : type === 'info' ? 'info' : 'check-circle-2';
+      toast.innerHTML = `
+        <i data-lucide="${icon}" style="width: 18px; height: 18px; flex-shrink: 0;"></i>
+        <span>${message}</span>
+      `;
+
+      document.body.appendChild(toast);
+      lucide.createIcons();
+
+      requestAnimationFrame(() => toast.classList.add('visible'));
+
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('visible');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // ============================================
+    // عرض رسالة النجاح
+    // ============================================
+    function showSuccess(message) {
+      const banner = document.getElementById('successBanner');
+      const text = document.getElementById('successMessage');
+      if (banner && text) {
+        text.textContent = message;
+        banner.classList.add('visible');
+        lucide.createIcons();
+      }
+    }
+
+    // ============================================
+    // ⭐ تسجيل الدخول عبر Google
+    // ============================================
+    async function handleGoogleLogin() {
+      if (state.isSubmitting) return;
+      state.isSubmitting = true;
+
+      const buttons = [
+        document.getElementById('googleLoginBtn'),
+        document.getElementById('googleSignupBtn')
+      ].filter(Boolean);
+
+      buttons.forEach((btn) => {
+        btn.disabled = true;
+        btn.classList.add('loading');
+      });
+
+      try {
+        const result = await signInWithGoogle({
+          redirectTo: window.location.origin + '/index.html'
+        });
+
+        if (!result || !result.success) {
+          showToast((result && result.error) || 'تعذّر تسجيل الدخول عبر Google', 'error');
+          buttons.forEach((btn) => {
+            btn.disabled = false;
+            btn.classList.remove('loading');
+          });
+          state.isSubmitting = false;
+          return;
+        }
+
+        // ⭐ عند النجاح ينتقل المتصفح إلى Google — بصمت، بلا أي رسالة.
+      } catch (err) {
+        console.error('handleGoogleLogin error:', err);
+        showToast('حدث خطأ غير متوقع — حاول مرة أخرى', 'error');
+        buttons.forEach((btn) => {
+          btn.disabled = false;
+          btn.classList.remove('loading');
+        });
+        state.isSubmitting = false;
+      }
+    }
+
+    // ============================================
+    // تسجيل الدخول
+    // ============================================
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (state.isSubmitting) return;
+
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const remember = document.getElementById('rememberMe').checked;
+
+      let hasError = false;
+
+      if (!isValidEmailFormat(email)) {
+        showError('loginEmail', 'loginEmailError');
+        hasError = true;
+      }
+      if (password.length < 6) {
+        showError('loginPassword', 'loginPasswordError');
+        hasError = true;
+      }
+
+      if (hasError) return;
+
+      state.isSubmitting = true;
+      const btn = document.getElementById('loginBtn');
+      btn.classList.add('loading');
+      btn.disabled = true;
+
+      const result = await signIn(email, password);
+
+      if (result.success) {
+        if (remember) {
+          localStorage.setItem('remembered_email', email);
+        } else {
+          localStorage.removeItem('remembered_email');
+        }
+
+        showToast('تم تسجيل الدخول بنجاح');
+
+        setTimeout(() => {
+          const redirectTo = getRedirectAfterLogin();
+          window.location.href = redirectTo;
+        }, 700);
+      } else {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        state.isSubmitting = false;
+
+        // معالجة خاصة: البريد غير مؤكد
+        if (result.error && result.error.includes('تأكيد')) {
+          showError('loginEmail', 'loginEmailError');
+          state.pendingEmail = email;
+          showToast(result.error, 'error');
+
+          setTimeout(() => {
+            showVerifyScreen(email);
+          }, 1500);
+        } else {
+          showToast(result.error, 'error');
+        }
+      }
+    });
+
+    // ============================================
+    // إنشاء حساب
+    // ============================================
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (state.isSubmitting) return;
+
+      const name = document.getElementById('registerName').value.trim();
+      const email = document.getElementById('registerEmail').value.trim();
+      const password = document.getElementById('registerPassword').value;
+      const confirm = document.getElementById('registerConfirm').value;
+
+      let hasError = false;
+
+      if (name.length < 3) {
+        showError('registerName', 'registerNameError');
+        hasError = true;
+      }
+      if (!isValidEmailFormat(email)) {
+        showError('registerEmail', 'registerEmailError');
+        hasError = true;
+      }
+      if (password.length < 6) {
+        showError('registerPassword', 'registerPasswordError');
+        hasError = true;
+      }
+if (password !== confirm) {
+  showError('registerConfirm', 'registerConfirmError');
+  hasError = true;
+}
+
+// 🆕 فحص الموافقة على الشروط
+const agreedToTerms = document.getElementById('agreeTerms').checked;
+if (!agreedToTerms) {
+  shakeTermsBox();
+  showToast('يجب الموافقة على الشروط والسياسة للمتابعة', 'error');
+  hasError = true;
+}
+
+if (hasError) return;
+
+      state.isSubmitting = true;
+      const btn = document.getElementById('registerBtn');
+      btn.classList.add('loading');
+      btn.disabled = true;
+
+      const result = await signUp(email, password, name);
+
+      if (result.success) {
+        // حفظ البيانات للاستخدام لاحقاً
+        state.pendingEmail = result.email || email;
+        state.pendingName = name;
+
+        // حفظ في sessionStorage (للعودة من confirm.html)
+        sessionStorage.setItem('pending_email', state.pendingEmail);
+
+        if (result.session) {
+          // حالة نادرة: Confirm Email مطفي
+          showToast('تم إنشاء الحساب بنجاح');
+          setTimeout(() => {
+            window.location.href = 'index.html';
+          }, 700);
+        } else {
+          // الحالة الطبيعية: يحتاج تأكيد البريد
+          showToast('تم إنشاء حسابك — تحقق من بريدك');
+          setTimeout(() => {
+            showVerifyScreen(state.pendingEmail);
+          }, 500);
+        }
+      } else {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        state.isSubmitting = false;
+        showToast(result.error, 'error');
+      }
+    });
+
+    // ============================================
+    // شاشة التحقق من البريد
+    // ============================================
+    function showVerifyScreen(email) {
+      state.pendingEmail = email;
+      state.isSubmitting = false;
+
+      const emailEl = document.getElementById('verifyEmailText');
+      if (emailEl) emailEl.textContent = email;
+
+      // إعادة تعيين زر إعادة الإرسال
+      resetResendButton();
+
+      // الانتقال للشاشة
+      showView('verify');
+
+      // تنظيف النموذج
+      document.getElementById('registerForm').reset();
+      document.getElementById('registerPassword').value = '';
+      document.getElementById('registerConfirm').value = '';
+      document.getElementById('passwordStrength').classList.remove('visible');
+    }
+
+    // ============================================
+    // نسخ البريد
+    // ============================================
+    async function copyEmail() {
+      if (!state.pendingEmail) return;
+
+      try {
+        // محاولة Clipboard API الحديثة
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(state.pendingEmail);
+        } else {
+          // fallback للمتصفحات القديمة
+          const textArea = document.createElement('textarea');
+          textArea.value = state.pendingEmail;
+          textArea.style.position = 'fixed';
+          textArea.style.opacity = '0';
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+        }
+
+        const btn = document.getElementById('copyEmailBtn');
+        if (btn) {
+          btn.classList.add('copied');
+          btn.innerHTML = '<i data-lucide="check" style="width: 16px; height: 16px;"></i>';
+          lucide.createIcons();
+
+          setTimeout(() => {
+            btn.classList.remove('copied');
+            btn.innerHTML = '<i data-lucide="copy" style="width: 16px; height: 16px;"></i>';
+            lucide.createIcons();
+          }, 2000);
+        }
+
+        showToast('تم نسخ البريد');
+      } catch (err) {
+        console.error('Copy error:', err);
+        showToast('تعذّر النسخ — انسخه يدوياً', 'error');
+      }
+    }
+
+// ============================================
+// 🆕 اهتزاز صندوق الشروط
+// ============================================
+function shakeTermsBox() {
+  const box = document.getElementById('termsAgreement');
+  if (!box) return;
+
+  // 🎬 إزالة الكلاس القديم أولاً (لإعادة تشغيل الأنيميشن)
+  box.classList.remove('shake');
+
+  // إجبار المتصفح على "إعادة الرسم" قبل إضافة الكلاس
+  void box.offsetWidth;
+
+  // إضافة الكلاس
+  box.classList.add('shake');
+
+  // 📳 اهتزاز الجهاز (إن كان مدعوماً)
+  if (navigator.vibrate) {
+    navigator.vibrate(50);
+  }
+
+  // إزالة الكلاس بعد انتهاء الأنيميشن
+  setTimeout(() => {
+    box.classList.remove('shake');
+  }, 600);
+}
+
+// 🆕 إزالة تأثير الاهتزاز عند الموافقة
+document.addEventListener('change', (e) => {
+  if (e.target && e.target.id === 'agreeTerms' && e.target.checked) {
+    const box = document.getElementById('termsAgreement');
+    if (box) box.classList.remove('shake');
+  }
+});
+
+    // ============================================
+    // تعديل البريد — يعيد تعيين النموذج بالكامل
+    // ============================================
+    function editEmail() {
+      // إيقاف أي cooldown
+      if (state.resendInterval) {
+        clearInterval(state.resendInterval);
+        state.resendInterval = null;
+      }
+
+      // إعادة تعيين حالة الإرسال
+      state.isSubmitting = false;
+
+      // إعادة تعيين النموذج
+      const registerForm = document.getElementById('registerForm');
+      if (registerForm) registerForm.reset();
+
+      // حذف قوة كلمة المرور
+      const strengthEl = document.getElementById('passwordStrength');
+      if (strengthEl) strengthEl.classList.remove('visible');
+
+      // حذف رسائل الخطأ
+      document.querySelectorAll('.error-message').forEach(el => {
+        el.classList.remove('visible');
+      });
+      document.querySelectorAll('.input-field').forEach(el => {
+        el.classList.remove('error');
+      });
+
+      // إعادة تعيين الأزرار (مهم! لحل مشكلة الزر العالق)
+      const registerBtn = document.getElementById('registerBtn');
+      if (registerBtn) {
+        registerBtn.classList.remove('loading');
+        registerBtn.disabled = false;
+        registerBtn.innerHTML = `
+          <span class="btn-loader"></span>
+          <span class="btn-text">إنشاء الحساب</span>
+          <i data-lucide="user-plus" class="btn-icon" style="width: 20px; height: 20px;"></i>
+        `;
+      }
+
+      // تعبئة البريد السابق لسهولة التعديل
+      const emailInput = document.getElementById('registerEmail');
+      if (emailInput && state.pendingEmail) {
+        emailInput.value = state.pendingEmail;
+      }
+
+      // حذف بيانات الجلسة
+      sessionStorage.removeItem('pending_email');
+      sessionStorage.removeItem('needs_verification');
+
+      // الانتقال للشاشة
+      showView('register');
+
+      // التركيز على البريد
+      setTimeout(() => {
+        const emailEl = document.getElementById('registerEmail');
+        if (emailEl) {
+          emailEl.focus();
+          emailEl.select();
+        }
+      }, 200);
+    }
+
+    // ============================================
+    // إعادة إرسال رابط التأكيد
+    // ============================================
+    async function handleResend() {
+      if (state.isResending) return;
+
+      if (!state.pendingEmail) {
+        showToast('لا يوجد بريد لإعادة الإرسال', 'error');
+        return;
+      }
+
+      // فحص Rate Limiter (60 ثانية)
+      const check = RateLimiter.canSend('resend_confirmation', 60000);
+      if (!check.allowed) {
+        showToast(`انتظر ${check.remaining} ثانية`, 'info');
+        return;
+      }
+
+      state.isResending = true;
+      const btn = document.getElementById('resendBtn');
+      const btnText = document.getElementById('resendBtnText');
+
+      if (btn) btn.disabled = true;
+      if (btnText) btnText.textContent = 'جاري الإرسال...';
+
+      const result = await resendConfirmation(state.pendingEmail);
+
+      if (result.success) {
+        RateLimiter.record('resend_confirmation');
+        showToast('تم إعادة إرسال الرابط');
+        startCooldown(60);
+      } else {
+        showToast(result.error, 'error');
+        if (btn) btn.disabled = false;
+        if (btnText) btnText.textContent = 'إعادة الإرسال';
+      }
+
+      state.isResending = false;
+    }
+
+    // ============================================
+    // مؤقت الانتظار
+    // ============================================
+    function startCooldown(seconds) {
+      const btn = document.getElementById('resendBtn');
+      const btnText = document.getElementById('resendBtnText');
+
+      if (!btn || !btnText) return;
+
+      let remaining = seconds;
+      btn.disabled = true;
+      btnText.textContent = `إعادة الإرسال (${remaining} ث)`;
+
+      if (state.resendInterval) clearInterval(state.resendInterval);
+
+      state.resendInterval = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) {
+          clearInterval(state.resendInterval);
+          state.resendInterval = null;
+          resetResendButton();
+        } else {
+          btnText.textContent = `إعادة الإرسال (${remaining} ث)`;
+        }
+      }, 1000);
+    }
+
+    function resetResendButton() {
+      const btn = document.getElementById('resendBtn');
+      const btnText = document.getElementById('resendBtnText');
+
+      if (state.resendInterval) {
+        clearInterval(state.resendInterval);
+        state.resendInterval = null;
+      }
+
+      if (btn) btn.disabled = false;
+      if (btnText) btnText.textContent = 'إعادة الإرسال';
+    }
+
+    // ============================================
+    // نسيت كلمة المرور
+    // ============================================
+    async function handleForgotPassword() {
+      const email = document.getElementById('loginEmail').value.trim();
+      const btn = document.getElementById('forgotBtn');
+
+      // التحقق من البريد
+      if (!email) {
+        showError('loginEmail', 'loginEmailError');
+        showToast('يرجى إدخال بريدك الإلكتروني أولاً', 'info');
+        document.getElementById('loginEmail').focus();
+        return;
+      }
+
+      if (!isValidEmailFormat(email)) {
+        showError('loginEmail', 'loginEmailError');
+        showToast('البريد الإلكتروني غير صحيح', 'error');
+        return;
+      }
+
+      // فحص Rate Limiter (60 ثانية)
+      const check = RateLimiter.canSend('forgot_password', 60000);
+      if (!check.allowed) {
+        showToast(`انتظر ${check.remaining} ثانية قبل المحاولة مرة أخرى`, 'info');
+        return;
+      }
+
+      // حالة التحميل
+      const originalHTML = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = `
+        <span class="spin"></span>
+        <span>جاري الإرسال...</span>
+      `;
+
+      try {
+        const result = await resetPassword(email);
+
+        if (result.success) {
+          RateLimiter.record('forgot_password');
+          showToast('تم إرسال رابط الاستعادة إلى بريدك');
+          showSuccess('تحقق من بريدك الإلكتروني — ستجد رابط إعادة تعيين كلمة المرور');
+
+          setTimeout(() => {
+            const banner = document.getElementById('successBanner');
+            if (banner) banner.classList.remove('visible');
+          }, 6000);
+        } else {
+          showToast(result.error, 'error');
+        }
+      } catch (err) {
+        console.error('Forgot password error:', err);
+        showToast('تعذّر إرسال الرابط — حاول لاحقاً', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+        lucide.createIcons();
+      }
+    }
+
+    // ============================================
+    // Escape للخروج
+    // ============================================
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        window.location.href = 'index.html';
+      }
+    });
+
+    // ============================================
+    // تنظيف عند مغادرة الصفحة
+    // ============================================
+    window.addEventListener('beforeunload', () => {
+      if (state.resendInterval) {
+        clearInterval(state.resendInterval);
+      }
+    });
+
+    console.log('✅ login.html v3.0 loaded');
+  </script>
+
+  <script data-shell>
+if ('serviceWorker' in navigator) {
+  // If an older worker controlled this page, refresh once when the new worker
+  // takes over. This guarantees a stale (previous-deploy) page cannot linger.
+  var hadController = !!navigator.serviceWorker.controller;
+  var reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', function () {
+    if (!hadController || reloading) return;
+    reloading = true;
+    window.location.reload();
+  });
+
+  window.addEventListener('load', () => {
+    // Force a fresh check so a previously cached (possibly outdated) worker
+    // is replaced as soon as a new sw.js is deployed.
+    navigator.serviceWorker.getRegistration().then(reg => {
+      if (reg) { try { reg.update(); } catch (e) {} }
+    }).catch(() => {});
+
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => {
+        console.log('✅ SW registered:', reg.scope);
+        try { reg.update(); } catch (e) {}
+      })
+      .catch(err => console.warn('⚠️ SW failed:', err));
+  });
+}
+</script>
+
+<!-- ============================================
+     Shell feature flag: browsers without the View Transitions API.
+     app.js picks the fallback animation itself; this class is exposed
+     for page CSS that may want to opt out of motion.
+     ============================================ -->
+<script data-shell>
+  (function () {
+    try {
+      if (!(window.CSS && CSS.supports && CSS.supports('view-transition-name', 'none'))) {
+        document.documentElement.classList.add('no-vt');
+      }
+    } catch (e) {
+      document.documentElement.classList.add('no-vt');
+    }
+  })();
+</script>
+
+</body>
+</html>

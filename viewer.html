@@ -1,0 +1,1517 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#f8fafb">
+<title>معاينة الملف — المنصة الطبية</title>
+
+<!-- الخطوط -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="theme-init.js"></script>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="المنصة الطبية">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-512.png">
+
+<!-- Smooth page transitions (View Transitions API + fallback fade).
+     The fixed bottom navigation gets its own view-transition-name and is
+     frozen, so it can never move or fade while the page content changes. -->
+<style data-shell>
+  /* Global theme defaults. `data-theme` is always set by theme-init.js
+     (light or dark), so native controls and scrollbars follow the app. */
+  :root { color-scheme: light; --medapp-amber: #fbbf24; --medapp-orange: #fb923c; --medapp-blue: #93c5fd; --medapp-blue-soft: #bfdbfe; --medapp-violet: #c4b5fd; --medapp-green: #34d399; --medapp-red: #f87171; --medapp-pink: #f472b6; }
+  [data-theme="dark"] { color-scheme: dark; }
+  [data-theme="light"] { --medapp-amber: #b45309; --medapp-orange: #c2410c; --medapp-blue: #2563eb; --medapp-blue-soft: #1d4ed8; --medapp-violet: #6d28d9; --medapp-green: #047857; --medapp-red: #b91c1c; --medapp-pink: #be185d; }
+
+  /* Premium smooth scrolling. The SPA router temporarily disables this for
+     page swaps / Back restoration so navigation is instant, never animated. */
+  html { scroll-behavior: smooth; }
+  /* app.js sets this only for instant SPA swaps / Back restoration. */
+  html.medapp-scroll-jump { scroll-behavior: auto !important; }
+
+  html.medapp-navigating { cursor: progress; }
+
+  /* ⭐IMPORTANT: the `hidden` attribute must always win.
+     Author rules like `.detail-empty { display: flex }` beat the user-agent
+     `[hidden] { display: none }` rule, which made "empty" blocks stay on
+     screen on top of real content. */
+  [hidden] { display: none !important; }
+
+  /* ⭐ Tap targets: 44px minimum, no double-tap zoom, no grey flash. */
+  button,
+  a[role="button"],
+  [role="button"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ⭐ انتقال ناعم بين الوضعين النهاري والليلي.
+     يُفعَّل هذا الصنف لحظياً قبل تبديل الثيم (MedApp.withThemeTransition)
+     فيتحوّل لون الخلفية والنص والحدود تدريجياً بدل القفز المفاجئ. */
+  html.theme-transition,
+  html.theme-transition body,
+  html.theme-transition *,
+  html.theme-transition *::before,
+  html.theme-transition *::after {
+    transition:
+      background-color 0.34s ease,
+      color 0.34s ease,
+      border-color 0.34s ease,
+      fill 0.34s ease,
+      stroke 0.34s ease,
+      box-shadow 0.34s ease !important;
+    transition-delay: 0s !important;
+  }
+
+  /* Very thin top progress bar, shown by app.js during SPA navigation. */
+  #medapp-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    z-index: 2147483647;
+    pointer-events: none;
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  #medapp-loader::before {
+    content: '';
+    display: block;
+    width: 40%;
+    height: 100%;
+    border-radius: 0 999px 999px 0;
+    background: linear-gradient(90deg, transparent, #059669 18%, #10b981 52%, #34d399 82%, transparent);
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+    transform: translateX(-110%);
+    will-change: transform;
+  }
+
+  html.medapp-loading #medapp-loader { opacity: 1; }
+  html.medapp-loading #medapp-loader::before {
+    animation: medapp-loader-slide 1.05s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  @keyframes medapp-loader-slide {
+    0%   { transform: translateX(-110%); }
+    100% { transform: translateX(360%); }
+  }
+
+  /* Only same-document transitions (started by app.js). Cross-document
+     @view-transition is intentionally NOT enabled: full loads must behave
+     exactly like the original pages. */
+
+  .floating-nav-wrapper { view-transition-name: medapp-bottom-nav; }
+  ::view-transition-group(medapp-bottom-nav) { animation: none; }
+  ::view-transition-old(medapp-bottom-nav),
+  ::view-transition-new(medapp-bottom-nav) { animation: none; }
+
+  /* Keep the sticky header out of the root cross-fade. Otherwise the old and
+     new snapshots of a translucent, blurred header overlap and look frozen /
+     show a ghost shadow while the page changes. */
+  header { view-transition-name: medapp-header; }
+  ::view-transition-group(medapp-header) { animation: none; }
+  ::view-transition-old(medapp-header),
+  ::view-transition-new(medapp-header) { animation: none; }
+
+  /* Light mode: the header must use a soft neutral shadow, never the heavy
+     black shadow used by the dark theme. */
+  [data-theme="light"] header {
+    background: rgba(248, 250, 251, 0.92);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    border-bottom-color: rgba(15, 23, 42, 0.08);
+    box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+    color: var(--text-primary);
+  }
+
+  /* Wins over every page-level `header.scrolled` (higher specificity). */
+  [data-theme="light"] header.scrolled {
+    background: rgba(248, 250, 251, 0.97);
+    border-bottom-color: rgba(15, 23, 42, 0.1);
+    box-shadow:
+      0 4px 18px rgba(15, 23, 42, 0.08),
+      0 1px 0 rgba(15, 23, 42, 0.05);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    ::view-transition-old(root) { animation: pt-fade-out 0.14s cubic-bezier(0.4, 0, 0.2, 1) both; }
+    ::view-transition-new(root) { animation: pt-fade-in 0.2s cubic-bezier(0.4, 0, 0.2, 1) both; }
+  }
+
+  /* No body animation on browsers without View Transitions: the swap is
+     already synchronous, and fading the body element would also fade the
+     fixed bottom navigation. The nav must never move or fade. */
+
+  @keyframes pt-fade-in  { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes pt-fade-out { from { opacity: 1; } to { opacity: 0; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto !important; }
+    html.theme-transition,
+    html.theme-transition body,
+    html.theme-transition *,
+    html.theme-transition *::before,
+    html.theme-transition *::after {
+      transition: none !important;
+    }
+    #medapp-loader::before {
+      animation: none !important;
+      transform: none;
+      width: 60%;
+    }
+    ::view-transition-old(root), ::view-transition-new(root),
+    ::view-transition-old(medapp-bottom-nav), ::view-transition-new(medapp-bottom-nav),
+    ::view-transition-old(medapp-header), ::view-transition-new(medapp-header) { animation: none !important; }
+  }
+
+  /* ============================================================
+     Premium file visual — shared by every file surface.
+     The helper `getFileIconMarkup()` in files.js supplies the
+     colour tokens; page classes (mini-file-icon, file-icon,
+     file-type-icon, …) keep their existing dimensions.
+     ============================================================ */
+  .premium-file-icon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    flex-shrink: 0;
+    overflow: hidden;
+    isolation: isolate;
+    color: var(--pf-color, #94a3b8);
+    background:
+      linear-gradient(145deg, var(--pf-bg, rgba(148, 163, 184, 0.16)), rgba(255, 255, 255, 0.02)),
+      var(--bg-card, #0a1a14);
+    border: 1px solid var(--pf-border, rgba(148, 163, 184, 0.34));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.34),
+      0 6px 15px -9px var(--pf-glow, rgba(148, 163, 184, 0.24));
+    transition: transform 0.24s ease, box-shadow 0.24s ease, border-color 0.24s ease;
+  }
+
+  .premium-file-icon::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.32), transparent 46%);
+    opacity: 0.85;
+  }
+
+  .premium-file-icon::after {
+    content: '';
+    position: absolute;
+    top: -36%;
+    right: -30%;
+    width: 78%;
+    height: 78%;
+    z-index: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    background: var(--pf-glow, rgba(148, 163, 184, 0.24));
+    filter: blur(9px);
+  }
+
+  .premium-file-icon > i {
+    position: relative;
+    z-index: 2;
+    display: inline-block;
+    line-height: 1;
+    font-size: 1.14rem;
+    transform: translateY(-2px);
+    filter: drop-shadow(0 2px 3px var(--pf-glow, rgba(148, 163, 184, 0.24)));
+  }
+
+  .premium-file-icon__ext {
+    position: absolute;
+    left: 50%;
+    bottom: 2px;
+    z-index: 2;
+    transform: translateX(-50%);
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.39rem;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: 0.15px;
+    color: var(--pf-color, #94a3b8);
+    opacity: 0.92;
+    pointer-events: none;
+  }
+
+  [data-theme="light"] .premium-file-icon {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.78),
+      0 5px 13px -10px var(--pf-glow, rgba(148, 163, 184, 0.24));
+  }
+
+  [data-theme="light"] .premium-file-icon::before {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.55), transparent 48%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .premium-file-icon { transition: none; }
+  }
+</style>
+
+
+<style>
+:root {
+  --bg-main: #f8fafb;
+  --bg-card: #ffffff;
+  --bg-elevated: #f1f5f9;
+  --bg-header: rgba(248, 250, 251, 0.95);
+  --bg-overlay: rgba(255, 255, 255, 0.98);
+  --border: rgba(16, 185, 129, 0.2);
+  --border-strong: rgba(16, 185, 129, 0.4);
+  --accent: #059669;
+  --accent-light: #10b981;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --danger: #ef4444;
+  --viewer-bg: #e8ecf0;
+  --paper-bg: #ffffff;
+  --page-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+  --header-h: 58px;
+  --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"] {
+  --bg-main: #06110d;
+  --bg-card: rgba(16, 34, 27, 0.7);
+  --bg-elevated: #0a1a14;
+  --bg-header: rgba(6, 17, 13, 0.95);
+  --bg-overlay: rgba(10, 26, 20, 0.98);
+  --border: rgba(16, 185, 129, 0.25);
+  --border-strong: rgba(16, 185, 129, 0.5);
+  --accent: #10b981;
+  --accent-light: #34d399;
+  --text-primary: #f0fdf4;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --viewer-bg: #0a1410;
+  --paper-bg: #f5f5f5;
+  --page-shadow: 0 2px 12px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Cairo', system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  background: var(--bg-main);
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  transition: background var(--transition), color var(--transition);
+}
+
+/* الهيدر */
+.header {
+  height: var(--header-h);
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-header);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  z-index: 100;
+}
+
+.icon-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+
+.icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+.icon-btn:active { transform: scale(0.94); }
+.icon-btn svg { width: 19px; height: 19px; }
+
+.file-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.file-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.file-icon svg { width: 19px; height: 19px; }
+
+.file-text { min-width: 0; flex: 1; }
+
+.file-title {
+  font-size: 0.88rem;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.file-sub {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 1px;
+}
+
+/* منطقة العرض */
+.viewer {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--viewer-bg);
+  padding: 12px 8px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+  overscroll-behavior: contain;
+}
+
+.viewer::-webkit-scrollbar { width: 5px; }
+.viewer::-webkit-scrollbar-track { background: transparent; }
+.viewer::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+
+/* صفحة */
+.pdf-page {
+  background: var(--paper-bg);
+  border-radius: 4px;
+  box-shadow: var(--page-shadow);
+  overflow: hidden;
+  max-width: 100%;
+  position: relative;
+  display: block;
+  flex-shrink: 0;
+  transition: box-shadow 0.3s;
+}
+
+.pdf-page canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Text Layer (للنسخ) */
+.pdf-page .text-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  line-height: 1;
+  z-index: 2;
+  pointer-events: auto;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.pdf-page .text-layer span,
+.pdf-page .text-layer br {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+  pointer-events: auto;
+}
+
+.pdf-page .text-layer span::selection {
+  background: rgba(16, 185, 129, 0.4);
+}
+
+/* Placeholder */
+.pdf-page.placeholder {
+  background: linear-gradient(90deg, var(--bg-elevated) 25%, rgba(200, 200, 200, 0.15) 50%, var(--bg-elevated) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.pdf-page.placeholder::after {
+  content: attr(data-page-num);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+/* شاشة التحميل */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-main);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  z-index: 200;
+  transition: opacity 0.35s, visibility 0.35s;
+}
+
+.loading-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.spinner {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  animation: spin 0.85s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-text {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.loading-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: -10px;
+  min-height: 20px;
+}
+
+.progress-bar {
+  width: 200px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-light));
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+/* خطأ */
+.error-state {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 40px 20px;
+  text-align: center;
+  height: 100%;
+}
+
+.error-state.visible { display: flex; }
+
+.error-state svg {
+  width: 60px;
+  height: 60px;
+  color: var(--danger);
+  opacity: 0.6;
+}
+
+.error-state h3 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.error-state p {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  max-width: 320px;
+  line-height: 1.6;
+}
+
+/* البحث */
+.search-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(6px);
+  z-index: 500;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 70px 16px 16px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.25s;
+}
+
+.search-overlay.visible { opacity: 1; visibility: visible; }
+
+.search-box {
+  width: 100%;
+  max-width: 500px;
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 14px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  transform: translateY(-20px);
+  transition: transform 0.25s;
+}
+
+.search-overlay.visible .search-box { transform: translateY(0); }
+
+.search-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0 14px;
+}
+
+.search-input-wrap:focus-within { border-color: var(--accent); }
+.search-input-wrap svg { width: 18px; height: 18px; color: var(--text-muted); flex-shrink: 0; }
+
+.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: 'Cairo', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 13px 0;
+  outline: none;
+}
+
+.search-input::placeholder { color: var(--text-muted); }
+
+.search-results {
+  margin-top: 10px;
+  max-height: 50vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.search-result-item {
+  padding: 11px 13px;
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.search-result-item:hover {
+  border-color: var(--accent);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.search-result-item .page-label {
+  font-size: 0.68rem;
+  color: var(--accent);
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.search-result-item .snippet {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  direction: ltr;
+  text-align: left;
+}
+
+.search-result-item .snippet mark {
+  background: rgba(245, 158, 11, 0.3);
+  color: var(--text-primary);
+  padding: 0 2px;
+  border-radius: 3px;
+}
+
+.search-hint {
+  text-align: center;
+  padding: 20px 10px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 12px 20px;
+  border-radius: 14px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  z-index: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  max-width: calc(100% - 32px);
+  backdrop-filter: blur(16px);
+}
+
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.toast svg { width: 17px; height: 17px; flex-shrink: 0; }
+.toast.success svg { color: var(--accent); }
+.toast.error svg { color: var(--danger); }
+.toast.info svg { color: #3b82f6; }
+
+/* مؤشر الصفحة */
+.page-hud {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: rgba(15, 23, 42, 0.9);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  backdrop-filter: blur(12px);
+  z-index: 90;
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.page-hud.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+@media (min-width: 768px) {
+  .viewer { padding: 20px 16px 60px; gap: 18px; }
+}
+</style>
+</head>
+<body>
+
+<!-- الهيدر -->
+<header class="header">
+  <a href="javascript:history.back()" class="icon-btn" title="رجوع">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 18l6-6-6-6"/>
+    </svg>
+  </a>
+
+  <div class="file-info">
+    <div class="file-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+      </svg>
+    </div>
+    <div class="file-text">
+      <div class="file-title" id="fileTitle">جاري التحميل...</div>
+      <div class="file-sub" id="fileSub">—</div>
+    </div>
+  </div>
+
+  <button class="icon-btn" id="searchBtn" title="بحث">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/>
+      <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+  </button>
+
+  <button class="icon-btn" id="themeBtn" title="تبديل الثيم">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+    </svg>
+  </button>
+</header>
+
+<!-- منطقة العرض -->
+<main class="viewer" id="viewer">
+  <div class="error-state" id="errorState">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <h3 id="errorTitle">تعذّر فتح الملف</h3>
+    <p id="errorMessage">حدث خطأ أثناء التحميل.</p>
+  </div>
+</main>
+
+<!-- شاشة التحميل -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text">جاري تحضير الملف...</div>
+  <div class="loading-sub" id="loadingSub">الاتصال بالسيرفر</div>
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+</div>
+
+<!-- مؤشر الصفحة -->
+<div class="page-hud" id="pageHud">الصفحة 1</div>
+
+<!-- نافذة البحث -->
+<div class="search-overlay" id="searchOverlay">
+  <div class="search-box">
+    <div class="search-input-wrap">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" class="search-input" id="searchInput" placeholder="ابحث في الملف..." autocomplete="off">
+    </div>
+    <div class="search-results" id="searchResults">
+      <div class="search-hint">اكتب كلمة للبحث في جميع الصفحات</div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+    <polyline points="22 4 12 14.01 9 11.01"/>
+  </svg>
+  <span id="toastText"></span>
+</div>
+
+<!-- السكربتات -->
+<script src="supabase-config.js"></script>
+<script src="auth.js"></script>
+<script src="db.js"></script>
+<script src="files.js"></script>
+
+
+<script src="app.js?v=4.7.0"></script>
+<script>
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+var state = {
+  fileId: null,
+  fileInfo: null,
+  pdfDoc: null,
+  totalPages: 0,
+  pdfBlob: null,
+  renderedPages: new Set(),
+  renderingPages: new Set(),
+  observer: null,
+  pageTextCache: new Map(),
+  containerWidth: 0,
+  renderOrder: [],
+};
+
+var $ = id => document.getElementById(id);
+var els = {
+  fileTitle:     $('fileTitle'),
+  fileSub:       $('fileSub'),
+  viewer:        $('viewer'),
+  errorState:    $('errorState'),
+  errorTitle:    $('errorTitle'),
+  errorMessage:  $('errorMessage'),
+  loadingOverlay:$('loadingOverlay'),
+  loadingSub:    $('loadingSub'),
+  progressFill:  $('progressFill'),
+  themeBtn:      $('themeBtn'),
+  searchBtn:     $('searchBtn'),
+  searchOverlay: $('searchOverlay'),
+  searchInput:   $('searchInput'),
+  searchResults: $('searchResults'),
+  toast:         $('toast'),
+  toastText:     $('toastText'),
+  pageHud:       $('pageHud'),
+};
+
+/* ═══ Toast ═══ */
+var toastTimer = null;
+function showToast(message, type = 'success') {
+  if (toastTimer) clearTimeout(toastTimer);
+  els.toastText.textContent = message;
+  els.toast.className = 'toast show ' + type;
+  const icons = {
+    success: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+    error:   '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>',
+    info:    '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>'
+  };
+  els.toast.querySelector('svg').innerHTML = icons[type] || icons.info;
+  toastTimer = setTimeout(() => els.toast.classList.remove('show'), 2200);
+}
+
+/* ═══ الثيم ═══ */
+function applyTheme() {
+  const theme = localStorage.getItem('medfav_theme') || 'light';
+  document.documentElement.setAttribute('data-theme', theme);
+  updateThemeIcon(theme);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = theme === 'dark' ? '#06110d' : '#f8fafb';
+}
+
+function updateThemeIcon(theme) {
+  const icon = els.themeBtn.querySelector('svg');
+  if (theme === 'dark') {
+    icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+  } else {
+    icon.innerHTML = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>';
+  }
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'light';
+  const next = current === 'light' ? 'dark' : 'light';
+  localStorage.setItem('medfav_theme', next);
+  applyTheme();
+  showToast(next === 'dark' ? 'الوضع الليلي 🌙' : 'الوضع النهاري ☀️', 'info');
+}
+
+/* ═══ تقدم التحميل ═══ */
+function setProgress(pct, text) {
+  els.progressFill.style.width = pct + '%';
+  if (text) els.loadingSub.textContent = text;
+}
+
+function hideLoading() {
+  els.loadingOverlay.classList.add('hidden');
+  setTimeout(() => {
+    if (els.loadingOverlay.parentNode) els.loadingOverlay.remove();
+  }, 500);
+}
+
+/* ═══ تحميل الملف كامل ═══ */
+async function downloadPdf(fileId, fileUrl) {
+  // 1) IndexedDB
+  try {
+    const cached = await getDownloadedFile(fileId);
+    if (cached && cached.blob) {
+      console.log('✅ من IndexedDB');
+      return cached.blob;
+    }
+  } catch (e) { /* تجاهل */ }
+
+  // 2) الشبكة
+  if (!navigator.onLine) throw new Error('لا يوجد اتصال بالإنترنت والملف غير محفوظ');
+
+  console.log('🌐 تحميل من الشبكة');
+  const response = await fetch(fileUrl);
+  if (!response.ok) throw new Error('فشل التحميل: ' + response.status);
+
+  const total = parseInt(response.headers.get('content-length') || '0', 10);
+  const chunks = [];
+  let received = 0;
+
+  const reader = response.body.getReader();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    received += value.length;
+    if (total > 0) {
+      const realPct = Math.round((received / total) * 100);
+      const barPct = Math.round((received / total) * 55);
+      setProgress(barPct, `تحميل ${realPct}%`);
+    }
+  }
+
+  return new Blob(chunks, { type: 'application/pdf' });
+}
+
+/* ═══ تحميل PDF تدريجي (Range requests) ═══ */
+function buildViewerPdfConfig(extra) {
+  return Object.assign({
+    cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+    cMapPacked: true,
+  }, extra || {});
+}
+
+async function openPdfProgressively(fileInfo) {
+  state.pdfBlob = null;
+
+  // 1) النسخة المحفوظة في IndexedDB تعمل حتى بدون إنترنت.
+  let cached = null;
+  try {
+    if (typeof getDownloadedFile === 'function') {
+      cached = await getDownloadedFile(state.fileId);
+    }
+  } catch (e) { /* تجاهل */ }
+
+  if (cached && cached.blob) {
+    setProgress(12, 'فتح النسخة المحفوظة...');
+    const cachedBuffer = await cached.blob.arrayBuffer();
+    const cachedTask = pdfjsLib.getDocument(buildViewerPdfConfig({ data: cachedBuffer }));
+    state.pdfDoc = await cachedTask.promise;
+    return;
+  }
+
+  const fileUrl = fileInfo.file_url || fileInfo.external_url || '';
+  if (!fileUrl) throw new Error('رابط الملف غير متوفر');
+  if (!navigator.onLine) throw new Error('لا يوجد اتصال بالإنترنت والملف غير محفوظ');
+
+  // 2) الرابط مباشرة: PDF.js يطلب أجزاء Range عند الحاجة فقط.
+  setProgress(6, 'بدء التحميل التدريجي...');
+
+  const streamOptions = typeof buildPdfStreamOptions === 'function'
+    ? buildPdfStreamOptions(fileUrl)
+    : { url: fileUrl, disableRange: false, disableStream: false, disableAutoFetch: true, rangeChunkSize: 65536 };
+
+  const loadingTask = pdfjsLib.getDocument(buildViewerPdfConfig(streamOptions));
+
+  loadingTask.onProgress = (progress) => {
+    if (!progress || !progress.total) {
+      setProgress(24, 'تحميل تدريجي — الصفحات تُعرض عند الطلب');
+      return;
+    }
+    const pct = Math.min(55, 8 + Math.round((progress.loaded / progress.total) * 47));
+    setProgress(pct, 'تحميل تدريجي — الصفحات تُعرض عند الطلب');
+  };
+
+  try {
+    state.pdfDoc = await loadingTask.promise;
+  } catch (err) {
+    // بعض السيرفرات لا تدعم Accept-Ranges؛ نرجع لتحميل كامل مرة واحدة.
+    console.warn('تعذّر التحميل التدريجي، سيتم الرجوع للتحميل الكامل:', err);
+    try { loadingTask.destroy(); } catch (e) {}
+
+    setProgress(12, 'السيرفر لا يدعم التحميل التدريجي — تحميل كامل...');
+    const blob = await downloadPdf(state.fileId, fileUrl);
+    state.pdfBlob = blob;
+    const arrayBuffer = await blob.arrayBuffer();
+    const fallbackTask = pdfjsLib.getDocument(buildViewerPdfConfig({ data: arrayBuffer }));
+    state.pdfDoc = await fallbackTask.promise;
+  }
+}
+
+/* ═══ حساب العرض ═══ */
+function calcContainerWidth() {
+  const rect = els.viewer.getBoundingClientRect();
+  const padding = window.innerWidth <= 640 ? 16 : 32;
+  const w = rect.width - padding;
+  return Math.max(w, 280);
+}
+
+/* ═══ إنشاء Placeholders ═══ */
+async function createPlaceholders() {
+  state.containerWidth = calcContainerWidth();
+  console.log('Container width:', state.containerWidth);
+
+  // أبعاد الصفحة الأولى
+  const firstPage = await state.pdfDoc.getPage(1);
+  const vp = firstPage.getViewport({ scale: 1 });
+  const ratio = vp.height / vp.width;
+
+  const pageHeight = Math.round(state.containerWidth * ratio);
+
+  const frag = document.createDocumentFragment();
+  for (let i = 1; i <= state.totalPages; i++) {
+    const div = document.createElement('div');
+    div.className = 'pdf-page placeholder';
+    div.dataset.pageNum = i;
+    div.style.width = state.containerWidth + 'px';
+    div.style.height = pageHeight + 'px';
+    frag.appendChild(div);
+  }
+  els.viewer.appendChild(frag);
+}
+
+/* ═══ رسم صفحة ═══ */
+async function renderPage(pageEl) {
+  const pageNum = parseInt(pageEl.dataset.pageNum, 10);
+  if (state.renderedPages.has(pageNum)) return;
+  if (state.renderingPages.has(pageNum)) return;
+  state.renderingPages.add(pageNum);
+
+  try {
+    const page = await state.pdfDoc.getPage(pageNum);
+
+    // أبعاد
+    const baseViewport = page.getViewport({ scale: 1 });
+    const containerWidth = state.containerWidth || calcContainerWidth() || 360;
+    const scale = containerWidth / baseViewport.width;
+    const viewport = page.getViewport({ scale });
+
+    // Canvas
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.floor(viewport.width * dpr));
+    canvas.height = Math.max(1, Math.floor(viewport.height * dpr));
+    canvas.style.width = '100%';
+    canvas.style.height = 'auto';
+
+    const ctx = canvas.getContext('2d', { alpha: false });
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    await page.render({
+      canvasContext: ctx,
+      viewport: viewport,
+      transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : null,
+    }).promise;
+
+    // Text Layer للنسخ
+    let textLayer = null;
+    try {
+      const textContent = await page.getTextContent();
+      state.pageTextCache.set(pageNum, textContent.items.map(i => i.str).join(' '));
+
+      textLayer = document.createElement('div');
+      textLayer.className = 'text-layer';
+      textLayer.style.width = viewport.width + 'px';
+      textLayer.style.height = viewport.height + 'px';
+
+      const params = {
+        container: textLayer,
+        viewport: viewport,
+        textDivs: [],
+      };
+      // v3.11 يستخدم textContentSource أو textContent
+      if (pdfjsLib.renderTextLayer.length >= 0) {
+        try {
+          pdfjsLib.renderTextLayer({ ...params, textContentSource: textContent });
+        } catch (err) {
+          pdfjsLib.renderTextLayer({ ...params, textContent: textContent });
+        }
+      }
+    } catch (e) {
+      console.warn('Text layer failed for page ' + pageNum, e);
+    }
+
+    // استبدال
+    pageEl.classList.remove('placeholder');
+    pageEl.style.height = 'auto';
+    pageEl.innerHTML = '';
+    pageEl.appendChild(canvas);
+    if (textLayer) pageEl.appendChild(textLayer);
+
+    state.renderedPages.add(pageNum);
+
+  } catch (e) {
+    console.error('فشل رسم الصفحة ' + pageNum, e);
+    // إذا فشلت، أبقِ placeholder مع نص الخطأ
+    pageEl.classList.remove('placeholder');
+    pageEl.style.display = 'flex';
+    pageEl.style.alignItems = 'center';
+    pageEl.style.justifyContent = 'center';
+    pageEl.innerHTML = '<span style="color:var(--text-muted);font-size:0.85rem;">تعذّر عرض الصفحة ' + pageNum + '</span>';
+  } finally {
+    state.renderingPages.delete(pageNum);
+  }
+}
+
+/* ═══ IntersectionObserver ═══ */
+function setupObserver() {
+  if (state.observer) state.observer.disconnect();
+
+  state.observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const el = entry.target;
+        requestAnimationFrame(() => renderPage(el));
+      }
+    });
+  }, {
+    root: els.viewer,
+    rootMargin: '400px 0px',
+    threshold: 0,
+  });
+
+  document.querySelectorAll('.pdf-page').forEach(el => {
+    state.observer.observe(el);
+  });
+}
+
+/* ═══ HUD السكرول ═══ */
+var hudTimer = null;
+function setupScrollHUD() {
+  els.viewer.addEventListener('scroll', () => {
+    const containerRect = els.viewer.getBoundingClientRect();
+    const centerY = containerRect.top + containerRect.height / 2;
+
+    let closestPage = 1;
+    let minDist = Infinity;
+
+    document.querySelectorAll('.pdf-page').forEach(p => {
+      const rect = p.getBoundingClientRect();
+      const pageCenter = rect.top + rect.height / 2;
+      const dist = Math.abs(pageCenter - centerY);
+      if (dist < minDist) {
+        minDist = dist;
+        closestPage = parseInt(p.dataset.pageNum, 10);
+      }
+    });
+
+    els.pageHud.textContent = `الصفحة ${closestPage} من ${state.totalPages}`;
+    els.pageHud.classList.add('show');
+
+    clearTimeout(hudTimer);
+    hudTimer = setTimeout(() => els.pageHud.classList.remove('show'), 1200);
+  }, { passive: true });
+}
+
+/* ═══ البحث ═══ */
+async function performSearch(query) {
+  const q = query.trim();
+  if (q.length < 2) {
+    els.searchResults.innerHTML = '<div class="search-hint">اكتب حرفين على الأقل</div>';
+    return;
+  }
+
+  els.searchResults.innerHTML = '<div class="search-hint">جاري البحث...</div>';
+
+  const results = [];
+  const lowerQ = q.toLowerCase();
+  const regex = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+
+  for (let i = 1; i <= state.totalPages; i++) {
+    let text = state.pageTextCache.get(i);
+    if (!text) {
+      try {
+        const page = await state.pdfDoc.getPage(i);
+        const tc = await page.getTextContent();
+        text = tc.items.map(it => it.str).join(' ');
+        state.pageTextCache.set(i, text);
+      } catch (e) { continue; }
+    }
+
+    if (text.toLowerCase().includes(lowerQ)) {
+      const idx = text.toLowerCase().indexOf(lowerQ);
+      const start = Math.max(0, idx - 50);
+      const end = Math.min(text.length, idx + q.length + 50);
+      let snippet = text.substring(start, end);
+      if (start > 0) snippet = '…' + snippet;
+      if (end < text.length) snippet = snippet + '…';
+      snippet = snippet.replace(regex, '<mark>$1</mark>');
+      results.push({ page: i, snippet });
+    }
+  }
+
+  if (results.length === 0) {
+    els.searchResults.innerHTML = '<div class="search-hint">لا توجد نتائج</div>';
+    return;
+  }
+
+  els.searchResults.innerHTML = results.map(r => `
+    <div class="search-result-item" data-page="${r.page}">
+      <div class="page-label">الصفحة ${r.page}</div>
+      <div class="snippet">${r.snippet}</div>
+    </div>
+  `).join('');
+
+  els.searchResults.querySelectorAll('.search-result-item').forEach(item => {
+    item.addEventListener('click', () => {
+      scrollToPage(parseInt(item.dataset.page, 10));
+      closeSearch();
+    });
+  });
+}
+
+function scrollToPage(pageNum) {
+  const el = document.querySelector(`.pdf-page[data-page-num="${pageNum}"]`);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    el.style.transition = 'box-shadow 0.4s';
+    el.style.boxShadow = '0 0 0 3px var(--accent), var(--page-shadow)';
+    setTimeout(() => { el.style.boxShadow = ''; }, 1800);
+  }
+}
+
+function openSearch() {
+  els.searchOverlay.classList.add('visible');
+  setTimeout(() => els.searchInput.focus(), 100);
+}
+
+function closeSearch() {
+  els.searchOverlay.classList.remove('visible');
+  els.searchInput.value = '';
+  els.searchResults.innerHTML = '<div class="search-hint">اكتب كلمة للبحث في جميع الصفحات</div>';
+}
+
+/* ═══ خطأ ═══ */
+function showError(title, message) {
+  els.errorTitle.textContent = title;
+  els.errorMessage.textContent = message;
+  els.errorState.classList.add('visible');
+  hideLoading();
+}
+
+/* ═══ URL Params ═══ */
+function parseParams() {
+  const params = new URLSearchParams(location.search);
+  const fileId = params.get('id');
+  if (!fileId) return null;
+  return {
+    id: fileId,
+    title:   params.get('file')     || 'بدون عنوان',
+    subject: params.get('subject')  || '',
+    size:    params.get('size')     || '',
+    url:     params.get('url')      || '',
+    path:    params.get('path')     || '',
+    category:params.get('category') || '',
+  };
+}
+
+/* ═══ التشغيل ═══ */
+async function init() {
+  applyTheme();
+
+  // تنظيف أي عرض سابق (مثلاً إذا أُعيد تشغيل init بعد swap).
+  if (state.observer) {
+    state.observer.disconnect();
+    state.observer = null;
+  }
+  if (state.pdfDoc && typeof state.pdfDoc.destroy === 'function') {
+    try { state.pdfDoc.destroy(); } catch (e) {}
+  }
+  state.pdfDoc = null;
+  state.totalPages = 0;
+  state.renderedPages = new Set();
+  state.renderingPages = new Set();
+  state.pageTextCache = new Map();
+
+  try {
+    const params = parseParams();
+    if (!params) {
+      showError('ملف غير محدد', 'لم يتم تحديد ملف للعرض.');
+      return;
+    }
+
+    state.fileId = params.id;
+
+    let fileInfo;
+    if (params.url && params.title) {
+      fileInfo = {
+        id: params.id,
+        title: params.title,
+        subject_name: params.subject,
+        file_url: params.url,
+        file_path: params.path,
+      };
+    } else {
+      fileInfo = await fetchFileById(params.id);
+      if (!fileInfo) throw new Error('الملف غير موجود');
+    }
+
+    state.fileInfo = fileInfo;
+
+    els.fileTitle.textContent = fileInfo.title || 'بدون عنوان';
+    els.fileSub.textContent = [fileInfo.subject_name, params.size].filter(Boolean).join(' • ') || 'PDF';
+    document.title = (fileInfo.title || 'ملف') + ' — المنصة الطبية';
+
+    // 1. فتح الملف: Range requests + صفحات عند الطلب.
+    //    لا ننتظر تنزيل الملف كاملاً قبل عرض الصفحة الأولى.
+    setProgress(4, 'الاتصال بالسيرفر...');
+    await openPdfProgressively(fileInfo);
+
+    setProgress(72, 'جاري تجهيز العرض...');
+    state.totalPages = state.pdfDoc.numPages;
+
+    setProgress(82, 'جاري تجهيز الصفحات...');
+
+    // 4. Placeholders
+    await createPlaceholders();
+
+    setProgress(95, 'جاري عرض الصفحة الأولى...');
+
+    // 5. العرض: أخفِ الـ loader بعد رسم الصفحة الأولى فقط، وليس بعد
+    //    اكتمال تنزيل الملف. رابط PDF.js أعلاه يستخدم Range requests.
+    els.viewer.scrollTop = 0;
+
+    const firstPageEl = document.querySelector('.pdf-page[data-page-num="1"]');
+    if (firstPageEl && state.pdfDoc) {
+      try {
+        await renderPage(firstPageEl);
+      } catch (e) {
+        console.warn('تعذّر رسم الصفحة الأولى:', e);
+      }
+    }
+
+    hideLoading();
+    setupObserver();
+    setupScrollHUD();
+
+    // ابدأ الصفحات التالية القريبة فوراً في الخلفية.
+    [2, 3].forEach((n, i) => {
+      const el = document.querySelector(`.pdf-page[data-page-num="${n}"]`);
+      if (!el) return;
+      setTimeout(() => renderPage(el), i * 60);
+    });
+
+    // تتبع المشاهدة
+    try { incrementFileViews(state.fileId); } catch (e) {}
+
+    // إعادة حساب عند تغيير الحجم
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        state.containerWidth = calcContainerWidth();
+      }, 300);
+    });
+
+  } catch (e) {
+    console.error('فشل التهيئة:', e);
+    showError('تعذّر فتح الملف', e.message || 'حدث خطأ غير متوقع.');
+  }
+}
+
+/* ═══ الأحداث ═══ */
+els.themeBtn.addEventListener('click', toggleTheme);
+els.searchBtn.addEventListener('click', openSearch);
+
+els.searchOverlay.addEventListener('click', (e) => {
+  if (e.target === els.searchOverlay) closeSearch();
+});
+
+var searchTimeout;
+els.searchInput.addEventListener('input', (e) => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => performSearch(e.target.value), 300);
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeSearch();
+  if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+    e.preventDefault();
+    openSearch();
+  }
+});
+
+/* ═══ ابدأ ═══ */
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+
+</script>
+
+<!-- Service Worker -->
+<script data-shell>
+if ('serviceWorker' in navigator) {
+  // If an older worker controlled this page, refresh once when the new worker
+  // takes over. This guarantees a stale (previous-deploy) page cannot linger.
+  var hadController = !!navigator.serviceWorker.controller;
+  var reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', function () {
+    if (!hadController || reloading) return;
+    reloading = true;
+    window.location.reload();
+  });
+
+  window.addEventListener('load', () => {
+    // Force a fresh check so a previously cached (possibly outdated) worker
+    // is replaced as soon as a new sw.js is deployed.
+    navigator.serviceWorker.getRegistration().then(reg => {
+      if (reg) { try { reg.update(); } catch (e) {} }
+    }).catch(() => {});
+
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => {
+        console.log('✅ SW registered:', reg.scope);
+        try { reg.update(); } catch (e) {}
+      })
+      .catch(err => console.warn('⚠️ SW failed:', err));
+  });
+}
+</script>
+
+
+<!-- ============================================
+     Shell feature flag: browsers without the View Transitions API.
+     app.js picks the fallback animation itself; this class is exposed
+     for page CSS that may want to opt out of motion.
+     ============================================ -->
+<script data-shell>
+  (function () {
+    try {
+      if (!(window.CSS && CSS.supports && CSS.supports('view-transition-name', 'none'))) {
+        document.documentElement.classList.add('no-vt');
+      }
+    } catch (e) {
+      document.documentElement.classList.add('no-vt');
+    }
+  })();
+</script>
+
+</body>
+</html>

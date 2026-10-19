@@ -1,0 +1,648 @@
+<!--@
+title: ملف الطالب — لوحة التحكم
+fontWeights: 400;600;700;800;900
+libs: fontawesome, supabase
+scripts: supabase-config, auth, db
+sw: true
+backHref: admin.html
+backIcon: fa
+headerTitle: ملف الطالب
+-->
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<!-- @include partials/head.html -->
+
+<style>
+/* ═══ الشريط العلوي الموحّد (نفس تصميم notes.html) ═══ */
+<!-- @include partials/topbar.html -->
+
+:root {
+  --bg-main: #06110d;
+  --bg-card: rgba(16, 34, 27, 0.68);
+  --bg-card-hover: rgba(22, 48, 38, 0.9);
+  --bg-solid: #0d221a;
+  --bg-elevated: #102a22;
+  --border-card: rgba(16, 185, 129, 0.18);
+  --border-card-hover: rgba(16, 185, 129, 0.46);
+  --accent: #10b981;
+  --accent-light: #34d399;
+  --accent-dark: #059669;
+  --accent-glow: rgba(16, 185, 129, 0.25);
+  --text-primary: #f0fdf4;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --gold: #fbbf24;
+  --blue: #60a5fa;
+  --violet: #a78bfa;
+  --pink: #f472b6;
+  --danger: #ef4444;
+  --t: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --shadow-soft: 0 10px 30px -22px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="light"] {
+  --bg-main: #f8fafb;
+  --bg-card: rgba(255, 255, 255, 0.9);
+  --bg-card-hover: rgba(255, 255, 255, 0.98);
+  --bg-solid: #ffffff;
+  --bg-elevated: #f1f5f9;
+  --border-card: rgba(16, 185, 129, 0.24);
+  --border-card-hover: rgba(16, 185, 129, 0.55);
+  --accent: #059669;
+  --accent-light: #10b981;
+  --accent-dark: #047857;
+  --accent-glow: rgba(16, 185, 129, 0.2);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --shadow-soft: 0 10px 26px -20px rgba(15, 23, 42, 0.22);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: 'Cairo', sans-serif;
+  background-color: var(--bg-main);
+  background-image:
+    radial-gradient(circle at 8% 4%, rgba(139, 92, 246, 0.11), transparent 34%),
+    radial-gradient(circle at 95% 70%, rgba(16, 185, 129, 0.08), transparent 36%);
+  background-attachment: fixed;
+  color: var(--text-primary);
+  min-height: 100vh;
+  padding-bottom: 40px;
+}
+
+.container { max-width: 980px; margin: 0 auto; padding: 22px 16px 40px; }
+
+.loading-wrap {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.spinner {
+  width: 38px; height: 38px; border-radius: 50%;
+  border: 3px solid rgba(16, 185, 129, 0.18);
+  border-top-color: var(--accent-light);
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.profile-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 24px;
+  margin-bottom: 18px;
+  border-radius: 24px;
+  border: 1px solid var(--border-card);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(139, 92, 246, 0.2), transparent 46%),
+    radial-gradient(circle at 0% 100%, rgba(16, 185, 129, 0.13), transparent 42%),
+    var(--bg-card);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+.profile-hero::before {
+  content: '';
+  position: absolute;
+  width: 210px; height: 210px; border-radius: 50%;
+  top: -120px; inset-inline-start: -80px;
+  background: rgba(139, 92, 246, 0.22);
+  filter: blur(60px);
+  pointer-events: none;
+}
+.profile-avatar {
+  position: relative;
+  z-index: 1;
+  width: 82px; height: 82px;
+  border-radius: 24px;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; font-weight: 900; color: #fff;
+  background: linear-gradient(135deg, #8b5cf6, #5b21b6);
+  box-shadow: 0 16px 34px -20px rgba(139, 92, 246, 0.75);
+  overflow: hidden;
+}
+.profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.profile-copy { flex: 1; min-width: 0; position: relative; z-index: 1; }
+.profile-name { font-size: 1.3rem; font-weight: 900; line-height: 1.3; }
+.profile-email {
+  margin-top: 4px; color: var(--text-secondary);
+  font-size: 0.76rem; font-weight: 600; direction: ltr; text-align: right;
+  overflow-wrap: anywhere;
+}
+.profile-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.profile-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 8px; border-radius: 8px;
+  font-size: 0.64rem; font-weight: 800;
+  border: 1px solid rgba(139, 92, 246, 0.24);
+  background: rgba(139, 92, 246, 0.1);
+  color: var(--violet);
+}
+.profile-chip.green { color: var(--accent-light); border-color: rgba(16, 185, 129, 0.24); background: rgba(16, 185, 129, 0.1); }
+.profile-chip.gold { color: var(--gold); border-color: rgba(251, 191, 36, 0.24); background: rgba(251, 191, 36, 0.1); }
+
+.profile-ring {
+  --value: 0;
+  position: relative;
+  width: 116px; height: 116px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: conic-gradient(var(--accent-light) calc(var(--value) * 1%), rgba(148, 163, 184, 0.16) 0);
+}
+.profile-ring::after {
+  content: '';
+  position: absolute; inset: 9px; border-radius: 50%;
+  background: var(--bg-solid);
+  border: 1px solid var(--border-card);
+}
+.profile-ring-inner { position: relative; z-index: 1; text-align: center; }
+.profile-ring-value { display: block; font-size: 1.55rem; line-height: 1; font-weight: 900; }
+.profile-ring-label { display: block; margin-top: 4px; font-size: 0.6rem; color: var(--text-secondary); font-weight: 800; }
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.stat-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 15px;
+  padding: 14px 10px;
+  text-align: center;
+  box-shadow: var(--shadow-soft);
+}
+.stat-box i { color: var(--accent-light); font-size: 0.95rem; }
+.stat-value { margin-top: 6px; font-size: 1.3rem; font-weight: 900; line-height: 1.1; }
+.stat-label { margin-top: 3px; font-size: 0.63rem; color: var(--text-muted); font-weight: 700; }
+
+.section-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin: 22px 2px 10px;
+}
+.section-title { font-size: 1rem; font-weight: 900; display: flex; align-items: center; gap: 8px; }
+.section-title i { color: var(--accent-light); }
+
+.subject-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 9px;
+}
+.subject-card {
+  padding: 14px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--border-card);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-soft);
+}
+.subject-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.subject-icon {
+  width: 36px; height: 36px; border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--subject-color, var(--accent-light));
+  background: var(--subject-bg, rgba(16, 185, 129, 0.14));
+  border: 1px solid var(--subject-border, rgba(16, 185, 129, 0.28));
+  font-size: 0.92rem;
+}
+.subject-count { font-size: 0.64rem; color: var(--text-secondary); font-weight: 900; }
+.subject-name { margin-top: 9px; font-size: 0.78rem; font-weight: 900; }
+.subject-bar { height: 6px; margin-top: 8px; border-radius: 99px; background: rgba(148, 163, 184, 0.16); overflow: hidden; }
+.subject-bar > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--subject-color, var(--accent)), var(--accent-light)); }
+.subject-percent { margin-top: 5px; font-size: 0.62rem; font-weight: 800; color: var(--subject-color, var(--accent-light)); }
+
+.tasks-card {
+  margin-top: 20px;
+  border-radius: 20px;
+  border: 1px solid var(--border-card);
+  background: var(--bg-card);
+  overflow: hidden;
+  box-shadow: var(--shadow-soft);
+}
+.tasks-head { padding: 18px 18px 12px; border-bottom: 1px solid rgba(148, 163, 184, 0.1); }
+.tasks-title { font-size: 0.96rem; font-weight: 900; }
+.tasks-sub { margin-top: 3px; font-size: 0.68rem; color: var(--text-secondary); font-weight: 600; }
+.tasks-list { padding: 10px 14px 16px; display: flex; flex-direction: column; gap: 7px; max-height: 560px; overflow-y: auto; }
+.task-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 11px 12px; border-radius: 12px;
+  background: rgba(128, 128, 128, 0.045);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+.task-check {
+  width: 25px; height: 25px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 1px;
+  color: #fff; font-size: 0.67rem;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+}
+.task-copy { flex: 1; min-width: 0; }
+.task-title {
+  font-size: 0.77rem; font-weight: 700; line-height: 1.6;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.task-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 4px; font-size: 0.62rem; color: var(--text-muted); font-weight: 600; }
+.task-meta .dot { width: 3px; height: 3px; border-radius: 50%; background: currentColor; }
+.task-date { color: var(--accent-light); }
+
+.empty-state {
+  padding: 40px 18px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  color: var(--text-muted);
+}
+.empty-state i { font-size: 1.8rem; color: var(--accent-light); opacity: 0.65; }
+.empty-state strong { font-size: 0.86rem; color: var(--text-secondary); }
+.empty-state span { font-size: 0.72rem; font-weight: 600; line-height: 1.7; max-width: 360px; }
+
+.error-card {
+  padding: 40px 20px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.error-card i { font-size: 2rem; color: var(--danger); }
+.error-card strong { font-size: 0.95rem; }
+.error-card span { font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; }
+
+.back-inline {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 18px; padding: 10px 14px;
+  border-radius: 12px; border: 1px solid var(--border-card);
+  background: var(--bg-card); color: var(--accent-light);
+  font-size: 0.74rem; font-weight: 800; text-decoration: none;
+}
+
+.toast {
+  position: fixed; bottom: 24px; left: 50%;
+  transform: translate(-50%, 24px);
+  z-index: 5000; display: flex; align-items: center; gap: 8px;
+  padding: 12px 18px; border-radius: 14px;
+  background: var(--bg-solid); border: 1px solid var(--border-card-hover);
+  color: var(--text-primary); font-size: 0.78rem; font-weight: 700;
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--t), transform var(--t);
+  box-shadow: 0 18px 44px -16px rgba(0, 0, 0, 0.35);
+}
+.toast.visible { opacity: 1; transform: translate(-50%, 0); }
+.toast i { color: var(--accent-light); }
+
+@media (max-width: 840px) {
+  .subject-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 620px) {
+  .container { padding: 16px 12px 32px; }
+  .profile-hero { flex-wrap: wrap; padding: 20px; }
+  .profile-avatar { width: 68px; height: 68px; border-radius: 20px; font-size: 1.6rem; }
+  .profile-ring { width: 104px; height: 104px; }
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .subject-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 380px) {
+  .subject-grid { grid-template-columns: 1fr; }
+  .profile-copy { flex: 1 1 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- @include partials/header.html -->
+
+<main class="container" id="pageContent">
+  <div class="loading-wrap" id="loadingState">
+    <div class="spinner"></div>
+    <div>جاري تحميل ملف الطالب…</div>
+  </div>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- @include partials/scripts.html -->
+
+<script>
+const USER_SUBJECTS = [
+  { key: 'physics',   name: 'الفيزياء',   icon: 'fa-atom',     color: '#34d399', bg: 'rgba(52, 211, 153, 0.14)', border: 'rgba(52, 211, 153, 0.30)' },
+  { key: 'chemistry', name: 'الكيمياء',   icon: 'fa-flask',    color: '#fbbf24', bg: 'rgba(251, 191, 36, 0.14)', border: 'rgba(251, 191, 36, 0.30)' },
+  { key: 'biology',   name: 'البيولوجيا', icon: 'fa-dna',      color: '#60a5fa', bg: 'rgba(96, 165, 250, 0.14)', border: 'rgba(96, 165, 250, 0.30)' },
+  { key: 'history',   name: 'تاريخ الطب', icon: 'fa-scroll',   color: '#a78bfa', bg: 'rgba(167, 139, 250, 0.14)', border: 'rgba(167, 139, 250, 0.30)' },
+  { key: 'english',   name: 'الإنجليزية', icon: 'fa-language', color: '#f472b6', bg: 'rgba(244, 114, 182, 0.14)', border: 'rgba(244, 114, 182, 0.30)' }
+];
+
+const USER_PREFIX = { phys: 'physics', chem: 'chemistry', bio: 'biology', zero: 'history', eng: 'english' };
+
+const userState = {
+  targetId: '',
+  profile: null,
+  currentProfile: null,
+  rows: [],
+  currentRows: [],
+  plans: {},
+  totalTasks: 0
+};
+
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function formatDate(value) {
+  if (!value) return '';
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return String(value);
+  const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+  return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+function taskSubject(row) {
+  const prefix = String(row.task_id || '').split('_')[0];
+  if (USER_PREFIX[prefix]) return USER_PREFIX[prefix];
+  const name = String(row.subject || '');
+  if (name.indexOf('فيزياء') !== -1) return 'physics';
+  if (name.indexOf('كيمياء') !== -1) return 'chemistry';
+  if (name.indexOf('بيولوج') !== -1) return 'biology';
+  if (name.indexOf('تاريخ') !== -1) return 'history';
+  if (name.indexOf('إنجليز') !== -1) return 'english';
+  return '';
+}
+
+function getSubject(key) {
+  return USER_SUBJECTS.find(function (item) { return item.key === key; }) || USER_SUBJECTS[0];
+}
+
+function roleInfo(role) {
+  const map = {
+    student: { label: 'طالب', icon: 'fa-graduation-cap', className: 'green' },
+    moderator: { label: 'مراقب', icon: 'fa-eye', className: '' },
+    admin: { label: 'مشرف', icon: 'fa-crown', className: 'gold' }
+  };
+  return map[role] || map.student;
+}
+
+function showToast(message, error) {
+  const toast = document.getElementById('toast');
+  if (!toast) return;
+  toast.innerHTML = '<i class="fa-solid ' + (error ? 'fa-circle-exclamation' : 'fa-circle-check') + '"></i><span>' + escapeHtml(message) + '</span>';
+  toast.classList.add('visible');
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(function () { toast.classList.remove('visible'); }, 2800);
+}
+
+async function loadPlans() {
+  const response = await fetch('plans-data.json', { cache: 'no-cache' });
+  if (!response.ok) throw new Error('HTTP ' + response.status);
+  const data = await response.json();
+  const plans = {};
+  let total = 0;
+  if (data && typeof data === 'object') {
+    Object.keys(data).forEach(function (date) {
+      if (!Array.isArray(data[date])) return;
+      data[date].forEach(function (task) {
+        if (!task || !task.id) return;
+        total++;
+        plans[date + '|' + task.id] = {
+          id: String(task.id),
+          date: date,
+          subject: task.subject || '',
+          instructor: task.instructor || '',
+          task: task.task || '',
+          type: task.type || ''
+        };
+      });
+    });
+  }
+  return { plans: plans, total: total };
+}
+
+function renderError(message) {
+  const root = document.getElementById('pageContent');
+  if (!root) return;
+  root.innerHTML =
+    '<div class="error-card">' +
+      '<i class="fa-solid fa-triangle-exclamation"></i>' +
+      '<strong>تعذّر تحميل الملف</strong>' +
+      '<span>' + escapeHtml(message || 'تحقق من الرابط أو الصلاحيات ثم حاول مرة أخرى.') + '</span>' +
+      '<a class="back-inline" href="admin.html"><i class="fa-solid fa-arrow-right"></i> العودة إلى لوحة التحكم</a>' +
+    '</div>';
+}
+
+async function loadUserProfile() {
+  const params = new URLSearchParams(window.location.search);
+  userState.targetId = params.get('id') || '';
+  if (!userState.targetId) throw new Error('معرّف الطالب غير موجود في الرابط.');
+
+  const session = await requireAuth('login.html');
+  if (!session) return false;
+
+  userState.currentProfile = await getProfile(session.id);
+  const role = userState.currentProfile && userState.currentProfile.role;
+  if (role !== 'admin' && role !== 'moderator') {
+    throw new Error('هذه الصفحة متاحة للمشرفين والمراقبين فقط.');
+  }
+
+  const results = await Promise.all([
+    getProfile(userState.targetId),
+    loadPlans()
+  ]);
+  const profile = results[0];
+  if (!profile) throw new Error('لم يتم العثور على حساب هذا الطالب.');
+  userState.profile = profile;
+
+  const planData = results[1];
+  userState.plans = planData.plans;
+  userState.totalTasks = planData.total;
+
+  try {
+    const { data, error } = await supabaseClient
+      .from('task_progress')
+      .select('plan_date,task_id,subject,task_title,instructor,task_type,completed,completed_at,updated_at')
+      .eq('user_id', userState.targetId)
+      .eq('completed', true)
+      .order('plan_date', { ascending: false });
+    if (error) throw error;
+
+    // Keep the full completed-history for the task list, but only tasks that
+    // still exist in the current plan may contribute to the percentages.
+    // Rows left over from an older plan must not push a student above 100%.
+    const seen = new Set();
+    userState.rows = (data || []).filter(function (row) {
+      if (!row || !row.completed || !row.plan_date || !row.task_id) return false;
+      const key = String(row.plan_date) + '|' + String(row.task_id);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    userState.currentRows = userState.rows.filter(function (row) {
+      return !!userState.plans[String(row.plan_date) + '|' + String(row.task_id)];
+    });
+  } catch (err) {
+    console.warn('task_progress load error:', err);
+    userState.rows = [];
+    showToast('تعذّر تحميل سجل تقدم الطالب — تحقق من الاتصال ثم أعد المحاولة.', true);
+  }
+
+  return true;
+}
+
+function buildSubjectStats() {
+  return USER_SUBJECTS.map(function (subject) {
+    let total = 0;
+    Object.keys(userState.plans).forEach(function (key) {
+      const task = userState.plans[key];
+      if (taskSubject({ task_id: task.id, subject: task.subject }) === subject.key) total++;
+    });
+    const done = userState.currentRows.filter(function (row) {
+      const task = userState.plans[row.plan_date + '|' + row.task_id];
+      return task && taskSubject({ task_id: task.id, subject: task.subject }) === subject.key;
+    }).length;
+    return {
+      subject: subject,
+      total: total,
+      done: done,
+      percent: total ? Math.round((done / total) * 100) : 0
+    };
+  });
+}
+
+function renderProfile() {
+  const root = document.getElementById('pageContent');
+  if (!root) return;
+  const profile = userState.profile;
+  const role = roleInfo(profile.role);
+  const displayName = profile.full_name || (profile.email ? profile.email.split('@')[0] : 'طالب');
+  const initial = displayName.charAt(0).toUpperCase();
+  const totalDone = userState.currentRows.length;
+  const total = userState.totalTasks;
+  const percent = total ? Math.min(100, Math.round((totalDone / total) * 100)) : 0;
+  const lastActive = userState.rows.reduce(function (latest, row) {
+    const value = row.updated_at || row.completed_at || '';
+    return value > latest ? value : latest;
+  }, '');
+  const subjectStats = buildSubjectStats();
+
+  const avatar = profile.avatar_url
+    ? '<img src="' + escapeHtml(profile.avatar_url) + '" alt="' + escapeHtml(displayName) + '">'
+    : escapeHtml(initial);
+
+  const subjectsMarkup = subjectStats.map(function (item) {
+    return '<div class="subject-card" style="--subject-color:' + item.subject.color + ';--subject-bg:' + item.subject.bg + ';--subject-border:' + item.subject.border + ';">' +
+      '<div class="subject-top">' +
+        '<span class="subject-icon"><i class="fa-solid ' + item.subject.icon + '"></i></span>' +
+        '<span class="subject-count">' + item.done + ' / ' + item.total + '</span>' +
+      '</div>' +
+      '<div class="subject-name">' + item.subject.name + '</div>' +
+      '<div class="subject-bar"><span style="width:' + item.percent + '%;"></span></div>' +
+      '<div class="subject-percent">' + item.percent + '%</div>' +
+    '</div>';
+  }).join('');
+
+  const rows = userState.rows.slice().sort(function (a, b) {
+    const dateA = a.plan_date || '';
+    const dateB = b.plan_date || '';
+    if (dateA !== dateB) return dateA < dateB ? 1 : -1;
+    return String(a.task_id || '').localeCompare(String(b.task_id || ''));
+  });
+
+  const tasksMarkup = rows.length ? rows.map(function (row) {
+    const plan = userState.plans[row.plan_date + '|' + row.task_id] || {};
+    const subject = getSubject(taskSubject(row));
+    const title = plan.task || row.task_title || 'مهمة دراسية';
+    const instructor = plan.instructor || row.instructor || '';
+    return '<div class="task-row">' +
+      '<span class="task-check"><i class="fa-solid fa-check"></i></span>' +
+      '<span class="task-copy">' +
+        '<span class="task-title">' + escapeHtml(title) + '</span>' +
+        '<span class="task-meta">' +
+          '<span style="color:' + subject.color + ';">' + subject.name + '</span>' +
+          (instructor ? '<span class="dot"></span><span>' + escapeHtml(instructor) + '</span>' : '') +
+          '<span class="dot"></span><span class="task-date"><i class="fa-regular fa-calendar" style="font-size:0.6rem;"></i> ' + escapeHtml(formatDate(row.plan_date)) + '</span>' +
+        '</span>' +
+      '</span>' +
+    '</div>';
+  }).join('') :
+    '<div class="empty-state">' +
+      '<i class="fa-solid fa-clipboard-check"></i>' +
+      '<strong>لا توجد مهام مكتملة بعد</strong>' +
+      '<span>عندما يبدأ الطالب بإنجاز مهامه من الصفحة الرئيسية، ستظهر هنا تلقائياً بعد المزامنة.</span>' +
+    '</div>';
+
+  root.innerHTML =
+    '<section class="profile-hero">' +
+      '<div class="profile-avatar">' + avatar + '</div>' +
+      '<div class="profile-copy">' +
+        '<div class="profile-name">' + escapeHtml(displayName) + '</div>' +
+        '<div class="profile-email">' + escapeHtml(profile.email || '—') + '</div>' +
+        '<div class="profile-chips">' +
+          '<span class="profile-chip ' + role.className + '"><i class="fa-solid ' + role.icon + '"></i> ' + role.label + '</span>' +
+          '<span class="profile-chip green"><i class="fa-solid fa-calendar-plus"></i> انضم ' + escapeHtml(formatDate(profile.created_at)) + '</span>' +
+          (lastActive ? '<span class="profile-chip"><i class="fa-solid fa-clock-rotate-left"></i> آخر نشاط ' + escapeHtml(formatDate(lastActive)) + '</span>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="profile-ring" style="--value:' + percent + ';" role="img" aria-label="نسبة إنجاز الطالب">' +
+        '<div class="profile-ring-inner">' +
+          '<span class="profile-ring-value">' + percent + '%</span>' +
+          '<span class="profile-ring-label">نسبة الإنجاز</span>' +
+        '</div>' +
+      '</div>' +
+    '</section>' +
+
+    '<div class="stats-row">' +
+      '<div class="stat-box"><i class="fa-solid fa-circle-check"></i><div class="stat-value">' + totalDone + '</div><div class="stat-label">مهمة مكتملة</div></div>' +
+      '<div class="stat-box"><i class="fa-solid fa-list-check"></i><div class="stat-value">' + Math.max(total - totalDone, 0) + '</div><div class="stat-label">مهمة متبقية</div></div>' +
+      '<div class="stat-box"><i class="fa-solid fa-layer-group"></i><div class="stat-value">' + total + '</div><div class="stat-label">إجمالي المهام</div></div>' +
+      '<div class="stat-box"><i class="fa-solid fa-chart-simple"></i><div class="stat-value">' + percent + '%</div><div class="stat-label">من الخطة</div></div>' +
+    '</div>' +
+
+    '<div class="section-head">' +
+      '<div class="section-title"><i class="fa-solid fa-layer-group"></i> التقدم حسب المادة</div>' +
+    '</div>' +
+    '<div class="subject-grid">' + subjectsMarkup + '</div>' +
+
+    '<section class="tasks-card">' +
+      '<div class="tasks-head">' +
+        '<div class="tasks-title">المهام المكتملة</div>' +
+        '<div class="tasks-sub">' + (rows.length ? 'أحدث ' + rows.length + ' مهمة أنجزها الطالب' : 'سيظهر سجل الإنجاز هنا') + '</div>' +
+      '</div>' +
+      '<div class="tasks-list">' + tasksMarkup + '</div>' +
+    '</section>' +
+
+    '<a class="back-inline" href="admin.html"><i class="fa-solid fa-arrow-right"></i> العودة إلى لوحة التحكم</a>';
+
+  document.title = displayName + ' — ملف الطالب';
+}
+
+async function initUserPage() {
+  try {
+    const allowed = await loadUserProfile();
+    if (allowed === false) return;
+    renderProfile();
+  } catch (err) {
+    console.error('admin-user init error:', err);
+    renderError(err && err.message ? err.message : 'حدث خطأ غير متوقع.');
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initUserPage);
+} else {
+  initUserPage();
+}
+</script>
+
+<!-- @include partials/sw-register.html -->
+<!-- @include partials/perf.html -->
+</body>
+</html>

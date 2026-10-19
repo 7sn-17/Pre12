@@ -1,0 +1,22 @@
+{
+  "name": "medical-year-platform",
+  "version": "4.7.0",
+  "private": true,
+  "description": "المنصة الطبية — السنة التحضيرية (static site + partials build)",
+  "scripts": {
+    "build": "node build.js",
+    "dev": "node build.js && node -e \"console.log('root + dist/ built - serve either with any static server')\""
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "acorn": "^8.19.0"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/node": "^2.1.1",
+    "@modelcontextprotocol/server": "^2.3.1",
+    "@supabase/mcp-server-supabase": "^0.14.0",
+    "zod": "^4.6.7"
+  }
+}

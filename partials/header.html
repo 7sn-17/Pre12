@@ -1,0 +1,9 @@
+<header>
+  <a href="{{backHref}}" class="{{backClass}}">
+{{backIcon}}
+  </a>
+{{#if headerCenter}}  <div class="header-center">{{/if}}
+  <div class="header-title"{{#if titleAttrs}} {{titleAttrs}}{{/if}}>{{headerTitle}}</div>
+{{headerSub}}{{#if headerCenter}}  </div>{{/if}}
+{{headerTrailing}}
+</header>

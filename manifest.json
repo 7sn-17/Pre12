@@ -1,0 +1,56 @@
+{
+  "name": "المنصة الطبية - السنة التحضيرية",
+  "short_name": "المنصة الطبية",
+  "description": "منصة تعليمية متكاملة لطلاب السنة التحضيرية الطبية — كتب، ملخصات، ملاحظات، وأهداف",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#06110d",
+  "theme_color": "#06110d",
+  "lang": "ar",
+  "dir": "rtl",
+  "categories": ["education", "medical", "books"],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512 384x384 256x256 192x192 144x144 96x96 72x72 48x48",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "دراستي",
+      "short_name": "دراستي",
+      "description": "افتح أدوات الدراسة",
+      "url": "/index.html?tab=studies",
+      "icons": [
+        {
+          "src": "icon-512.png",
+          "sizes": "512x512"
+        }
+      ]
+    },
+    {
+      "name": "ملفاتي",
+      "short_name": "ملفاتي",
+      "description": "ملفاتك المحمّلة والمحفوظة",
+      "url": "/index.html?tab=favorites",
+      "icons": [
+        {
+          "src": "icon-512.png",
+          "sizes": "512x512"
+        }
+      ]
+    }
+  ]
+}

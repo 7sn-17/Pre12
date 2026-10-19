@@ -1,0 +1,1222 @@
+<!--@
+title: الخطط الدراسية — المنصة الطبية
+themeColor: #f8fafb
+libs: lucide
+sw: true
+backHref: index.html
+backIcon: lucide
+headerCenter: true
+headerTitle: الخطط الدراسية
+headerSub: <div class="header-sub">خطط المواد الخمس</div>
+-->
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<!-- @include partials/head.html -->
+
+<style>
+:root {
+  --bg: #06110d;
+  --bg-card: rgba(16, 34, 27, 0.72);
+  --bg-elevated: #0a1a14;
+  --bg-header: rgba(6, 17, 13, 0.9);
+  --border: rgba(16, 185, 129, 0.18);
+  --border-strong: rgba(16, 185, 129, 0.42);
+  --accent: #10b981;
+  --accent-light: #34d399;
+  --accent-dark: #059669;
+  --text: #f0fdf4;
+  --text-2: #94a3b8;
+  --text-3: #64748b;
+  --shadow-card: 0 18px 44px -22px rgba(0, 0, 0, 0.65);
+  --t: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="light"] {
+  --bg: #f8fafb;
+  --bg-card: rgba(255, 255, 255, 0.92);
+  --bg-elevated: #f1f5f9;
+  --bg-header: rgba(248, 250, 251, 0.94);
+  --border: rgba(16, 185, 129, 0.22);
+  --border-strong: rgba(16, 185, 129, 0.5);
+  --accent: #059669;
+  --accent-light: #10b981;
+  --accent-dark: #047857;
+  --text: #0f172a;
+  --text-2: #475569;
+  --text-3: #94a3b8;
+  --shadow-card: 0 18px 42px -24px rgba(15, 23, 42, 0.22);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Cairo', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--bg);
+  background-image:
+    radial-gradient(circle at 8% 4%, rgba(16, 185, 129, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 92% 96%, rgba(5, 150, 105, 0.06) 0%, transparent 42%);
+  background-attachment: fixed;
+  color: var(--text);
+  min-height: 100vh;
+  padding-bottom: 40px;
+  overflow-x: hidden;
+}
+
+[data-theme="light"] body {
+  background-image:
+    radial-gradient(circle at 8% 4%, rgba(16, 185, 129, 0.07) 0%, transparent 40%),
+    radial-gradient(circle at 92% 96%, rgba(5, 150, 105, 0.05) 0%, transparent 42%);
+}
+
+/* ══ Shared header ══ */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 16px;
+  background: var(--bg-header);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid var(--border);
+}
+
+[data-theme="light"] header {
+  background: rgba(248, 250, 251, 0.92);
+  border-bottom-color: rgba(15, 23, 42, 0.08);
+}
+
+.nav-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--text);
+  text-decoration: none;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  transition: all var(--t);
+}
+
+.nav-btn:hover {
+  color: var(--accent-light);
+  border-color: var(--accent);
+}
+
+.nav-btn i,
+.nav-btn svg { width: 19px; height: 19px; }
+
+.header-center { flex: 1; min-width: 0; text-align: center; }
+
+.header-title {
+  font-size: 1.02rem;
+  font-weight: 900;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.header-sub {
+  margin-top: 1px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--accent-light);
+}
+
+/* ══ Layout ══ */
+.plans-main {
+  width: 100%;
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 20px 16px 60px;
+}
+
+.plans-hero {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: 24px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(255, 255, 255, 0.26), transparent 42%),
+    linear-gradient(135deg, #0f766e 0%, #059669 52%, #10b981 100%);
+  box-shadow: 0 20px 48px -26px rgba(5, 150, 105, 0.8);
+}
+
+[data-theme="light"] .plans-hero {
+  box-shadow: 0 20px 48px -28px rgba(5, 150, 105, 0.55);
+}
+
+.plans-hero::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  width: 190px;
+  height: 190px;
+  left: -70px;
+  bottom: -120px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 0 0 26px rgba(255, 255, 255, 0.04);
+}
+
+.plans-hero-top {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.plans-hero-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.plans-hero-icon i,
+.plans-hero-icon svg { width: 24px; height: 24px; }
+
+.plans-hero h1 {
+  font-size: 1.18rem;
+  font-weight: 900;
+  line-height: 1.3;
+}
+
+.plans-hero p {
+  margin-top: 3px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.6;
+}
+
+.plans-hero-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 15px;
+}
+
+.plans-hero-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border-radius: 99px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.11);
+  border: 1px solid rgba(255, 255, 255, 0.17);
+}
+
+.plans-hero-chip i,
+.plans-hero-chip svg { width: 12px; height: 12px; }
+
+/* ══ Cards ══ */
+.plans-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.plan-card {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  border-radius: 21px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  transition: transform var(--t), border-color var(--t), box-shadow var(--t);
+  animation: planCardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.plan-card:nth-child(1) { animation-delay: 0.04s; }
+.plan-card:nth-child(2) { animation-delay: 0.09s; }
+.plan-card:nth-child(3) { animation-delay: 0.14s; }
+.plan-card:nth-child(4) { animation-delay: 0.19s; }
+.plan-card:nth-child(5) { animation-delay: 0.24s; }
+
+@keyframes planCardIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.plan-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--plan-accent, var(--border-strong));
+  box-shadow:
+    0 22px 48px -24px rgba(15, 23, 42, 0.3),
+    0 0 0 1px var(--plan-accent-soft, transparent);
+}
+
+[data-theme="dark"] .plan-card:hover {
+  box-shadow:
+    0 22px 48px -20px rgba(0, 0, 0, 0.7),
+    0 0 0 1px var(--plan-accent-soft, transparent);
+}
+
+.plan-card:active { transform: translateY(-1px) scale(0.99); }
+
+.plan-card:focus-visible {
+  outline: 2px solid var(--plan-accent, var(--accent));
+  outline-offset: 3px;
+}
+
+.plan-card-media {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--bg-elevated);
+}
+
+.plan-card-media img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  z-index: 2;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+}
+
+.plan-card:hover .plan-card-media img { transform: scale(1.045); }
+
+.plan-card-media::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(2, 6, 23, 0.04) 0%, rgba(2, 6, 23, 0.04) 55%, rgba(2, 6, 23, 0.5) 100%);
+}
+
+.plan-card-placeholder {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  padding: 12px;
+  color: var(--text-2);
+  background:
+    radial-gradient(circle at 50% 35%, var(--plan-accent-soft, rgba(16, 185, 129, 0.18)), transparent 62%),
+    linear-gradient(135deg, var(--bg-elevated), var(--bg-card));
+}
+
+.plan-card-placeholder::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.55;
+  background-image: radial-gradient(var(--plan-accent, var(--accent)) 0.8px, transparent 0.8px);
+  background-size: 16px 16px;
+  mask-image: linear-gradient(180deg, transparent, #000 55%, transparent);
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 55%, transparent);
+}
+
+.plan-placeholder-icon {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--plan-accent, var(--accent-light));
+  background: var(--plan-accent-soft, rgba(16, 185, 129, 0.14));
+  border: 1px solid var(--plan-accent-soft, rgba(16, 185, 129, 0.28));
+}
+
+.plan-placeholder-icon i,
+.plan-placeholder-icon svg { width: 24px; height: 24px; }
+
+.plan-placeholder-text {
+  position: relative;
+  font-size: 0.67rem;
+  font-weight: 800;
+  color: var(--text-3);
+}
+
+.plan-card.image-missing .plan-card-media img { display: none; }
+.plan-card.image-missing .plan-card-placeholder { z-index: 2; }
+
+.plan-card-expand,
+.plan-card-subject-icon {
+  position: absolute;
+  z-index: 4;
+  width: 29px;
+  height: 29px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: rgba(2, 6, 23, 0.34);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.plan-card-expand {
+  top: 9px;
+  left: 9px;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: all var(--t);
+}
+
+.plan-card:hover .plan-card-expand,
+.plan-card:focus-visible .plan-card-expand {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.plan-card-subject-icon {
+  top: 9px;
+  right: 9px;
+  color: #fff;
+  background: var(--plan-accent, var(--accent));
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 5px 16px rgba(2, 6, 23, 0.26);
+}
+
+.plan-card-expand i,
+.plan-card-expand svg,
+.plan-card-subject-icon i,
+.plan-card-subject-icon svg { width: 14px; height: 14px; }
+
+.plan-card-body {
+  position: relative;
+  padding: 12px 13px 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plan-card-titles { flex: 1; min-width: 0; }
+
+.plan-card-title {
+  font-size: 0.92rem;
+  font-weight: 900;
+  color: var(--text);
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.plan-card-sub {
+  margin-top: 2px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--text-3);
+}
+
+.plan-card-arrow {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--plan-accent, var(--accent-light));
+  background: var(--plan-accent-soft, rgba(16, 185, 129, 0.12));
+  border: 1px solid var(--plan-accent-soft, rgba(16, 185, 129, 0.24));
+  transition: transform var(--t), background var(--t);
+}
+
+.plan-card:hover .plan-card-arrow {
+  transform: translateX(-3px);
+  background: var(--plan-accent, var(--accent));
+  color: #fff;
+}
+
+.plan-card-arrow i,
+.plan-card-arrow svg { width: 15px; height: 15px; }
+
+/* ══ Full-screen lightbox ══ */
+.plan-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s ease, visibility 0.28s ease;
+}
+
+.plan-lightbox.open {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.plan-lightbox-backdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(16, 185, 129, 0.13), transparent 48%),
+    rgba(2, 6, 23, 0.97);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.plan-lightbox-shell {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  color: #f8fafc;
+  padding-top: env(safe-area-inset-top);
+}
+
+.plan-lightbox-bar {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(2, 6, 23, 0.34);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
+.plan-lightbox-info { flex: 1; min-width: 0; }
+
+.plan-lightbox-title {
+  font-size: 0.98rem;
+  font-weight: 900;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.plan-lightbox-counter {
+  margin-top: 2px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: rgba(248, 250, 252, 0.6);
+}
+
+.plan-lightbox-close {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-family: inherit;
+  transition: all var(--t);
+}
+
+.plan-lightbox-close:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(248, 113, 113, 0.5);
+  color: #fecaca;
+}
+
+.plan-lightbox-close i,
+.plan-lightbox-close svg { width: 20px; height: 20px; }
+
+.plan-lightbox-stage {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+}
+
+.plan-lightbox-stage:active { cursor: grabbing; }
+
+.plan-lightbox-image {
+  display: block;
+  max-width: calc(100vw - 22px);
+  max-height: calc(100vh - 160px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.55);
+  transform-origin: center center;
+  will-change: transform;
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.plan-lightbox-stage.image-missing .plan-lightbox-image { display: none; }
+
+.plan-lightbox-placeholder {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  padding: 24px;
+  color: rgba(248, 250, 252, 0.62);
+}
+
+.plan-lightbox-stage.image-missing .plan-lightbox-placeholder { display: flex; }
+
+.plan-lightbox-placeholder-icon {
+  width: 76px;
+  height: 76px;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.13);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+}
+
+.plan-lightbox-placeholder-icon i,
+.plan-lightbox-placeholder-icon svg { width: 34px; height: 34px; }
+
+.plan-lightbox-placeholder-title {
+  font-size: 1rem;
+  font-weight: 900;
+  color: #f8fafc;
+}
+
+.plan-lightbox-placeholder-text {
+  font-size: 0.76rem;
+  font-weight: 600;
+  max-width: 280px;
+  line-height: 1.7;
+}
+
+.plan-lightbox-nav {
+  position: absolute;
+  top: 50%;
+  z-index: 5;
+  width: 44px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #f8fafc;
+  background: rgba(2, 6, 23, 0.36);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  transform: translateY(-50%);
+  font-family: inherit;
+  transition: all var(--t);
+}
+
+.plan-lightbox-nav:hover {
+  background: rgba(16, 185, 129, 0.28);
+  border-color: rgba(52, 211, 153, 0.55);
+}
+
+.plan-lightbox-nav.prev { right: 10px; }
+.plan-lightbox-nav.next { left: 10px; }
+
+.plan-lightbox-nav i,
+.plan-lightbox-nav svg { width: 23px; height: 23px; }
+
+.plan-lightbox-footer {
+  position: relative;
+  z-index: 4;
+  padding: 9px 16px calc(12px + env(safe-area-inset-bottom));
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: rgba(248, 250, 252, 0.5);
+  background: linear-gradient(180deg, transparent, rgba(2, 6, 23, 0.55));
+}
+
+@media (min-width: 720px) {
+  .plans-main { padding: 26px 22px 70px; }
+  .plans-hero { padding: 24px; }
+  .plan-lightbox-nav.prev { right: 24px; }
+  .plan-lightbox-nav.next { left: 24px; }
+}
+
+@media (max-width: 480px) {
+  .plans-main { padding: 16px 12px 50px; }
+  .plans-hero { padding: 17px; border-radius: 21px; }
+  .plans-grid { gap: 11px; }
+  .plan-card { border-radius: 18px; }
+  .plan-card-body { padding: 10px 11px 11px; }
+  .plan-card-title { font-size: 0.86rem; }
+  .plan-lightbox-nav { width: 38px; height: 46px; }
+  .plan-lightbox-nav.prev { right: 7px; }
+  .plan-lightbox-nav.next { left: 7px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plan-card,
+  .plan-card:hover,
+  .plan-card-media img,
+  .plan-card-arrow { transform: none; }
+  .plan-lightbox-image { transition: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- @include partials/header.html -->
+
+<main class="plans-main">
+  <section class="plans-hero" aria-labelledby="plansHeroTitle">
+    <div class="plans-hero-top">
+      <div class="plans-hero-icon">
+        <i data-lucide="map"></i>
+      </div>
+      <div>
+        <h1 id="plansHeroTitle">خططك الدراسية في مكان واحد</h1>
+        <p>اضغط على أي بطاقة لعرض الخطة كاملة، مع إمكانية التكبير والتنقل بين المواد.</p>
+      </div>
+    </div>
+    <div class="plans-hero-chips" aria-hidden="true">
+      <span class="plans-hero-chip"><i data-lucide="flask-conical"></i> الكيمياء</span>
+      <span class="plans-hero-chip"><i data-lucide="dna"></i> البيولوجيا</span>
+      <span class="plans-hero-chip"><i data-lucide="atom"></i> الفيزياء</span>
+      <span class="plans-hero-chip"><i data-lucide="languages"></i> الإنجليزية</span>
+      <span class="plans-hero-chip"><i data-lucide="rocket"></i> تاريخ الطب</span>
+    </div>
+  </section>
+
+  <section class="plans-grid" id="plansGrid" aria-label="خطط المواد">
+
+    <article class="plan-card" data-plan-index="0" tabindex="0" role="button"
+             aria-label="عرض خطة الكيمياء" onclick="openPlanLightbox(0)"
+             onkeydown="planCardKeydown(event, 0)"
+             style="--plan-accent:#f59e0b;--plan-accent-soft:rgba(245,158,11,0.16);">
+      <div class="plan-card-media">
+        <div class="plan-card-placeholder">
+          <span class="plan-placeholder-icon"><i data-lucide="flask-conical"></i></span>
+          <span class="plan-placeholder-text">الصورة قريباً</span>
+        </div>
+        <img src="plans/chem.jpg" alt="خطة الكيمياء" loading="lazy"
+             onload="this.closest('.plan-card').classList.remove('image-missing')"
+             onerror="this.style.display='none';this.closest('.plan-card').classList.add('image-missing')">
+        <span class="plan-card-expand"><i data-lucide="maximize-2"></i></span>
+        <span class="plan-card-subject-icon"><i data-lucide="flask-conical"></i></span>
+      </div>
+      <div class="plan-card-body">
+        <div class="plan-card-titles">
+          <div class="plan-card-title">الكيمياء</div>
+          <div class="plan-card-sub">خطة الكيمياء</div>
+        </div>
+        <span class="plan-card-arrow"><i data-lucide="arrow-left"></i></span>
+      </div>
+    </article>
+
+    <article class="plan-card" data-plan-index="1" tabindex="0" role="button"
+             aria-label="عرض خطة البيولوجيا" onclick="openPlanLightbox(1)"
+             onkeydown="planCardKeydown(event, 1)"
+             style="--plan-accent:#10b981;--plan-accent-soft:rgba(16,185,129,0.16);">
+      <div class="plan-card-media">
+        <div class="plan-card-placeholder">
+          <span class="plan-placeholder-icon"><i data-lucide="dna"></i></span>
+          <span class="plan-placeholder-text">الصورة قريباً</span>
+        </div>
+        <img src="plans/bio.jpg" alt="خطة البيولوجيا" loading="lazy"
+             onload="this.closest('.plan-card').classList.remove('image-missing')"
+             onerror="this.style.display='none';this.closest('.plan-card').classList.add('image-missing')">
+        <span class="plan-card-expand"><i data-lucide="maximize-2"></i></span>
+        <span class="plan-card-subject-icon"><i data-lucide="dna"></i></span>
+      </div>
+      <div class="plan-card-body">
+        <div class="plan-card-titles">
+          <div class="plan-card-title">البيولوجيا</div>
+          <div class="plan-card-sub">خطة بيولوجيا الخلية</div>
+        </div>
+        <span class="plan-card-arrow"><i data-lucide="arrow-left"></i></span>
+      </div>
+    </article>
+
+    <article class="plan-card" data-plan-index="2" tabindex="0" role="button"
+             aria-label="عرض خطة الفيزياء" onclick="openPlanLightbox(2)"
+             onkeydown="planCardKeydown(event, 2)"
+             style="--plan-accent:#3b82f6;--plan-accent-soft:rgba(59,130,246,0.16);">
+      <div class="plan-card-media">
+        <div class="plan-card-placeholder">
+          <span class="plan-placeholder-icon"><i data-lucide="atom"></i></span>
+          <span class="plan-placeholder-text">الصورة قريباً</span>
+        </div>
+        <img src="plans/phys.jpg" alt="خطة الفيزياء" loading="lazy"
+             onload="this.closest('.plan-card').classList.remove('image-missing')"
+             onerror="this.style.display='none';this.closest('.plan-card').classList.add('image-missing')">
+        <span class="plan-card-expand"><i data-lucide="maximize-2"></i></span>
+        <span class="plan-card-subject-icon"><i data-lucide="atom"></i></span>
+      </div>
+      <div class="plan-card-body">
+        <div class="plan-card-titles">
+          <div class="plan-card-title">الفيزياء</div>
+          <div class="plan-card-sub">خطة الفيزياء</div>
+        </div>
+        <span class="plan-card-arrow"><i data-lucide="arrow-left"></i></span>
+      </div>
+    </article>
+
+    <article class="plan-card" data-plan-index="3" tabindex="0" role="button"
+             aria-label="عرض خطة الإنجليزية" onclick="openPlanLightbox(3)"
+             onkeydown="planCardKeydown(event, 3)"
+             style="--plan-accent:#8b5cf6;--plan-accent-soft:rgba(139,92,246,0.16);">
+      <div class="plan-card-media">
+        <div class="plan-card-placeholder">
+          <span class="plan-placeholder-icon"><i data-lucide="languages"></i></span>
+          <span class="plan-placeholder-text">الصورة قريباً</span>
+        </div>
+        <img src="plans/eng.jpg" alt="خطة الإنجليزية" loading="lazy"
+             onload="this.closest('.plan-card').classList.remove('image-missing')"
+             onerror="this.style.display='none';this.closest('.plan-card').classList.add('image-missing')">
+        <span class="plan-card-expand"><i data-lucide="maximize-2"></i></span>
+        <span class="plan-card-subject-icon"><i data-lucide="languages"></i></span>
+      </div>
+      <div class="plan-card-body">
+        <div class="plan-card-titles">
+          <div class="plan-card-title">الإنجليزية</div>
+          <div class="plan-card-sub">خطة الإنجليزية</div>
+        </div>
+        <span class="plan-card-arrow"><i data-lucide="arrow-left"></i></span>
+      </div>
+    </article>
+
+    <article class="plan-card" data-plan-index="4" tabindex="0" role="button"
+             aria-label="عرض خطة تاريخ الطب" onclick="openPlanLightbox(4)"
+             onkeydown="planCardKeydown(event, 4)"
+             style="--plan-accent:#ec4899;--plan-accent-soft:rgba(236,72,153,0.16);">
+      <div class="plan-card-media">
+        <div class="plan-card-placeholder">
+          <span class="plan-placeholder-icon"><i data-lucide="rocket"></i></span>
+          <span class="plan-placeholder-text">الصورة قريباً</span>
+        </div>
+        <img src="plans/zero.jpg" alt="الخطة صفر" loading="lazy"
+             onload="this.closest('.plan-card').classList.remove('image-missing')"
+             onerror="this.style.display='none';this.closest('.plan-card').classList.add('image-missing')">
+        <span class="plan-card-expand"><i data-lucide="maximize-2"></i></span>
+        <span class="plan-card-subject-icon"><i data-lucide="rocket"></i></span>
+      </div>
+      <div class="plan-card-body">
+        <div class="plan-card-titles">
+          <div class="plan-card-title">تاريخ الطب</div>
+          <div class="plan-card-sub">الخطة صفر</div>
+        </div>
+        <span class="plan-card-arrow"><i data-lucide="arrow-left"></i></span>
+      </div>
+    </article>
+
+  </section>
+
+</main>
+
+<!-- ══ Lightbox ══ -->
+<div class="plan-lightbox" id="planLightbox" aria-hidden="true">
+  <div class="plan-lightbox-backdrop" onclick="closePlanLightbox()"></div>
+  <div class="plan-lightbox-shell" role="dialog" aria-modal="true" aria-labelledby="planLightboxTitle">
+    <div class="plan-lightbox-bar">
+      <div class="plan-lightbox-info">
+        <div class="plan-lightbox-title" id="planLightboxTitle">—</div>
+        <div class="plan-lightbox-counter" id="planLightboxCounter">— / —</div>
+      </div>
+      <button class="plan-lightbox-close" type="button" onclick="closePlanLightbox()" aria-label="إغلاق">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+
+    <div class="plan-lightbox-stage" id="planLightboxStage">
+      <img class="plan-lightbox-image" id="planLightboxImage" alt="" draggable="false">
+      <div class="plan-lightbox-placeholder" id="planLightboxPlaceholder">
+        <div class="plan-lightbox-placeholder-icon"><i data-lucide="image-off"></i></div>
+        <div class="plan-lightbox-placeholder-title" id="planLightboxPlaceholderTitle">الصورة غير متوفرة بعد</div>
+        <div class="plan-lightbox-placeholder-text" id="planLightboxPlaceholderText">
+          أضف صورة الخطة إلى مجلد plans/ ثم أعد تحميل الصفحة.
+        </div>
+      </div>
+    </div>
+
+    <button class="plan-lightbox-nav prev" type="button" onclick="planPrev()" aria-label="الخطة السابقة">
+      <i data-lucide="chevron-right"></i>
+    </button>
+    <button class="plan-lightbox-nav next" type="button" onclick="planNext()" aria-label="الخطة التالية">
+      <i data-lucide="chevron-left"></i>
+    </button>
+
+    <div class="plan-lightbox-footer" id="planLightboxHint">
+      اسحب يميناً أو يساراً للتنقل • استخدم إصبعين للتكبير
+    </div>
+  </div>
+</div>
+
+<!-- @include partials/sw-register.html -->
+<!-- @include partials/perf.html -->
+
+<script>
+  var PLANS = [
+    { key: 'chemistry', title: 'الكيمياء',    image: 'plans/chem.jpg', icon: 'flask-conical' },
+    { key: 'biology',   title: 'البيولوجيا',  image: 'plans/bio.jpg',  icon: 'dna' },
+    { key: 'physics',   title: 'الفيزياء',    image: 'plans/phys.jpg', icon: 'atom' },
+    { key: 'english',   title: 'الإنجليزية',  image: 'plans/eng.jpg',  icon: 'languages' },
+    { key: 'zero',      title: 'تاريخ الطب',  image: 'plans/zero.jpg', icon: 'rocket' }
+  ];
+
+  var planViewer = {
+    index: 0,
+    scale: 1,
+    x: 0,
+    y: 0,
+    pointers: new Map(),
+    dragStart: null,
+    pinchStart: null,
+    lastTap: 0,
+    moved: false,
+    wasPinching: false
+  };
+
+  function planGetEl(id) {
+    return document.getElementById(id);
+  }
+
+  function planCardKeydown(event, index) {
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+      event.preventDefault();
+      openPlanLightbox(index);
+    }
+  }
+
+  function planSetMissingStage(missing) {
+    var stage = planGetEl('planLightboxStage');
+    if (stage) stage.classList.toggle('image-missing', !!missing);
+  }
+
+  function planUpdateHint() {
+    var hint = planGetEl('planLightboxHint');
+    if (!hint) return;
+    hint.textContent = planViewer.scale > 1.02
+      ? 'اسحب للتحريك • اضغط مرتين للتصغير'
+      : 'اسحب يميناً أو يساراً للتنقل • استخدم إصبعين للتكبير';
+  }
+
+  function planResetZoom() {
+    planViewer.scale = 1;
+    planViewer.x = 0;
+    planViewer.y = 0;
+    planApplyTransform();
+  }
+
+  function planApplyTransform() {
+    var image = planGetEl('planLightboxImage');
+    if (!image) return;
+    image.style.transform = 'translate3d(' + planViewer.x + 'px,' + planViewer.y + 'px,0) scale(' + planViewer.scale + ')';
+    planUpdateHint();
+  }
+
+  function planClampPan() {
+    var stage = planGetEl('planLightboxStage');
+    if (!stage) return;
+    var maxX = Math.max(0, (stage.clientWidth * (planViewer.scale - 1)) / 2);
+    var maxY = Math.max(0, (stage.clientHeight * (planViewer.scale - 1)) / 2);
+    planViewer.x = Math.max(-maxX, Math.min(maxX, planViewer.x));
+    planViewer.y = Math.max(-maxY, Math.min(maxY, planViewer.y));
+  }
+
+  function planShow(index) {
+    if (!PLANS.length) return;
+    planViewer.index = ((index % PLANS.length) + PLANS.length) % PLANS.length;
+    var shownIndex = planViewer.index;
+    var plan = PLANS[planViewer.index];
+    var image = planGetEl('planLightboxImage');
+    var title = planGetEl('planLightboxTitle');
+    var counter = planGetEl('planLightboxCounter');
+    var missingTitle = planGetEl('planLightboxPlaceholderTitle');
+    var missingText = planGetEl('planLightboxPlaceholderText');
+
+    planResetZoom();
+    planSetMissingStage(false);
+
+    if (title) title.textContent = plan.title;
+    if (counter) counter.textContent = (planViewer.index + 1) + ' / ' + PLANS.length;
+    if (missingTitle) missingTitle.textContent = 'صورة ' + plan.title + ' غير متوفرة بعد';
+    if (missingText) missingText.textContent = 'أضف الصورة باسم ' + plan.image.replace('plans/', '') + ' داخل مجلد plans/ ثم أعد تحميل الصفحة.';
+
+    if (!image) return;
+    image.alt = 'خطة ' + plan.title;
+    image.classList.remove('image-missing');
+    image.style.display = '';
+
+    image.onload = function () {
+      if (planViewer.index !== shownIndex) return;
+      planSetMissingStage(false);
+    };
+
+    image.onerror = function () {
+      if (planViewer.index !== shownIndex) return;
+      planSetMissingStage(true);
+    };
+
+    image.src = plan.image;
+
+    // Cached images can finish before the handlers above are attached.
+    if (image.complete) {
+      planSetMissingStage(image.naturalWidth === 0);
+    }
+  }
+
+  function openPlanLightbox(index) {
+    var lightbox = planGetEl('planLightbox');
+    if (!lightbox) return;
+    planViewer.pointers.clear();
+    planViewer.dragStart = null;
+    planViewer.pinchStart = null;
+    planViewer.lastTap = 0;
+    planShow(index);
+    lightbox.classList.add('open');
+    lightbox.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    if (window.lucide) lucide.createIcons();
+    setTimeout(function () {
+      var closeBtn = lightbox.querySelector('.plan-lightbox-close');
+      if (closeBtn) closeBtn.focus({ preventScroll: true });
+    }, 180);
+  }
+
+  function closePlanLightbox() {
+    var lightbox = planGetEl('planLightbox');
+    if (!lightbox) return;
+    lightbox.classList.remove('open');
+    lightbox.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    planViewer.pointers.clear();
+    planViewer.dragStart = null;
+    planViewer.pinchStart = null;
+    planResetZoom();
+  }
+
+  function planPrev() { planShow(planViewer.index - 1); }
+  function planNext() { planShow(planViewer.index + 1); }
+
+  function planToggleZoom() {
+    if (planViewer.scale > 1.02) {
+      planResetZoom();
+    } else {
+      planViewer.scale = 2.5;
+      planViewer.x = 0;
+      planViewer.y = 0;
+      planClampPan();
+      planApplyTransform();
+    }
+  }
+
+  function planPointerDown(event) {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    var stage = planGetEl('planLightboxStage');
+    if (!stage) return;
+
+    try { stage.setPointerCapture(event.pointerId); } catch (e) {}
+    planViewer.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+    if (planViewer.pointers.size === 1) {
+      planViewer.dragStart = {
+        x: event.clientX,
+        y: event.clientY,
+        tx: planViewer.x,
+        ty: planViewer.y
+      };
+      planViewer.moved = false;
+    } else if (planViewer.pointers.size === 2) {
+      var points = Array.from(planViewer.pointers.values());
+      var dx = points[1].x - points[0].x;
+      var dy = points[1].y - points[0].y;
+      planViewer.pinchStart = {
+        dist: Math.max(1, Math.hypot(dx, dy)),
+        scale: planViewer.scale,
+        x: planViewer.x,
+        y: planViewer.y,
+        midX: (points[0].x + points[1].x) / 2,
+        midY: (points[0].y + points[1].y) / 2
+      };
+      planViewer.dragStart = null;
+      planViewer.wasPinching = true;
+    }
+  }
+
+  function planPointerMove(event) {
+    if (!planViewer.pointers.has(event.pointerId)) return;
+    planViewer.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+    if (planViewer.pointers.size === 2 && planViewer.pinchStart) {
+      var points = Array.from(planViewer.pointers.values());
+      var dx = points[1].x - points[0].x;
+      var dy = points[1].y - points[0].y;
+      var dist = Math.max(1, Math.hypot(dx, dy));
+      var midX = (points[0].x + points[1].x) / 2;
+      var midY = (points[0].y + points[1].y) / 2;
+      var nextScale = planViewer.pinchStart.scale * (dist / planViewer.pinchStart.dist);
+
+      planViewer.scale = Math.max(1, Math.min(4, nextScale));
+      planViewer.x = planViewer.pinchStart.x + (midX - planViewer.pinchStart.midX);
+      planViewer.y = planViewer.pinchStart.y + (midY - planViewer.pinchStart.midY);
+      planClampPan();
+      planApplyTransform();
+      planViewer.moved = true;
+      if (event.cancelable) event.preventDefault();
+      return;
+    }
+
+    if (planViewer.pointers.size === 1 && planViewer.dragStart && planViewer.scale > 1.02) {
+      var panX = event.clientX - planViewer.dragStart.x;
+      var panY = event.clientY - planViewer.dragStart.y;
+      if (Math.abs(panX) > 3 || Math.abs(panY) > 3) planViewer.moved = true;
+      planViewer.x = planViewer.dragStart.tx + panX;
+      planViewer.y = planViewer.dragStart.ty + panY;
+      planClampPan();
+      planApplyTransform();
+      if (event.cancelable) event.preventDefault();
+    }
+  }
+
+  function planPointerUp(event) {
+    if (!planViewer.pointers.has(event.pointerId)) return;
+
+    planViewer.pointers.delete(event.pointerId);
+
+    if (planViewer.pointers.size === 1) {
+      var remaining = Array.from(planViewer.pointers.values())[0];
+      planViewer.dragStart = {
+        x: remaining.x,
+        y: remaining.y,
+        tx: planViewer.x,
+        ty: planViewer.y
+      };
+      planViewer.pinchStart = null;
+      return;
+    }
+
+    if (planViewer.pointers.size > 0) return;
+
+    var drag = planViewer.dragStart;
+    if (drag && planViewer.scale <= 1.02 && !planViewer.wasPinching) {
+      var dx = event.clientX - drag.x;
+      var dy = event.clientY - drag.y;
+
+      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+        if (dx > 0) planShow(planViewer.index - 1);
+        else planShow(planViewer.index + 1);
+      } else if (Math.abs(dx) < 8 && Math.abs(dy) < 8) {
+        var now = Date.now();
+        if (now - planViewer.lastTap < 320) {
+          planToggleZoom();
+          planViewer.lastTap = 0;
+        } else {
+          planViewer.lastTap = now;
+        }
+      }
+    }
+
+    planViewer.dragStart = null;
+    planViewer.pinchStart = null;
+    planViewer.wasPinching = false;
+    planViewer.moved = false;
+  }
+
+  function planWheel(event) {
+    var lightbox = planGetEl('planLightbox');
+    if (!lightbox || !lightbox.classList.contains('open')) return;
+    event.preventDefault();
+
+    var factor = event.deltaY < 0 ? 1.14 : 0.88;
+    planViewer.scale = Math.max(1, Math.min(4, planViewer.scale * factor));
+    if (planViewer.scale <= 1.02) {
+      planViewer.x = 0;
+      planViewer.y = 0;
+    }
+    planClampPan();
+    planApplyTransform();
+  }
+
+  function planKeydown(event) {
+    var lightbox = planGetEl('planLightbox');
+    if (!lightbox || !lightbox.classList.contains('open')) return;
+
+    if (event.key === 'Escape') {
+      closePlanLightbox();
+    } else if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      planNext();
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      planPrev();
+    } else if (event.key === '+' || event.key === '=') {
+      event.preventDefault();
+      planToggleZoom();
+    } else if (event.key === '-') {
+      event.preventDefault();
+      planResetZoom();
+    }
+  }
+
+  function initPlans() {
+    var stage = planGetEl('planLightboxStage');
+    if (stage) {
+      stage.addEventListener('pointerdown', planPointerDown);
+      stage.addEventListener('pointermove', planPointerMove);
+      stage.addEventListener('pointerup', planPointerUp);
+      stage.addEventListener('pointercancel', planPointerUp);
+      stage.addEventListener('wheel', planWheel, { passive: false });
+    }
+
+    document.addEventListener('keydown', planKeydown);
+    window.addEventListener('resize', planResetZoom);
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPlans);
+  } else {
+    initPlans();
+  }
+</script>
+</body>
+</html>

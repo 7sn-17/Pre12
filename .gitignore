@@ -1,0 +1,77 @@
+# ============================================================
+# المنصة الطبية — السنة التحضيرية (Pre12)
+# .gitignore — ملفات التطوير والبناء والأدوات المحلية
+# ============================================================
+
+# ── الاعتماديات ───────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+!.yarn/plugins
+!.yarn/versions
+.yarn-integrity
+
+# ── مخرجات البناء ─────────────────────────────────────────
+# dist/ يُبنى على خادم Vercel تلقائياً عبر "npm run build"
+dist/
+build/
+.cache/
+.temp/
+tmp/
+
+# ── ملفات تطوير داخلية (لا تُرفع إلى GitHub) ──────────────
+# ملاحظات المهام والمراحل
+prompt*.txt
+# ملفات الاختبار
+master.test.js
+*.test.js
+*.spec.js
+__tests__/
+tests/
+coverage/
+.nyc_output/
+# النسخة الأصلية المرجعية للتصميم (محلية فقط)
+tools/_orig/
+
+# ملاحظة: مجلد supabase/ (مخططات قاعدة البيانات) مقصود رفعه إلى
+# GitHub لأنه يوثّق مخطط القاعدة — وهو مستثنى من dist/ عبر EXCLUDE_TOP
+# في build.js فلا يُنشر على الويب.
+
+# ── الأسرار ومتغيرات البيئة ───────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.json
+service-account*.json
+supabase-service-role*
+.vscode/settings.json
+.idea/
+
+# ── نظام التشغيل والمحرّرات ──────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.swp
+*.swo
+*~
+
+# ── السجلّات ──────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
