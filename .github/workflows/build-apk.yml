@@ -76,13 +76,20 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
+      - name: 🏷️ Read the app version
+        id: version
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
       - name: 🚀 Publish the GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          # ⭐ الـ Release يحتاج تاجاً — ننشئه من رقم الإصدار في package.json
+          #    (وإن كان موجوداً، يُحدَّث الـ Release ويُستبدل الملف).
+          tag_name: v${{ steps.version.outputs.version }}
           files: android/app/build/outputs/apk/debug/app-debug.apk
-          name: المنصة الطبية — ${{ github.ref_name }}
+          name: المنصة الطبية — v${{ steps.version.outputs.version }}
           body: |
-            ## 📱 المنصة الطبية — نسخة Android
+            ## 📱 المنصة الطبية — نسخة Android v${{ steps.version.outputs.version }}
 
             تطبيق أندرويد مبني من نفس كود الواجهة (WebView + Capacitor).
 
@@ -99,4 +106,5 @@ jobs:
             بُني تلقائياً عبر [GitHub Actions](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).
           fail_on_unmatched_files: true
           draft: false
-          prerelease: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+          make_latest: true
+          prerelease: false
