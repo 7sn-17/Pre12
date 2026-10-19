@@ -91,13 +91,26 @@ jobs:
       - name: 🔑 Decode the release keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           if [ -z "$KEYSTORE_BASE64" ]; then
             echo "::error::KEYSTORE_BASE64 secret is missing — cannot sign the release."
             exit 1
           fi
-          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
+          # ⚠️ السر قد يحتوي أسطر جديدة (\r\n) — ننظّفها قبل الفك،
+          #    و--ignore-garbage يتجاهل أي مسافة زائدة.
+          printf '%s' "$KEYSTORE_BASE64" | tr -d '\r\n' | base64 --decode --ignore-garbage > android/app/release.keystore
           echo "keystore decoded: $(stat -c %s android/app/release.keystore) bytes"
+
+          # ⭐ نتحقق أن الملف مفتاح توقيع صالح وأن كلمة السر والاسم صحيحان،
+          #    حتى نفشل برسالة واضحة بدل خطأ غامض داخل Gradle.
+          if ! keytool -list -keystore android/app/release.keystore -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" > /dev/null 2>&1; then
+            echo "::error::The decoded file is not a valid keystore for the given alias — check KEYSTORE_BASE64 / KEYSTORE_PASSWORD / KEY_ALIAS."
+            keytool -list -keystore android/app/release.keystore -storepass "$KEYSTORE_PASSWORD" 2>&1 | head -10 || true
+            exit 1
+          fi
+          echo "✅ keystore verified (alias: $KEY_ALIAS)"
 
       - name: 📦 Build the signed release APK
         working-directory: android
