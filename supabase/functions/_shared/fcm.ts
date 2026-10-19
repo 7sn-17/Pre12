@@ -242,7 +242,7 @@ export async function createSender(): Promise<FcmSender | null> {
     };
   }
 
-  const apiKey = Deno.env.get('FCM_API_KEY');
+  const apiKey = Deno.env.get('FCM_API_KEY') || (await readVaultSecret('fcm_api_key'));
   if (apiKey) {
     return {
       mode: 'legacy',
