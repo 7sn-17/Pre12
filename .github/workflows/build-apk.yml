@@ -123,6 +123,60 @@ jobs:
           file android/app/release.keystore
           keytool -list -keystore android/app/release.keystore -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" | head -6
 
+      - name: 🩹 Self-heal an unusable base64 secret
+        # يعمل حتى لو فشلت خطوة الفك — يجرّب صيغ base64 الأخرى ثم
+        # يتحقق من كل واحدة بمفتاح keytool.
+        if: always()
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          if keytool -list -keystore android/app/release.keystore -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" > /dev/null 2>&1; then
+            echo "✅ the keystore is valid — nothing to repair."
+            exit 0
+          fi
+          echo "::warning::the decoded keystore is invalid — trying alternative base64 forms."
+          python3 - <<'PY'
+          import base64, os, re, subprocess, sys
+          raw = os.environ.get('KEYSTORE_BASE64', '')
+          password = os.environ.get('KEYSTORE_PASSWORD', '')
+          alias = os.environ.get('KEY_ALIAS', '')
+          target = 'android/app/release.keystore'
+
+          def forms(text):
+              base = re.sub(r'[^A-Za-z0-9+/=_-]', '', text)
+              out = []
+              for variant in (base, base.replace('-', '+').replace('_', '/')):
+                  stripped = variant.rstrip('=')
+                  for pad in ('', '=', '=='):
+                      out.append(stripped + pad)
+              return out
+
+          for index, candidate in enumerate(forms(raw)):
+              try:
+                  data = base64.b64decode(candidate, validate=False)
+              except Exception:
+                  continue
+              if len(data) < 512:
+                  continue
+              path = target if index == 0 else target + '.alt'
+              with open(path, 'wb') as handle:
+                  handle.write(data)
+              check = subprocess.run(
+                  ['keytool', '-list', '-keystore', path, '-storepass', password, '-alias', alias],
+                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+              if check.returncode == 0:
+                  if path != target:
+                      os.replace(path, target)
+                  print('✅ repaired: the keystore is valid (%d bytes).' % len(data))
+                  sys.exit(0)
+              if path != target and os.path.exists(path):
+                  os.remove(path)
+          print('::error::No usable keystore could be produced from KEYSTORE_BASE64 — the secret itself is incomplete.')
+          sys.exit(1)
+          PY
+
       - name: 📦 Build the signed release APK
         working-directory: android
         env:
