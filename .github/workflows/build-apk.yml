@@ -65,23 +65,24 @@ jobs:
       - name: 🔗 Sync Capacitor
         run: npx cap sync android
 
-      - name: 🖼️ Verify the web assets (the tools images)
-        # ⭐ نتأكّد أن صور الأدوات (icons/) وبقية أصول الويب موجودة
-        #    فعلاً داخل مجلد الأصول الذي سينتقل إلى الـ APK.
+      - name: 🖼️ Verify the web assets
+        # ⭐ نتأكّد أن أصول الويب الأساسية موجودة فعلاً داخل مجلد
+        #    الأصول الذي سينتقل إلى الـ APK.
         run: |
-          echo "── the tools images ──"
-          ls -l android/app/src/main/assets/public/icons/
-          for f in flipclock forest notion drbaraa; do
-            if [ ! -f "android/app/src/main/assets/public/icons/$f.jpg" ]; then
-              echo "::error::the tools image $f.jpg is missing from the android assets"
+          echo "── the main pages ──"
+          ls android/app/src/main/assets/public/*.html
+          echo "── the shared scripts ──"
+          for f in app.js auth.js db.js files.js sync.js streak.js native.js notifications.js ui.js theme-init.js sw.js; do
+            if [ ! -f "android/app/src/main/assets/public/$f" ]; then
+              echo "::error::$f is missing from the android assets"
               exit 1
             fi
           done
-          echo "── the main pages ──"
-          ls android/app/src/main/assets/public/*.html | head -30
+          echo "── the launcher icons ──"
+          ls android/app/src/main/res/mipmap-xxxhdpi/
           echo "── the size of the web assets ──"
           du -sh android/app/src/main/assets/public/
-          echo "✅ the web assets (including the tools images) are inside the build"
+          echo "✅ the web assets are inside the build"
 
       - name: 🏛️ Make gradlew executable
         working-directory: android
@@ -247,14 +248,14 @@ jobs:
           echo "── the web assets inside the APK ──"
           unzip -l "$APK" | grep "assets/public/" | head -n 15
 
-          echo "── the tools images inside the APK ──"
-          unzip -l "$APK" | grep "assets/public/icons/"
+          echo "── the shared scripts inside the APK ──"
+          unzip -l "$APK" | grep -E "assets/public/(ui|app|auth|native)\.js"
 
           echo "── the native libraries inside the APK ──"
           unzip -l "$APK" | grep "lib/" | head -n 12
 
           echo "── the essentials ──"
-          for entry in "assets/public/index.html" "assets/public/icons/flipclock.jpg" "assets/public/icons/forest.jpg" "assets/public/icons/notion.jpg" "assets/public/icons/drbaraa.jpg" "classes.dex" "resources.arsc" "AndroidManifest.xml"; do
+          for entry in "assets/public/index.html" "assets/public/confirm.html" "assets/public/login.html" "assets/public/ui.js" "assets/public/app.js" "assets/public/auth.js" "assets/public/native.js" "assets/public/sw.js" "assets/public/icon-512.png" "classes.dex" "resources.arsc" "AndroidManifest.xml"; do
             if unzip -l "$APK" | grep -q "$entry"; then
               echo "   ✅ $entry"
             else
