@@ -355,6 +355,29 @@ function copyAssets() {
 }
 
 
+/**
+ * ⭐⭐ فحص بنية الوسوم — يمنع تكرار خطأ "وسم غير مغلق" الذي كسر
+ *    تخطيط صفحات كاملة (.login وindex).
+ *    نتجاهل محتوى السكربتات (سلاسل HTML داخل JavaScript).
+ */
+function verifyMarkupBalance(pageName, html) {
+  const body = html.slice(html.indexOf('<body'));
+  const markup = body.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '');
+  const openDiv = (markup.match(/<div\b/g) || []).length;
+  const closeDiv = (markup.match(/<\/div>/g) || []).length;
+  const openBtn = (markup.match(/<button\b/g) || []).length;
+  const closeBtn = (markup.match(/<\/button>/g) || []).length;
+
+  const errors = [];
+  if (openDiv !== closeDiv) {
+    errors.push(`unbalanced <div> (${openDiv} open / ${closeDiv} close)`);
+  }
+  if (openBtn !== closeBtn) {
+    errors.push(`unbalanced <button> (${openBtn} open / ${closeBtn} close)`);
+  }
+  return errors;
+}
+
 // ------------------------------------------------------------------
 // Validation
 // ------------------------------------------------------------------
@@ -412,6 +435,8 @@ function main() {
     fs.writeFileSync(path.join(DIST, page), out, 'utf8');
 
     const errs = validatePage(page, out, isApp);
+    const markupErrors = verifyMarkupBalance(page, out);
+    if (markupErrors.length) errs.push(...markupErrors);
     if (errs.length) problems.push(`${page}: ${errs.join(', ')}`);
   });
 
