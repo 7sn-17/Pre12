@@ -12,19 +12,7 @@
           "package_name": "com.pre12.medical"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "537816557648-gb6uvf6hpde36enn6e0u6t66c2amehkq.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_client_info": {
-            "package_name": "com.pre12.medical"
-          }
-        },
-        {
-          "client_id": "537816557648-1lu9etodpb39afdaieisl2mevm6pdluk.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
           "current_key": "AIzaSyCM1WBDwKsUPvRTqZ6VkcYPZ6J_Q4EUCrM"

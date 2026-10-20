@@ -32,7 +32,7 @@ const DIST = path.join(ROOT, 'dist');
 
 // Bumped whenever app.js changes. The query string is what makes returning
 // visitors pick up the new router even though static JS is served immutable.
-const APP_VERSION = '2.7.0';
+const APP_VERSION = '2.7.2';
 const APP_JS = `app.js?v=${APP_VERSION}`;
 
 // ------------------------------------------------------------------
@@ -319,6 +319,8 @@ const EXCLUDE_TOP = new Set([
   'assets',
   // Tooling / deployment config
   'build.js', 'package.json', 'package-lock.json', 'vercel.json',
+  // ⭐ إعداد Firebase — نسخة المشروع الأصلية (لا يُنشر على الويب)
+  'google-services.json',
   '.git', '.gitignore',
   // Documentation (kept in the repo, not shipped to users)
   'README.md', 'ARCHITECTURE.md',

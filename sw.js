@@ -1,9 +1,9 @@
 // ============================================
 // sw.js — Service Worker
-// Version 2.7.0 — SPA shell + network-first HTML + cache-first JSON
+// Version 2.7.2 — SPA shell + network-first HTML + cache-first JSON
 // ============================================
 
-const CACHE_VERSION = 'v2.7.0';
+const CACHE_VERSION = 'v2.7.2';
 const STATIC_CACHE  = `medfav-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `medfav-runtime-${CACHE_VERSION}`;
 const PDF_CACHE     = `medfav-pdf-${CACHE_VERSION}`;
@@ -48,7 +48,7 @@ const PRECACHE_URLS = [
   '/supabase-config.js',
   '/theme-init.js',
   '/app.js',
-  '/app.js?v=2.7.0',
+  '/app.js?v=2.7.2',
   '/streak.js',
   '/native.js',
   '/notifications.js',
@@ -371,4 +371,4 @@ self.addEventListener('message', (event) => {
   }
 });
 
-console.log('✅ sw.js v2.7.0 loaded');
+console.log('✅ sw.js v2.7.2 loaded');

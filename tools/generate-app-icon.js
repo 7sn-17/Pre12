@@ -40,8 +40,13 @@ const RES = path.join(ROOT, 'android', 'app', 'src', 'main', 'res');
 const BRAND_LIGHT = [0x14, 0xa1, 0x7e]; // #14A17E — أعلى اليمين
 const BRAND_DARK = [0x04, 0x66, 0x4e];  // #04664E — أسفل اليسار
 
-/* المنطقة الآمنة: 66dp من 108dp ⇒ الشعار 60% من اللوحة */
-const FOREGROUND_RATIO = 0.60;
+/* المنطقة الآمنة: 66dp من 108dp ⇒ الشعار 50% من اللوحة
+   (Prompt 28: 50% بدل 60% — «السمّاعة تلامس حواف الأيقونة») */
+const FOREGROUND_RATIO = 0.50;
+
+/* الأيقونة القديمة (legacy): هامش لا يقل عن 15% من كل جهة */
+const LEGACY_PADDING = 0.15;
+const LEGACY_RATIO = 1 - (LEGACY_PADDING * 2);   // 0.70
 
 /* كثافات الأيقونة: 108dp ⇒ px */
 const DENSITIES = [
@@ -50,6 +55,15 @@ const DENSITIES = [
   ['mipmap-xhdpi', 216],
   ['mipmap-xxhdpi', 324],
   ['mipmap-xxxhdpi', 432]
+];
+
+/* ⭐ أحجام الأيقونة القديمة (legacy launcher icon) */
+const LEGACY_SIZES = [
+  ['mipmap-mdpi', 48],
+  ['mipmap-hdpi', 72],
+  ['mipmap-xhdpi', 96],
+  ['mipmap-xxhdpi', 144],
+  ['mipmap-xxxhdpi', 192]
 ];
 
 /* ══════════════════════════════════════════════════════════
@@ -305,6 +319,47 @@ function cropToContent(image, threshold) {
   return { width: w, height: h, data: out };
 }
 
+/** ⭐ يرسم التدرّج الأخضر (فاتح أعلى اليمين ← غامق أسفل اليسار) */
+function paintGradient(canvas, size) {
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const u = (x + (size - 1 - y)) / (2 * (size - 1));  // 0 = أسفل اليسار
+      const o = (y * size + x) * 4;
+      canvas[o] = Math.round(BRAND_DARK[0] + (BRAND_LIGHT[0] - BRAND_DARK[0]) * u);
+      canvas[o + 1] = Math.round(BRAND_DARK[1] + (BRAND_LIGHT[1] - BRAND_DARK[1]) * u);
+      canvas[o + 2] = Math.round(BRAND_DARK[2] + (BRAND_LIGHT[2] - BRAND_DARK[2]) * u);
+      canvas[o + 3] = 255;
+    }
+  }
+  return canvas;
+}
+
+/** ⭐ الأيقونة القديمة: تدرّج كامل + السمّاعة بهامش 15% */
+function legacyIcon(image, size) {
+  const canvas = paintGradient(Buffer.alloc(size * size * 4), size);
+  const box = Math.round(size * LEGACY_RATIO);
+  const ratio = Math.min(box / image.width, box / image.height);
+  const logoW = Math.max(1, Math.round(image.width * ratio));
+  const logoH = Math.max(1, Math.round(image.height * ratio));
+  const logo = resize(image, logoW, logoH);
+  const offsetX = Math.round((size - logoW) / 2);
+  const offsetY = Math.round((size - logoH) / 2);
+
+  for (let y = 0; y < logoH; y++) {
+    for (let x = 0; x < logoW; x++) {
+      const src = (y * logoW + x) * 4;
+      const a = logo.data[src + 3] / 255;
+      if (a <= 0) continue;
+      const dst = ((y + offsetY) * size + (x + offsetX)) * 4;
+      canvas[dst] = Math.round(logo.data[src] * a + canvas[dst] * (1 - a));
+      canvas[dst + 1] = Math.round(logo.data[src + 1] * a + canvas[dst + 1] * (1 - a));
+      canvas[dst + 2] = Math.round(logo.data[src + 2] * a + canvas[dst + 2] * (1 - a));
+      canvas[dst + 3] = 255;
+    }
+  }
+  return { width: size, height: size, data: canvas };
+}
+
 /** يضع الصورة في وسط لوحة شفافة (لأيقونة تكيّفية) */
 function centerOnCanvas(image, size, scale) {
   const canvas = Buffer.alloc(size * size * 4);   // شفاف تماماً
@@ -389,10 +444,17 @@ function main() {
     );
   }
 
-  console.log('▶ legacy icon (full bleed — Android masks it)');
-  for (const [folder] of DENSITIES) {
-    writeBinary(path.join(RES, folder, 'ic_launcher.png'), fs.readFileSync(SOURCE));
-    writeBinary(path.join(RES, folder, 'ic_launcher_round.png'), fs.readFileSync(SOURCE));
+  console.log('▶ legacy icon (gradient + 15% padding)');
+  for (const [folder, size] of LEGACY_SIZES) {
+    const legacy = legacyIcon(extracted, size);
+    writeBinary(
+      path.join(RES, folder, 'ic_launcher.png'),
+      encodePNG(legacy.width, legacy.height, legacy.data)
+    );
+    writeBinary(
+      path.join(RES, folder, 'ic_launcher_round.png'),
+      encodePNG(legacy.width, legacy.height, legacy.data)
+    );
   }
 
   console.log('▶ background + adaptive icon xml');
@@ -407,7 +469,7 @@ function main() {
     console.log('   ✔ removed the obsolete ' + path.relative(ROOT, oldColor));
   }
 
-  console.log('\n✅ Adaptive icon generated (gradient background + 60% stethoscope).');
+  console.log('\n✅ Adaptive icon generated (gradient background + 50% stethoscope, legacy with 15% padding).');
 }
 
 main();

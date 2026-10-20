@@ -302,29 +302,63 @@
   // ─────────────────────────────────────────────
   // com.pre12.medical://login-callback?code=… → نبدّل الكود بجلسة
   // ونغلق تبويب المتصفح.
+  //
+  // ⭐⭐ حالتان يجب التغطيتان:
+  //   1) التطبيق مفتوح   → appUrlOpen
+  //   2) تشغيل بارد      → getLaunchUrl (الرابط الذي فُتح به التطبيق)
   function bindDeepLinks() {
     var App = plugin('App');
-    if (!App || typeof App.addListener !== 'function') return;
+    if (!App) return;
 
-    try {
-      App.addListener('appUrlOpen', function (data) {
-        var url = (data && data.url) || '';
-        if (!url) return;
+    // ⭐ نفس الرابط قد يصل من المصدرين → نعالجه مرّة واحدة فقط
+    //    (كود PKCE يُستعمل مرّة واحدة فقط).
+    var handled = {};
+
+    function handle(url) {
+      if (!url) return;
+      if (handled[url]) return;
+      handled[url] = true;
+      try {
         if (typeof handleAuthDeepLink === 'function') {
           handleAuthDeepLink(url);
+        } else {
+          // ⭐ auth.js قد لا يكون محمّلاً بعد → نعيد المحاولة بعد قليل
+          setTimeout(function () {
+            if (typeof handleAuthDeepLink === 'function') handleAuthDeepLink(url);
+          }, 400);
         }
-      });
+      } catch (e) {
+        console.warn('[native] deep link handling failed:', e);
+      }
+    }
 
-      // تشغيل بارد: التطبيق فُتح عبر رابط
-      if (typeof App.getLaunchUrl === 'function') {
-        App.getLaunchUrl().then(function (data) {
-          if (data && data.url && typeof handleAuthDeepLink === 'function') {
-            handleAuthDeepLink(data.url);
-          }
-        }).catch(function () {});
+    try {
+      if (typeof App.addListener === 'function') {
+        App.addListener('appUrlOpen', function (data) {
+          handle((data && data.url) || '');
+        });
       }
     } catch (e) {
-      console.warn('[native] deep link binding failed:', e);
+      console.warn('[native] appUrlOpen listener failed:', e);
+    }
+
+    // ⭐⭐ تشغيل بارد: التطبيق فُتح عبر الرابط — getLaunchUrl يُعيده.
+    if (typeof App.getLaunchUrl === 'function') {
+      var tryLaunch = function (attempt) {
+        Promise.resolve(App.getLaunchUrl())
+          .then(function (data) {
+            var url = (data && data.url) || '';
+            if (!url) return;
+            // ⭐ على التشغيل البارد قد لا يكون عميل Supabase جاهزاً بعد
+            if (!global.supabaseClient && attempt < 12) {
+              setTimeout(function () { tryLaunch(attempt + 1); }, 150);
+              return;
+            }
+            handle(url);
+          })
+          .catch(function () {});
+      };
+      tryLaunch(0);
     }
   }
 

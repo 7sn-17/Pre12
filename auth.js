@@ -317,6 +317,38 @@ async function hashNonceWithSha256(text) {
   return base64UrlEncode(digest);
 }
 
+/**
+ * ⭐ يستخرج مُعرّف الهوية (idToken) من استجابة Google.
+ *
+ * يختلف الشكل بين إصدارات المُزوّد:
+ *   v8  → { provider: 'google', result: { idToken, … } }
+ *   أقدم → { response: { idToken } }  أو  { idToken }
+ *
+ * نجرّب كل الأشكال حتى لا نرمي "لم يُرجع Google مُعرّف هوية" على مستخدم
+ * سجّل دخوله فعلاً.
+ */
+function extractGoogleIdToken(result) {
+  if (!result) return null;
+
+  const candidates = [
+    result.result,
+    result.response,
+    result.data,
+    result
+  ];
+
+  for (let i = 0; i < candidates.length; i++) {
+    const candidate = candidates[i];
+    if (!candidate) continue;
+    if (typeof candidate.idToken === 'string' && candidate.idToken) return candidate.idToken;
+    if (candidate.result && typeof candidate.result.idToken === 'string' && candidate.result.idToken) {
+      return candidate.result.idToken;
+    }
+  }
+
+  return null;
+}
+
 /** ⭐ تدفّق Google الأصلي (بلا متصفح) */
 async function signInWithGoogleNative() {
   const SocialLogin = window.Capacitor && window.Capacitor.Plugins
@@ -352,8 +384,12 @@ async function signInWithGoogleNative() {
     options: { nonce: hashedNonce }
   });
 
-  const idToken = result && result.response ? result.response.idToken : null;
+  // ⭐⭐ شكل الاستجابة في @capgo/capacitor-social-login v8:
+  //    { provider: 'google', result: { idToken, accessToken, profile } }
+  //    (الكود القديم كان يقرأ result.response → كان دائماً null).
+  const idToken = extractGoogleIdToken(result);
   if (!idToken) {
+    console.warn('[auth] the Google response was:', JSON.stringify(result).slice(0, 300));
     throw new Error('لم يُرجع Google مُعرّف هوية');
   }
 
@@ -428,9 +464,22 @@ async function signInWithGoogle(options) {
 // com.pre12.medical://login-callback?code=...
 // ============================================
 
-/** ⭐ يستبدل كود PKCE بجلسة في Supabase */
+/**
+ * ⭐ يستبدل كود PKCE بجلسة في Supabase.
+ *
+ * يدعم ثلاثة أشكال للرابط:
+ *   1. ?code=…                        → exchangeCodeForSession (PKCE)
+ *   2. ?token_hash=…&type=…          → verifyOtp (قوالب بريد Supabase الحديثة)
+ *   3. #access_token=…&refresh_token=… → setSession (التدفّق الضمني)
+ */
 async function handleAuthDeepLink(url) {
   if (!url) return false;
+
+  // ⭐ حارس: نفس الرابط قد يصل مرتين (getLaunchUrl + appUrlOpen)
+  //    وكود PKCE يُستعمل مرّة واحدة فقط — فنتجاهل التكرار.
+  if (handleAuthDeepLink.busy) return false;
+  handleAuthDeepLink.busy = true;
+
   try {
     // ⭐ التوكن قد يكون في الاستعلام (?...) أو في الجزء (#...)
     const parts = String(url).split('#');
@@ -439,6 +488,7 @@ async function handleAuthDeepLink(url) {
     const params = new URLSearchParams(queryPart + '&' + fragmentPart);
 
     const code = params.get('code');
+    const tokenHash = params.get('token_hash');
     const accessToken = params.get('access_token');
     const refreshToken = params.get('refresh_token');
     const errorCode = params.get('error_code') || params.get('error');
@@ -447,6 +497,7 @@ async function handleAuthDeepLink(url) {
 
     if (errorCode) {
       console.warn('[auth] deep link error:', errorCode, errorDescription || '');
+      authToast('تعذّر تأكيد الرابط: ' + (errorDescription || errorCode), 'error');
       try {
         window.dispatchEvent(new CustomEvent('medapp:auth-error', {
           detail: { error: errorCode, description: errorDescription || '' }
@@ -458,10 +509,33 @@ async function handleAuthDeepLink(url) {
     const client = window.supabaseClient;
     if (!client || !client.auth) return false;
 
+    if (!code && !tokenHash && !accessToken) {
+      console.warn('[auth] the deep link has no credentials:', url.slice(0, 120));
+      return false;
+    }
+
+    const isRecovery = type === 'recovery';
     let session = null;
+
+    authToast(isRecovery ? 'جارٍ فتح استعادة كلمة المرور…' : 'جارٍ تأكيد حسابك…', 'info');
 
     if (code && typeof client.auth.exchangeCodeForSession === 'function') {
       const result = await client.auth.exchangeCodeForSession(code);
+      if (result && result.error) {
+        // ⭐ رابط البريد قد يحمل كوداً بلا code-verifier محفوظ
+        //    (تشغيل بارد / تطبيق مثبَّت حديثاً) → نتبادله مباشرة.
+        const fallback = await exchangeAuthCodeDirectly(code);
+        if (!fallback) throw result.error;
+        session = fallback;
+      } else {
+        session = result && result.data ? result.data.session : null;
+      }
+    } else if (tokenHash && typeof client.auth.verifyOtp === 'function') {
+      // ⭐ قوالب البريد الحديثة في Supabase ترسل token_hash بدل code
+      const result = await client.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: isRecovery ? 'recovery' : 'email'
+      });
       if (result && result.error) throw result.error;
       session = result && result.data ? result.data.session : null;
     } else if (accessToken && typeof client.auth.setSession === 'function') {
@@ -470,11 +544,20 @@ async function handleAuthDeepLink(url) {
         access_token: accessToken,
         refresh_token: refreshToken || ''
       });
-      if (result && result.error) throw result.error;
-      session = result && result.data ? result.data.session : null;
+      if (result && result.error) {
+        // ⭐ نجرّب تدفّق التحديث المباشر (refresh_token) قبل الاستسلام
+        const fallback = await refreshSessionDirectly(refreshToken);
+        if (!fallback) throw result.error;
+        session = fallback;
+      } else {
+        session = result && result.data ? result.data.session : null;
+      }
     }
 
-    if (!session) return false;
+    if (!session) {
+      authToast('تعذّر إنشاء الجلسة — جرّب فتح الرابط مرة أخرى', 'error');
+      return false;
+    }
 
     // ⭐ أغلق المتصفح ثم انتقل.
     try { if (typeof closeNativeBrowser === 'function') closeNativeBrowser(); } catch (e) {}
@@ -484,22 +567,132 @@ async function handleAuthDeepLink(url) {
       }));
     } catch (e) {}
 
+    authToast(isRecovery ? 'تم التحقق — عيّن كلمة المرور الآن' : 'تم تأكيد حسابك بنجاح ✅', 'success');
+
     // ⭐ استعادة كلمة المرور → صفحة تعيين كلمة المرور، غيرها → الرئيسية
-    const isRecovery = type === 'recovery';
     setTimeout(function () {
+      var here = String(window.location.pathname || '').split('/').pop() || 'index.html';
+      if (here === (isRecovery ? 'reset-password.html' : 'index.html')) return;  // ⭐ نحن في الصفحة الهدف
       window.location.href = isRecovery ? 'reset-password.html' : 'index.html';
-    }, 150);
+    }, 600);
 
     return true;
   } catch (err) {
     console.warn('[auth] deep link handling failed:', err);
+    authToast('تعذّر تأكيد الرابط — ' + ((err && err.message) || 'خطأ غير معروف'), 'error');
     try {
       window.dispatchEvent(new CustomEvent('medapp:auth-error', {
         detail: { error: 'deep-link-failed' }
       }));
     } catch (e) {}
     return false;
+  } finally {
+    // ⭐ نسمح بمحاولة جديدة بعد مهلة قصيرة (الرابط قد يُفتح مرتين)
+    setTimeout(function () { handleAuthDeepLink.busy = false; }, 4000);
   }
+}
+
+/**
+ * ⭐⭐ تبادل كود المصادقة مباشرةً عبر نقطة /token.
+ *
+ * السبب: `exchangeCodeForSession` في supabase-js يتطلب وجود
+ * "code verifier" محفوظ في الجهاز. لكن رابط تأكيد البريد يُنشئ
+ * الكود على الخادم (بلا verifier) — وفي التشغيل البارد (تطبيق
+ * مثبَّت حديثاً) لا يوجد verifier محفوظ، فيفشل التبادل.
+ * نطلب من الخادم مباشرةً، وهذا مدعوم لأن الكود نفسه يحمل الجلسة.
+ */
+async function exchangeAuthCodeDirectly(code) {
+  try {
+    const response = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=pkce', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY
+      },
+      body: JSON.stringify({ auth_code: code, code_verifier: '' })
+    });
+    if (!response.ok) return null;
+    const json = await response.json();
+    if (!json || !json.access_token || !json.refresh_token) return null;
+
+    const result = await supabaseClient.auth.setSession({
+      access_token: json.access_token,
+      refresh_token: json.refresh_token
+    });
+    if (result && result.error) return null;
+    return (result && result.data) ? result.data.session : null;
+  } catch (e) {
+    console.warn('[auth] the direct code exchange failed:', e);
+    return null;
+  }
+}
+
+/**
+ * ⭐⭐ تجديد الجلسة مباشرةً عبر refresh_token.
+ * شبكة أمان أخيرة: بعض الروابط القديمة تحمل توكن منتهياً.
+ */
+async function refreshSessionDirectly(refreshToken) {
+  if (!refreshToken) return null;
+  try {
+    const response = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY
+      },
+      body: JSON.stringify({ refresh_token: refreshToken })
+    });
+    if (!response.ok) return null;
+    const json = await response.json();
+    if (!json || !json.access_token || !json.refresh_token) return null;
+
+    const result = await supabaseClient.auth.setSession({
+      access_token: json.access_token,
+      refresh_token: json.refresh_token
+    });
+    if (result && result.error) return null;
+    return (result && result.data) ? result.data.session : null;
+  } catch (e) {
+    console.warn('[auth] the direct refresh failed:', e);
+    return null;
+  }
+}
+
+/**
+ * ⭐ إشعار صغير يعمل في كل الصفحات (showToast معرّف في كل صفحة على حدة).
+ */function authToast(message, type) {
+  try {
+    if (typeof showToast === 'function') {
+      showToast(message, type === 'error' ? 'error' : (type === 'info' ? 'info' : 'success'));
+      return;
+    }
+  } catch (e) {}
+
+  try {
+    var toast = document.getElementById('authDeepLinkToast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'authDeepLinkToast';
+      toast.setAttribute('role', 'status');
+      toast.style.cssText = [
+        'position:fixed', 'left:50%', 'bottom:calc(24px + env(safe-area-inset-bottom))',
+        'transform:translate(-50%,16px)', 'z-index:2147483000', 'max-width:calc(100vw - 32px)',
+        'padding:12px 17px', 'border-radius:14px', 'font:700 0.78rem/1.5 Cairo,system-ui,sans-serif',
+        'color:#f0fdf4', 'background:#0d221a', 'border:1px solid rgba(16,185,129,0.45)',
+        'box-shadow:0 18px 44px -16px rgba(0,0,0,0.5)', 'opacity:0',
+        'transition:opacity .25s ease, transform .25s ease', 'pointer-events:none'
+      ].join(';');
+      document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.style.opacity = '1';
+    toast.style.transform = 'translate(-50%,0)';
+    clearTimeout(authToast.timer);
+    authToast.timer = setTimeout(function () {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translate(-50%,16px)';
+    }, 3200);
+  } catch (e) {}
 }
 
 // ============================================
