@@ -2105,6 +2105,68 @@ also documents every previous version.
 - The custom animated splash screen was **deleted entirely** (markup,
   CSS, animation and the sessionStorage flag).
 
+### 5.24 Phase 31 / v3.7.0 (the overlays, the account deletion, a solid push flow)
+
+#### ⭐⭐ The root cause of the "blocking overlay"
+
+The `.auth-required-overlay` CSS had **vanished** from the shared shell
+(only the button rules survived). The two overlay `<div>`s — the iPhone
+install banner and the "Login Required" block — therefore rendered as
+**unstyled, always-visible blocks at the bottom of every screen**, and
+they swallowed the clicks.
+
+The fix is structural, not cosmetic:
+
+- the **iPhone install modal is deleted** (the install button now shows
+  a one-line toast on iOS);
+- the **"Login Required" overlay is out of the page flow** —
+  `partials/auth-prompt.html` is deleted and `ui.js` now owns
+  `showLoginPrompt()`;
+- `showLoginPrompt()` is called **only** when a guest actually attempts
+  an action that needs an account (favourite · offline download · My
+  Lectures · Progress).
+
+#### 🗑️ Deleting the account
+
+`index.html` → the Danger Zone → **"حذف الحساب نهائياً"** → a
+two-step confirmation (the word `حذف` must be typed) → the new
+`delete-user-account` Edge Function:
+
+```ts
+const { data: userData } = await admin.auth.getUser(accessToken); // من الـ JWT
+// … تنظيف الجداول المرتبطة (progress · favourites · notes · albums …)
+await admin.auth.admin.deleteUser(userId);                          // service_role
+```
+
+The client then signs out and returns to `index.html`.
+
+#### 📩 Unverified sign-ups
+
+`signUp()` recognises *"already registered"*: it stores the email in
+`pending_verification`, flags it, and the login page sends the user to
+`confirm.html`, where a **fresh OTP** is sent automatically
+(`auth.resend({ type: 'signup' })`) with the message
+*"هذا البريد مسجل بالفعل. لقد أرسلنا لك رمزاً جديداً."*.
+
+#### 🔔 The push flow, hardened
+
+- **One permanent** `'registration'` listener (repeat calls used to
+  stack duplicates) with a waiter queue.
+- `ensurePushToken()` runs after **every** sign-in and on **app start**,
+  so the FCM token is always fresh without touching the test button.
+- The token is **upserted**, so it is stored even without a profile row.
+
+#### ☁️ Firebase (verified through the MCP)
+
+- The project `pre12-medical` (number 21831772653) is **ACTIVE** and the
+  Android app `com.pre12.medical`
+  (`1:21831772653:android:3ff1955d03c28118561fe4`) matches
+  `google-services.json` ✓.
+- The **release keystore's fingerprints were registered**:
+  `SHA1 18:23:F8:DC:C2:83:6D:FE:6E:51:9F:DA:E6:25:51:6D:A4:0D:95:1E`
+  and its SHA-256 — without them Credential Manager refuses to return
+  an identity.
+
 ### 5.23 Phase 30 — v3.6.1 (a simpler update + a premium modal)
 
 #### The update is handed to the browser
