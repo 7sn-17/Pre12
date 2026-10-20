@@ -271,6 +271,22 @@
   }
 
   /**
+   * ⭐⭐⭐ يحوّلMarkdown إلى نصّ نظيف (بلا ** أو ` أو روابط).
+   */
+  function cleanMarkdown(text) {
+    return String(text || '')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')   // [نص](رابط) → نص
+      .replace(/\*\*([^*]+)\*\*/g, '$1')            // **عريض** → عريض
+      .replace(/__([^_]+)__/g, '$1')
+      .replace(/`([^`]+)`/g, '$1')                    // `code` → code
+      .replace(/^#{1,6}\s*/gm, '')                   // # عنوان
+      .replace(/^>\s?/gm, '')                        // > اقتباس
+      .replace(/\*([^*]+)\*/g, '$1')                // *مائل*
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+
+  /**
    * ⭐⭐ يستخرج آخر 3 نقاط من سجلّ التغييرات (بدل عرض الملف كاملاً).
    */
   function extractChangelogHighlights(notes) {
@@ -298,10 +314,11 @@
         var t = l.trim();
         return t && t.charAt(0) !== '#' && t.charAt(0) !== '<' && t.indexOf('---') !== 0;
       }).slice(0, 3);
-      return fallback.join('\n');
+      return cleanMarkdown(fallback.join('\n'));
     }
 
-    return bullets.map(function (b) { return '• ' + b; }).join('\n');
+    // ⭐ نصّ نظيف بلا Markdown
+    return bullets.map(function (b) { return '• ' + cleanMarkdown(b); }).join('\n');
   }
 
   /** ⭐ يفتح سجلّ التغييرات كاملاً في المتصفّح */
@@ -337,6 +354,7 @@
     downloadAndInstall: downloadAndInstall,
     showModal: showUpdateModal,
     extractChangelogHighlights: extractChangelogHighlights,
+    cleanMarkdown: cleanMarkdown,
     openChangelog: openChangelog,
     compareVersions: compareVersions,
     isNative: isNative
