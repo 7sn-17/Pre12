@@ -24,10 +24,28 @@
     backButtonBound: false,
     fcmToken: '',
     pushListenerBound: false,
+    lastFcmAlert: '',
     lastNotificationTap: null,
     permissionRequested: false,
     notificationPermission: null
   };
+
+  /**
+   * ⭐⭐⭐ TASK 4 — تشخيص FCM مرئي على الشاشة.
+   * alert() حتى يرى المستخدم الخطأ الحقيقي من Firebase بدل الاكتفاء
+   * بسجلّ logcat. نمنع تكرار نفس الرسالة مرّتين متتاليتين فقط
+   * (بعض الأحداث تُطلق أكثر من مرّة لنفس السبب).
+   */
+  function showFcmDebugAlert(message) {
+    var text = String(message == null ? '' : message);
+    if (!text || nativeState.lastFcmAlert === text) return;
+    nativeState.lastFcmAlert = text;
+    try {
+      if (typeof global.alert === 'function') global.alert(text);
+    } catch (e) {
+      console.warn('[native] the FCM alert could not be shown:', e);
+    }
+  }
 
   function plugin(name) {
     return Plugins[name] || null;
@@ -230,6 +248,8 @@
       )
         .then(function (result) {
           if (result && result.error) {
+            // ⭐ TASK 4: فشل الحفظ في profiles مرئي أيضاً
+            showFcmDebugAlert('FCM Save Error: ' + result.error.message);
             console.warn('[native] could not save the FCM token:', result.error.message);
             return false;
           }
@@ -241,6 +261,7 @@
           )
             .then(function (up) {
               if (up && up.error) {
+                showFcmDebugAlert('FCM Save Error: ' + up.error.message);
                 console.warn('[native] the token upsert failed:', up.error.message);
                 return false;
               }
@@ -277,6 +298,8 @@
       // ⚠️ الترتيب مهم: المستمع أوّلاً … ثم register()
       PushNotifications.addListener('registration', function (token) {
         var value = (token && token.value) || token || '';
+        // ⭐ TASK 4: الرمز ظاهر على الشاشة فور وصوله
+        showFcmDebugAlert('Token Received: ' + value);
         if (!value) return;
         nativeState.fcmToken = String(value);
         console.info('[native] the FCM token arrived:', nativeState.fcmToken.slice(0, 24) + '…');
@@ -284,9 +307,12 @@
       });
 
       PushNotifications.addListener('registrationError', function (error) {
+        // ⭐ TASK 4: الخطأ الحقيقي من Firebase مرئي — لا logcat فقط
+        showFcmDebugAlert('FCM Error: ' + JSON.stringify(error));
         console.warn('[native] the FCM registration failed:', error);
       });
     } catch (e) {
+      showFcmDebugAlert('FCM Error: ' + JSON.stringify(String(e && e.message ? e.message : e)));
       console.warn('[native] the registration listener could not be attached:', e);
     }
   }
@@ -337,6 +363,8 @@
     return Promise.resolve(PushNotifications.requestPermissions())
       .then(function (perm) {
         if (!perm || perm.receive !== 'granted') {
+          // ⭐ TASK 4: فشل الإذن مرئي أيضاً
+          showFcmDebugAlert('FCM Permission: ' + JSON.stringify(perm || {}));
           console.warn('[native] the notification permission was not granted:',
             (perm && (perm.receive || perm.status)) || 'unknown');
           return '';
@@ -353,11 +381,13 @@
             });
           })
           .catch(function (e) {
+            showFcmDebugAlert('FCM Register Error: ' + JSON.stringify(String(e && e.message ? e.message : e)));
             console.warn('[native] the FCM registration call failed:', e);
             return '';
           });
       })
       .catch(function (e) {
+        showFcmDebugAlert('FCM Permission Error: ' + JSON.stringify(String(e && e.message ? e.message : e)));
         console.warn('[native] ensuring the FCM token failed:', e);
         return '';
       });

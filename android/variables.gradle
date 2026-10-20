@@ -2,6 +2,10 @@ ext {
     minSdkVersion = 24
     compileSdkVersion = 36
     targetSdkVersion = 36
+    // ⭐ Firebase Cloud Messaging — يقرأه @capacitor/push-notifications
+    //    و@capacitor-firebase/messaging من rootProject.ext.
+    //    (Capacitor 8 متوافق مع 25.x — لا نستخدم BoM لتجنّب تعارض الإصدارات)
+    firebaseMessagingVersion = '25.0.1'
     androidxActivityVersion = '1.11.0'
     androidxAppCompatVersion = '1.7.1'
     androidxCoordinatorLayoutVersion = '1.3.0'

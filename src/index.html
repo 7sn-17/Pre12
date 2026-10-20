@@ -1393,7 +1393,8 @@ sw: true
     .today-sheet-overlay {
       position: fixed;
       inset: 0;
-      z-index: 3500;
+      /* ⭐ فوق الشريط العلوي والسفلي والزرّ العائم (9999) */
+      z-index: 100000;
       display: flex;
       align-items: flex-end;
       justify-content: center;
@@ -3685,7 +3686,7 @@ i.fab {
     .nav-btn-center {
       position: absolute;
       left: 50%;
-      top: 0;
+      top: 14px;
       right: auto;
       bottom: auto;
       transform: translate(-50%, -50%);
@@ -3736,7 +3737,8 @@ i.fab {
     .upload-sheet-overlay {
       position: fixed;
       inset: 0;
-      z-index: 3600;
+      /* ⭐ فوق الشريط العلوي والسفلي والزرّ العائم (9999) */
+      z-index: 100000;
       display: flex;
       align-items: flex-end;
       justify-content: center;

@@ -836,6 +836,30 @@
   .medapp-update-overlay { z-index: var(--z-update, 1000100); }
   .auth-required-overlay { z-index: var(--z-overlay, 20000); }
 
+  /* ============================================================
+     ⭐⭐⭐ TASK 2 — النوافذ فوق الشريط العلوي والشريط السفلي والزرّ "+"
+     ------------------------------------------------------------
+     كانت نوافذ "إضافة محتوى" و"قائمة المهام" (وكذلك .modal-overlay
+     في الأهداف/الملاحظات/المعدّل/الإدارة) تستخدم z-index 3000–3600،
+     أي **تحت** الشريط السفلي (9999) والزرّ العائم (9500)، فكانت
+     تُرسم خلفهما. نافذة "سلسلة الأيام" وحدها كانت تعمل لأنها
+     تستخدم 10000. نوحّد الجميع على طبقة واحدة عالية جداً فوق كل شيء.
+     ============================================================ */
+  .modal-overlay,
+  .modal-backdrop,
+  .bottom-sheet,
+  .add-modal,
+  .tasks-modal,
+  .upload-sheet-overlay,
+  .today-sheet-overlay,
+  .streak-sheet-overlay,
+  .search-modal-overlay,
+  .auth-required-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 100000 !important;
+  }
+
   /* ⭐ display:none ⟶ flex لا يُشغّل transition، فنتكفّل بحركة الدخول
      عبر animation حتى تبقى النوافذ أنيقة كما كانت. */
   @media (prefers-reduced-motion: no-preference) {
@@ -880,6 +904,8 @@
      نُزيح حاوية المحتوى نفسها (لا نعتمد على :has() الذي قد لا
      تدعمه بعض الـ WebViews فيبدو المحتوى مختفياً تحت الشريط).
      تُستثنى الواجهات بملء الشاشة (viewer) لأنها تدير هندستها.
+     ⭐ v4.1.1 — مساحة تنفّس صريحة: ارتفاع الشريط + المنطقة الآمنة
+     + 20px، حتى لا تبدأ أول بطاقة ملتصقة بالشريط عند التمرير.
      ════════════════════════════════════════════════════════════ */
   body > header ~ .container,
   body > header ~ main:not(.viewer),
@@ -890,7 +916,11 @@
   .app-content {
     box-sizing: border-box;
     min-height: 100vh;
-    padding-top: calc(var(--app-header-h) + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) !important;
+    padding-top: calc(
+      var(--header-height, 80px) +
+      var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) +
+      20px
+    ) !important;
   }
 
   /* ⭐ الإزاحة السفلية للشريط العائم — للصفحات التي تحمله فعلاً فقط
@@ -958,13 +988,15 @@
     text-align: center;
   }
 
-  /* ⭐⭐⭐ زر "+" العائم — متمركز تماماً (لا position:relative ولا margin سالب) */
+  /* ⭐⭐⭐ زر "+" العائم — متمركز أفقياً، ومنخفض قليلاً ليلامس الشريط
+     (كان top:0 فيطفو نصفه الأعلى بعيداً عن الأيقونات؛ 14px يجعل
+     تداخله مع الشريط طبيعياً كما في التطبيقات الأصلية). */
   .floating-nav .nav-btn-center,
   .floating-nav-wrapper .nav-btn-center {
     position: absolute !important;
     left: 50% !important;
     right: auto !important;
-    top: 0 !important;
+    top: 14px !important;
     bottom: auto !important;
     margin: 0 !important;
     transform: translate(-50%, -50%) !important;
@@ -999,7 +1031,7 @@
     gap: 4px;
   }
   .fab-button {
-    position: fixed; left: 50%; transform: translateX(-50%); bottom: 25px; z-index: 9500;
+    position: fixed; left: 50%; transform: translateX(-50%); bottom: 12px; z-index: 9500;
   }
 
   /* ============================================================
@@ -2040,7 +2072,7 @@ if ('serviceWorker' in navigator) {
 </script>
 
 
-<script src="app.js?v=4.1.0"></script>
+<script src="app.js?v=4.1.1"></script>
 <script>
 
   var PLANS = [
