@@ -1,42 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- ⭐ أيقونة شريط الإشعارات: سماعة طبية بالأبيض (تُلوَّن حسب النظام) -->
+<!--
+  ⭐ v4.4.0 — أيقونة شريط الإشعارات: سماعة طبية بيضاء بسيطة.
+  Android يستخدم قناة alpha فقط للأيقونة الصغيرة، لذا الخلفية شفافة
+  والرسم أبيض خالص (24×24dp) ليتلوّن تلقائياً حسب النظام.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <!-- أنبوب الأذن الأيمن -->
-    <path
-        android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="1.7"
-        android:strokeLineCap="round"
-        android:fillColor="#00000000"
-        android:pathData="M5.2,3.4 L5.2,9.6" />
+
     <!-- أنبوب الأذن الأيسر -->
     <path
+        android:pathData="M5,3.2 L5,8.2 C5,11.6 7.6,13.6 10.8,13.6"
         android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="1.7"
-        android:strokeLineCap="round"
-        android:fillColor="#00000000"
-        android:pathData="M10.8,3.4 L10.8,9.6" />
-    <!-- القوس بين الأنبوبين -->
-    <path
-        android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="1.7"
+        android:strokeWidth="2"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:fillColor="#00000000"
-        android:pathData="M5.2,9.6 C5.2,13.4 10.8,13.4 10.8,9.6" />
-    <!-- الأنبوب النازل -->
+        android:fillColor="#00000000" />
+
+    <!-- أنبوب الأذن الأيمن -->
     <path
+        android:pathData="M19,3.2 L19,8.2 C19,11.6 16.4,13.6 13.2,13.6"
         android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="1.7"
+        android:strokeWidth="2"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:fillColor="#00000000"
-        android:pathData="M8,13.2 L8,15.6 C8,18.6 10.4,20.2 13.4,20.2 L15.4,20.2" />
-    <!-- رأس السماعة -->
+        android:fillColor="#00000000" />
+
+    <!-- وصلة Y -->
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M18.6,14.6 a3.4,3.4 0 1,0 0,6.8 a3.4,3.4 0 1,0 0,-6.8 z" />
+        android:pathData="M10.8,13.6 C11.3,14.3 11.7,14.9 12,15.6 C12.3,14.9 12.7,14.3 13.2,13.6"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+
+    <!-- الأنبوب النازل إلى رأس السماعة -->
+    <path
+        android:pathData="M12,15.6 L12,16.5 C12,18.8 14,19.3 16,19.3"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+
+    <!-- رأس السماعة (حلقة) -->
+    <path
+        android:pathData="M18.5,16.6 a2.7,2.7 0 1,0 0,5.4 a2.7,2.7 0 1,0 0,-5.4"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+
+    <!-- أطراف الأذن -->
+    <path
+        android:pathData="M5,2 a1.2,1.2 0 1,0 0,2.4 a1.2,1.2 0 1,0 0,-2.4"
+        android:fillColor="#FFFFFFFF" />
+    <path
+        android:pathData="M19,2 a1.2,1.2 0 1,0 0,2.4 a1.2,1.2 0 1,0 0,-2.4"
+        android:fillColor="#FFFFFFFF" />
 </vector>

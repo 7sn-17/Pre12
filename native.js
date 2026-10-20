@@ -45,6 +45,38 @@
     try { localStorage.setItem(FCM_TOKEN_KEY, String(token)); } catch (e) {}
   }
 
+  /**
+   * ⭐ v4.4.0 — استخراج الرمز الحقيقي من أي شكل ترجعه الإضافات.
+   * كان FirebaseMessaging.getToken() يُرجع { token: "..." } بينما الكود
+   * يقرأ value فقط، فيُحوَّل الكائن إلى النص "[object Object]" ويُحفظ
+   * في profiles.fcm_token. لا نستخدم String(object) أبداً.
+   */
+  function extractFcmToken(value) {
+    if (!value) return '';
+    if (typeof value === 'string') return value.trim();
+    if (typeof value !== 'object') return '';
+
+    var keys = ['token', 'value', 'registrationId', 'registrationToken', 'id'];
+    for (var i = 0; i < keys.length; i++) {
+      var nested = value[keys[i]];
+      if (typeof nested === 'string' && nested.trim()) return nested.trim();
+      if (nested && typeof nested === 'object') {
+        var deeper = extractFcmToken(nested);
+        if (deeper) return deeper;
+      }
+    }
+    return '';
+  }
+
+  /** ⭐ رمز FCM صالح: نصّ طويل بلا مسافات، وليس "[object Object]". */
+  function isUsableFcmToken(token) {
+    token = String(token || '');
+    return token.length >= 20 &&
+      token.length <= 4096 &&
+      token.indexOf('[object') === -1 &&
+      !/\s/.test(token);
+  }
+
   function plugin(name) {
     return Plugins[name] || null;
   }
@@ -268,8 +300,12 @@
    * الجلسة. لا نستخدم upsert: إنشاء الصفّ مسؤولية trigger القاعدة.
    */
   function queueFcmTokenSave(token) {
-    token = String(token || '');
-    if (!token) return Promise.resolve(false);
+    // ⭐ v4.4.0 — نقبل كائناً ({token}/{value}) ونستخرج النصّ الحقيقي.
+    token = extractFcmToken(token);
+    if (!isUsableFcmToken(token)) {
+      console.warn('[native] ignored an invalid FCM token shape.');
+      return Promise.resolve(false);
+    }
 
     nativeState.pendingFcmToken = token;
     rememberFcmToken(token);
@@ -299,9 +335,13 @@
    *   يحدّث profiles.fcm_token فقط، ويعيد المحاولة إن لم تكن الجلسة جاهزة.
    */
   function saveTokenToDB(token, attempt) {
-    token = String(token || '');
+    // ⭐ TASK 1 (v4.4.0) — نحفظ النصّ فقط. لا JSON.stringify، ولا String(object).
+    token = extractFcmToken(token);
     attempt = Number(attempt) || 0;
-    if (!token) return Promise.resolve(false);
+    if (!isUsableFcmToken(token)) {
+      console.warn('[native] saveTokenToDB received an invalid token; not saving.');
+      return Promise.resolve(false);
+    }
 
     var client = supabaseClientRef();
     if (!client || !client.from) {
@@ -392,9 +432,9 @@
     try {
       // ⚠️ الترتيب مهم: المستمع أوّلاً … ثم register()
       PushNotifications.addListener('registration', function (token) {
-        var value = (token && token.value) || token || '';
-        if (!value) return;
-        nativeState.fcmToken = String(value);
+        var value = extractFcmToken(token);
+        if (!isUsableFcmToken(value)) return;
+        nativeState.fcmToken = value;
         rememberFcmToken(nativeState.fcmToken);
         // ⭐ console only — the user must never see a debug alert.
         console.info('[native] Token Received:', nativeState.fcmToken.slice(0, 24) + '…');
@@ -426,9 +466,12 @@
 
     return Promise.resolve(read())
       .then(function (result) {
-        var value = (result && result.value) || result || '';
-        if (!value) return nativeState.fcmToken || '';
-        nativeState.fcmToken = String(value);
+        var value = extractFcmToken(result);
+        if (!isUsableFcmToken(value)) {
+          console.warn('[native] the FCM plugin did not return a token string.');
+          return nativeState.fcmToken || '';
+        }
+        nativeState.fcmToken = value;
         rememberFcmToken(nativeState.fcmToken);
         console.info('[native] the FCM token was read:', nativeState.fcmToken.slice(0, 24) + '…');
         return Promise.resolve(queueFcmTokenSave(nativeState.fcmToken)).then(function () {
@@ -502,9 +545,9 @@
     try {
       if (typeof Messaging.addListener === 'function') {
         Messaging.addListener('tokenReceived', function (token) {
-          var value = (token && token.value) || token || '';
-          if (!value) return;
-          nativeState.fcmToken = String(value);
+          var value = extractFcmToken(token);
+          if (!isUsableFcmToken(value)) return;
+          nativeState.fcmToken = value;
           rememberFcmToken(nativeState.fcmToken);
           bindAuthTokenSave();
           queueFcmTokenSave(nativeState.fcmToken);
@@ -533,9 +576,10 @@
 
       if (typeof Messaging.getToken === 'function') {
         Messaging.getToken().then(function (result) {
-          var value = (result && result.value) || result || '';
-          if (!value) return;
-          nativeState.fcmToken = String(value);
+          // ⭐ FirebaseMessaging returns { token: "..." } — not { value }.
+          var value = extractFcmToken(result);
+          if (!isUsableFcmToken(value)) return;
+          nativeState.fcmToken = value;
           rememberFcmToken(nativeState.fcmToken);
           bindAuthTokenSave();
           queueFcmTokenSave(nativeState.fcmToken);

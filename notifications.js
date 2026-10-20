@@ -333,10 +333,10 @@
 
     try {
       PushNotifications.addListener('registration', function (token) {
-        var value = (token && token.value) || token || '';
-        if (!value) return;
+        var value = extractFcmToken(token);
+        if (!isUsableFcmToken(value)) return;
         rememberFcmToken(value);
-        console.info('[notifications] the FCM token arrived:', String(value).slice(0, 18) + '…');
+        console.info('[notifications] the FCM token arrived:', value.slice(0, 18) + '…');
         saveFcmToken(value);
         flushPushWaiters(value);
       });
@@ -439,9 +439,42 @@
     try { localStorage.setItem(FCM_TOKEN_KEY, String(token)); } catch (e) {}
   }
 
+  /**
+   * ⭐ v4.4.0 — { token }, { value }, or a nested object → the real string.
+   * Never fall back to String(object): that stored "[object Object]".
+   */
+  function extractFcmToken(value) {
+    if (!value) return '';
+    if (typeof value === 'string') return value.trim();
+    if (typeof value !== 'object') return '';
+
+    var keys = ['token', 'value', 'registrationId', 'registrationToken', 'id'];
+    for (var i = 0; i < keys.length; i++) {
+      var nested = value[keys[i]];
+      if (typeof nested === 'string' && nested.trim()) return nested.trim();
+      if (nested && typeof nested === 'object') {
+        var deeper = extractFcmToken(nested);
+        if (deeper) return deeper;
+      }
+    }
+    return '';
+  }
+
+  function isUsableFcmToken(token) {
+    token = String(token || '');
+    return token.length >= 20 &&
+      token.length <= 4096 &&
+      token.indexOf('[object') === -1 &&
+      !/\s/.test(token);
+  }
+
   /** ⭐ يحفظ توكن الإشعارات في جدول profiles — update فقط (RLS آمن) */
   function saveFcmToken(token) {
-    if (!token) return Promise.resolve(false);
+    token = extractFcmToken(token);
+    if (!isUsableFcmToken(token)) {
+      console.warn('[notifications] ignored an invalid FCM token shape.');
+      return Promise.resolve(false);
+    }
     rememberFcmToken(token);
     // ⭐ v4.3.0 — the client is exposed on window by supabase-config.js.
     var client = global.supabaseClient ||
@@ -565,20 +598,25 @@
      ══════════════════════════════════════════════════════════ */
 
   /**
-   * ⭐ ينشئ قناة الإشعارات ("medapp_reminders") — بدونها تُسقط الإشعارات
-   *   على أندرويد 8+ إذا لم تكن موجودة.
+   * ⭐ v4.4.0 — قناة إشعارات احترافية بصوت chime واهتزاز.
+   *   غيّرنا المعرّف إلى v2 لأن Android لا يسمح بتعديل صوت/اهتزاز قناة
+   *   أُنشئت سابقاً؛ المعرّف الجديد يضمن أن المستخدمين الحاليين يحصلون
+   *   على الإعدادات الجديدة دون حذف قنواتهم يدوياً.
    */
   function ensureChannel() {
     var LocalNotifications = plugin('LocalNotifications');
     if (!LocalNotifications || typeof LocalNotifications.createChannel !== 'function') return;
     try {
       LocalNotifications.createChannel({
-        id: 'medapp_reminders',
+        id: 'medapp_reminders_v2',
         name: 'تذكيرات المنصة',
         description: 'تذكير بالمهام وحماية سلسلة الدراسة',
-        importance: 4,
+        importance: 5,
         visibility: 1,
+        sound: 'beep.wav',
         vibration: true,
+        lights: true,
+        lightColor: '#10b981',
       });
     } catch (e) {
       console.warn('[notifications] could not create the channel:', e);
@@ -613,7 +651,8 @@
         title: message.title,
         body: message.body,
         smallIcon: 'ic_stat_icon',
-        channelId: 'medapp_reminders',
+        channelId: 'medapp_reminders_v2',
+        sound: 'beep.wav',
         schedule: { at: new Date(Date.now() + delay) },
         extra: { category: message.category }
       }]
@@ -664,7 +703,8 @@
             title: '⏰ اختبار التذكير المحلي',
             body: 'إذا وصلتك هذه الرسالة فالتذكير المحلي يعمل — بعد ' + wait + ' ثوانٍ.',
             smallIcon: 'ic_stat_icon',
-            channelId: 'medapp_reminders',
+            channelId: 'medapp_reminders_v2',
+            sound: 'beep.wav',
             schedule: { at: at },
             extra: { action: 'tasks', test: 'local' }
           }]
@@ -812,8 +852,10 @@
       notifications: [{
         id: DAILY_REMINDER_ID,
         title: '📚 مراجعة يومية',
-        body: '📚 لا تنسَ مراجعة مهامك اليومية على المنصة الطبية. أنت تستطيع!',
+        body: '📚 لا تنسَ مراجعة مهامك اليومية. أنت تستطيع!',
         smallIcon: 'ic_stat_icon',
+        channelId: 'medapp_reminders_v2',
+        sound: 'beep.wav',
         schedule: { on: { hour: DAILY_REMINDER_HOUR, minute: 0 }, every: 'day' },
         extra: { action: 'tasks' }
       }]
@@ -894,12 +936,12 @@
 
     return Promise.resolve(PushNotifications.getToken())
       .then(function (result) {
-        var value = (result && (result.value || result.token)) || (typeof result === 'string' ? result : '');
-        if (!value) {
+        var value = extractFcmToken(result);
+        if (!isUsableFcmToken(value)) {
           console.warn('[notifications] the device still has no FCM token.');
           return '';
         }
-        console.info('[notifications] the FCM token saved:', String(value).slice(0, 18) + '…');
+        console.info('[notifications] the FCM token saved:', value.slice(0, 18) + '…');
         return saveFcmToken(value).then(function () { return value; });
       })
       .catch(function (e) {

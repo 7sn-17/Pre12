@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="4.3.0">
+<meta name="app-version" content="4.4.0">
 <title>السنة التحضيرية - المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -429,6 +429,16 @@
     50%      { box-shadow: 0 0 0 10px rgba(16,185,129,0.05), 0 0 48px -4px rgba(52,211,153,0.85); }
   }
 
+  .medapp-update-kicker {
+    position: relative;
+    margin-bottom: 6px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    color: #6ee7b7;
+    opacity: 0.9;
+  }
+
   .medapp-update-title {
     position: relative;
     font-size: 1.24rem;
@@ -454,10 +464,29 @@
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
 
-  /* ⭐ الملاحظات — قائمة عربية نظيفة */
+  .medapp-update-from {
+    position: relative;
+    margin-top: 7px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: #94a3b8;
+    direction: ltr;
+  }
+
+  .medapp-update-section-title {
+    position: relative;
+    margin: 18px 0 8px;
+    text-align: right;
+    font-size: 0.76rem;
+    font-weight: 800;
+    color: #a7f3d0;
+    letter-spacing: 0.2px;
+  }
+
+  /* ⭐ الملاحظات — قائمة عربية نظيفة بعلامات صحّ خضراء */
   .medapp-update-notes {
     position: relative;
-    margin: 18px 0 0;
+    margin: 0;
     padding: 14px 16px;
     list-style: none;
     text-align: right;
@@ -467,7 +496,9 @@
   }
   .medapp-update-notes li {
     position: relative;
-    padding-right: 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
     margin-bottom: 9px;
     font-size: 0.81rem;
     font-weight: 600;
@@ -476,16 +507,33 @@
     text-align: right;
   }
   .medapp-update-notes li:last-child { margin-bottom: 0; }
-  .medapp-update-notes li::before {
-    content: '';
-    position: absolute;
-    right: 2px;
-    top: 12px;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #6ee7b7, #10b981);
-    box-shadow: 0 0 10px rgba(52, 211, 153, 0.8);
+  .medapp-update-notes li i {
+    flex: 0 0 auto;
+    width: 15px;
+    height: 15px;
+    margin-top: 5px;
+    color: #34d399;
+    filter: drop-shadow(0 0 6px rgba(52, 211, 153, 0.45));
+  }
+  .medapp-update-notes li span { flex: 1; }
+
+  .medapp-update-footnote {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 14px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    line-height: 1.7;
+    color: #94a3b8;
+  }
+  .medapp-update-footnote i {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+    color: #34d399;
   }
 
   /* ⭐ الأزرار */
@@ -6317,7 +6365,7 @@ i.fab {
         <div class="settings-icon"><i data-lucide="info"></i></div>
         <div class="settings-text">
           <h4>حول التطبيق</h4>
-          <p id="aboutVersionText">الإصدار 4.3.0 • السنة التحضيرية</p>
+          <p id="aboutVersionText">الإصدار 4.4.0 • السنة التحضيرية</p>
         </div>
       </div>
       <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
@@ -6620,7 +6668,7 @@ i.fab {
 <script src="notifications.js"></script>
 
 
-  <script src="app.js?v=4.3.0"></script>
+  <script src="app.js?v=4.4.0"></script>
 <script>
 
     lucide.createIcons();
@@ -7671,28 +7719,36 @@ function openLastActivity() {
 
         const { data, error } = await supabaseClient.functions.invoke('send-test-notification');
 
+        // ⭐ v4.4.0 — الخادم يعيد 200 مع {ok:false,error} لأخطاء FCM المتوقّعة،
+        //    لذا لا نعتبر النجاح نجاحاً إلا إذا كان ok !== false.
+        function friendlyTestError(reason) {
+          var text = String(reason || '');
+          var lower = text.toLowerCase();
+          if (lower.indexOf('no-device-token') > -1) {
+            return 'لا يوجد رمز إشعارات لهذا الجهاز — فعّل الإشعارات ثم أعد المحاولة.';
+          }
+          if (lower.indexOf('fcm-not-configured') > -1) {
+            return 'الإشعارات غير مُهيّأة على الخادم — تحقّق من سرّ حساب خدمة FCM.';
+          }
+          if (lower.indexOf('invalid-session') > -1 || lower.indexOf('missing-authorization') > -1 || lower.indexOf('401') > -1) {
+            return 'انتهت الجلسة — سجّل الدخول ثم أعد المحاولة.';
+          }
+          if (lower.indexOf('unregistered') > -1 || lower.indexOf('registration token') > -1) {
+            return 'رمز الجهاز غير صالح — أعد تفعيل الإشعارات ليُولَّد رمز جديد.';
+          }
+          return text || 'تعذّر إرسال الإشعار التجريبي.';
+        }
+
         if (error) {
           console.error('[test-notification]', error);
-          const reason = await readServerMessage(error, data);
-          let friendly = reason;
-          if (reason.indexOf('no-device-token') > -1) {
-            friendly = 'لا يوجد رمز إشعارات لهذا الجهاز — فعّل الإشعارات ثم أعد المحاولة.';
-          } else if (reason.indexOf('fcm-not-configured') > -1) {
-            friendly = 'الإشعارات غير مُهيّأة على الخادم — تحقّق من سرّ حساب خدمة FCM.';
-          } else if (reason.indexOf('invalid session') > -1 || reason.indexOf('401') > -1) {
-            friendly = 'انتهت الجلسة — سجّل الدخول ثم أعد المحاولة.';
-          } else if (reason.indexOf('UNREGISTERED') > -1 || reason.indexOf('registration token') > -1) {
-            friendly = 'رمز الجهاز غير صالح — أعد تفعيل الإشعارات ليُولَّد رمز جديد.';
-          } else if (!friendly) {
-            friendly = 'تعذّر إرسال الإشعار التجريبي.';
-          }
-          showToast(friendly, 'error');
+          showToast(friendlyTestError(await readServerMessage(error, data)), 'error');
           revealNotificationDiagnostics();
           return;
         }
 
-        if (data && data.error === 'no-device-token') {
-          showToast('لا يوجد رمز إشعارات لهذا الجهاز — فعّل الإشعارات ثم أعد المحاولة', 'error');
+        if (data && data.ok === false) {
+          console.error('[test-notification] server error:', data);
+          showToast(friendlyTestError(data.message || data.error), 'error');
           revealNotificationDiagnostics();
           return;
         }

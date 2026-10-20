@@ -6516,28 +6516,36 @@ function openLastActivity() {
 
         const { data, error } = await supabaseClient.functions.invoke('send-test-notification');
 
+        // ⭐ v4.4.0 — الخادم يعيد 200 مع {ok:false,error} لأخطاء FCM المتوقّعة،
+        //    لذا لا نعتبر النجاح نجاحاً إلا إذا كان ok !== false.
+        function friendlyTestError(reason) {
+          var text = String(reason || '');
+          var lower = text.toLowerCase();
+          if (lower.indexOf('no-device-token') > -1) {
+            return 'لا يوجد رمز إشعارات لهذا الجهاز — فعّل الإشعارات ثم أعد المحاولة.';
+          }
+          if (lower.indexOf('fcm-not-configured') > -1) {
+            return 'الإشعارات غير مُهيّأة على الخادم — تحقّق من سرّ حساب خدمة FCM.';
+          }
+          if (lower.indexOf('invalid-session') > -1 || lower.indexOf('missing-authorization') > -1 || lower.indexOf('401') > -1) {
+            return 'انتهت الجلسة — سجّل الدخول ثم أعد المحاولة.';
+          }
+          if (lower.indexOf('unregistered') > -1 || lower.indexOf('registration token') > -1) {
+            return 'رمز الجهاز غير صالح — أعد تفعيل الإشعارات ليُولَّد رمز جديد.';
+          }
+          return text || 'تعذّر إرسال الإشعار التجريبي.';
+        }
+
         if (error) {
           console.error('[test-notification]', error);
-          const reason = await readServerMessage(error, data);
-          let friendly = reason;
-          if (reason.indexOf('no-device-token') > -1) {
-            friendly = 'لا يوجد رمز إشعارات لهذا الجهاز — فعّل الإشعارات ثم أعد المحاولة.';
-          } else if (reason.indexOf('fcm-not-configured') > -1) {
-            friendly = 'الإشعارات غير مُهيّأة على الخادم — تحقّق من سرّ حساب خدمة FCM.';
-          } else if (reason.indexOf('invalid session') > -1 || reason.indexOf('401') > -1) {
-            friendly = 'انتهت الجلسة — سجّل الدخول ثم أعد المحاولة.';
-          } else if (reason.indexOf('UNREGISTERED') > -1 || reason.indexOf('registration token') > -1) {
-            friendly = 'رمز الجهاز غير صالح — أعد تفعيل الإشعارات ليُولَّد رمز جديد.';
-          } else if (!friendly) {
-            friendly = 'تعذّر إرسال الإشعار التجريبي.';
-          }
-          showToast(friendly, 'error');
+          showToast(friendlyTestError(await readServerMessage(error, data)), 'error');
           revealNotificationDiagnostics();
           return;
         }
 
-        if (data && data.error === 'no-device-token') {
-          showToast('لا يوجد رمز إشعارات لهذا الجهاز — فعّل الإشعارات ثم أعد المحاولة', 'error');
+        if (data && data.ok === false) {
+          console.error('[test-notification] server error:', data);
+          showToast(friendlyTestError(data.message || data.error), 'error');
           revealNotificationDiagnostics();
           return;
         }

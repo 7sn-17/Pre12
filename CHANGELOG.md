@@ -2,7 +2,23 @@
 
 **التطبيق الرسمي لطلاب الطب في سوريا**
 
-⬇️ [تحميل v4.3.0](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+⬇️ [تحميل v4.4.0](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+
+## ✨ v4.4.0 — رمز FCM نصّي + CORS احترافي + هوية الإشعارات
+
+- **إصلاح جذري لرمز FCM**: استخراج الرمز الحقيقي من `{ token }` أو
+  `{ value }` أو `registrationId` قبل الحفظ، ورفض أي كائن أو قيمة مثل
+  `[object Object]`، وتنظيف القيمة الفاسدة من `profiles.fcm_token` تلقائياً.
+- **إصلاح CORS و502**: استخدام `corsHeaders` الرسمي من Supabase SDK في
+  `send-test-notification`، وإرجاع JSON واضح لأخطاء FCM بدل انهيار 502،
+  مع التحقّق من الرمز قبل الإرسال ومسحه إن كان غير صالح.
+- **هوية إشعارات موحّدة**: أيقونة سماعة طبية بيضاء 24×24dp، وقناة
+  `medapp_reminders_v2` بصوت `beep.wav` واهتزاز، مع تحديث نص التذكير
+  اليومي: «📚 لا تنسَ مراجعة مهامك اليومية. أنت تستطيع!».
+- **نافذة تحديث احترافية**: تصميم أخضر بهوية التطبيق، رقم الإصدار والانتقال
+  من النسخة الحالية، 3–4 نقاط من سجل التغييرات، زر «تحديث الآن» عبر
+  `Browser.open` وزر «لاحقاً»، وقراءة `version.json` بلا كاش.
+- **الإصدار**: 4.4.0 (‏versionCode 24).
 
 ## ✨ v4.3.0 — إصلاح الإشعارات من الجذر + اختبار المحرّكات
 

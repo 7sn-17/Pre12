@@ -307,23 +307,36 @@
 
     var notesHtml = '';
     if (highlights.length) {
-      notesHtml = '<ul class="medapp-update-notes">' +
-        highlights.map(function (item) {
-          return '<li>' + escapeHtml(item) + '</li>';
-        }).join('') +
+      notesHtml =
+        '<div class="medapp-update-section-title">ما الجديد في هذا الإصدار</div>' +
+        '<ul class="medapp-update-notes">' +
+          highlights.map(function (item) {
+            return '<li><i data-lucide="check"></i><span>' + escapeHtml(item) + '</span></li>';
+          }).join('') +
         '</ul>';
     }
 
+    var fromVersion = String(update.currentVersion || '').replace(/^v/i, '');
+    var fromLine = fromVersion
+      ? '<div class="medapp-update-from">من v' + escapeHtml(fromVersion) + ' إلى v' + escapeHtml(update.version || '') + '</div>'
+      : '';
+
     overlay.innerHTML =
-      '<div class="medapp-update-card" role="dialog" aria-modal="true">' +
+      '<div class="medapp-update-card" role="dialog" aria-modal="true" aria-labelledby="medappUpdateTitle" dir="rtl">' +
         '<div class="medapp-update-glow"></div>' +
         '<div class="medapp-update-icon"><i data-lucide="sparkles"></i></div>' +
-        '<div class="medapp-update-title">إصدار جديد متاح!</div>' +
+        '<div class="medapp-update-kicker">تحديث رسمي وآمن</div>' +
+        '<div class="medapp-update-title" id="medappUpdateTitle">إصدار جديد متاح</div>' +
         '<div class="medapp-update-version">v' + escapeHtml(update.version || '') + '</div>' +
+        fromLine +
         notesHtml +
+        '<div class="medapp-update-footnote">' +
+          '<i data-lucide="shield-check"></i>' +
+          '<span>تحديث من المصدر الرسمي — بياناتك وإعداداتك محفوظة.</span>' +
+        '</div>' +
         '<div class="medapp-update-actions">' +
-          '<button class="medapp-update-btn ghost" id="medappUpdateLater">لاحقاً</button>' +
-          '<button class="medapp-update-btn primary" id="medappUpdateNow">' +
+          '<button class="medapp-update-btn ghost" id="medappUpdateLater" type="button">لاحقاً</button>' +
+          '<button class="medapp-update-btn primary" id="medappUpdateNow" type="button">' +
             '<i data-lucide="download" style="width:16px;height:16px;"></i>' +
             '<span>تحديث الآن</span>' +
           '</button>' +
@@ -341,10 +354,21 @@
 
     function close() {
       overlay.classList.remove('open');
+      document.removeEventListener('keydown', onKey);
       setTimeout(function () {
         if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
       }, 260);
     }
+
+    function onKey(event) {
+      if (event && event.key === 'Escape') close();
+    }
+    document.addEventListener('keydown', onKey);
+
+    // ⭐ نقرة على الخلفية تُغلق النافذة أيضاً (مع بقاء زر «لاحقاً»).
+    overlay.addEventListener('click', function (event) {
+      if (event.target === overlay) close();
+    });
 
     var laterBtn = document.getElementById('medappUpdateLater');
     if (laterBtn) laterBtn.addEventListener('click', close);

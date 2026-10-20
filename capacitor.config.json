@@ -43,7 +43,14 @@
       "color": "#10b981"
     },
     "PushNotifications": {
-      "presentationOptions": ["badge", "sound", "alert"]
+      "presentationOptions": ["badge", "sound", "alert"],
+      "smallIcon": "ic_stat_icon",
+      "iconColor": "#10b981"
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_icon",
+      "iconColor": "#10b981",
+      "sound": "beep.wav"
     },
     "Keyboard": {
       "resize": "native"
