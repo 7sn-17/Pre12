@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#f8fafb">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="4.6.5">
+<meta name="app-version" content="4.6.6">
 <title>معاينة الملف — المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -1562,6 +1562,28 @@ body.single-page .pdf-page { scroll-snap-align: start; margin-bottom: 40vh; }
 body.single-page .pdf-page:not(.current) { display: none; }
 body.single-page .pdf-page.current { margin-bottom: 0; }
 
+/* ⭐⭐⭐ v4.6.6: صندوق التظليل — يُضاف داخل حاوية الصفحة (position:relative)
+   فوق الـcanvas (z-index:1) وطبقة النصّ (z-index:5) بـ z-index:10 */
+.pdf-page {
+  position: relative;
+}
+
+.pdf-highlight-box {
+  position: absolute;
+  background-color: rgba(255, 100, 100, 0.6);
+  z-index: 10;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  border-radius: 4px;
+  animation: medappHighlightPulse 0.35s ease-out;
+}
+
+@keyframes medappHighlightPulse {
+  0%   { opacity: 0; transform: scale(1.12); }
+  60%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
 /* ⭐⭐⭐ v4.6.5: تظليل النتائج داخل صفحة PDF — واضح جداً فوق الـcanvas */
 .pdf-page canvas {
   position: relative;
@@ -2051,7 +2073,7 @@ main.viewer {
 <script src="notifications.js"></script>
 
 
-<script src="app.js?v=4.6.5"></script>
+<script src="app.js?v=4.6.6"></script>
 <script>
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -2867,22 +2889,42 @@ async function jumpToMatch(match) {
   if (!match) return;
   const pageNum = match.page;
 
-  // 1) الصفحة
+  // ⭐⭐ v4.6.6 — STEP 1: إغلاق نافذة البحث فوراً.
+  closeSearch();
+
+  // ⭐ STEP 2: إجبار العارض على الانتقال إلى الصفحة الهدف
+  //   (الـvirtualized renderer يتطلّب ذلك قبل أن تُرسم).
   var el = document.querySelector('.pdf-page[data-page-num="' + pageNum + '"]');
   if (!el) return;
 
-  if (state.singlePage) setCurrentPage(pageNum, true);
-  await ensurePageRendered(pageNum);
-
-  // 2) الموضع الدقيق
-  var span = el.querySelector('.text-layer span[data-idx="' + match.itemIdx + '"]');
-  var top = el.offsetTop;
-  if (span) {
-    top += parseFloat(span.dataset.y || '0');
+  if (state.singlePage) {
+    setCurrentPage(pageNum, true);
+  } else {
+    // ⭐ نضع الصفحة في مكانها الصحيح داخل العمود المرئي.
+    el.scrollIntoView({ behavior: 'auto', block: 'start' });
   }
-  els.viewer.scrollTo({ top: Math.max(0, top - 80), behavior: 'smooth' });
 
-  // 3) التظليل
+  // ⭐ STEP 3: انتظار رسم الصفحة (قد تكون حُرّرت من الذاكرة).
+  await ensurePageRendered(pageNum);
+  await new Promise(function (resolve) {
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(function () { resolve(); });
+    else setTimeout(resolve, 16);
+  });
+
+  // ⭐ STEP 4: إيجاد عنصر النصّ المطابق (المسافة Y الدقيقة).
+  el = document.querySelector('.pdf-page[data-page-num="' + pageNum + '"]');
+  if (!el) return;
+  var span = el.querySelector('.text-layer span[data-idx="' + match.itemIdx + '"]');
+
+  // ⭐ STEP 5: التمرير إلى الموضع الدقيق.
+  if (span && typeof span.scrollIntoView === 'function') {
+    span.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  } else {
+    // ⭐ احتياط: الصفحة نفسها (لم يُبنَ طبقة النصّ).
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ⭐ التظليل (بعد الوصول للصفحة).
   highlightMatch(match);
 
   if (els.pageHud) {
@@ -2897,6 +2939,8 @@ async function jumpToMatch(match) {
 function highlightMatch(match) {
   document.querySelectorAll('.text-layer span.hit, .text-layer span.current')
     .forEach((s) => s.classList.remove('hit', 'current'));
+  document.querySelectorAll('.pdf-highlight-box')
+    .forEach((box) => box.remove());
 
   const el = document.querySelector('.pdf-page[data-page-num="' + match.page + '"]');
   if (!el) return;
@@ -2904,7 +2948,7 @@ function highlightMatch(match) {
   if (!term) return;
 
   el.querySelectorAll('.text-layer span').forEach((span) => {
-    if (String(span.textContent || '').toLowerCase().indexOf(term) >= 0) {
+    if (String(span.textContent || '').toLowerCase().includes(term)) {
       span.classList.add('hit');
     }
   });
@@ -2914,6 +2958,33 @@ function highlightMatch(match) {
     current.classList.add('current');
     setTimeout(() => current.classList.remove('current'), 2600);
   }
+
+  // ⭐⭐ v4.6.6 — TASK 3: صندوق تظليل صريح داخل حاوية الصفحة،
+  //   بموضع محسوب ديناميكياً فوق الـcanvas (z-index: 10).
+  if (!current) return;
+
+  const pageRect = el.getBoundingClientRect();
+  const spanRect = current.getBoundingClientRect();
+  if (!pageRect.width || !spanRect.width) return;
+
+  const box = document.createElement('div');
+  box.className = 'pdf-highlight-box';
+  box.style.position = 'absolute';
+  box.style.left = (spanRect.left - pageRect.left - 2) + 'px';
+  box.style.top = (spanRect.top - pageRect.top - 2) + 'px';
+  box.style.width = (spanRect.width + 4) + 'px';
+  box.style.height = (spanRect.height + 4) + 'px';
+  box.style.backgroundColor = 'rgba(255, 100, 100, 0.6)';
+  box.style.zIndex = '10';
+  box.style.pointerEvents = 'none';
+  box.style.borderRadius = '4px';
+  box.style.boxShadow = '0 0 0 2px rgba(255, 80, 80, 0.85)';
+  box.style.mixBlendMode = 'multiply';
+  el.appendChild(box);
+
+  setTimeout(function () {
+    if (box && box.parentNode) box.parentNode.removeChild(box);
+  }, 3200);
 }
 
 /** ⭐ التالي / السابق بين المطابقات */

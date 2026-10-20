@@ -1,5 +1,5 @@
 {
-  "latest_version": "4.6.5",
+  "latest_version": "4.6.6",
   "download_url": "https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk",
-  "changelog": "إصلاح الكتابة (IME): تدمير وإعادة بناء مستمعي حقل البحث — مستمع 'input' واحد بلا أي شرط + 'compositionend' لالتقاط الكلمة العربية بعد انتهاء التكوين، فصار البحث يستجيب من أول حرف (لصق/حذف/ تصحيح تلقائي تعمل جميعها).\nالنقر على النتيجة: تُغلق نافذة البحث فوراً ثم ينتقل التطبيق إلى الصفحة والموضع الدقيق.\nتظليل واضح:Yellow ساطع (rgba(255,235,59,0.6)) فوق الـcanvas مع z-index 9999 وpointer-events none وmix-blend-mode multiply.\nالإصدار: 4.6.5 (‏versionCode 35)."
+  "changelog": "بحث عربي حيّ: مع لوحة المفاتيح العربية (IME) داخل الـWebView قد يُحجب حدث 'input' أثناء التكوين — صار البحث يستجيب عبر 'compositionupdate' (كل حرف) و'compositionend' بلا أي شرط على inputType أو isComposing.\nقفز PDF موثوق: إغلاق النافذة ← إجبار العارض على الصفحة الهدف ← انتظار رسمها ← التمرير إلى الموضع Y الدقيق بـ scrollIntoView.\nتظليل واضح: صندوق أحمر برتقالي (rgba(255,100,100,0.6)) داخل حاوية الصفحة مع z-index:10 فوق الـcanvas.\nالإصدار: 4.6.6 (‏versionCode 36)."
 }

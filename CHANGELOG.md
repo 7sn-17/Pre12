@@ -2,7 +2,19 @@
 
 **التطبيق الرسمي لطلاب الطب في سوريا**
 
-⬇️ [تحميل v4.6.5](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+⬇️ [تحميل v4.6.6](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+
+## ✨ v4.6.6 — الضربة الأخيرة للبحث (عربي + PDF)
+
+- **بحث عربي حيّ**: مع لوحة المفاتيح العربية (IME) داخل الـWebView قد
+  يُحجب حدث 'input' أثناء التكوين — صار البحث يستجيب عبر
+  'compositionupdate' (كل حرف) و'compositionend' بلا أي شرط على
+  inputType أو isComposing.
+- **قفز PDF موثوق**: إغلاق النافذة ← إجبار العارض على الصفحة الهدف ←
+  انتظار رسمها ← التمرير إلى الموضع Y الدقيق بـ scrollIntoView.
+- **تظليل واضح**: صندوق أحمر برتقالي (rgba(255,100,100,0.6)) داخل
+  حاوية الصفحة مع z-index:10 فوق الـcanvas.
+- **الإصدار**: 4.6.6 (‏versionCode 36).
 
 ## ✨ v4.6.5 — إصلاح الكتابة في الإشعارات والبحث
 
