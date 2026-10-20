@@ -65,6 +65,24 @@ jobs:
       - name: 🔗 Sync Capacitor
         run: npx cap sync android
 
+      - name: 🖼️ Verify the web assets (the tools images)
+        # ⭐ نتأكّد أن صور الأدوات (icons/) وبقية أصول الويب موجودة
+        #    فعلاً داخل مجلد الأصول الذي سينتقل إلى الـ APK.
+        run: |
+          echo "── the tools images ──"
+          ls -l android/app/src/main/assets/public/icons/
+          for f in flipclock forest notion drbaraa; do
+            if [ ! -f "android/app/src/main/assets/public/icons/$f.jpg" ]; then
+              echo "::error::the tools image $f.jpg is missing from the android assets"
+              exit 1
+            fi
+          done
+          echo "── the main pages ──"
+          ls android/app/src/main/assets/public/*.html | head -30
+          echo "── the size of the web assets ──"
+          du -sh android/app/src/main/assets/public/
+          echo "✅ the web assets (including the tools images) are inside the build"
+
       - name: 🏛️ Make gradlew executable
         working-directory: android
         run: chmod +x gradlew
@@ -208,6 +226,52 @@ jobs:
             jarsigner -verify -verbose:summary "$APK" | head -10 || true
           fi
 
+      - name: 🧪 Inspect the APK structure
+        # ⭐ قبل النشر: نثبت أن الـ APK سليم البنية (اسم الحزمة،
+        #    النشاط الرئيسي، الأصول، ومكتبات المعماريات).
+        run: |
+          APK="android/app/build/outputs/apk/release/app-release.apk"
+          BUILD_TOOLS="${ANDROID_HOME:-$ANDROID_SDK_ROOT}/build-tools"
+          AAPT=$(ls -1 "$BUILD_TOOLS"/*/aapt 2>/dev/null | sort -V | tail -1)
+          if [ -z "$AAPT" ]; then
+            AAPT=$(ls -1 "$BUILD_TOOLS"/*/aapt2 2>/dev/null | sort -V | tail -1)
+          fi
+
+          if [ -n "$AAPT" ]; then
+            echo "── aapt dump badging (using $AAPT) ──"
+            "$AAPT" dump badging "$APK" | head -n 10
+          else
+            echo "::warning::aapt/aapt2 not found — skipping the badging dump"
+          fi
+
+          echo "── the web assets inside the APK ──"
+          unzip -l "$APK" | grep "assets/public/" | head -n 15
+
+          echo "── the tools images inside the APK ──"
+          unzip -l "$APK" | grep "assets/public/icons/"
+
+          echo "── the native libraries inside the APK ──"
+          unzip -l "$APK" | grep "lib/" | head -n 12
+
+          echo "── the essentials ──"
+          for entry in "assets/public/index.html" "assets/public/icons/flipclock.jpg" "assets/public/icons/forest.jpg" "assets/public/icons/notion.jpg" "assets/public/icons/drbaraa.jpg" "classes.dex" "resources.arsc" "AndroidManifest.xml"; do
+            if unzip -l "$APK" | grep -q "$entry"; then
+              echo "   ✅ $entry"
+            else
+              echo "::error::$entry is missing from the APK"
+              exit 1
+            fi
+          done
+          echo "✅ the APK structure is complete"
+
+      - name: 🔐 Publish the SHA-256 checksum
+        # ⭐ lets the user verify their download (a truncated download
+        #    is the usual cause of "there is a problem parsing the package").
+        run: |
+          cd android/app/build/outputs/apk/release
+          sha256sum app-release.apk | tee app-release.apk.sha256
+          echo "APK_SHA256=$(cut -d' ' -f1 app-release.apk.sha256)" >> "$GITHUB_ENV"
+
       - name: 📤 Upload the APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -221,7 +285,9 @@ jobs:
           # ⭐ الـ Release يحتاج تاجاً — ننشئه من رقم الإصدار في package.json
           #    (وإن كان موجوداً، يُحدَّث الـ Release ويُستبدل الملف).
           tag_name: v${{ steps.version.outputs.version }}
-          files: android/app/build/outputs/apk/release/app-release.apk
+          files: |
+            android/app/build/outputs/apk/release/app-release.apk
+            android/app/build/outputs/apk/release/app-release.apk.sha256
           name: المنصة الطبية — v${{ steps.version.outputs.version }}
           body: |
             ## 📱 المنصة الطبية — نسخة Android v${{ steps.version.outputs.version }}
@@ -231,11 +297,21 @@ jobs:
             | الملف | الوصف |
             |---|---|
             | `app-release.apk` | نسخة الإنتاج الموقّعة — قابلة للتثبيت والتحديث |
+            | `app-release.apk.sha256` | بصمة SHA-256 للتحقّق من أن الملف نُزّل كاملاً |
+
+            **الشعار (SHA-256):**
+            ```
+            ${{ env.APK_SHA256 }}
+            ```
 
             **التثبيت على الهاتف:**
             1. نزّل `app-release.apk` إلى جهازك.
-            2. افتحه من مدير الملفات.
-            3. اسمح للتثبيت من هذا المصدر، ثم أكّد التثبيت.
+            2. تحقّق من البصمة (اختياري): `sha256sum app-release.apk`.
+            3. افتحه من مدير الملفات.
+            4. اسمح للتثبيت من هذا المصدر، ثم أكّد التثبيت.
+
+            > ⚠️ إذا ظهرت رسالة «There is a problem parsing the package» فغالباً
+            > كان التنزيل **ناقصاً** — أعد التنزيل أو تحقّق من البصمة أعلاه.
 
             ---
             بُني تلقائياً عبر [GitHub Actions](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).
@@ -243,3 +319,20 @@ jobs:
           draft: false
           make_latest: true
           prerelease: false
+
+      - name: 🌐 Verify the published asset
+        # ⭐ نتأكّد أن الملف المنشور على GitHub مطابق تماماً للملف المبني.
+        continue-on-error: true
+        run: |
+          sleep 15
+          mkdir -p /tmp/verify && cd /tmp/verify
+          gh release download "v${{ steps.version.outputs.version }}" --repo "${{ github.repository }}" --pattern "app-release.apk" --dir . --clobber
+          ACTUAL=$(sha256sum app-release.apk | cut -d' ' -f1)
+          echo "published : $ACTUAL"
+          echo "expected  : ${{ env.APK_SHA256 }}"
+          if [ "$ACTUAL" = "${{ env.APK_SHA256 }}" ]; then
+            echo "✅ the published APK is intact."
+          else
+            echo "::warning::the published file does not match the build (a CDN cache issue?)"
+          fi
+
