@@ -2,7 +2,16 @@
 
 **التطبيق الرسمي لطلاب الطب في سوريا**
 
-⬇️ [تحميل v4.5.1](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+⬇️ [تحميل v4.5.2](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+
+## ✨ v4.5.2 — أيقونة السمعة الطبية الدقيقة
+
+- **أيقونة جديدة بالكامل**: استُبدلت أيقونة شريط الحالة بنسخة Vector
+  جديدة تماماً (سماعة طبية: أذانان، أنبوبان، أنبوب سفلي، وصدرية بحلقة
+  داخلية) بالأبيض النقي 24×24dp في مسار واحد نظيف.
+- **تطبيق على النسخ الحديثة**: حُدّث الملفّان `drawable` و`drawable-v24`
+  معاً، فلا يحتفظ أندرويد 7+ على الأيقونة القديمة.
+- **الإصدار**: 4.5.2 (‏versionCode 29).
 
 ## ✨ v4.5.1 — إشعارات غنية بأزرار إجراء
 
