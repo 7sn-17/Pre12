@@ -238,14 +238,21 @@ Deno.serve(async (req) => {
 
     /* ── 5) السجلّ ── */
     try {
-      await admin.from('notification_log').insert({
-        category: 'update',
-        title,
-        body,
-        target: 'all',
-        sent: result.sent > 0,
-        error: result.failed ? `${result.failed} device(s) failed` : null,
-      });
+      // ⭐ v4.6.3 — HOTFIX: نسجّل الإعلان فقط عند نجاح الإرسال.
+      //   المحاولة الفاشلة كانت تُسجَّل، فيمنع حارس التكرار إعلاناً
+      //   لاحقاً لنفس الإصدار عندما تتوفّر الأجهزة.
+      if (result.sent > 0) {
+        await admin.from('notification_log').insert({
+          category: 'update',
+          title,
+          body,
+          target: 'all',
+          sent: true,
+          error: result.failed ? `${result.failed} device(s) failed` : null,
+        });
+      } else {
+        console.info('[update-notification] no device received the announcement — not logged (a retry stays possible).');
+      }
     } catch (e) {
       console.warn('[update-notification] the log could not be written:', e);
     }
