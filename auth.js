@@ -1084,7 +1084,6 @@ function translateAuthError(message) {
 // ============================================
 function onAuthStateChange(callback) {
   return supabaseClient.auth.onAuthStateChange((event, session) => {
-    console.log('🔔 Auth Event:', event);
     callback(event, session);
   });
 }
@@ -1191,5 +1190,3 @@ const RateLimiter = {
     }
   }
 };
-
-console.log('✅ auth.js v2.0 loaded');

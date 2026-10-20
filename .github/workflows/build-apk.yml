@@ -300,36 +300,34 @@ jobs:
             android/app/build/outputs/apk/release/Medical_Platform_v${{ steps.version.outputs.version }}.apk
             android/app/build/outputs/apk/release/Medical_Platform_v${{ steps.version.outputs.version }}.apk.sha256
           name: المنصة الطبية — v${{ steps.version.outputs.version }}
-          body: |
-            ## 📱 المنصة الطبية — نسخة Android v${{ steps.version.outputs.version }}
-
-            تطبيق أندرويد **موقّع** مبني من نفس كود الواجهة (WebView + Capacitor).
-
-            | الملف | الوصف |
-            |---|---|
-            | `Medical_Platform_v${{ steps.version.outputs.version }}.apk` | نسخة الإنتاج الموقّعة — قابلة للتثبيت والتحديث |
-            | `Medical_Platform_v${{ steps.version.outputs.version }}.apk.sha256` | بصمة SHA-256 للتحقّق من أن الملف نُزّل كاملاً |
-
-            **الشعار (SHA-256):**
-            ```
-            ${{ env.APK_SHA256 }}
-            ```
-
-            **التثبيت على الهاتف:**
-            1. نزّل `Medical_Platform_v${{ steps.version.outputs.version }}.apk` إلى جهازك.
-            2. تحقّق من البصمة (اختياري): `sha256sum Medical_Platform_v${{ steps.version.outputs.version }}.apk`.
-            3. افتحه من مدير الملفات.
-            4. اسمح للتثبيت من هذا المصدر، ثم أكّد التثبيت.
-
-            > ⚠️ إذا ظهرت رسالة «There is a problem parsing the package» فغالباً
-            > كان التنزيل **ناقصاً** — أعد التنزيل أو تحقّق من البصمة أعلاه.
-
-            ---
-            بُني تلقائياً عبر [GitHub Actions](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).
+          # ⭐ جسم الإصدار يأتي من CHANGELOG.md (توثيق عربي أنيق)
+          body_path: ./CHANGELOG.md
           fail_on_unmatched_files: true
           draft: false
           make_latest: true
           prerelease: false
+
+      - name: 📣 Announce the new release to all users
+        # ⭐ بعد النشر: نُعلم كل المستخدمين بوجود تحديث جديد.
+        #    يحتاج مفتاح service_role (أو سرّ cron) في أسرار GitHub.
+        continue-on-error: true
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] && [ -z "$CRON_SECRET" ]; then
+            echo "::warning::SUPABASE_SERVICE_ROLE_KEY / CRON_SECRET are not set — skipping the announcement."
+            exit 0
+          fi
+          curl -sS -X POST \
+            "https://pfjpeqhevegivjmyjvux.supabase.co/functions/v1/send-update-notification" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "x-cron-secret: $CRON_SECRET" \
+            -d "{\"version\":\"$VERSION\",\"title\":\"🚀 تحديث جديد متاح v$VERSION!\",\"body\":\"اضغط للتحديث.\"}" \
+            | head -c 400
+          echo
 
       - name: 🌐 Verify the published asset
         # ⭐ نتأكّد أن الملف المنشور على GitHub مطابق تماماً للملف المبني.

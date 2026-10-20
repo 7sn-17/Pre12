@@ -295,7 +295,7 @@ sw: true
     .streak-sheet-overlay {
       position: fixed;
       inset: 0;
-      z-index: 10050;
+      z-index: var(--z-sheet, 10000);
       background: rgba(3, 12, 9, 0.66);
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
@@ -3830,7 +3830,7 @@ i.fab {
       background: rgba(3, 10, 8, 0.92);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      z-index: 3000;
+      z-index: var(--z-overlay, 20000);
       opacity: 0;
       pointer-events: none;
       transition: opacity var(--transition-smooth);
@@ -4351,127 +4351,9 @@ i.fab {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 
-  /* ============================================================
-     ⭐⭐ شاشة البداية المتحرّكة (Phase 20)
-     ------------------------------------------------------------
-     تغطّي التطبيق بالكامل لحظةً، تنبض بالسمّاعة ��الاسم،
-     ثم تختفي بعد ثانيتين. تُعرض مرّة واحدة فقط في الجلسة
-     (sessionStorage) — لا تتكرّر مع التنقّل الداخلي.
-     ============================================================ */
-  .medapp-splash {
-    position: fixed;
-    inset: 0;
-    z-index: 99999;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    background:
-      radial-gradient(circle at 50% 36%, rgba(16, 185, 129, 0.16), transparent 58%),
-      linear-gradient(160deg, #0a2019 0%, #06110d 58%, #040d0a 100%);
-    opacity: 1;
-    visibility: visible;
-    transition: opacity 0.55s ease, visibility 0.55s ease;
-  }
-  .medapp-splash[hidden] { display: none; }
-  .medapp-splash.is-hiding {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-  }
-  .medapp-splash-logo {
-    width: 128px;
-    height: 128px;
-    border-radius: 34px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(5, 150, 105, 0.08));
-    border: 1px solid rgba(16, 185, 129, 0.32);
-    box-shadow: 0 0 44px -8px rgba(16, 185, 129, 0.45);
-    animation: splashPulse 2s ease-in-out infinite;
-  }
-  .medapp-splash-logo svg {
-    width: 76px;
-    height: 76px;
-    color: #34d399;
-    filter: drop-shadow(0 0 14px rgba(52, 211, 153, 0.65));
-  }
-  .medapp-splash-title {
-    font-size: 1.45rem;
-    font-weight: 900;
-    letter-spacing: 0.5px;
-    color: #f0fdf4;
-    text-shadow: 0 0 26px rgba(16, 185, 129, 0.55);
-    animation: splashPulse 2s ease-in-out infinite;
-  }
-  .medapp-splash-sub {
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: rgba(148, 163, 184, 0.85);
-    animation: splashPulse 2s ease-in-out infinite;
-    animation-delay: 0.25s;
-  }
-  @keyframes splashPulse {
-    0%, 100% { transform: scale(1);    opacity: 0.88; }
-    50%      { transform: scale(1.07); opacity: 1; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .medapp-splash-logo,
-    .medapp-splash-title,
-    .medapp-splash-sub { animation: none; }
-  }
   </style>
 </head>
 <body>
-
-  <!-- ⭐⭐ شاشة البداية المتحرّكة — تُعرض مرّة واحدة في الجلسة -->
-  <div class="medapp-splash" id="medappSplash" hidden aria-hidden="true">
-    <div class="medapp-splash-logo">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
-           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M5.2 3.4 L5.2 9.6"></path>
-        <path d="M10.8 3.4 L10.8 9.6"></path>
-        <path d="M5.2 9.6 C5.2 13.4 10.8 13.4 10.8 9.6"></path>
-        <path d="M8 13.2 L8 15.6 C8 18.6 10.4 20.2 13.4 20.2 L15.4 20.2"></path>
-        <circle cx="18.6" cy="17.2" r="3.4"></circle>
-      </svg>
-    </div>
-    <div class="medapp-splash-title">المنصة الطبية</div>
-    <div class="medapp-splash-sub">السنة التحضيرية</div>
-  </div>
-
-  <script>
-    // ⭐⭐ شاشة البداية — تظهر مرّة واحدة في الجلسة فقط
-    (function initSplash() {
-      var splash = document.getElementById('medappSplash');
-      if (!splash) return;
-
-      var seen = false;
-      try { seen = sessionStorage.getItem('medapp_splash_seen') === '1'; } catch (e) {}
-
-      if (seen) {
-        // ⭐ سبق أن رأيناها — نُزيلها فوراً
-        if (splash.parentNode) splash.parentNode.removeChild(splash);
-        return;
-      }
-
-      try { sessionStorage.setItem('medapp_splash_seen', '1'); } catch (e) {}
-
-      // ⭐ نظهرها الآن
-      splash.removeAttribute('hidden');
-      splash.setAttribute('aria-hidden', 'false');
-
-      // ⭐ بعد ثانيتين: تلاشٍ ناعم ثم إزالة
-      setTimeout(function () {
-        splash.classList.add('is-hiding');
-        setTimeout(function () {
-          if (splash.parentNode) splash.parentNode.removeChild(splash);
-        }, 650);
-      }, 2000);
-    })();
-  </script>
 
   <!-- الهيدر -->
   <header id="header">
@@ -5003,18 +4885,18 @@ i.fab {
           <div class="toggle-switch" id="notificationToggle" role="switch" aria-checked="false" aria-label="تفعيل الإشعارات" onclick="toggleNotifications(event)"></div>
         </div>
 
-        <!-- ⭐⭐ تحديث رمز الإشعارات (FCM) -->
-        <div class="settings-item" id="notificationTokenItem" style="cursor: default;">
+        <!-- ⭐⭐⭐ تحديثات التطبيق -->
+        <div class="settings-item" id="appUpdateItem" style="cursor: default;">
           <div class="settings-item-left">
-            <div class="settings-icon" style="background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.25); color: var(--medapp-blue);">
-              <i data-lucide="refresh-cw"></i>
+            <div class="settings-icon" style="background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.28); color: var(--accent-light, #34d399);">
+              <i data-lucide="download"></i>
             </div>
             <div class="settings-text">
-              <h4>تحديث رمز الإشعارات</h4>
-              <p id="notificationTokenStatus">مزامنة الرمز مع خوادم الإشعارات</p>
+              <h4>تحديثات التطبيق</h4>
+              <p id="appUpdateStatus">تثبيت أحدث إصدار مباشرة من داخل التطبيق</p>
             </div>
           </div>
-          <button class="settings-item-arrow" id="refreshTokenBtn" onclick="refreshNotificationToken()"
+          <button class="settings-item-arrow" id="checkUpdateBtn" onclick="checkForAppUpdateNow()"
                   style="
                     flex-shrink: 0;
                     padding: 8px 14px;
@@ -5026,7 +4908,48 @@ i.fab {
                     font-size: 0.72rem;
                     font-weight: 800;
                     cursor: pointer;
-                  ">تحديث</button>
+                  ">التحقق من التحديثات</button>
+        </div>
+
+        <!-- ⭐⭐⭐ التذكير اليومي (8 مساءً) -->
+        <div class="settings-item" id="dailyReminderItem" style="cursor: default;">
+          <div class="settings-item-left">
+            <div class="settings-icon" style="background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.28); color: var(--medapp-amber, #fbbf24);">
+              <i data-lucide="bell-ring"></i>
+            </div>
+            <div class="settings-text">
+              <h4>التذكير اليومي</h4>
+              <p id="dailyReminderStatus">تذكير ثابت في الساعة 8 مساءً</p>
+            </div>
+          </div>
+          <div class="toggle-switch" id="dailyReminderToggle" role="switch" aria-checked="true"
+               aria-label="تفعيل التذكير اليومي" onclick="toggleDailyReminder(event)"></div>
+        </div>
+
+        <!-- ⭐⭐⭐ إرسال إشعار تجريبي -->
+        <div class="settings-item" id="testNotificationItem" style="cursor: default;">
+          <div class="settings-item-left">
+            <div class="settings-icon" style="background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.25); color: var(--medapp-blue, #60a5fa);">
+              <i data-lucide="send"></i>
+            </div>
+            <div class="settings-text">
+              <h4>إرسال إشعار تجريبي</h4>
+              <p>تأكد من وصول الإشعارات إلى جهازك</p>
+            </div>
+          </div>
+          <button class="settings-item-arrow" id="testNotificationBtn" onclick="sendTestNotification()"
+                  style="
+                    flex-shrink: 0;
+                    padding: 8px 14px;
+                    border-radius: 10px;
+                    border: 1px solid var(--border-card-hover, rgba(16, 185, 129, 0.46));
+                    background: transparent;
+                    color: var(--accent-light, #34d399);
+                    font-family: inherit;
+                    font-size: 0.72rem;
+                    font-weight: 800;
+                    cursor: pointer;
+                  ">إرسال</button>
         </div>
 
         <!-- حالة الاتصال -->
@@ -5816,37 +5739,115 @@ function openLastActivity() {
     }
 
     // ============================================
-    // ⭐⭐ تحديث رمز الإشعارات (FCM)
+    // ⭐⭐⭐ التحديث داخل التطبيق
     // ============================================
-    async function refreshNotificationToken() {
-      const status = document.getElementById('notificationTokenStatus');
-      const btn = document.getElementById('refreshTokenBtn');
+    async function checkForAppUpdateNow(options) {
+      options = options || {};
+      const status = document.getElementById('appUpdateStatus');
+      const btn = document.getElementById('checkUpdateBtn');
 
-      if (typeof MedAppNotifications === 'undefined' ||
-          typeof MedAppNotifications.refreshPushToken !== 'function') {
+      if (typeof MedAppUpdate === 'undefined' || typeof MedAppUpdate.check !== 'function') {
         if (status) status.textContent = 'غير متاح في الويب';
-        showToast('تحديث الرمز متاح في التطبيق فقط', 'info');
+        showToast('التحديث متاح في التطبيق فقط', 'info');
         return;
       }
 
-      if (btn) { btn.disabled = true; btn.textContent = 'جارٍ…'; }
-      if (status) status.textContent = 'جارٍ جلب الرمز من Google…';
+      if (btn) { btn.disabled = true; btn.textContent = 'جارٍ الفحص…'; }
+      if (status) status.textContent = 'جارٍ الاتصال بـ GitHub…';
 
       try {
-        const result = await MedAppNotifications.refreshPushToken();
-        if (result && result.ok) {
-          const short = String(result.token).slice(0, 16) + '…';
-          if (status) status.textContent = 'الرمز: ' + short;
-          showToast('تم تحديث رمز الإشعارات ✅', 'success');
+        const result = await MedAppUpdate.check({ silent: true });
+        if (result && result.updateAvailable) {
+          if (status) status.textContent = 'إصدار جديد v' + result.version + ' متاح!';
+          showToast('🚀 إصدار جديد متاح: v' + result.version, 'success');
+          if (typeof showUpdateModal === 'function') showUpdateModal(result);
         } else {
-          if (status) status.textContent = 'تعذّر جلب الرمز';
-          showToast((result && result.error) || 'تعذّر جلب الرمز', 'error');
+          if (status) status.textContent = 'أنت على أحدث إصدار ✅';
+          showToast('أنت على أحدث إصدار ✅', 'success');
+        }
+        return result;
+      } catch (e) {
+        console.error('[update] the check failed:', e);
+        if (status) status.textContent = 'تعذّر الاتصال بـ GitHub';
+        showToast('تعذّر التحقّق من التحديثات — تحقّق من الاتصال', 'error');
+        return null;
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'التحقق من التحديثات'; }
+      }
+    }
+
+    // ============================================
+    // ⭐⭐⭐ التذكير اليومي (8 مساءً)
+    // ============================================
+    async function toggleDailyReminder(event) {
+      if (event) event.stopPropagation();
+      const toggle = document.getElementById('dailyReminderToggle');
+      const status = document.getElementById('dailyReminderStatus');
+
+      if (typeof MedAppNotifications === 'undefined' ||
+          typeof MedAppNotifications.scheduleDailyReminder !== 'function') {
+        if (status) status.textContent = 'غير متاح في الويب';
+        showToast('التذكير اليومي متاح في التطبيق فقط', 'info');
+        return;
+      }
+
+      const enabled = !(toggle && toggle.classList.contains('active'));
+
+      try {
+        const ok = await MedAppNotifications.scheduleDailyReminder(enabled);
+        if (toggle) {
+          toggle.classList.toggle('active', enabled);
+          toggle.setAttribute('aria-checked', enabled ? 'true' : 'false');
+        }
+        if (status) {
+          status.textContent = enabled ? 'تذكير ثابت في الساعة 8 مساءً' : 'التذكير اليومي متوقف';
+        }
+        if (ok) {
+          showToast(enabled ? 'تم تفعيل التذكير اليومي ✅' : 'تم إيقاف التذكير اليومي', enabled ? 'success' : 'info');
         }
       } catch (e) {
-        if (status) status.textContent = 'تعذّر جلب الرمز';
-        showToast('تعذّر جلب الرمز', 'error');
+        showToast('تعذّر تغيير إعداد التذكير', 'error');
+      }
+    }
+
+    /** ⭐ يُزامِن المفتاح مع الحالة المحفوظة */
+    function refreshDailyReminderToggle() {
+      const toggle = document.getElementById('dailyReminderToggle');
+      const status = document.getElementById('dailyReminderStatus');
+      if (typeof MedAppNotifications === 'undefined') return;
+      const enabled = MedAppNotifications.isDailyReminderEnabled();
+      if (toggle) {
+        toggle.classList.toggle('active', enabled);
+        toggle.setAttribute('aria-checked', enabled ? 'true' : 'false');
+      }
+      if (status) {
+        status.textContent = enabled ? 'تذكير ثابت في الساعة 8 مساءً' : 'التذكير اليومي متوقف';
+      }
+    }
+
+    // ============================================
+    // ⭐⭐⭐ إرسال إشعار تجريبي
+    // ============================================
+    async function sendTestNotification() {
+      const btn = document.getElementById('testNotificationBtn');
+
+      if (btn) { btn.disabled = true; btn.textContent = 'جارٍ…'; }
+
+      try {
+        const { error } = await supabaseClient.functions.invoke('send-test-notification');
+
+        if (error) {
+          console.error('[test-notification]', error);
+          showToast('تعذر إرسال الإشعار التجريبي. يرجى التواصل مع المطور لحل هذه المشكلة.', 'error');
+          return;
+        }
+
+        showToast('تم إرسال الإشعار التجريبي ✅', 'success');
+      } catch (e) {
+        console.error('[test-notification]', e);
+        showToast('تعذر إرسال الإشعار التجريبي. يرجى التواصل مع المطور لحل هذه المشكلة.', 'error');
       } finally {
-        if (btn) { btn.disabled = false; btn.textContent = 'تحديث'; }
+        if (btn) { btn.disabled = false; btn.textContent = 'إرسال'; }
       }
     }
 
@@ -6570,7 +6571,10 @@ function openRecentFile(fileId) {
       lucide.createIcons();
 
       if (viewName === 'favorites') loadFavorites();
-      if (viewName === 'settings') refreshNotificationToggle();
+      if (viewName === 'settings') {
+        refreshNotificationToggle();
+        refreshDailyReminderToggle();
+      }
       if (viewName === 'home') {
         loadLastActivity();
         loadRandomTip();
@@ -8325,7 +8329,7 @@ function showAbout() {
     }
 
     // ⭐⭐ رابط التحميل المباشر — نشاركه مع السلسلة
-    var APP_DOWNLOAD_URL = 'https://github.com/7sn-17/Pre12/releases/latest/download/Medical_Platform_v3.0.0.apk';
+    var APP_DOWNLOAD_URL = 'https://github.com/7sn-17/Pre12/releases/latest/download/Medical_Platform_v3.5.0.apk';
 
     async function shareStreak() {
       var text = streakShareText();
@@ -8528,7 +8532,6 @@ function showAbout() {
         loadStats()
       ]);
       
-      console.log('✅ index.html loaded');
     }
 
     init();
@@ -8618,7 +8621,6 @@ function showAbout() {
   // 3. مراقبة حالة الاتصال
   // ============================================
   window.addEventListener('online', () => {
-    console.log('🟢 اتصال عاد');
     syncNetworkSnackbar();
 
     // إعادة تحميل البيانات
@@ -8630,7 +8632,6 @@ function showAbout() {
   });
 
   window.addEventListener('offline', () => {
-    console.log('🔴 انقطع الاتصال');
     syncNetworkSnackbar();
   });
 
@@ -8678,7 +8679,6 @@ function isStandalone() {
 // التقاط حدث "قابل للتثبيت" من Chrome
 // ============================================
 window.addEventListener('beforeinstallprompt', (e) => {
-  console.log('📱 التطبيق قابل للتثبيت');
   
   // منع النافذة التلقائية
   e.preventDefault();
@@ -8699,7 +8699,6 @@ window.addEventListener('beforeinstallprompt', (e) => {
 // بعد التثبيت بنجاح
 // ============================================
 window.addEventListener('appinstalled', () => {
-  console.log('✅ تم تثبيت التطبيق');
   isInstalled = true;
   deferredInstallPrompt = null;
   
@@ -8793,7 +8792,6 @@ async function handleInstallClick() {
   
   // انتظار رد المستخدم
   const { outcome } = await deferredInstallPrompt.userChoice;
-  console.log('نتيجة التثبيت:', outcome);
   
   if (outcome === 'accepted') {
     if (typeof showToast === 'function') {
@@ -8967,7 +8965,6 @@ if (document.readyState === 'loading') {
   // ============================================
   // 4. اختبار سريع
   // ============================================
-  console.log('📡 حالة الاتصال:', navigator.onLine ? '🟢 متصل' : '🔴 غير متصل');
 </script>
 <!-- @include partials/sw-register.html -->
 <!-- @include partials/perf.html -->

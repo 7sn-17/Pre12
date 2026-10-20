@@ -951,11 +951,6 @@ sw: true
         const errorCode = get('error_code');
         const errorDescription = get('error_description');
 
-        console.log('🔍 فحص الرابط:');
-        console.log('  type:', type);
-        console.log('  has access_token:', !!accessToken);
-        console.log('  has token_hash:', !!tokenHash);
-        console.log('  has error:', !!error);
 
         // ═══════════════════════════════════════════
         // الحالة 1: يوجد خطأ صريح في URL
@@ -970,7 +965,6 @@ sw: true
         // الحالة 2: token_hash (الطريقة الحديثة)
         // ═══════════════════════════════════════════
         if (tokenHash) {
-          console.log('✅ استخدام token_hash');
           await handleTokenHash(tokenHash, type);
           return;
         }
@@ -979,7 +973,6 @@ sw: true
         // الحالة 3: access_token (الطريقة القديمة)
         // ═══════════════════════════════════════════
         if (accessToken) {
-          console.log('✅ استخدام access_token');
           await handleAccessToken(accessToken, refreshToken);
           return;
         }
@@ -1026,12 +1019,10 @@ sw: true
           verifyType = 'signup';
         }
 
-        console.log(`🔐 محاولة verifyOtp بنوع: ${verifyType}`);
 
         const result = await verifyEmailOtp(tokenHash, verifyType);
 
         if (result.success) {
-          console.log('✅ تم التحقق بنجاح:', result.user?.email);
           
           // حالة خاصة: إعادة تعيين كلمة المرور
           if (verifyType === 'recovery') {
@@ -1094,7 +1085,6 @@ sw: true
     // ============================================
     async function handleAccessToken(accessToken, refreshToken) {
       try {
-        console.log('🔐 محاولة setSession');
         
         const { data, error } = await supabaseClient.auth.setSession({
           access_token: accessToken,
@@ -1129,7 +1119,6 @@ sw: true
           return;
         }
 
-        console.log('✅ تم تعيين الجلسة:', data.user?.email);
 
         // تحديد نوع العملية من معاملات URL
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -1265,7 +1254,6 @@ sw: true
       }
     });
 
-    console.log('✅ confirm.html v1.0 loaded');
   </script>
 
   <!-- @include partials/sw-register.html -->

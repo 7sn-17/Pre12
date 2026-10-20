@@ -855,12 +855,10 @@ async function isFileFavorite(fileId) {
 // 14. مراقبة الاتصال
 // ============================================
 window.addEventListener('online', () => {
-  console.log('🟢 Back online');
   clearOldCache();
 });
 
 window.addEventListener('offline', () => {
-  console.log('🔴 Offline');
 });
 
 // ============================================
@@ -1203,5 +1201,3 @@ async function copyFileLink(file) {
 function getHostInfo(url) {
   return detectFileHost(url);
 }
-
-console.log(`✅ files.js v${FILES_VERSION} loaded — Font Awesome + Full Format Support`);

@@ -91,7 +91,11 @@ async function readVaultSecret(name: string): Promise<string | null> {
 
 /** ⭐ يبحث عن حساب الخدمة: المتغيّر ثم Vault */
 export async function getServiceAccount(): Promise<ServiceAccount | null> {
-  const raw = Deno.env.get('FCM_SERVICE_ACCOUNT') || (await readVaultSecret('fcm_service_account'));
+  // ⭐ ثلاثة مصادر: متغيّرات البيئة (باسمين) ثم Supabase Vault
+  const raw =
+    Deno.env.get('FIREBASE_SERVICE_ACCOUNT_JSON') ||
+    Deno.env.get('FCM_SERVICE_ACCOUNT') ||
+    (await readVaultSecret('fcm_service_account'));
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);

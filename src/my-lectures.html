@@ -721,7 +721,7 @@ body {
 /* ═══ المودالات ═══ */
 /* ⭐ فوق الشريط العلوي الثابت (9999) — وإلا تغطّاه الشريط */
 .lec-overlay {
-  position: fixed; inset: 0; z-index: 10050;
+  position: fixed; inset: 0; z-index: calc(var(--z-sheet, 10000) + 50);
   display: flex; align-items: center; justify-content: center;
   padding: 18px;
   background: rgba(3, 10, 8, 0.62);
@@ -796,7 +796,7 @@ body {
 /* ═══ معرض الصور الاحترافي (Gallery) ═══ */
 /* ⭐ فوق الشريط العلوي (9999) */
 .gallery {
-  position: fixed; inset: 0; z-index: 10100;
+  position: fixed; inset: 0; z-index: calc(var(--z-sheet, 10000) + 100);
   background: rgba(2, 8, 6, 0.94);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -944,7 +944,7 @@ body {
 /* ═══ نافذة إعادة التسمية ═══ */
 /* ⭐ فوق الشريط العلوي (9999) */
 .rename-overlay {
-  position: fixed; inset: 0; z-index: 10160;
+  position: fixed; inset: 0; z-index: calc(var(--z-sheet, 10000) + 160);
   display: flex; align-items: center; justify-content: center;
   padding: 20px;
   background: rgba(2, 8, 6, 0.72);
@@ -957,7 +957,7 @@ body {
 /* ═══ أداة القص (Crop) ═══ */
 /* ⭐ فوق الشريط العلوي (9999) */
 .crop-overlay {
-  position: fixed; inset: 0; z-index: 10150;
+  position: fixed; inset: 0; z-index: calc(var(--z-sheet, 10000) + 150);
   background: rgba(2, 8, 6, 0.93);
   backdrop-filter: blur(6px);
   display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -4017,9 +4017,7 @@ async function initLecturePage() {
 
     // ⭐ نسخ الصور محلياً في الخلفية حتى تعمل بلا شبكة لاحقاً.
     if (navigator.onLine) {
-      warmAlbumImages(lectureState.images.slice(0, 40)).then(function (saved) {
-        if (saved) console.log('📦 cached ' + saved + ' lecture images locally');
-      });
+      warmAlbumImages(lectureState.images.slice(0, 40)).then(function () {});
     }
   } catch (err) {
     console.error('initLecturePage error:', err);

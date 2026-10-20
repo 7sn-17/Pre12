@@ -1195,11 +1195,9 @@ if (document.readyState === 'loading') {
 // 14. مراقبة حالة الاتصال
 // ============================================
 window.addEventListener('online', () => {
-  console.log('🟢 IndexedDB ready — online');
 });
 
 window.addEventListener('offline', () => {
-  console.log('🔴 IndexedDB ready — offline');
 });
 
 // ⭐ معالجة عند إغلاق الصفحة
@@ -1221,5 +1219,3 @@ if ('BroadcastChannel' in window) {
     }
   });
 }
-
-console.log('✅ db.js v2.0.0 loaded — IndexedDB enhanced');

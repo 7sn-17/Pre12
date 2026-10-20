@@ -346,7 +346,6 @@
         if (typeof PushNotifications.addListener === 'function') {
           PushNotifications.addListener('registration', function (token) {
             var value = (token && token.value) || token || '';
-            console.log('[notifications] the FCM token arrived:', String(value).slice(0, 18) + '…');
             done(value);
           });
 
@@ -606,6 +605,9 @@
     if (!isNative()) return Promise.resolve(null);
     options = options || {};
 
+    // ⭐ نعيد جدولة التذكير اليومي عند كل إقلاع
+    try { restoreDailyReminder(); } catch (e) {}
+
     return Promise.all([collectState(), loadPlan()]).then(function (results) {
       var state = results[0] || {};
       var plan = results[1];
@@ -640,6 +642,115 @@
     });
   }
 
+  /* ══════════════════════════════════════════════════════════
+     ⭐ التذكير اليومي الثابت (8 مساءً) + التوجيه الذكي
+     ══════════════════════════════════════════════════════════ */
+
+  var DAILY_REMINDER_ID = 9001;
+  var DAILY_REMINDER_HOUR = 20;     // 8 مساءً
+  var DAILY_REMINDER_KEY = 'medapp_daily_reminder_v1';
+
+  /** ⭐ هل التذكير اليومي مفعّل؟ */
+  function isDailyReminderEnabled() {
+    try {
+      return localStorage.getItem(DAILY_REMINDER_KEY) !== '0';
+    } catch (e) {
+      return true;
+    }
+  }
+
+  /**
+   * ⭐⭐ يجدول التذكير اليومي (8 مساءً) أو يلغيه.
+   * @param {boolean} enabled
+   */
+  function scheduleDailyReminder(enabled) {
+    var LocalNotifications = plugin('LocalNotifications');
+    if (!LocalNotifications || typeof LocalNotifications.schedule !== 'function') {
+      return Promise.resolve(false);
+    }
+
+    try {
+      localStorage.setItem(DAILY_REMINDER_KEY, enabled ? '1' : '0');
+    } catch (e) {}
+
+    // ⭐ نلغي التذكير القديم أولاً
+    try {
+      if (typeof LocalNotifications.cancel === 'function') {
+        LocalNotifications.cancel({ notifications: [{ id: DAILY_REMINDER_ID }] });
+      }
+    } catch (e) {}
+
+    if (!enabled) return Promise.resolve(true);
+
+    ensureChannel();
+
+    return LocalNotifications.schedule({
+      notifications: [{
+        id: DAILY_REMINDER_ID,
+        title: '📚 مراجعة يومية',
+        body: '📚 لا تنسَ مراجعة مهامك اليومية على المنصة الطبية. أنت تستطيع!',
+        smallIcon: 'ic_stat_icon',
+        schedule: { on: { hour: DAILY_REMINDER_HOUR, minute: 0 }, every: 'day' },
+        extra: { action: 'tasks' }
+      }]
+    }).then(function () {
+      writeState({ dailyReminder: true, dailyReminderAt: DAILY_REMINDER_HOUR });
+      return true;
+    }).catch(function (err) {
+      console.warn('[notifications] the daily reminder could not be scheduled:', err);
+      return false;
+    });
+  }
+
+  /** ⭐ يستعيد جدولة التذكير عند بدء التطبيق */
+  function restoreDailyReminder() {
+    if (!isDailyReminderEnabled()) return Promise.resolve(false);
+    return scheduleDailyReminder(true);
+  }
+
+  /**
+   * ⭐⭐ التوجيه الذكي — أيقونة الإشعار تحدّد ما يُفتح:
+   *   update  → نافذة التحديث
+   *   tasks   → مهام اليوم
+   *   streak  → ورقة السلسلة
+   *   lectures → محاضراتي
+   */
+  function routeNotificationAction(payload) {
+    var data = payload || {};
+    if (typeof data === 'string') {
+      try { data = JSON.parse(data); } catch (e) { data = { action: data }; }
+    }
+    var action = String(data.action || data.target || '').toLowerCase();
+
+    if (!action) return false;
+
+    if (action === 'update') {
+      if (typeof global.showUpdateModal === 'function' && data.version) {
+        global.showUpdateModal({ version: data.version, notes: data.notes || '' });
+      } else if (typeof global.MedAppUpdate !== 'undefined') {
+        global.MedAppUpdate.check({ silent: true });
+      }
+      return true;
+    }
+
+    if (action === 'tasks') {
+      try { global.location.href = 'index.html#tasks'; } catch (e) {}
+      return true;
+    }
+
+    if (action === 'streak') {
+      try { global.location.href = 'index.html#streak'; } catch (e) {}
+      return true;
+    }
+
+    if (action === 'lectures') {
+      try { global.location.href = 'my-lectures.html'; } catch (e) {}
+      return true;
+    }
+
+    return false;
+  }
+
   /**
    * ⭐⭐ يجدّد رمز الإشعارات يدوياً (زر في الإعدادات) — يُرجع
    *    { ok, token, error }.
@@ -667,6 +778,11 @@
     getStoredPermission: getStoredPermission,
     openAppSettings: openAppSettings,
     refreshPushToken: refreshPushToken,
+    scheduleDailyReminder: scheduleDailyReminder,
+    isDailyReminderEnabled: isDailyReminderEnabled,
+    restoreDailyReminder: restoreDailyReminder,
+    routeNotificationAction: routeNotificationAction,
+    DAILY_REMINDER_ID: DAILY_REMINDER_ID,
     saveFcmToken: saveFcmToken,
     readState: readState
   };

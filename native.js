@@ -286,6 +286,70 @@
     }
   }
 
+  /**
+   * ⭐⭐⭐ التوجيه الذكي — يستمع لضغطة الإشعار (محلي أو بعيد)
+   * ويقرأ data.action لتحديد ما يُفتح:
+   *   update · tasks · streak · lectures
+   */
+  function bindNotificationRouting() {
+    if (!isNative) return;
+
+    var LocalNotifications = plugin('LocalNotifications');
+    if (LocalNotifications && typeof LocalNotifications.addListener === 'function') {
+      try {
+        LocalNotifications.addListener('localNotificationActionPerformed', function (event) {
+          var payload = (event && event.notification) || event || {};
+          routeNotification(payload);
+        });
+      } catch (e) {
+        console.warn('[native] the local notification listener failed:', e);
+      }
+    }
+
+    var PushNotifications = plugin('PushNotifications');
+    if (PushNotifications && typeof PushNotifications.addListener === 'function') {
+      try {
+        PushNotifications.addListener('pushNotificationActionPerformed', function (event) {
+          var payload = (event && event.notification) || event || {};
+          routeNotification(payload);
+        });
+      } catch (e) {
+        console.warn('[native] the push notification listener failed:', e);
+      }
+    }
+
+    var Messaging = plugin('FirebaseMessaging');
+    if (Messaging && typeof Messaging.addListener === 'function') {
+      try {
+        Messaging.addListener('notificationActionPerformed', function (action) {
+          var payload = (action && action.notification) || action || {};
+          routeNotification(payload);
+        });
+      } catch (e) {}
+    }
+  }
+
+  function routeNotification(payload) {
+    try {
+      if (global.MedAppNotifications && typeof global.MedAppNotifications.routeNotificationAction === 'function') {
+        var handled = global.MedAppNotifications.routeNotificationAction(payload);
+        if (handled) return;
+      }
+      // ⭐ احتياطي: افتح الصفحة المطلوبة
+      var data = (payload && payload.data) || payload || {};
+      var action = String(data.action || '').toLowerCase();
+      if (action === 'tasks' || action === 'streak') {
+        global.location.href = 'index.html#' + action;
+      } else if (action === 'lectures') {
+        global.location.href = 'my-lectures.html';
+      } else if (action === 'update') {
+        if (global.MedAppUpdate) global.MedAppUpdate.check({ silent: true });
+      }
+    } catch (e) {
+      console.warn('[native] the notification routing failed:', e);
+    }
+  }
+
   function navigateFromNotification(action) {
     var data = (action && (action.data || action.notification)) || {};
     var target = data.target || data.url || data.path || '';
@@ -413,6 +477,7 @@
     bindNetwork();
     bindFirebase();
     bindDeepLinks();
+    bindNotificationRouting();
 
     // ⭐ منع قائمة الضغط المطوّل (Context Menu) على الصور
     try {

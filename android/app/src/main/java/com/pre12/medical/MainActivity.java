@@ -22,6 +22,8 @@ public class MainActivity extends BridgeActivity
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        // ⭐ مثبّت الحزم (تحديث التطبيق داخل التطبيق)
+        registerPlugin(ApkInstallerPlugin.class);
         super.onCreate(savedInstanceState);
     }
 

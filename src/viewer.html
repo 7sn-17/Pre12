@@ -742,7 +742,6 @@ async function downloadPdf(fileId, fileUrl) {
   try {
     const cached = await getDownloadedFile(fileId);
     if (cached && cached.blob) {
-      console.log('✅ من IndexedDB');
       return cached.blob;
     }
   } catch (e) { /* تجاهل */ }
@@ -750,7 +749,6 @@ async function downloadPdf(fileId, fileUrl) {
   // 2) الشبكة
   if (!navigator.onLine) throw new Error('لا يوجد اتصال بالإنترنت والملف غير محفوظ');
 
-  console.log('🌐 تحميل من الشبكة');
   const response = await fetch(fileUrl);
   if (!response.ok) throw new Error('فشل التحميل: ' + response.status);
 
@@ -850,7 +848,6 @@ function calcContainerWidth() {
 /* ═══ إنشاء Placeholders ═══ */
 async function createPlaceholders() {
   state.containerWidth = calcContainerWidth();
-  console.log('Container width:', state.containerWidth);
 
   // أبعاد الصفحة الأولى
   const firstPage = await state.pdfDoc.getPage(1);

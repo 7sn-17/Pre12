@@ -1429,7 +1429,6 @@ headerTitle: الملاحظات
       try {
         session = await getSession();
       } catch (err) {
-        console.log('Session check failed:', err);
       }
       
       if (!session) {
@@ -1463,7 +1462,6 @@ headerTitle: الملاحظات
             saveToStorage(KEYS.PROFILE_CACHE, profile);
           }
         } catch (err) {
-          console.log('Profile fetch failed, using cache');
         }
       }
       
@@ -2158,7 +2156,6 @@ headerTitle: الملاحظات
           showConnectionBanner(false);
         }
         
-        console.log('✅ notes.html loaded');
         
       } catch (err) {
         console.error('Init error:', err);

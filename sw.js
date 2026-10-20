@@ -1,9 +1,9 @@
 // ============================================
 // sw.js — Service Worker
-// Version 3.0.0 — SPA shell + network-first HTML + cache-first JSON
+// Version 3.5.0 — SPA shell + network-first HTML + cache-first JSON
 // ============================================
 
-const CACHE_VERSION = 'v3.0.0';
+const CACHE_VERSION = 'v3.5.0';
 const STATIC_CACHE  = `medfav-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `medfav-runtime-${CACHE_VERSION}`;
 const PDF_CACHE     = `medfav-pdf-${CACHE_VERSION}`;
@@ -48,7 +48,7 @@ const PRECACHE_URLS = [
   '/theme-init.js',
   '/ui.js',
   '/app.js',
-  '/app.js?v=3.0.0',
+  '/app.js?v=3.5.0',
   '/streak.js',
   '/native.js',
   '/notifications.js',
@@ -71,10 +71,8 @@ const PRECACHE_URLS = [
 // 1. Install
 // ============================================
 self.addEventListener('install', (event) => {
-  console.log('🔧 SW: Installing', CACHE_VERSION);
   event.waitUntil(
     caches.open(STATIC_CACHE).then((cache) => {
-      console.log('📦 SW: Pre-caching...');
       return Promise.allSettled(
         PRECACHE_URLS.map(url =>
           cache.add(url).catch(err =>
@@ -83,7 +81,6 @@ self.addEventListener('install', (event) => {
         )
       );
     }).then(() => {
-      console.log('✅ SW: Installed');
       return self.skipWaiting();
     })
   );
@@ -93,7 +90,6 @@ self.addEventListener('install', (event) => {
 // 2. Activate — امسح كل نسخة قديمة
 // ============================================
 self.addEventListener('activate', (event) => {
-  console.log('🔧 SW: Activating', CACHE_VERSION);
   event.waitUntil(
     caches.keys().then((names) => {
       return Promise.all(
@@ -101,12 +97,10 @@ self.addEventListener('activate', (event) => {
           n !== STATIC_CACHE && n !== RUNTIME_CACHE &&
           n !== PDF_CACHE && n !== IMGS_CACHE)
           .map(n => {
-            console.log('🗑️ SW: Removing old cache', n);
             return caches.delete(n);
           })
       );
     }).then(() => {
-      console.log('✅ SW: Activated');
       return self.clients.claim();
     })
   );
@@ -170,7 +164,6 @@ async function handleScheduleImage(request) {
   try {
     const cached = await caches.match(request);
     if (cached) {
-      console.log('📦 SW: img from cache');
       return cached;
     }
 
@@ -367,4 +360,3 @@ self.addEventListener('message', (event) => {
   }
 });
 
-console.log('✅ sw.js v3.0.0 loaded');

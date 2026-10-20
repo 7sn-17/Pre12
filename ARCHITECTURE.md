@@ -2043,6 +2043,68 @@ The name is version-aware, the release body, the artifact and the
 "verify the published asset" step all use it, and the in-app share
 message links straight to it.
 
+### 5.20 Phase 27 — v3.5.0 (the ultimate master phase)
+
+#### 🔄 The in-app update ecosystem
+
+`app-update.js` (loaded by the shell on every page) implements the
+whole cycle:
+
+| Step | What |
+|---|---|
+| the check | `App.getInfo()` → the current version, then `GET api.github.com/repos/7sn-17/Pre12/releases/latest` → `compareVersions()` |
+| the modal | `showUpdateModal()` — a premium green card with the version, the release notes and **تحديث الآن** / **لاحقاً** |
+| the download | `FileTransfer.downloadFile()` into the app's cache (with a progress bar) |
+| the install | the custom **`ApkInstallerPlugin`** (Java) opens the Android package installer through the app's FileProvider |
+
+> The npm package `@capgo/capacitor-android-inline-install` only
+> supports the **Google Play** in-app install (the app is not on
+> Play), so the project ships its own 40-line plugin that does the
+> real thing: `Intent(ACTION_VIEW)` +
+> `application/vnd.android.package-archive`.
+
+#### 🔔 The notification ecosystem
+
+- **A daily local reminder at 8 PM** — *"📚 لا تنسَ مراجعة مهامك
+  اليومية على المنصة الطبية. أنت تستطيع!"* — with a toggle in the
+  settings (`schedule: { on: { hour: 20, minute: 0 }, every: 'day' }`).
+- **"إرسال إشعار تجريبي"** replaces the old token button and calls the
+  new `send-test-notification` Edge Function; on failure it shows
+  *"تعذر إرسال الإشعار التجريبي. يرجى التواصل مع المطور لحل هذه
+  المشكلة."*
+- **Smart routing** — `routeNotificationAction()` reads `data.action`
+  from both `localNotificationActionPerformed` and
+  `pushNotificationActionPerformed`:
+
+  | action | result |
+  |---|---|
+  | `update` | the update modal opens immediately |
+  | `tasks` | index.html + today's card |
+  | `streak` | the streak sheet opens |
+  | `lectures` | my-lectures.html |
+
+- **Two Edge Functions**: `send-test-notification` (to the caller) and
+  `send-update-notification` (a broadcast to every device, called by
+  the CI right after the release).
+
+#### 📣 The release notes
+
+`CHANGELOG.md` is now the **body of the GitHub Release**
+(`body_path: ./CHANGELOG.md`) — a hand-written Arabic changelog that
+also documents every previous version.
+
+#### 🧹 The code audit
+
+- **The z-index scale** is now declared once in the shell:
+  `--z-header: 9999` · `--z-sheet: 10000` · `--z-overlay: 20000` ·
+  `--z-modal: 1000000` · `--z-update: 1000100` · `--z-toast: 2147483647`
+  — the streak sheet, the search overlay, the ui.js modals and the
+  update modal can no longer overlap each other.
+- **58 `console.log` statements removed** from the runtime code (only
+  `console.error` / `console.warn` remain for debugging).
+- The custom animated splash screen was **deleted entirely** (markup,
+  CSS, animation and the sessionStorage flag).
+
 ## 12. Cheatsheet
 
 ### Commands

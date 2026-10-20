@@ -396,14 +396,12 @@ pwa: none
 
     // مراقبة الاتصال
     window.addEventListener('online', () => {
-      console.log('✅ متصل الآن');
       setTimeout(() => {
         window.location.href = 'index.html';
       }, 500);
     });
 
     window.addEventListener('offline', () => {
-      console.log('⚠️ انقطع الاتصال');
     });
 
     // فحص أولي
