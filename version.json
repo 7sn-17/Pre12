@@ -1,5 +1,5 @@
 {
-  "latest_version": "4.4.1",
+  "latest_version": "4.4.2",
   "download_url": "https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk",
-  "changelog": "حمولة FCM كاملة: كل إشعار خادم يحمل الآن notification (العنوان والنص) وdata معاً، بأولوية high وقناة medapp_reminders، فلا يعتمد على معالجة التطبيق فقط.\nإشعارات المقدمة: عند وصول FCM والتطبيق مفتوح، يُعاد عرضه فوراً كإشعار محلي عبر @capacitor/local-notifications مع الصوت والاهتزاز، لأن Android لا يرسم إشعارات FCM تلقائياً في المقدمة.\nقناة heads-up: قناة medapp_reminders تُنشأ بـimportance: 5 وvisibility: 1 (Public) لتظهر كبانر منبثق فوق الشاشة.\nالإصدار: 4.4.1 (‏versionCode 25)."
+  "changelog": "أيقونة إشعار جديدة: استُبدلت أيقونة شريط الحالة بالكامل برسم Vector دقيق للسماعة الطبية (أذنان، أنبوبان، أنبوب سفلي، وصدرية بحلقة داخلية) بالأبيض النقي 24×24dp.\nصوت احترافي: تغيّرت قناة medapp_reminders من beep.wav إلى sound: 'default'، لاستخدام نغمة Android النظامية المتّسقة، مع بقاء الاهتزاز والأهمية العالية.\nالإصدار: 4.4.2 (‏versionCode 26)."
 }

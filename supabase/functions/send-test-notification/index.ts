@@ -198,7 +198,7 @@ Deno.serve(async (req) => {
           channelId: 'medapp_reminders',
           icon: 'ic_stat_icon',
           color: '#10b981',
-          sound: 'beep.wav',
+          sound: 'default',
         },
       },
     };

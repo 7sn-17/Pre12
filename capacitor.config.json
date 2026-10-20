@@ -50,7 +50,7 @@
     "LocalNotifications": {
       "smallIcon": "ic_stat_icon",
       "iconColor": "#10b981",
-      "sound": "beep.wav"
+      "sound": "default"
     },
     "Keyboard": {
       "resize": "native"

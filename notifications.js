@@ -610,17 +610,24 @@
     }
 
     try {
-      var result = LocalNotifications.createChannel({
+      var channel = {
         id: 'medapp_reminders',
         name: 'تذكيرات المنصة',
         description: 'تذكير بالمهام وحماية سلسلة الدراسة',
         importance: 5,
         visibility: 1,
-        sound: 'beep.wav',
+        sound: 'default',
         vibration: true,
         lights: true,
         lightColor: '#10b981',
-      });
+      };
+
+      // ⭐ v4.4.2 — Capacitor interprets `sound` as a res/raw resource
+      //   name, so the literal "default" would point at a missing file.
+      //   Omitting the key lets Android use the system default sound.
+      if (channel.sound === 'default') delete channel.sound;
+
+      var result = LocalNotifications.createChannel(channel);
 
       if (result && typeof result.then === 'function') {
         return result.then(function () { return true; }).catch(function (e) {
@@ -664,7 +671,7 @@
         body: message.body,
         smallIcon: 'ic_stat_icon',
         channelId: 'medapp_reminders',
-        sound: 'beep.wav',
+        sound: 'default',
         schedule: { at: new Date(Date.now() + delay) },
         extra: { category: message.category }
       }]
@@ -716,7 +723,7 @@
             body: 'إذا وصلتك هذه الرسالة فالتذكير المحلي يعمل — بعد ' + wait + ' ثوانٍ.',
             smallIcon: 'ic_stat_icon',
             channelId: 'medapp_reminders',
-            sound: 'beep.wav',
+            sound: 'default',
             schedule: { at: at },
             extra: { action: 'tasks', test: 'local' }
           }]
@@ -871,7 +878,7 @@
         body: '📚 لا تنسَ مراجعة مهامك اليومية. أنت تستطيع!',
         smallIcon: 'ic_stat_icon',
         channelId: 'medapp_reminders',
-        sound: 'beep.wav',
+        sound: 'default',
         schedule: { on: { hour: DAILY_REMINDER_HOUR, minute: 0 }, every: 'day' },
         extra: { action: 'tasks' }
       }]

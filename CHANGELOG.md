@@ -2,7 +2,17 @@
 
 **التطبيق الرسمي لطلاب الطب في سوريا**
 
-⬇️ [تحميل v4.4.1](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+⬇️ [تحميل v4.4.2](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+
+## ✨ v4.4.2 — أيقونة السماعة الدقيقة + الصوت الافتراضي
+
+- **أيقونة إشعار جديدة**: استُبدلت أيقونة شريط الحالة بالكامل برسم
+  Vector دقيق للسماعة الطبية (أذنان، أنبوبان، أنبوب سفلي، وصدرية
+  بحلقة داخلية) بالأبيض النقي 24×24dp.
+- **صوت احترافي**: تغيّرت قناة `medapp_reminders` من `beep.wav` إلى
+  `sound: 'default'`، لاستخدام نغمة Android النظامية المتّسقة، مع بقاء
+  الاهتزاز والأهمية العالية.
+- **الإصدار**: 4.4.2 (‏versionCode 26).
 
 ## ✨ v4.4.1 — إصلاح وصول إشعارات FCM الفعلية
 

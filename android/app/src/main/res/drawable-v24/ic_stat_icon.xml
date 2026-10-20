@@ -1,57 +1,42 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
-  ⭐ v4.4.0 — أيقونة شريط الإشعارات: سماعة طبية بيضاء بسيطة.
-  نسخة API 24+ مطابقة تماماً لنسخة drawable/.
--->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
+    
+    <!-- Upper Tubes and Earpieces -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M4,3 C4,2.45 4.45,2 5,2 H7.5 C8.05,2 8.5,2.45 8.5,3 V4 C8.5,4.55 8.05,5 7.5,5 H5 C4.45,5 4,4.55 4,4 V3 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M13.5,3 C13.5,2.45 13.95,2 14.5,2 H17 C17.55,2 18,2.45 18,3 V4 C18,4.55 17.55,5 17,5 H14.5 C13.95,5 13.5,4.55 13.5,4 V3 Z" />
+    
+    <!-- Tubing and Junction -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M6.25,5 V7.5 C6.25,10 8.5,12 11,13 L11,15 C7,13.5 4.5,10.5 4.5,7.5 V5 H6.25 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M15.75,5 V7.5 C15.75,10 13.5,12 11,13 L11,15 C15,13.5 17.5,10.5 17.5,7.5 V5 H15.75 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M10,13 C10,12.45 10.45,12 11,12 C11.55,12 12,12.45 12,13 C12,13.55 11.55,14 11,14 C10.45,14 10,13.55 10,13 Z" />
 
+    <!-- Lower Tube -->
     <path
-        android:pathData="M5,3.2 L5,8.2 C5,11.6 7.6,13.6 10.8,13.6"
-        android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:fillColor="#00000000" />
+        android:fillColor="#FFFFFF"
+        android:pathData="M11,14 C11,16.5 13,19 16.5,19 C18.5,19 20.5,18 21.5,16.5 L20,15.5 C19.2,16.6 17.8,17.5 16.5,17.5 C13.8,17.5 12.5,15.5 12.5,14 H11 Z" />
 
+    <!-- Chest Piece with Cutout -->
     <path
-        android:pathData="M19,3.2 L19,8.2 C19,11.6 16.4,13.6 13.2,13.6"
-        android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:fillColor="#00000000" />
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M18.5,8 C15.46,8 13,10.46 13,13.5 C13,16.54 15.46,19 18.5,19 C21.54,19 24,16.54 24,13.5 C24,10.46 21.54,8 18.5,8 Z M18.5,10 C20.43,10 22,11.57 22,13.5 C22,15.43 20.43,17 18.5,17 C16.57,17 15,15.43 15,13.5 C15,11.57 16.57,10 18.5,10 Z" />
+    
+    <!-- Center Dot -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M18.5,12 C17.67,12 17,12.67 17,13.5 C17,14.33 17.67,15 18.5,15 C19.33,15 20,14.33 20,13.5 C20,12.67 19.33,12 18.5,12 Z" />
 
-    <path
-        android:pathData="M10.8,13.6 C11.3,14.3 11.7,14.9 12,15.6 C12.3,14.9 12.7,14.3 13.2,13.6"
-        android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:fillColor="#00000000" />
-
-    <path
-        android:pathData="M12,15.6 L12,16.5 C12,18.8 14,19.3 16,19.3"
-        android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:fillColor="#00000000" />
-
-    <path
-        android:pathData="M18.5,16.6 a2.7,2.7 0 1,0 0,5.4 a2.7,2.7 0 1,0 0,-5.4"
-        android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:fillColor="#00000000" />
-
-    <path
-        android:pathData="M5,2 a1.2,1.2 0 1,0 0,2.4 a1.2,1.2 0 1,0 0,-2.4"
-        android:fillColor="#FFFFFFFF" />
-    <path
-        android:pathData="M19,2 a1.2,1.2 0 1,0 0,2.4 a1.2,1.2 0 1,0 0,-2.4"
-        android:fillColor="#FFFFFFFF" />
 </vector>

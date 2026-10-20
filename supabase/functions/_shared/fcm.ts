@@ -186,7 +186,7 @@ async function sendV1(token: string, message: FcmMessage, sa: ServiceAccount): P
             priority: 'HIGH',
             notification: {
               channel_id: 'medapp_reminders',
-              sound: 'beep.wav',
+              sound: 'default',
               icon: 'ic_stat_icon',
               color: '#10b981',
             },

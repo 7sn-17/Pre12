@@ -675,17 +675,26 @@
       return Promise.resolve(false);
     }
     try {
-      return Promise.resolve(LocalNotifications.createChannel({
+      var channel = {
         id: 'medapp_reminders',
         name: 'تذكيرات المنصة',
         description: 'تذكير بالمهام وحماية سلسلة الدراسة',
         importance: 5,
         visibility: 1,
-        sound: 'beep.wav',
+        sound: 'default',
         vibration: true,
         lights: true,
         lightColor: '#10b981',
-      })).then(function () { return true; }).catch(function () { return false; });
+      };
+
+      // ⭐ v4.4.2 — see notifications.js: omit the literal "default" so
+      //   Android uses the system notification sound instead of a
+      //   non-existent res/raw/default resource.
+      if (channel.sound === 'default') delete channel.sound;
+
+      return Promise.resolve(LocalNotifications.createChannel(channel))
+        .then(function () { return true; })
+        .catch(function () { return false; });
     } catch (e) {
       return Promise.resolve(false);
     }
@@ -740,7 +749,7 @@
         body: body,
         smallIcon: 'ic_stat_icon',
         channelId: 'medapp_reminders',
-        sound: 'beep.wav',
+        sound: 'default',
         schedule: { at: new Date(now + 350) },
         extra: data,
       }]
