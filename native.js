@@ -23,6 +23,7 @@
     isNative: isNative,
     backButtonBound: false,
     fcmToken: '',
+    pushListenerBound: false,
     lastNotificationTap: null,
     permissionRequested: false,
     notificationPermission: null
@@ -211,30 +212,155 @@
 
   /**
    * ⭐ حفظ توكن FCM في جدول profiles حتى تصل الإشعارات لكل جهاز.
+   * (update على صفّ المستخدم ثم upsert احتياطي إن لم يوجد الصفّ)
    */
   function saveFcmToken(token) {
     if (!token) return Promise.resolve(false);
     var client = supabaseClientRef();
-    if (!client) return Promise.resolve(false);
+    if (!client || !client.from) return Promise.resolve(false);
 
-    return currentUserId().then(function (userId) {
-      if (!userId) return false;
-      return client.from('profiles')
-        .update({ fcm_token: token })
-        .eq('id', userId)
+    return Promise.resolve(currentUserId()).then(function (userId) {
+      if (!userId) {
+        console.warn('[native] the FCM token was not saved: no signed-in user yet.');
+        return false;
+      }
+      // ⭐⭐ التحديث المطلوب حرفياً: profiles.fcm_token للمستخدم الحالي
+      return Promise.resolve(
+        client.from('profiles').update({ fcm_token: token }).eq('id', userId).select('id')
+      )
         .then(function (result) {
           if (result && result.error) {
-            // قد لا يوجد العمود — نتجاهل بهدوء.
             console.warn('[native] could not save the FCM token:', result.error.message);
             return false;
           }
-          return true;
+          if (((result && result.data) || []).length) return true;
+
+          // ⭐ لا صفّ في profiles؟ نُنشئه.
+          return Promise.resolve(
+            client.from('profiles').upsert({ id: userId, fcm_token: token }, { onConflict: 'id' })
+          )
+            .then(function (up) {
+              if (up && up.error) {
+                console.warn('[native] the token upsert failed:', up.error.message);
+                return false;
+              }
+              return true;
+            });
         })
         .catch(function (e) {
           console.warn('[native] FCM token save failed:', e);
           return false;
         });
     });
+  }
+
+  /**
+   * ⭐⭐⭐ TASK 6 — التسلسل الصحيح لتوليد رمز FCM وحفظه:
+   *
+   *   1) `const perm = await PushNotifications.requestPermissions();`
+   *   2) `if (perm.receive === 'granted') { await PushNotifications.register(); }`
+   *   3) المستمع على حدث 'registration' يُعرَّف **قبل** register()
+   *      فيحفظ الرمز فور وصوله.
+   *   4) `setTimeout` بمقدار 3 ثوانٍ بعد register() قبل قراءة الرمز
+   *      وحفظه — ليعطي Firebase وقته في توليد الرمز.
+   *
+   * هذه هي العلّة الفعلية لبقاء `profiles.fcm_token = NULL`: كان
+   * التسجيل يتمّ بلا إذن إشعارات، وبلا أي مهلة انتظار.
+   */
+  function bindPushRegistrationListener() {
+    if (nativeState.pushListenerBound) return;
+    var PushNotifications = plugin('PushNotifications');
+    if (!PushNotifications || typeof PushNotifications.addListener !== 'function') return;
+    nativeState.pushListenerBound = true;
+
+    try {
+      // ⚠️ الترتيب مهم: المستمع أوّلاً … ثم register()
+      PushNotifications.addListener('registration', function (token) {
+        var value = (token && token.value) || token || '';
+        if (!value) return;
+        nativeState.fcmToken = String(value);
+        console.info('[native] the FCM token arrived:', nativeState.fcmToken.slice(0, 24) + '…');
+        saveFcmToken(nativeState.fcmToken);
+      });
+
+      PushNotifications.addListener('registrationError', function (error) {
+        console.warn('[native] the FCM registration failed:', error);
+      });
+    } catch (e) {
+      console.warn('[native] the registration listener could not be attached:', e);
+    }
+  }
+
+  /** ⭐ يقرأ الرمز (PushNotifications ثم FirebaseMessaging) ويحفظه */
+  function readAndSaveFcmToken() {
+    var PushNotifications = plugin('PushNotifications');
+    var Messaging = plugin('FirebaseMessaging');
+
+    var read = null;
+    if (PushNotifications && typeof PushNotifications.getToken === 'function') {
+      read = PushNotifications.getToken.bind(PushNotifications);
+    } else if (Messaging && typeof Messaging.getToken === 'function') {
+      read = Messaging.getToken.bind(Messaging);
+    }
+    if (!read) return Promise.resolve(nativeState.fcmToken || '');
+
+    return Promise.resolve(read())
+      .then(function (result) {
+        var value = (result && result.value) || result || '';
+        if (!value) return nativeState.fcmToken || '';
+        nativeState.fcmToken = String(value);
+        console.info('[native] the FCM token was read:', nativeState.fcmToken.slice(0, 24) + '…');
+        return Promise.resolve(saveFcmToken(nativeState.fcmToken)).then(function () {
+          return nativeState.fcmToken;
+        });
+      })
+      .catch(function (e) {
+        console.warn('[native] could not read the FCM token:', e);
+        return nativeState.fcmToken || '';
+      });
+  }
+
+  /** ⭐⭐⭐ يضمن وجود رمز FCM محفوظ (يُستدعى بعد الدخول وعند الإقلاع) */
+  function ensureFcmToken() {
+    if (!isNative) return Promise.resolve('');
+    var PushNotifications = plugin('PushNotifications');
+
+    // 3) المستمع قبل register
+    bindPushRegistrationListener();
+
+    if (!PushNotifications || typeof PushNotifications.register !== 'function') {
+      console.warn('[native] the PushNotifications plugin is not available');
+      return readAndSaveFcmToken();
+    }
+
+    // 1) الإذن أوّلاً
+    return Promise.resolve(PushNotifications.requestPermissions())
+      .then(function (perm) {
+        if (!perm || perm.receive !== 'granted') {
+          console.warn('[native] the notification permission was not granted:',
+            (perm && (perm.receive || perm.status)) || 'unknown');
+          return '';
+        }
+
+        // 2) ثم التسجيل
+        return Promise.resolve(PushNotifications.register())
+          .then(function () {
+            // 4) 3 ثوانٍ قبل القراءة والحفظ
+            return new Promise(function (resolve) {
+              setTimeout(function () {
+                readAndSaveFcmToken().then(resolve, function () { resolve(''); });
+              }, 3000);
+            });
+          })
+          .catch(function (e) {
+            console.warn('[native] the FCM registration call failed:', e);
+            return '';
+          });
+      })
+      .catch(function (e) {
+        console.warn('[native] ensuring the FCM token failed:', e);
+        return '';
+      });
   }
 
   function bindFirebase() {
@@ -248,7 +374,9 @@
     try {
       if (typeof Messaging.addListener === 'function') {
         Messaging.addListener('tokenReceived', function (token) {
-          nativeState.fcmToken = token || '';
+          var value = (token && token.value) || token || '';
+          if (!value) return;
+          nativeState.fcmToken = String(value);
           saveFcmToken(nativeState.fcmToken);
         });
 
@@ -274,8 +402,10 @@
       }
 
       if (typeof Messaging.getToken === 'function') {
-        Messaging.getToken().then(function (token) {
-          nativeState.fcmToken = token || '';
+        Messaging.getToken().then(function (result) {
+          var value = (result && result.value) || result || '';
+          if (!value) return;
+          nativeState.fcmToken = String(value);
           saveFcmToken(nativeState.fcmToken);
         }).catch(function (e) {
           console.warn('[native] could not read the FCM token:', e);
@@ -529,14 +659,19 @@
     // ⭐⭐ تشخيص: اطبع رمز FCM عند بدء التطبيق (أول خطوة في تشخيص الإشعارات)
     setTimeout(function () { logFcmTokenOnStartup(); }, 2500);
 
-    // ⭐⭐⭐ نضمن رمز FCM عند البدء (إن كان المستخدم مسجّلاً)
+    // ⭐⭐⭐ TASK 6 — نضمن رمز FCM عند البدء (إن كان المستخدم مسجّلاً).
+    //    التسلسل: الإذن → register() → 3 ثوانٍ → قراءة وحفظ الرمز.
     setTimeout(function () {
       try {
         var user = (typeof global.getAuthUser === 'function') ? global.getAuthUser() : null;
         if (!user || !user.id) return;
-        if (global.MedAppNotifications && typeof global.MedAppNotifications.ensurePushToken === 'function') {
-          global.MedAppNotifications.ensurePushToken();
-        }
+        ensureFcmToken().then(function (token) {
+          if (token) return;
+          // ⭐ احتياطي: محرّك الإشعارات يعرف كيف يقرأ الرمز أيضاً.
+          if (global.MedAppNotifications && typeof global.MedAppNotifications.ensurePushToken === 'function') {
+            global.MedAppNotifications.ensurePushToken();
+          }
+        });
       } catch (e) {}
     }, 4000);
 
@@ -554,6 +689,8 @@
     try {
       global.addEventListener('medapp:auth-success', function () {
         requestNotificationPermissionOnce();
+        // ⭐⭐⭐ TASK 6 — بعد كل تسجيل دخول: أنشئ الرمز واحفظه في profiles
+        setTimeout(function () { ensureFcmToken(); }, 1200);
       });
       global.addEventListener('medapp:notification-permission', function (event) {
         global.MedAppNative.state.notificationPermission = (event && event.detail) || null;
@@ -602,6 +739,8 @@
     syncSafeArea: syncSafeArea,
     hideSplash: hideSplash,
     saveFcmToken: saveFcmToken,
+    ensureFcmToken: ensureFcmToken,
+    readAndSaveFcmToken: readAndSaveFcmToken,
     closeBrowser: closeNativeBrowser
   };
   global.closeNativeBrowser = closeNativeBrowser;

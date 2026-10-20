@@ -2,7 +2,29 @@
 
 **التطبيق الرسمي لطلاب الطب في سوريا**
 
-⬇️ [تحميل v3.8.0](https://github.com/7sn-17/Pre12/releases/latest/download/Medical_Platform_v3.8.0.apk)
+⬇️ [تحميل v4.1.0](https://github.com/7sn-17/Pre12/releases/latest/download/Medical_Platform_v4.1.0.apk)
+
+## ✨ v4.1.0 — إنقاذ الواجهة واستعادة CSS
+
+- **استعادة CSS من Git**: أُعيدت كتلة النوافذ المنبثقة المخصّصة (`.medapp-ui-*`)
+  ونافذة "سجّل الدخول" (`.auth-required-*`) كاملةً من الوسم `v3.6.0` (‏`82efe58`).
+  كانت محذوفة من `partials/head.html` فظهرت كل الحوارات كبطاقات عارية.
+- **زر "+" العائم**: أُزيل `position: relative` الذي كان يلغي `position: absolute`
+  فيزيح الزرّ نصف عرض الشريط، وأُزيلت هوامش `margin-top: -22px` من استعلامات الوسائط.
+- **الشريط السفلي**: تخطيط Flexbox صارم (`display:flex` · `align-items:center` ·
+  `justify-content:space-around`) وعناصر متساوية العرض، والمنطقة الآمنة تُحسب مرّة واحدة.
+- **المحتوى لم يعد يختفي**: الإزاحة العلوية انتقلت من `body:has(> header)` (التي تفشل
+  في WebViews قديمة) إلى حاوية المحتوى نفسها، وأُضيفت إزاحة سفلية 110px فوق الشريط
+  العائم والزرّ. تُستثنى واجهة العرض بملء الشاشة (`viewer`).
+- **لا طبقات شبح**: كل نافذة مغلقة صارت `display:none` + `pointer-events:none`،
+  وكل نافذة مفتوحة `display:flex` — مع حركة دخول أنيقة بديلة.
+- **زر "حذف الحساب"**: عنصر قائمة ساكن (`position: static`) داخل "منطقة الخطر" أسفل
+  "تسجيل الخروج"، بتصميم زرّ أحمر واضح بدل الشكل العائم.
+- **رمز FCM**: التسلسل الصحيح في `native.js` — إذن ← `register()` بعد تثبيت مستمع
+  `registration` ← مهلة 3 ثوانٍ ← قراءة الرمز وحفظه في `profiles.fcm_token`
+  (مع `upsert` احتياطي إن لم يوجد الصفّ) — ويُعاد بعد كل تسجيل دخول.
+- **الإصدار**: 4.1.0 (‏versionCode 19) — ‏`google-services.json` مؤكَّد في
+  `android/app/` للحزمة `com.pre12.medical`.
 
 ## ✨ v3.8.0
 

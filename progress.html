@@ -303,28 +303,25 @@
     padding-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) !important;
   }
 
-  /* ⭐ جسم الصفحة يتزحزح بمقدار الشريط حتى لا يختفي تحته */
+  /* ⭐⭐⭐ TASK 2 (v4.1.0) — إزاحة المحتوى عن الشريط العلوي الثابت
+     كانت تتحقّق عبر `body:has(> header)`، وهي تعتمد على دعم :has()
+     في الـ WebView؛ إن غاب الدعم يختفي أعلى المحتوى تحت الشريط.
+     انتقلت المسؤولية إلى حاوية المحتوى نفسها (انظر قسم TASK 2 أدناه)
+     — وهي قاعدة لا تعتمد على أي محدد حديث. */
   body:has(> header),
   body:has(> .ml-topbar) {
-    padding-top: calc(var(--app-header-h) + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
-  }
-
-  /* ⭐ حاويات التطبيق تحترم المنطقة الآمنة من الأسفل */
-  body > main,
-  body > .container,
-  .app-container {
-    padding-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+    padding-top: 0;
   }
 
   /* ============================================================
      ⭐⭐ شبكة أمان: أي طبقة مخفية يجب ألّا تعترض النقرات
      ------------------------------------------------------------
-     كانت طبقة "تسجيل الدخول" (و iPhone) بلا CSS فتُعرض كنصّ
-     دائم أسفل الشاشة وتبتلع كل الضغقات. هذه القاعدة تمنع ذلك
-     أبداً: أي طبقة غير مفعّلة تُخفى تماماً ولا تلتقط أي نقرة.
+     كانت طبقة "تسجيل الدخول" بلا CSS فتُعرض كنصّ دائم أسفل الشاشة
+     وتبتلع كل الضغطات. التفاصيل الكاملة في قسم TASK 4 أدناه
+     (display/hidden + pointer-events لكل نافذة).
      ============================================================ */
   .auth-required-overlay:not(.active),
-  .modal-backdrop:not(.active),
+  .modal-backdrop:not(.open):not(.active),
   .medapp-ui-root:not(.open),
   .medapp-update-overlay:not(.open) {
     display: none !important;
@@ -514,28 +511,497 @@
   }
   .medapp-update-btn.ghost:hover { background: rgba(148, 163, 184, 0.08); }
 
-    .auth-required-btn.primary {
-      background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
-      color: white;
-      box-shadow: 0 8px 20px var(--accent-glow);
-    }
+  /* ============================================================
+     ⭐⭐⭐ TASK 1 — RESTORED FROM GIT (v3.6.0 · commit 82efe58)
+     ------------------------------------------------------------
+     النوافذ المنبثقة المخصّصة (بديل alert/confirm/prompt) التي
+     يبنيها ui.js. هذه القواعد كانت **محذوفة** من هذا الملف منذ
+     v3.6.1 فظهرت النوافذ كبطاقات عارية ("Ghost Elements").
+     تمّت استعادتها من الـ commit 82efe58 حرفياً.
+     ════════════════════════════════════════════════════════════ */
+  .medapp-ui-root {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal, 1000000);
+    pointer-events: none;
+  }
+  .medapp-ui-root.open { pointer-events: auto; }
 
-    .auth-required-btn.primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 28px var(--accent-glow-strong);
-    }
+  .medapp-ui-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 22px;
+    background: rgba(3, 10, 8, 0.68);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    opacity: 0;
+    transition: opacity 0.22s ease;
+  }
+  [data-theme="light"] .medapp-ui-overlay { background: rgba(15, 23, 42, 0.42); }
+  .medapp-ui-root.open .medapp-ui-overlay { opacity: 1; }
 
-    .auth-required-btn.secondary {
-      background: rgba(128, 128, 128, 0.08);
-      border-color: var(--border-card);
-      color: var(--text-secondary);
-    }
+  .medapp-ui-card {
+    width: 100%;
+    max-width: 400px;
+    padding: 26px 22px 20px;
+    border-radius: 24px;
+    text-align: center;
+    background: var(--bg-solid, #0d221a);
+    border: 1px solid var(--border-card, rgba(16, 185, 129, 0.18));
+    box-shadow: 0 30px 80px -24px rgba(0, 0, 0, 0.65);
+    transform: translateY(16px) scale(0.94);
+    opacity: 0;
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease;
+  }
+  .medapp-ui-root.open .medapp-ui-card { transform: translateY(0) scale(1); opacity: 1; }
 
-    .auth-required-btn.secondary:hover {
-      background: rgba(128, 128, 128, 0.15);
-      border-color: var(--border-card-hover);
-      color: var(--text-primary);
-    }
+  .medapp-ui-icon {
+    width: 62px;
+    height: 62px;
+    margin: 0 auto 14px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--medapp-ui-tone, var(--medapp-blue, #60a5fa)) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--medapp-ui-tone, var(--medapp-blue, #60a5fa)) 38%, transparent);
+    color: var(--medapp-ui-tone, var(--medapp-blue, #60a5fa));
+  }
+  .medapp-ui-icon i { width: 28px; height: 28px; }
+
+  .medapp-ui-title {
+    font-size: 1.06rem;
+    font-weight: 900;
+    color: var(--text-primary, #f0fdf4);
+    line-height: 1.5;
+  }
+  .medapp-ui-message {
+    margin-top: 8px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    line-height: 1.8;
+    color: var(--text-secondary, #94a3b8);
+  }
+  .medapp-ui-actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+  }
+  .medapp-ui-input {
+    width: 100%;
+    margin-top: 18px;
+    padding: 13px 15px;
+    border-radius: 13px;
+    border: 1.5px solid var(--border-card, rgba(16, 185, 129, 0.18));
+    background: var(--bg-elevated, #102a22);
+    color: var(--text-primary, #f0fdf4);
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  .medapp-ui-input:focus {
+    border-color: var(--accent-emerald, #10b981);
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+  }
+  .medapp-ui-input.shake { animation: medappShake 0.4s ease; }
+  @keyframes medappShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+  }
+
+  .medapp-ui-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-radius: 13px;
+    border: 1px solid var(--border-card, rgba(16, 185, 129, 0.18));
+    background: var(--bg-elevated, #102a22);
+    color: var(--text-primary, #f0fdf4);
+    font-family: inherit;
+    font-size: 0.84rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  }
+  .medapp-ui-btn:hover { transform: translateY(-2px); }
+  .medapp-ui-btn:active { transform: translateY(0) scale(0.98); }
+  .medapp-ui-btn.primary {
+    border: none;
+    background: linear-gradient(135deg, var(--accent-emerald, #10b981), var(--accent-dark, #059669));
+    color: #fff;
+    box-shadow: 0 10px 26px -14px rgba(16, 185, 129, 0.8);
+  }
+  .medapp-ui-btn.danger {
+    border: none;
+    background: linear-gradient(135deg, #ef4444, #b91c1c);
+    color: #fff;
+    box-shadow: 0 10px 26px -14px rgba(239, 68, 68, 0.8);
+  }
+  .medapp-ui-btn.ghost { background: transparent; color: var(--text-secondary, #94a3b8); }
+
+  /* ============================================================
+     ⭐⭐⭐ TASK 1 — RESTORED FROM GIT (v3.6.0 · commit 82efe58)
+     ------------------------------------------------------------
+     نافذة "سجّل الدخول" (وضع الزائر) — مشتركة بين كل الصفحات.
+     كانت قواعدها محذوفة أيضاً؛ بقيت أزرارها بلا حاوية فظهرت
+     كنصّ عائم أسفل الشاشة يبتلع النقرات.
+     ════════════════════════════════════════════════════════════ */
+  .auth-required-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(3, 10, 8, 0.9);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    z-index: var(--z-overlay, 20000);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-smooth);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  [data-theme="light"] .auth-required-overlay { background: rgba(248, 250, 251, 0.9); }
+
+  .auth-required-overlay.active { opacity: 1; pointer-events: auto; }
+
+  .auth-required-card {
+    background: var(--bg-solid);
+    border: 1px solid var(--border-card-hover);
+    border-radius: 24px;
+    padding: 28px 24px;
+    max-width: 380px;
+    width: 100%;
+    text-align: center;
+    transform: translateY(20px) scale(0.96);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 40px var(--accent-glow);
+  }
+
+  [data-theme="light"] .auth-required-card {
+    box-shadow:
+      0 20px 60px rgba(15, 23, 42, 0.16),
+      0 0 40px var(--accent-glow);
+  }
+
+  .auth-required-overlay.active .auth-required-card { transform: translateY(0) scale(1); }
+
+  .auth-required-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 22px;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.15));
+    border: 1px solid var(--accent-emerald);
+    color: var(--accent-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 18px;
+    box-shadow: 0 8px 24px var(--accent-glow);
+    position: relative;
+  }
+
+  .auth-required-icon::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 26px;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    animation: medappAuthPulse 2.5s ease-in-out infinite;
+  }
+
+  @keyframes medappAuthPulse {
+    0%, 100% { opacity: 0.55; transform: scale(1); }
+    50%      { opacity: 0.15; transform: scale(1.04); }
+  }
+
+  .auth-required-title {
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+  }
+
+  .auth-required-message {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    margin-bottom: 22px;
+  }
+
+  .auth-required-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .auth-required-btn {
+    padding: 13px 20px;
+    border-radius: 14px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+    transition: all var(--transition-fast);
+    border: 1px solid transparent;
+  }
+
+  .auth-required-btn i { width: 16px; height: 16px; }
+
+  .auth-required-btn.primary {
+    background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+    color: white;
+    box-shadow: 0 8px 20px var(--accent-glow);
+  }
+
+  .auth-required-btn.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px var(--accent-glow-strong);
+  }
+
+  .auth-required-btn.secondary {
+    background: rgba(128, 128, 128, 0.08);
+    border-color: var(--border-card);
+    color: var(--text-secondary);
+  }
+
+  .auth-required-btn.secondary:hover {
+    background: rgba(128, 128, 128, 0.15);
+    border-color: var(--border-card-hover);
+    color: var(--text-primary);
+  }
+
+  /* ============================================================
+     ⭐⭐⭐ TASK 4 — النوافذ والطبقات: لا عنصر شبح يبتلع النقرات
+     ------------------------------------------------------------
+     • كل نافذة مُغلقة: display:none + pointer-events:none.
+     • كل نافذة مفتوحة: display:flex + pointer-events:auto.
+     • حركة دخول ناعمة تعوّض اختفاء الـ transition عند display:none.
+     ════════════════════════════════════════════════════════════ */
+  /* ⭐ ملاحظة: بعض الصفحات تفتح النافذة بـ .active وأخرى بـ .open —
+     لذلك نعتبر أيّاً منهما "مفتوحة" (وإلا لبقيت النافذة مخفية). */
+  .streak-sheet-overlay:not(.open),
+  .today-sheet-overlay:not(.open),
+  .upload-sheet-overlay:not(.open),
+  .modal-overlay:not(.open):not(.active),
+  .modal-backdrop:not(.open):not(.active),
+  .auth-required-overlay:not(.active),
+  .search-modal-overlay:not(.active),
+  .medapp-ui-root:not(.open),
+  .medapp-update-overlay:not(.open) {
+    display: none !important;
+    pointer-events: none !important;
+  }
+
+  /* ⭐ نافذة البحث وورقة السلسلة ليستا flex في صفحتهما — نُعيدهما
+     block كما صُمّمتا (حتى لا يتغيّر داخلهما). */
+  .streak-sheet-overlay.open,
+  .search-modal-overlay.active {
+    display: block !important;
+    pointer-events: auto !important;
+  }
+
+  .today-sheet-overlay.open,
+  .upload-sheet-overlay.open,
+  .modal-overlay.open,
+  .modal-overlay.active,
+  .modal-backdrop.open,
+  .modal-backdrop.active,
+  .auth-required-overlay.active,
+  .medapp-ui-root.open,
+  .medapp-update-overlay.open {
+    display: flex !important;
+    pointer-events: auto !important;
+  }
+
+  /* ⭐ كل نافذة في طبقتها الصحيحة (سلّم الـ z-index في :root) */
+  .medapp-ui-root { z-index: var(--z-modal, 1000000); }
+  .medapp-update-overlay { z-index: var(--z-update, 1000100); }
+  .auth-required-overlay { z-index: var(--z-overlay, 20000); }
+
+  /* ⭐ display:none ⟶ flex لا يُشغّل transition، فنتكفّل بحركة الدخول
+     عبر animation حتى تبقى النوافذ أنيقة كما كانت. */
+  @media (prefers-reduced-motion: no-preference) {
+    .streak-sheet-overlay.open,
+    .today-sheet-overlay.open,
+    .upload-sheet-overlay.open,
+    .modal-overlay.open,
+    .modal-overlay.active,
+    .modal-backdrop.open,
+    .modal-backdrop.active,
+    .auth-required-overlay.active { animation: medappOverlayIn 0.26s ease both; }
+
+    .streak-sheet-overlay.open > *,
+    .today-sheet-overlay.open > *,
+    .upload-sheet-overlay.open > *,
+    .modal-overlay.open > *,
+    .modal-overlay.active > * { animation: medappSheetIn 0.34s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+    .medapp-ui-root.open .medapp-ui-overlay { animation: medappOverlayIn 0.22s ease both; }
+    .medapp-ui-root.open .medapp-ui-card { animation: medappCardIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both; }
+    .medapp-update-overlay.open .medapp-update-card { animation: medappCardIn 0.34s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  }
+
+  @keyframes medappOverlayIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  @keyframes medappSheetIn {
+    from { transform: translateY(26px) scale(0.985); }
+    to   { transform: translateY(0) scale(1); }
+  }
+
+  @keyframes medappCardIn {
+    from { opacity: 0; transform: translateY(16px) scale(0.94); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* ============================================================
+     ⭐⭐⭐ TASK 2 — لا يختفي المحتوى تحت الشريط العلوي/السفلي
+     ------------------------------------------------------------
+     نُزيح حاوية المحتوى نفسها (لا نعتمد على :has() الذي قد لا
+     تدعمه بعض الـ WebViews فيبدو المحتوى مختفياً تحت الشريط).
+     تُستثنى الواجهات بملء الشاشة (viewer) لأنها تدير هندستها.
+     ════════════════════════════════════════════════════════════ */
+  body > header ~ .container,
+  body > header ~ main:not(.viewer),
+  body > .ml-topbar ~ .container,
+  body > .ml-topbar ~ main:not(.viewer),
+  body > header ~ .app-content,
+  body > .ml-topbar ~ .app-content,
+  .app-content {
+    box-sizing: border-box;
+    min-height: 100vh;
+    padding-top: calc(var(--app-header-h) + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) !important;
+  }
+
+  /* ⭐ الإزاحة السفلية للشريط العائم — للصفحات التي تحمله فعلاً فقط
+     (حتى لا نضيف فراغاً ميّتاً في بقية الصفحات).
+     110px = ارتفاع الشريط + الزرّ العائم الذي يطفو فوقه. */
+  body:has(.floating-nav-wrapper) > .container,
+  body:has(.floating-nav-wrapper) > main,
+  body:has(.floating-nav-wrapper) .app-content {
+    padding-bottom: calc(110px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))) !important;
+  }
+
+  /* الشريط العلوي الثابت يجب ألّا يغطّي المحتوى حتى لو غاب :has() */
+  body > header,
+  body > .ml-topbar {
+    min-height: calc(var(--app-header-h) + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
+  }
+
+  /* ⭐ واجهة العرض بملء الشاشة (viewer) ترويستها في التدفّق لا ثابتة */
+  body > header.header {
+    position: static;
+    min-height: 0;
+    padding: 0 12px !important;
+    view-transition-name: none;
+  }
+
+  /* ============================================================
+     ⭐⭐⭐ TASK 3 — الشريط السفلي العائم + زر "+" المتمركز
+     ------------------------------------------------------------
+     تخطيط Flexbox صارم: عناصر متساوية، تمركز عمودي، بلا التفاف.
+     (الأصناف الفعلية في المشروع: .floating-nav + .nav-btn)
+     ════════════════════════════════════════════════════════════ */
+  .floating-nav-wrapper {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0;
+    right: 0;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: flex-end !important;
+    z-index: 9999;
+    padding: 0 16px calc(12px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))) !important;
+    pointer-events: none;
+  }
+
+  .floating-nav {
+    display: flex !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    position: relative !important;
+    overflow: visible !important;
+    width: 100%;
+    max-width: 460px;
+    padding: 7px 6px !important;
+  }
+
+  /* ⭐ عناصر الشريط: أعمدة متساوية العرض وممركزة */
+  .floating-nav > .nav-btn {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    text-align: center;
+  }
+
+  /* ⭐⭐⭐ زر "+" العائم — متمركز تماماً (لا position:relative ولا margin سالب) */
+  .floating-nav .nav-btn-center,
+  .floating-nav-wrapper .nav-btn-center {
+    position: absolute !important;
+    left: 50% !important;
+    right: auto !important;
+    top: 0 !important;
+    bottom: auto !important;
+    margin: 0 !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 9500;
+  }
+
+  .floating-nav .nav-btn-center:hover,
+  .floating-nav-wrapper .nav-btn-center:hover {
+    transform: translate(-50%, calc(-50% - 3px)) rotate(90deg) !important;
+  }
+
+  .floating-nav .nav-btn-center:active,
+  .floating-nav-wrapper .nav-btn-center:active {
+    transform: translate(-50%, calc(-50% - 1px)) scale(0.95) !important;
+  }
+
+  /* ⭐ أسماء بديلة (توافقاً مع وصف المهمة) — لا تستخدمها أي صفحة
+     حالياً، لكن إن استُخدمت مستقبلاً فستحصل على التخطيط نفسه. */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0; height: 65px; z-index: 9000;
+    background: var(--bg-card); border-top: 1px solid var(--border-color);
+    display: flex !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+  }
+  .bottom-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+  .fab-button {
+    position: fixed; left: 50%; transform: translateX(-50%); bottom: 25px; z-index: 9500;
+  }
 
   /* ============================================================
      Premium file visual — shared by every file surface.
@@ -1485,7 +1951,7 @@ body {
 <script src="notifications.js"></script>
 
 
-<script src="app.js?v=3.8.0"></script>
+<script src="app.js?v=4.1.0"></script>
 <script>
 
 var PROGRESS_SUBJECTS = [

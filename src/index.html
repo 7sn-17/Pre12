@@ -74,7 +74,9 @@ sw: true
         radial-gradient(circle at 90% 80%, rgba(5, 150, 105, 0.06) 0%, transparent 40%);
       background-attachment: fixed;
       color: var(--text-primary);
-      padding-bottom: 130px;
+      /* ⭐ TASK 2: الإزاحة السفلية للشريط العائم انتقلت إلى .container
+         (بلا :has() ولا double-padding) — لا حشوة مكرّرة هنا. */
+      padding-bottom: 0;
       min-height: 100vh;
       overflow-x: hidden;
       transition: background-color var(--transition-smooth), color var(--transition-smooth);
@@ -888,6 +890,14 @@ sw: true
 
     /* الحاوية */
     .container { padding: 20px; max-width: 720px; margin: 0 auto; position: relative; z-index: 1; }
+
+    /* ⭐⭐⭐ TASK 2 — الإزاحة السفلية للشريط العائم (بلا :has())
+       الشريط مثبّت أسفل الشاشة، والزرّ "+" يطفو فوقه، فنضمن ألّا
+       يختفي آخر عنصر تحتهما. (الإزاحة العلوية من partials/head.html) */
+    .container {
+      box-sizing: border-box;
+      padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px));
+    }
 
     /* التبويبات */
     .tab-view { display: none; animation: viewIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
@@ -3470,6 +3480,50 @@ i.fab {
     }
     .settings-item.danger-item:hover { transform: translateX(-3px); }
 
+    /* ============================================================
+       ⭐⭐⭐ TASK 5 — زر "حذف الحساب نهائياً"
+       ------------------------------------------------------------
+       عنصر قائمة **ساكن** (position: static) داخل "منطقة الخطر"،
+       أسفل "تسجيل الخروج" تماماً — ويُعرض كزرّ أحمر واضح.
+       (لا position:fixed/absolute، ولا عرض عائم = لا فوضى).
+       ============================================================ */
+    #deleteAccountItem {
+      position: static !important;
+      float: none !important;
+      display: flex;
+      width: 100%;
+      /* ⭐ لا هامش إضافي: المجموعة تستخدم gap أصلاً */
+      margin: 0;
+      text-align: right;
+      font-family: inherit;
+      cursor: pointer;
+      -webkit-appearance: none;
+      appearance: none;
+      color: #ffffff;
+      background: linear-gradient(135deg, #dc2626, #991b1b);
+      border: 1px solid rgba(248, 113, 113, 0.55);
+      box-shadow: 0 12px 26px -18px rgba(220, 38, 38, 0.95);
+      transition: transform var(--transition-fast), background 0.2s ease, box-shadow 0.2s ease;
+    }
+    #deleteAccountItem:hover {
+      background: linear-gradient(135deg, #ef4444, #b91c1c);
+      border-color: rgba(248, 113, 113, 0.85);
+      box-shadow: 0 14px 30px -18px rgba(239, 68, 68, 1);
+      transform: translateX(-3px);
+    }
+    #deleteAccountItem:active { transform: translateX(-1px) scale(0.99); }
+
+    /* نصوص الزرّ وأيقونته بيضاء على الخلفية الحمراء */
+    #deleteAccountItem .settings-text h4 { color: #ffffff; }
+    #deleteAccountItem .settings-text p { color: rgba(255, 255, 255, 0.88); }
+    #deleteAccountItem .settings-icon {
+      background: rgba(255, 255, 255, 0.18);
+      border-color: rgba(255, 255, 255, 0.34);
+      color: #ffffff;
+    }
+    #deleteAccountItem .settings-arrow { color: #ffffff; }
+    #deleteAccountItem:hover .settings-arrow { color: #ffffff; transform: translateX(-4px); }
+
     .settings-item {
       background: var(--bg-card);
       border: 1px solid var(--border-card);
@@ -3549,7 +3603,8 @@ i.fab {
       justify-content: center;
       align-items: flex-end;
       z-index: 9999;
-      padding: 0 16px;
+      /* ⭐ الفراغ السفلي يحترم المنطقة الآمنة مرّة واحدة فقط هنا */
+      padding: 0 16px calc(12px + env(safe-area-inset-bottom, 0px));
       /* ⭐ لا يغطّي أزرار الشاشة ولا يلتقط نقرة واحدة */
       pointer-events: none;
     }
@@ -3562,7 +3617,7 @@ i.fab {
       -webkit-backdrop-filter: blur(24px);
       border: 1px solid rgba(16, 185, 129, 0.3);
       border-radius: 30px;
-      padding: 7px 6px calc(7px + env(safe-area-inset-bottom));
+      padding: 7px 6px;
       display: flex !important;
       align-items: center !important;
       justify-content: space-around !important;
@@ -3624,12 +3679,17 @@ i.fab {
     .nav-btn.active i { transform: translateY(-1px) scale(1.1); }
     .nav-btn:not(.active):hover { color: var(--text-primary); background: rgba(128, 128, 128, 0.08); }
 
-    /* ⭐⭐ الزرّ الأوسط "+" — متمركز تماماً فوق الشريط */
+    /* ⭐⭐ الزرّ الأوسط "+" — متمركز تماماً فوق الشريط
+       ⚠️ لا نُعيد تعريف position هنا إطلاقاً (كان `position: relative`
+       يلغي `absolute` فيزيح الزرّ بمقدار 50% من عرض الشريط) */
     .nav-btn-center {
       position: absolute;
       left: 50%;
       top: 0;
+      right: auto;
+      bottom: auto;
       transform: translate(-50%, -50%);
+      margin: 0;
       flex: 0 0 auto;
       width: 58px;
       height: 58px;
@@ -3649,9 +3709,7 @@ i.fab {
         0 0 0 4px var(--bg-main),
         0 0 0 5px rgba(16, 185, 129, 0.3);
       transition: all var(--transition-smooth);
-      z-index: 2;
-      z-index: 2;
-      position: relative;
+      z-index: 9500;
       flex-shrink: 0;
     }
 
@@ -4455,7 +4513,7 @@ i.fab {
       .search-modal-close { width: 42px; height: 42px; }
       .icon-btn { width: 38px; height: 38px; }
       .icon-btn i { width: 18px; height: 18px; }
-      .nav-btn-center { width: 54px; height: 54px; margin-top: -22px; }
+      .nav-btn-center { width: 54px; height: 54px; }
       .nav-btn-center i { width: 22px; height: 22px; }
       .quick-access-grid { gap: 8px; }
       .quick-access-btn { padding: 12px 6px; }
@@ -4471,7 +4529,7 @@ i.fab {
       z-index: 2147483647;
     }
       .file-mini-card { min-width: 240px; max-width: 240px; }
-      .nav-btn-center { width: 50px; height: 50px; margin-top: -20px; }
+      .nav-btn-center { width: 50px; height: 50px; }
       .nav-btn span { font-size: 0.6rem; }
       .quick-access-grid { gap: 6px; }
       .quick-access-btn { padding: 10px 4px; }
@@ -4480,8 +4538,10 @@ i.fab {
       .qa-label { font-size: 0.62rem; }
     }
 
+    /* ⭐ TASK 3 — المنطقة الآمنة السفلية تُحترم مرّة واحدة: داخل
+       حشوة .floating-nav-wrapper أعلاه. لا نُزيح الشريط هنا مرّتين. */
     @supports (padding: env(safe-area-inset-bottom)) {
-      .floating-nav-wrapper { bottom: calc(20px + env(safe-area-inset-bottom)); }
+      .floating-nav-wrapper { bottom: 0; }
     }
 
 @media (prefers-reduced-motion: reduce) {
@@ -5194,18 +5254,18 @@ i.fab {
       <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px; color: var(--medapp-red, #f87171);"></i>
     </div>
 
-    <!-- ⭐⭐⭐ حذف الحساب نهائياً — تحت زر تسجيل الخروج -->
-    <button type="button" class="settings-item danger-item" id="deleteAccountItem" style="display: none; width: 100%; text-align: right; cursor: pointer;">
+    <!-- ⭐⭐⭐ TASK 5: حذف الحساب نهائياً — عنصر قائمة ساكن أسفل "تسجيل الخروج" تماماً -->
+    <button type="button" class="settings-item danger-item" id="deleteAccountItem" style="display: none;">
       <div class="settings-item-left">
-        <div class="settings-icon" style="background: rgba(239, 68, 68, 0.14); border-color: rgba(239, 68, 68, 0.32); color: var(--medapp-red, #f87171);">
+        <div class="settings-icon">
           <i data-lucide="user-x"></i>
         </div>
         <div class="settings-text">
-          <h4 style="color: var(--medapp-red, #f87171);">حذف الحساب نهائياً</h4>
+          <h4>حذف الحساب نهائياً</h4>
           <p>سيُحذف حسابك وكل بياناتك — لا يمكن التراجع</p>
         </div>
       </div>
-      <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px; color: var(--medapp-red, #f87171);"></i>
+      <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
     </button>
   </div>
 
