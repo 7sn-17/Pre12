@@ -917,6 +917,24 @@ sw: true
       window.location.href = 'index.html';
     }
 
+    /**
+     * ⭐⭐⭐ تسجيل بريد مسجَّل مسبقاً لم يُؤكَّد — نرسل له رمزاً جديداً.
+     */
+    async function handleAlreadyRegistered(email) {
+      try {
+        const { error } = await supabaseClient.auth.resend({
+          type: 'signup',
+          email: email,
+          options: { emailRedirectTo: getAuthRedirectUrl() }
+        });
+        if (error) throw error;
+        setOtpMessage('هذا البريد مسجل بالفعل. لقد أرسلنا لك رمزاً جديداً.', 'success');
+      } catch (e) {
+        console.error('[confirm] the resend failed:', e);
+        setOtpMessage('تعذّر إرسال الرمز — اضغط "إعادة الإرسال" بعد قليل.', 'error');
+      }
+    }
+
     /** ⭐ فتح شاشة إدخال الرمز */
     function showOtpState(email) {
       otpEmail = (email || '').trim().toLowerCase();
@@ -1236,6 +1254,13 @@ sw: true
       const email = getPendingEmail();
       if (email) {
         showOtpState(email);
+        // ⭐ إن وصلنا من محاولة تسجيل بريد مسجَّل مسبقاً ⇒ نرسل رمزاً جديداً
+        try {
+          if (sessionStorage.getItem('medapp_already_registered') === '1') {
+            sessionStorage.removeItem('medapp_already_registered');
+            setTimeout(function () { handleAlreadyRegistered(email); }, 500);
+          }
+        } catch (e) {}
       } else {
         showError(
           'لا يوجد طلب تأكيد',

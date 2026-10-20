@@ -2442,6 +2442,17 @@ if (hasError) return;
             window.location.href = 'confirm.html?email=' + encodeURIComponent(state.pendingEmail);
           }, 600);
         }
+      } else if (result.alreadyRegistered) {
+        // ⭐⭐ البريد مسجَّل مسبقاً ولم يُؤكَّد — نرسل رمزاً جديداً
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        state.isSubmitting = false;
+        state.pendingEmail = result.email || email;
+        try { sessionStorage.setItem('pending_email', state.pendingEmail); } catch (e) {}
+        showToast('هذا البريد مسجّل بالفعل. لقد أرسلنا لك رمزاً جديداً.', 'info');
+        setTimeout(() => {
+          window.location.href = 'confirm.html?email=' + encodeURIComponent(state.pendingEmail);
+        }, 700);
       } else {
         btn.classList.remove('loading');
         btn.disabled = false;

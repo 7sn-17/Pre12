@@ -529,6 +529,17 @@
     // ⭐⭐ تشخيص: اطبع رمز FCM عند بدء التطبيق (أول خطوة في تشخيص الإشعارات)
     setTimeout(function () { logFcmTokenOnStartup(); }, 2500);
 
+    // ⭐⭐⭐ نضمن رمز FCM عند البدء (إن كان المستخدم مسجّلاً)
+    setTimeout(function () {
+      try {
+        var user = (typeof global.getAuthUser === 'function') ? global.getAuthUser() : null;
+        if (!user || !user.id) return;
+        if (global.MedAppNotifications && typeof global.MedAppNotifications.ensurePushToken === 'function') {
+          global.MedAppNotifications.ensurePushToken();
+        }
+      } catch (e) {}
+    }, 4000);
+
     // ⭐ محرّك الإشعارات الذكي — يجدول إشعاراً مناسباً لحالة المستخدم.
     try {
       if (global.MedAppNotifications && typeof global.MedAppNotifications.init === 'function') {

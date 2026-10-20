@@ -1081,27 +1081,6 @@ header {
 
 </div>
 
-<!-- ⭐ نافذة "سجّل الدخول" (وضع الزائر) -->
-<div class="auth-required-overlay" id="authRequiredModal" onclick="closeAuthPrompt()">
-  <div class="auth-required-card" onclick="event.stopPropagation()">
-    <div class="auth-required-icon" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.15)); border-color: #3b82f6; color: var(--medapp-blue);">
-      <i data-lucide="lock" style="width: 32px; height: 32px;"></i>
-    </div>
-    <div class="auth-required-title">سجّل الدخول للمتابعة</div>
-    <div class="auth-required-message" data-auth-message>
-      يمكنك التصفح والقراءة بلا حساب — لكن نحتاج تسجيل الدخول لحفظ المفضّلة، أو تحميل الملفات للقراءة دون إنترنت.
-    </div>
-
-    <div class="auth-required-actions">
-      <a href="login.html" class="auth-required-btn primary">
-        <i data-lucide="log-in" style="width: 16px; height: 16px;"></i>
-        تسجيل الدخول
-      </a>
-      <button type="button" class="auth-required-btn secondary" onclick="closeAuthPrompt()">متابعة التصفح</button>
-    </div>
-  </div>
-</div>
-
 <script src="supabase-config.js"></script>
 <script src="db.js"></script>
 <script src="files.js"></script>
@@ -1109,7 +1088,7 @@ header {
 <script src="notifications.js"></script>
 
 
-<script src="app.js?v=3.6.1"></script>
+<script src="app.js?v=3.7.0"></script>
 <script>
 
 /* ═══════════════════════════════════════════════════════

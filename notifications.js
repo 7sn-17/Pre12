@@ -310,6 +310,59 @@
    *
    * ⭐⭐ المستمع على حدث 'registration' يُعرَّف **قبل** الاستدعاء.
    */
+  var pushListenerAttached = false;
+  var pushWaiters = [];
+
+  /** ⭐ يُبلّغ كل المنتظرين عند وصول التوكن */
+  function flushPushWaiters(token) {
+    if (!token) return;
+    var waiters = pushWaiters.splice(0, pushWaiters.length);
+    for (var i = 0; i < waiters.length; i++) {
+      try { waiters[i](token); } catch (e) {}
+    }
+  }
+
+  /**
+   * ⭐⭐ مُستمع واحد دائم لحدث 'registration'.
+   *    الاستدعاءات المتكرّرة كانت تُنشئ مستمعين مكرّرين (تسجيل التوكن عدّة مرّات).
+   */
+  function attachPushListener() {
+    if (pushListenerAttached) return;
+    var PushNotifications = plugin('PushNotifications');
+    if (!PushNotifications || typeof PushNotifications.addListener !== 'function') return;
+
+    try {
+      PushNotifications.addListener('registration', function (token) {
+        var value = (token && token.value) || token || '';
+        if (!value) return;
+        console.info('[notifications] the FCM token arrived:', String(value).slice(0, 18) + '…');
+        saveFcmToken(value);
+        flushPushWaiters(value);
+      });
+
+      PushNotifications.addListener('registrationError', function (error) {
+        console.warn('[notifications] the FCM registration failed:', error);
+        flushPushWaiters('');
+      });
+
+      pushListenerAttached = true;
+    } catch (e) {
+      console.warn('[notifications] the registration listener could not be attached:', e);
+    }
+  }
+
+  /**
+   * ⭐⭐⭐ يضمن وجود رمز FCM صالح — يُستدعى بعد تسجيل الدخول
+   *    وعند فتح التطبيق (لا نعتمد على المستخدم أن يفتح زر الاختبار).
+   * @returns {Promise<string>} الرمز (أو نص فارغ)
+   */
+  function ensurePushToken() {
+    if (!isNative()) return Promise.resolve('');
+    attachPushListener();
+    return registerForPush();
+  }
+
+
   function registerForPush() {
     var PushNotifications = plugin('PushNotifications');
     if (!PushNotifications) {
@@ -341,22 +394,9 @@
         resolve(token || '');
       }
 
-      // ⭐⭐ 1) المستمع أولاً — ثم الاستدعاء
-      try {
-        if (typeof PushNotifications.addListener === 'function') {
-          PushNotifications.addListener('registration', function (token) {
-            var value = (token && token.value) || token || '';
-            done(value);
-          });
-
-          PushNotifications.addListener('registrationError', function (error) {
-            console.warn('[notifications] the FCM registration failed:', error);
-            done('');
-          });
-        }
-      } catch (e) {
-        console.warn('[notifications] could not attach the registration listener:', e);
-      }
+      // ⭐⭐ 1) ننتظر حدث 'registration' (المُستمع مُثبَّت مسبقاً مرة واحدة)
+      attachPushListener();
+      pushWaiters.push(done);
 
       // ⭐⭐ 2) ثم الاستدعاء
       try {
@@ -778,6 +818,8 @@
     getStoredPermission: getStoredPermission,
     openAppSettings: openAppSettings,
     refreshPushToken: refreshPushToken,
+    ensurePushToken: ensurePushToken,
+    attachPushListener: attachPushListener,
     scheduleDailyReminder: scheduleDailyReminder,
     isDailyReminderEnabled: isDailyReminderEnabled,
     restoreDailyReminder: restoreDailyReminder,

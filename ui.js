@@ -276,6 +276,74 @@
   }
 
   /**
+   * ⭐⭐⭐ نافذة "تسجيل الدخول مطلوب".
+   *
+   * ⭐ القاعدة: **لا تُستدعى إلا** عندما يحاول زائر (غير مسجّل) تنفيذ
+   *   إجراء يتطلّب حساباً (مفضّلة · تنزيل · محاضراتي · التقدّم).
+   *   لا وجود لها في تدفّق الصفحة ✗ (هذا ما كان يسبّب طبقة شفافة
+   *   فوق كل الشاشات).
+   *
+   * @param {string} message  سبب الطلب (عربي)
+   * @param {object} [options] { title, loginText, cancelText }
+   * @returns {Promise<boolean>} true إذا اختار المستخدم تسجيل الدخول
+   */
+  function showLoginPrompt(message, options) {
+    options = options || {};
+    var root = ensureRoot();
+
+    return new Promise(function (resolve) {
+      var settled = false;
+      current = {
+        resolve: function (value) { if (!settled) { settled = true; resolve(value); } },
+        onCancel: null
+      };
+
+      root.innerHTML =
+        '<div class="medapp-ui-overlay" data-tone="info">' +
+          '<div class="medapp-ui-card" role="dialog" aria-modal="true">' +
+            '<div class="medapp-ui-icon"><i data-lucide="log-in"></i></div>' +
+            '<div class="medapp-ui-title">' + escapeHtml(options.title || 'تسجيل الدخول مطلوب') + '</div>' +
+            '<div class="medapp-ui-message">' + (message || 'سجّل الدخول للمتابعة — يمكنك التصفّح كمشاهد بلا حساب.') + '</div>' +
+            '<div class="medapp-ui-actions">' +
+              '<button class="medapp-ui-btn ghost" data-medapp-ui-cancel>' +
+                '<span>' + escapeHtml(options.cancelText || 'لاحقاً') + '</span>' +
+              '</button>' +
+              '<button class="medapp-ui-btn primary" data-medapp-ui-login>' +
+                '<i data-lucide="log-in" style="width:16px;height:16px;"></i>' +
+                '<span>' + escapeHtml(options.loginText || 'تسجيل الدخول') + '</span>' +
+              '</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+
+      root.classList.add('open');
+
+      var cancelBtn = root.querySelector('[data-medapp-ui-cancel]');
+      var loginBtn = root.querySelector('[data-medapp-ui-login]');
+      var overlay = root.querySelector('.medapp-ui-overlay');
+
+      function finish(value) {
+        closeCurrent(value);
+        if (value) {
+          try { global.location.href = 'login.html'; } catch (e) {}
+        }
+      }
+
+      if (cancelBtn) cancelBtn.addEventListener('click', function () { finish(false); });
+      if (loginBtn) loginBtn.addEventListener('click', function () { finish(true); });
+      if (overlay) {
+        overlay.addEventListener('click', function (event) {
+          if (event.target === overlay) finish(false);
+        });
+      }
+
+      document.addEventListener('keydown', onKeyDown, true);
+      refreshIcons();
+      if (loginBtn) loginBtn.focus();
+    });
+  }
+
+  /**
    * ⭐⭐⭐ يفتح رابطاً خارجياً — أصلياً في التطبيق (Browser.open)
    *          وموبّاً على الويب (window.open).
    *
@@ -333,11 +401,13 @@
   global.showCustomAlert = showCustomAlert;
   global.showCustomConfirm = showCustomConfirm;
   global.showCustomPrompt = showCustomPrompt;
+  global.showLoginPrompt = showLoginPrompt;
   global.openExternal = openExternal;
   global.MedAppUI = {
     alert: showCustomAlert,
     confirm: showCustomConfirm,
     prompt: showCustomPrompt,
+    loginPrompt: showLoginPrompt,
     openExternal: openExternal
   };
 })(window);

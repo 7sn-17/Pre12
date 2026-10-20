@@ -5693,7 +5693,7 @@ i.fab {
         <div class="settings-icon"><i data-lucide="info"></i></div>
         <div class="settings-text">
           <h4>حول التطبيق</h4>
-          <p id="aboutVersionText">الإصدار 3.6.1 • السنة التحضيرية</p>
+          <p id="aboutVersionText">الإصدار 3.7.0 • السنة التحضيرية</p>
         </div>
       </div>
       <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
@@ -5762,6 +5762,20 @@ i.fab {
       <i data-lucide="triangle-alert"></i>
       <span>منطقة الخطر</span>
     </div>
+
+    <!-- ⭐⭐⭐ حذف الحساب نهائياً -->
+    <button type="button" class="settings-item danger-item" id="deleteAccountItem" style="display: none; width: 100%; text-align: right; cursor: pointer;" onclick="confirmDeleteAccount()">
+      <div class="settings-item-left">
+        <div class="settings-icon" style="background: rgba(239, 68, 68, 0.14); border-color: rgba(239, 68, 68, 0.32); color: var(--medapp-red, #f87171);">
+          <i data-lucide="user-x"></i>
+        </div>
+        <div class="settings-text">
+          <h4 style="color: var(--medapp-red, #f87171);">حذف الحساب نهائياً</h4>
+          <p>سيُحذف حسابك وكل بياناتك — لا يمكن التراجع</p>
+        </div>
+      </div>
+      <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px; color: var(--medapp-red, #f87171);"></i>
+    </button>
 
     <!-- ⭐ تسجيل الخروج (يظهر للمستخدم المسجّل فقط) -->
     <div class="settings-item danger-item" id="logoutItem" style="display: none;" onclick="handleLogout()">
@@ -5935,71 +5949,8 @@ i.fab {
     </div>
   </div>
 
-<!-- مودال: تثبيت iOS -->
-<div class="auth-required-overlay" id="iosInstallModal" onclick="closeIosInstallModal()">
-  <div class="auth-required-card" onclick="event.stopPropagation()">
-    <div class="auth-required-icon" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.15)); border-color: #3b82f6; color: var(--medapp-blue);">
-      <i data-lucide="smartphone" style="width: 32px; height: 32px;"></i>
-    </div>
-    <div class="auth-required-title">تثبيت التطبيق على iPhone</div>
-    <div class="auth-required-message">
-      لتحصل على تجربة تطبيق كاملة، اتبع هذه الخطوات:
-    </div>
-    
-    <div class="ios-install-steps">
-      <div class="ios-step">
-        <div class="ios-step-number">1</div>
-        <div>اضغط على زر <strong style="color: var(--accent-light);">المشاركة</strong> أسفل الشاشة</div>
-        <div class="ios-step-icon">
-          <i data-lucide="share"></i>
-        </div>
-      </div>
-      <div class="ios-step">
-        <div class="ios-step-number">2</div>
-        <div>اختر <strong style="color: var(--accent-light);">"إضافة إلى الشاشة الرئيسية"</strong></div>
-        <div class="ios-step-icon">
-          <i data-lucide="plus-square"></i>
-        </div>
-      </div>
-      <div class="ios-step">
-        <div class="ios-step-number">3</div>
-        <div>اضغط <strong style="color: var(--accent-light);">"إضافة"</strong> أعلى الشاشة</div>
-        <div class="ios-step-icon">
-          <i data-lucide="check"></i>
-        </div>
-      </div>
-    </div>
-
-    <div class="auth-required-actions">
-      <button class="auth-required-btn primary" onclick="closeIosInstallModal()">
-        <i data-lucide="check" style="width: 16px; height: 16px;"></i>
-        فهمت
-      </button>
-    </div>
-  </div>
-</div>
 
   <!-- مودال: تحتاج حساب -->
-  <div class="auth-required-overlay" id="authRequiredModal" onclick="closeAuthRequiredModal()">
-    <div class="auth-required-card" onclick="event.stopPropagation()">
-      <div class="auth-required-icon">
-        <i data-lucide="lock" style="width: 32px; height: 32px;"></i>
-      </div>
-      <div class="auth-required-title">هذه الميزة تحتاج حساب</div>
-      <div class="auth-required-message">
-        لتحميل الملفات وحفظها في مفضلتك والوصول إليها في أي وقت، يرجى تسجيل الدخول أولاً.
-      </div>
-      <div class="auth-required-actions">
-        <a href="login.html" class="auth-required-btn primary">
-          <i data-lucide="log-in" style="width: 16px; height: 16px;"></i>
-          تسجيل الدخول
-        </a>
-        <button class="auth-required-btn secondary" onclick="closeAuthRequiredModal()">
-          لاحقاً
-        </button>
-      </div>
-    </div>
-  </div>
 
   <!-- سكربتات -->
 <script src="supabase-config.js"></script>
@@ -6012,7 +5963,7 @@ i.fab {
 <script src="notifications.js"></script>
 
 
-  <script src="app.js?v=3.6.1"></script>
+  <script src="app.js?v=3.7.0"></script>
 <script>
 
     lucide.createIcons();
@@ -6412,21 +6363,16 @@ function openLastActivity() {
 
     function requireLogin() {
       if (isUserLoggedIn()) return true;
-      showAuthRequiredModal();
+      // ⭐⭐ النافذة تُعرض فقط عند الحاجة (وليس ثابتة في الصفحة)
+      showLoginPrompt('سجّل الدخول لحفظ الملفات في مفضلتك والوصول إليها في أي وقت.');
       return false;
     }
 
-    function showAuthRequiredModal() {
-      const modal = document.getElementById('authRequiredModal');
-      modal.classList.add('active');
-      document.body.style.overflow = 'hidden';
-      lucide.createIcons();
-    }
-
-    function closeAuthRequiredModal() {
-      const modal = document.getElementById('authRequiredModal');
-      modal.classList.remove('active');
-      document.body.style.overflow = '';
+    // ⭐ توافق مع الكود القديم — لكن النافذة صارت في ui.js
+    function showAuthRequiredModal(message) {
+      if (typeof showLoginPrompt === 'function') {
+        showLoginPrompt(message || 'سجّل الدخول للمتابعة.');
+      }
     }
 
     // ============================================
@@ -6619,6 +6565,74 @@ function openLastActivity() {
       if (status) {
         status.textContent = enabled ? 'تذكير ثابت في الساعة 8 مساءً' : 'التذكير اليومي متوقف';
       }
+    }
+
+    // ============================================
+    // ⭐⭐⭐ حذف الحساب نهائياً
+    // ============================================
+    async function confirmDeleteAccount() {
+      const confirmed = await showCustomConfirm(
+        'حذف الحساب نهائياً',
+        'سيُحذف حسابك وكل بياناتك (الملفات، المحاضرات، الملاحظات، التقدّم) نهائياً.<br>' +
+        '<strong style="color:#fca5a5;">هذا الإجراء لا يمكن التراجع عنه.</strong>',
+        null,
+        { confirmText: 'حذف حسابي', cancelText: 'إلغاء', type: 'warning', danger: true }
+      );
+      if (!confirmed) return;
+
+      // ⭐ تأكيد ثانٍ — كتابة كلمة "حذف" للتأكيد
+      const typed = await showCustomPrompt(
+        'تأكيد أخير',
+        'اكتب كلمة <strong>حذف</strong> لتأكيد حذف الحساب.',
+        '',
+        null,
+        { placeholder: 'حذف', confirmText: 'حذف نهائي', maxLength: 10 }
+      ).catch(function () { return null; });
+
+      if (String(typed || '').trim() !== 'حذف') {
+        showToast('تم إلغاء الحذف', 'info');
+        return;
+      }
+
+      await deleteCurrentAccount();
+    }
+
+    /** ⭐⭐⭐ يستدعي دالة الحذف ثم يخرج */
+    async function deleteCurrentAccount() {
+      const user = (typeof getAuthUser === 'function') ? getAuthUser() : null;
+      if (!user) {
+        showToast('سجّل الدخول أولاً', 'info');
+        return;
+      }
+
+      showToast('جارٍ حذف الحساب…', 'info');
+
+      try {
+        const { error } = await supabaseClient.functions.invoke('delete-user-account', {
+          body: { confirm: 'DELETE' }
+        });
+        if (error) throw error;
+      } catch (e) {
+        console.error('[delete-account]', e);
+        showToast('تعذّر حذف الحساب: ' + ((e && e.message) || 'خطأ غير معروف'), 'error');
+        return;
+      }
+
+      // ⭐ تنظيف محلي ثم خروج
+      try {
+        if (typeof clearCachedProfile === 'function') clearCachedProfile();
+        localStorage.removeItem('pending_verification');
+        localStorage.removeItem('medapp_pending_email');
+        sessionStorage.removeItem('pending_verification');
+        sessionStorage.removeItem('medapp_pending_email');
+      } catch (e) {}
+
+      try {
+        if (typeof signOut === 'function') await signOut();
+      } catch (e) {}
+
+      showToast('تم حذف الحساب', 'success');
+      setTimeout(function () { window.location.href = 'index.html'; }, 900);
     }
 
     // ============================================
@@ -6931,6 +6945,8 @@ function openLastActivity() {
       const hideAuth = !(options && options.skipAuthItem);
       if (authItem) authItem.style.display = hideAuth ? 'none' : '';
       if (logoutItem) logoutItem.style.display = hideAuth ? '' : 'none';
+      const deleteItem = document.getElementById('deleteAccountItem');
+      if (deleteItem) deleteItem.style.display = hideAuth ? 'none' : '';
       
       const adminItem = document.getElementById('adminPanelItem');
 if (adminItem && (role === 'admin' || role === 'moderator')) {
@@ -8926,11 +8942,7 @@ function showAbout() {
           closeSearchModal();
           return;
         }
-        const authModal = document.getElementById('authRequiredModal');
-        if (authModal && authModal.classList.contains('active')) {
-          closeAuthRequiredModal();
-          return;
-        }
+        // ⭐ نافذة الدخولLive في ui.js — Esc تُغلقها هي تلقائياً
       }
     });
 
@@ -9316,7 +9328,7 @@ function showAbout() {
 
     // ⭐⭐ رابط التحميل المباشر — نشاركه مع السلسلة
     // ⭐ رابط التحميل — يتبع إصدار التطبيق الحالي
-    var APP_DOWNLOAD_URL = 'https://github.com/7sn-17/Pre12/releases/latest/download/Medical_Platform_v3.6.1.apk';
+    var APP_DOWNLOAD_URL = 'https://github.com/7sn-17/Pre12/releases/latest/download/Medical_Platform_v3.7.0.apk';
 
     async function shareStreak() {
       var text = streakShareText();
@@ -9762,9 +9774,11 @@ function updateInstallButtonAsInstalled() {
 // معالجة الضغط على زر التثبيت
 // ============================================
 async function handleInstallClick() {
-  // iOS
+  // ⭐ iOS: رسالة قصيرة (كانت مودالاً دائماً معروضاً على كل الشاشات)
   if (isIOS()) {
-    openIosInstallModal();
+    if (typeof showToast === 'function') {
+      showToast('على iPhone: اضغط المشاركة ثم "إضافة إلى الشاشة الرئيسية"', 'info');
+    }
     return;
   }
   
@@ -9897,24 +9911,6 @@ function dismissInstallBanner() {
   localStorage.setItem('medfav_install_banner_dismissed', Date.now().toString());
   
   hideInstallBanner();
-}
-
-// ============================================
-// Modal iOS
-// ============================================
-function openIosInstallModal() {
-  const modal = document.getElementById('iosInstallModal');
-  if (!modal) return;
-  modal.classList.add('active');
-  document.body.style.overflow = 'hidden';
-  if (window.lucide) lucide.createIcons();
-}
-
-function closeIosInstallModal() {
-  const modal = document.getElementById('iosInstallModal');
-  if (!modal) return;
-  modal.classList.remove('active');
-  document.body.style.overflow = '';
 }
 
 // ============================================

@@ -40,25 +40,26 @@ function isUserLoggedIn() {
   return !!AUTH_USER;
 }
 
-/** ⭐ يعرض نافذة "سجّل الدخول" بدل إعادة التوجيه الفوري */
+/**
+ * ⭐⭐ نافذة "تسجيل الدخول مطلوب" — Living في ui.js.
+ *
+ * ⭐ القاعدة: لا تُستدعى إلا عند محاولة زائر لتنفيذ إجراء
+ *   يتطلّب حساباً (مفضّلة · تنزيل · محاضراتي · التقدّم).
+ *   لا وجود لها في تدفّق الصفحة (هذا ما كان يحجب النقرات).
+ */
 function showAuthPrompt(message) {
-  var modal = document.getElementById('authRequiredModal');
-  if (!modal) {
-    // لا توجد نافذة في هذه الصفحة → نوجّه إلى صفحة الدخول.
-    window.location.href = 'login.html';
-    return;
+  if (typeof global.showLoginPrompt === 'function') {
+    return global.showLoginPrompt(message);
   }
-  var text = modal.querySelector('[data-auth-message]');
-  if (text && message) text.textContent = message;
-  modal.classList.add('active');
-  document.body.style.overflow = 'hidden';
-  if (window.lucide) window.lucide.createIcons();
+  // ⭐ احتياطي: لا نوجّه تلقائياً — نكتفي برسالة
+  if (typeof showToast === 'function') {
+    showToast(message || 'سجّل الدخول للمتابعة', 'info');
+  }
+  return Promise.resolve(false);
 }
 
 function closeAuthPrompt() {
-  var modal = document.getElementById('authRequiredModal');
-  if (modal) modal.classList.remove('active');
-  document.body.style.overflow = '';
+  // ⭐ النافذة الجديدة تُغلق بنفسها
 }
 
 /**
@@ -376,6 +377,16 @@ async function signIn(email, password) {
       console.warn('Avatar sync failed:', avatarErr);
     }
 
+    // ⭐⭐⭐ نضمن وجود رمز الإشعارات بعد الدخول (بدون انتظار المستخدم)
+    try {
+      if (typeof global.MedAppNotifications !== 'undefined' &&
+          typeof global.MedAppNotifications.ensurePushToken === 'function') {
+        global.MedAppNotifications.ensurePushToken();
+      }
+    } catch (pushErr) {
+      console.warn('the push token could not be ensured:', pushErr);
+    }
+
     // ⭐ خزّن الملف الشخصي محلياً حتى يعمل العرض دون اتصال من أول مرة.
     if (navigator.onLine && data.user) {
       try {
@@ -560,6 +571,16 @@ async function signInWithGoogleNative() {
     await syncProfileAvatar(data.user);
   } catch (e) {
     console.warn('[auth] the avatar could not be saved:', e);
+  }
+
+  // ⭐⭐⭐ نضمن وجود رمز الإشعارات بعد الدخول عبر Google
+  try {
+    if (typeof global.MedAppNotifications !== 'undefined' &&
+        typeof global.MedAppNotifications.ensurePushToken === 'function') {
+      global.MedAppNotifications.ensurePushToken();
+    }
+  } catch (pushErr) {
+    console.warn('[auth] the push token could not be ensured:', pushErr);
   }
 
   return { success: true, user: data.user, session: data.session };
@@ -908,7 +929,34 @@ async function signUp(email, password, fullName) {
       needsVerification: !data.session  // ✅ يحتاج تأكيد البريد
     };
   } catch (err) {
-    return { success: false, error: translateAuthError(err.message) };
+    var message = (err && err.message) || '';
+    var lower = message.toLowerCase();
+
+    // ⭐⭐⭐ المستخدم مسجَّل مسبقاً لكنه لم يأكّد بريده (انتهى الرمز)
+    //   → لا نعرض "البريد مسجّل" ونغلق الباب؛ نرسل له رمزاً جديداً
+    //     عبر صفحة confirm.html.
+    if (lower.indexOf('already registered') > -1 ||
+        lower.indexOf('already exists') > -1 ||
+        lower.indexOf('user already exists') > -1 ||
+        lower.indexOf('email address has already been registered') > -1) {
+
+      try { localStorage.setItem('pending_verification', cleanEmail); } catch (e) {}
+      try { sessionStorage.setItem('pending_verification', cleanEmail); } catch (e) {}
+      // ⭐ علم يُخبر صفحة confirm.html أن البريد مسجَّل مسبقاً
+      try { sessionStorage.setItem('medapp_already_registered', '1'); } catch (e) {}
+      try { localStorage.setItem('medapp_pending_email', cleanEmail); } catch (e) {}
+      try { sessionStorage.setItem('medapp_pending_email', cleanEmail); } catch (e) {}
+
+      return {
+        success: false,
+        alreadyRegistered: true,
+        needsVerification: true,
+        email: cleanEmail,
+        error: 'هذا البريد مسجّل بالفعل. لقد أرسلنا لك رمزاً جديداً لتأكيد الحساب.'
+      };
+    }
+
+    return { success: false, error: translateAuthError(message) };
   }
 }
 
