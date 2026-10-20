@@ -1683,6 +1683,198 @@ reads `data.target` (or `data.url` / `data.path`) and navigates there:
 
 ---
 
+### 5.12 Phase 14 — v2.6.0 (the icon, the build, the header, guest mode)
+
+- **The icon was copied verbatim** (no safe-zone scaling) — later replaced
+  by a proper adaptive icon (see 5.13).
+- ⭐⭐ **`build.js` must never copy `android/`** into `dist/`: it landed in
+  the APK's web assets *and inside itself*, growing on every sync
+  (**47 MB → 4 MB**). `EXCLUDE_TOP` now excludes `android` and `assets`.
+- The header became `position: fixed; z-index: 9999` with a safe-area
+  padding, and the body is offset by the header height
+  (`body:has(> header)`), so the rubber-band no longer reveals it.
+- The native Google flow never falls back to the web any more.
+- **Guest mode**: `subject` / `viewer` / `all-files` are browsable without
+  an account; the shared prompt (`partials/auth-prompt.html` +
+  `requireLoginAction()` in `auth.js`) appears only for actions that need
+  one.
+
+### 5.13 Phase 15/16 — v2.7.0 (the adaptive icon + the notification engine)
+
+#### The adaptive icon
+
+`icon-512.png` is **RGB** (no alpha): a white stethoscope on a green
+gradient. `tools/generate-app-icon.js` (no external dependencies) now
+
+1. **extracts** the stethoscope (per-pixel "green-ness" → alpha, then
+   crops to the bounding box),
+2. places it on a transparent 108×108 canvas →
+   `mipmap-*/ic_launcher_foreground.png`,
+3. writes `drawable/ic_launcher_background.xml` — the *logo's own
+   gradient* (`#04664E → #14A17E`),
+4. writes `mipmap-anydpi-v26/ic_launcher.xml` + `_round.xml`
+   (background + foreground + monochrome).
+
+#### The native Google login
+
+`SocialLogin.login()`'s `options` object **is** the config the plugin
+reads `scopes` from — passing `scopes: ['email','profile']` made the
+plugin reject the call with *"You CANNOT use scopes without modifying
+the main activity"*. Fixed on both sides: `MainActivity` implements
+`ModifiedMainActivityForSocialLoginPlugin`, and the `scopes` array was
+removed (the plugin adds `email · profile · openid` by default).
+
+#### The universal notification engine
+
+| Layer | Where | What |
+|---|---|---|
+| Permissions | `notifications.js` | `requestNotificationPermission()` → check → request → register → `profiles.fcm_token` |
+| Fallback | `notifications.js` | `openAppSettings()` → `NativeSettings.openAndroid({option:'app'})` |
+| UI | `index.html` (settings tab) | the toggle: granted → ON · denied → OFF + a hint to open the phone settings |
+| Local | `notifications.js` | 6 categories, weighted randomisation, `@capacitor/local-notifications` |
+| Remote | `supabase/functions/smart-notifications-engine` | the same 6 categories, hourly via **pg_cron + pg_net** |
+| Manual | `supabase/functions/send-admin-notification` | the admin panel sends to *all* / *a subject* / *an email* |
+
+The 6 categories: `onboarding` · `agenda` · `streak` · `reengagement` ·
+`content` · `achievement` — each with several Arabic templates chosen
+with `Math.random()` and filled with `{name}`, `{streak}`,
+`{missed_count}`, `{subject}`, `{task_count}`.
+
+**FCM authentication** (`supabase/functions/_shared/fcm.ts`): the HTTP v1
+API with an RS256 service-account JWT (the key comes from the
+`FCM_SERVICE_ACCOUNT` secret or Supabase **Vault**), plus a legacy
+fallback with the Firebase API key.
+
+**The cron job** (`supabase/migrations/20261020_notification_engine.sql`):
+`pg_cron` runs every hour and `pg_net` posts to the engine with the
+`x-cron-secret` header (the secret lives in Vault, and the RPC that
+reads it is granted to `service_role` only).
+
+#### The My Lectures UI fixes
+
+- The floating toast (`z-index: 2147483647`, covering every modal) was
+  replaced by a **notice bar** that stays *below* the modals — and when
+  a modal is open the message appears **inside** it.
+- Every overlay now sits **above** the fixed header (10050 / 10100 /
+  10150 / 10160).
+- The shell (`partials/head.html`) ships a **complete fallback variable
+  set**. `--accent-emerald` was undefined on several pages, so the
+  login button's `background: linear-gradient(…)` was invalid and its
+  white text was **invisible**.
+
+### 5.14 Phase 17 — v2.7.2 (cold-start deep links + the Google identity)
+
+#### The email-confirmation deep link
+
+| Situation | How it is caught |
+|---|---|
+| the app is open | `App.addListener('appUrlOpen')` |
+| the app was closed | `App.getLaunchUrl()` — retried until `supabaseClient` exists |
+| both at once | the URL is de-duplicated (a PKCE code is single-use) |
+
+The handler understands three shapes: `?code=` (PKCE), `?token_hash=`
+(Supabase's modern templates) and the implicit `#access_token=…`
+fragment — plus two **direct HTTP fallbacks** (a link code has no stored
+code-verifier, so it is exchanged straight against
+`POST /auth/v1/token?grant_type=pkce`; and a `refresh_token` grant as
+the last resort). Every outcome now produces a visible toast.
+
+#### The native Google login
+
+The plugin **v8** answers with a different shape than the code expected:
+
+```ts
+// v8 actually returns:          the old code was reading:
+{ provider: 'google',             result.response.idToken   // → always null ✗
+  result: { idToken, accessToken, profile } }
+```
+
+`extractGoogleIdToken()` now accepts `result.result`,
+`result.response` and a flat `idToken`.
+
+### 5.15 Phase 18 — v2.7.3 (the emergency build fix)
+
+**Nothing was deleted.** The v2.7.2 APK was compared byte-by-byte with
+the working v2.7.0 one: the zip, the 12,280-byte APK Signing Block,
+the binary `AndroidManifest.xml`, `resources.arsc`, the four ABIs, the
+`classes.dex` count and the four tool images were **identical and
+valid**. The 2.4 MB drop was entirely the launcher icons (the legacy
+`ic_launcher.png` used to be the 627×614 source, ≈260 KB × 5 densities
+× 2 files).
+
+> *"There is a problem parsing the package"* is what Android says for a
+> **truncated download**, not for a bad build.
+
+The workflow gained four proof steps: *Verify the web assets* (fails if
+a tool image is missing), *Inspect the APK structure* (`aapt dump
+badging` + the eight essentials), *Publish the SHA-256 checksum* and
+*Verify the published asset* (downloads the release asset back and
+compares hashes).
+
+### 5.16 Phase 19 — v2.8.0 (the code flow + the nonce fix)
+
+#### ⭐⭐ The email template — what YOU must do in Supabase
+
+> **Supabase Dashboard → Authentication → Email Templates → *Confirm signup***
+> → put the raw token in the body:
+>
+> ```html
+> <p>رمز تأكيد حسابك في المنصة الطبية:</p>
+> <p style="font-size:28px;font-weight:bold;letter-spacing:6px">{{ .Token }}</p>
+> <p>أو الصق الرمز المكوّن من 6 أرقام في التطبيق مباشرة.</p>
+> ```
+>
+> `{{ .Token }}` is the **raw** 6-digit token (not the hash) — exactly
+> what the app sends to `verifyOtp({ email, token, type })`.
+
+The deep-link confirmation is **no longer required**: the app asks for
+the 6 digits itself, so a cold start can never lose the link.
+
+| Step | Where |
+|---|---|
+| the sign-up sends the code | `auth.js → signUp()` (the *Confirm signup* template) |
+| the code is remembered | `localStorage['medapp_pending_email']` |
+| the user is sent to the code page | `login.html → confirm.html?email=…` |
+| the 6 boxes | `confirm.html` — auto-focus, auto-advance, paste, auto-submit |
+| the verification | `auth.js → verifyOtpCode()` → `supabase.auth.verifyOtp()` |
+| the resend | `confirm.html → resendOtpCode()` → `supabase.auth.resend({ type:'signup' })` with a **60 s** countdown |
+
+The old deep-link path (`?token_hash=` / `#access_token=`) still works if
+someone opens an old e-mail ✓.
+
+#### ⭐⭐ The Google "Nonces mismatch" — the real fix
+
+Supabase's server compares the nonce like this
+(`supabase/auth` → `internal/api/token_oidc.go`):
+
+```go
+hash := fmt.Sprintf("%x", sha256.Sum256([]byte(params.Nonce)))
+if hash != idToken.Nonce {
+    return apierrors.NewOAuthError("invalid nonce", "Nonces mismatch")
+}
+```
+
+`%x` is **hexadecimal**. The app was sending the **base64url** hash to
+Google, so the server's hex hash never matched the token's claim →
+*"Nonces mismatch"*. `hashNonceWithSha256()` now returns **hex**
+(Google gets the hex hash, Supabase gets the raw nonce) ✓.
+
+#### The tools images
+
+The images were valid, present in the APK and referenced with a relative
+path — but the `<img>` was written into the card **before** it entered
+the DOM and it had no real fallback. Now:
+
+- `loadToolImage()` appends the image **after** the element is in the
+  page and tries *relative → absolute → relative → absolute* before
+  falling back to the line icon;
+- `loading="lazy"` was removed (it can postpone the load forever in a
+  WebView);
+- `build.js → verifyToolIcons()` **fails the build** if any of the four
+  images is missing from `dist/icons/`;
+- the CI step *Verify the web assets* lists the folder and fails if a
+  file is absent.
+
 ## 12. Cheatsheet
 
 ### Commands

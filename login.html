@@ -2090,7 +2090,7 @@
       </div>
       <div class="step-item">
         <span class="step-number">4</span>
-        <span class="step-text">اضغط على رابط التأكيد لتفعيل حسابك</span>
+        <span class="step-text">انسخ الرمز المكوّن من 6 أرقام وأدخله في التطبيق</span>
       </div>
     </div>
 
@@ -2100,6 +2100,11 @@
     <i data-lucide="inbox"></i>
     <span>فتح البريد</span>
   </a>
+  <!-- ⭐⭐ إدخال الرمز يدوياً (6 أرقام) — التدفّق الجديد -->
+  <button class="action-btn" id="enterCodeBtn" onclick="goToCodeEntry()">
+    <i data-lucide="key-round"></i>
+    <span>إدخال الرمز</span>
+  </button>
   <button class="action-btn" onclick="editEmail()">
     <i data-lucide="pencil"></i>
     <span>تعديل البريد</span>
@@ -2523,11 +2528,13 @@ if (hasError) return;
             window.location.href = 'index.html';
           }, 700);
         } else {
-          // الحالة الطبيعية: يحتاج تأكيد البريد
-          showToast('تم إنشاء حسابك — تحقق من بريدك');
+          // ⭐⭐ الحالة الطبيعية: يحتاج تأكيد البريد عبر رمز من 6 أرقام
+          showToast('تم إنشاء حسابك — أرسلنا رمزاً إلى بريدك');
+          try { localStorage.setItem('medapp_pending_email', state.pendingEmail); } catch (e) {}
+          try { sessionStorage.setItem('medapp_pending_email', state.pendingEmail); } catch (e) {}
           setTimeout(() => {
-            showVerifyScreen(state.pendingEmail);
-          }, 500);
+            window.location.href = 'confirm.html?email=' + encodeURIComponent(state.pendingEmail);
+          }, 600);
         }
       } else {
         btn.classList.remove('loading');
@@ -2540,6 +2547,18 @@ if (hasError) return;
     // ============================================
     // شاشة التحقق من البريد
     // ============================================
+    /**
+     * ⭐⭐ الانتقال إلى صفحة إدخال الرمز (6 أرقام).
+     */
+    function goToCodeEntry() {
+      const email = (state && state.pendingEmail) || '';
+      try { if (email) localStorage.setItem('medapp_pending_email', email); } catch (e) {}
+      try { if (email) sessionStorage.setItem('medapp_pending_email', email); } catch (e) {}
+      window.location.href = email
+        ? 'confirm.html?email=' + encodeURIComponent(email)
+        : 'confirm.html';
+    }
+
     function showVerifyScreen(email) {
       state.pendingEmail = email;
       state.isSubmitting = false;

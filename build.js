@@ -32,7 +32,7 @@ const DIST = path.join(ROOT, 'dist');
 
 // Bumped whenever app.js changes. The query string is what makes returning
 // visitors pick up the new router even though static JS is served immutable.
-const APP_VERSION = '2.7.3';
+const APP_VERSION = '2.8.0';
 const APP_JS = `app.js?v=${APP_VERSION}`;
 
 // ------------------------------------------------------------------
@@ -351,6 +351,27 @@ function copyAssets() {
   return copied;
 }
 
+// ⭐⭐ صور الأدوات (Tools) — لازم أن تكون في dist/icons/
+//    بدونها تظهر مربّعات فارغة داخل التطبيق (Phase 19).
+const REQUIRED_TOOL_ICONS = ['flipclock.jpg', 'forest.jpg', 'notion.jpg', 'drbaraa.jpg'];
+
+function verifyToolIcons() {
+  const dir = path.join(DIST, 'icons');
+  const missing = [];
+  for (const file of REQUIRED_TOOL_ICONS) {
+    const target = path.join(dir, file);
+    if (!fs.existsSync(target) || fs.statSync(target).size === 0) {
+      missing.push(file);
+    }
+  }
+  if (missing.length) {
+    console.error('\n❌ the tools images are missing from dist/icons/: ' + missing.join(', '));
+    console.error('   (they must be copied from the project root /icons/ folder)');
+    process.exit(1);
+  }
+  console.log('✅ the tools images are in dist/icons/ (' + REQUIRED_TOOL_ICONS.length + ' files)');
+}
+
 // ------------------------------------------------------------------
 // Validation
 // ------------------------------------------------------------------
@@ -412,6 +433,9 @@ function main() {
   });
 
   const assets = copyAssets();
+
+  // ⭐ صور الأدوات يجب أن تكون في dist/ — نتأكّد قبل المتابعة
+  verifyToolIcons();
 
   // Determinism / sanity: every source page must have been written.
   pages.forEach((p) => {

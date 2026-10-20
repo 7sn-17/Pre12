@@ -310,11 +310,26 @@ function generateRawNonce() {
   return base64UrlEncode(bytes.buffer);
 }
 
-/** 🔒 بصمة SHA-256 للـ nonce */
+/**
+ * 🔒 بصمة SHA-256 للـ nonce — **hexadecimal**.
+ *
+ * ⭐⭐ لماذا hex وليس base64url؟
+ *    خادم Supabase (GoTrue) يتحقّق من الـ nonce هكذا:
+ *      hash := fmt.Sprintf("%x", sha256.Sum256([]byte(params.Nonce)))
+ *      if hash != idToken.Nonce { return "Nonces mismatch" }
+ *    أي أن الخادم يقارن **بصمة hex** بما أعادته Google في الـ claim.
+ *    لذلك يجب أن نرسل إلى Google نفس البصمة (hex) بالضبط، وإلا
+ *    رفض الـ id_token برسالة "Nonces mismatch".
+ */
 async function hashNonceWithSha256(text) {
   const data = new TextEncoder().encode(text);
   const digest = await crypto.subtle.digest('SHA-256', data);
-  return base64UrlEncode(digest);
+  const bytes = new Uint8Array(digest);
+  let hex = '';
+  for (let i = 0; i < bytes.length; i++) {
+    hex += bytes[i].toString(16).padStart(2, '0');
+  }
+  return hex;
 }
 
 /**
@@ -726,6 +741,13 @@ async function signUp(email, password, fullName) {
       };
     }
     
+    // ⭐⭐ نحفظ البريد الذي ينتظر التأكيد — صفحة confirm.html
+    //    تقرأه لتعرض خانات الرمز (6 أرقام) تلقائياً.
+    if (!data.session) {
+      try { localStorage.setItem('medapp_pending_email', cleanEmail); } catch (e) {}
+      try { sessionStorage.setItem('medapp_pending_email', cleanEmail); } catch (e) {}
+    }
+
     return { 
       success: true, 
       user: data.user, 
@@ -818,6 +840,32 @@ async function resetPassword(email) {
 // ============================================
 // 11. تأكيد رمز OTP (يُستخدم في confirm.html)
 // ============================================
+/**
+ * ⭐⭐ تأكيد الرمز المكوّن من 6 أرقام.
+ *
+ * الخادم يشفّر الرمز بنفسه (token → hash) — فنرسل الرمز الخام كما هو.
+ */
+async function verifyOtpCode(email, code, type = 'signup') {
+  try {
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    const cleanCode = String(code || '').replace(/\D/g, '');
+    if (!cleanEmail) return { success: false, error: 'لا يوجد بريد إلكتروني' };
+    if (cleanCode.length !== 6) return { success: false, error: 'الرمز يجب أن يكون 6 أرقام' };
+
+    const { data, error } = await supabaseClient.auth.verifyOtp({
+      email: cleanEmail,
+      token: cleanCode,
+      type: type
+    });
+
+    if (error) throw error;
+    try { localStorage.removeItem('medapp_pending_email'); } catch (e) {}
+    return { success: true, user: data.user, session: data.session };
+  } catch (err) {
+    return { success: false, error: translateAuthError(err && err.message) };
+  }
+}
+
 async function verifyEmailOtp(tokenHash, type = 'signup') {
   try {
     const { data, error } = await supabaseClient.auth.verifyOtp({
@@ -858,6 +906,10 @@ function translateAuthError(message) {
     'token has expired or is invalid': 'رابط التأكيد منتهي أو غير صحيح',
     'email link is invalid or has expired': 'رابط التأكيد منتهي — اطلب رابطاً جديداً',
     'user already confirmed': 'تم تأكيد بريدك مسبقاً',
+    'nonces mismatch': 'فشل تحقّق الأمان (nonce) — أعد المحاولة من فضلك',
+    'invalid nonce': 'فشل تحقّق الأمان (nonce) — أعد المحاولة من فضلك',
+    'passed nonce and nonce in id_token should either both exist or not': 'فشل تحقّق الأمان (nonce) — أعد المحاولة من فضلك',
+    'unacceptable audience in id_token': 'مُعرّف العميل (client id) غير مطابق — تحقّق من إعدادات Google',
     'over_email_send_rate_limit': 'محاولات كثيرة. حاول بعد دقيقة'
   };
   

@@ -264,6 +264,92 @@ sw: true
       height: 18px;
     }
 
+    /* ⭐⭐ حقول رمز التحقق (6 أرقام) */
+    .otp-row {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin: 22px 0 6px;
+      direction: ltr;
+      flex-wrap: nowrap;
+    }
+    .otp-box {
+      width: 46px;
+      height: 56px;
+      border-radius: 14px;
+      border: 1.5px solid var(--border-card);
+      background: var(--bg-elevated, #102a22);
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 1.5rem;
+      font-weight: 900;
+      text-align: center;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+      -webkit-user-select: text;
+      user-select: text;
+    }
+    .otp-box:focus {
+      border-color: var(--accent-emerald, #10b981);
+      box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+      transform: translateY(-2px);
+    }
+    .otp-box.filled { border-color: rgba(16, 185, 129, 0.55); }
+    .otp-box.shake { animation: otpShake 0.4s ease; }
+    @keyframes otpShake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      75% { transform: translateX(6px); }
+    }
+    .email-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 14px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.28);
+      color: var(--accent-light, #34d399);
+      font-size: 0.78rem;
+      font-weight: 800;
+      direction: ltr;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .otp-message {
+      margin-top: 12px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      min-height: 1.2em;
+      color: var(--text-secondary, #94a3b8);
+    }
+    .otp-message.error { color: #fca5a5; }
+    .otp-message.success { color: var(--accent-light, #34d399); }
+    .resend-btn {
+      margin-top: 18px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 20px;
+      border-radius: 12px;
+      border: 1px solid var(--border-card);
+      background: transparent;
+      color: var(--accent-light, #34d399);
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .resend-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      color: var(--text-secondary, #94a3b8);
+    }
+    .resend-btn:not(:disabled):hover { background: rgba(16, 185, 129, 0.1); }
+
     /* زر ثانوي */
     .secondary-btn {
       display: inline-flex;
@@ -432,6 +518,44 @@ sw: true
         </div>
       </div>
 
+      <!-- ========== ⭐ حالة إدخال رمز التحقق (6 أرقام) ========== -->
+      <div id="codeState" class="state-view">
+        <div class="state-icon" style="background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.3); color: #60a5fa;">
+          <i data-lucide="shield-check"></i>
+        </div>
+        <h1 class="state-title">أدخل رمز التحقق</h1>
+        <p class="state-text">
+          أرسلنا رمزاً من 6 أرقام إلى بريدك.<br>
+          اكتبه هنا لتأكيد حسابك.
+        </p>
+
+        <div class="email-chip" id="otpEmailChip">
+          <i data-lucide="mail" style="width: 14px; height: 14px;"></i>
+          <span id="otpEmailText">—</span>
+        </div>
+
+        <div class="otp-row" id="otpRow" dir="ltr">
+          <input class="otp-box" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="one-time-code" aria-label="الرقم 1">
+          <input class="otp-box" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="الرقم 2">
+          <input class="otp-box" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="الرقم 3">
+          <input class="otp-box" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="الرقم 4">
+          <input class="otp-box" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="الرقم 5">
+          <input class="otp-box" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="الرقم 6">
+        </div>
+
+        <div class="otp-message" id="otpMessage"></div>
+
+        <button class="resend-btn" id="resendCodeBtn" onclick="resendOtpCode()" disabled>
+          <i data-lucide="refresh-cw" style="width: 15px; height: 15px;"></i>
+          <span id="resendCodeLabel">إعادة الإرسال بعد 60 ثانية</span>
+        </button>
+
+        <a href="login.html#register" class="secondary-btn" style="margin-top: 10px;">
+          <i data-lucide="arrow-right"></i>
+          <span>تغيير البريد الإلكتروني</span>
+        </a>
+      </div>
+
       <!-- ========== حالة الخطأ ========== -->
       <div id="errorState" class="state-view">
         <div class="state-icon error">
@@ -557,6 +681,232 @@ sw: true
     }
 
     // ============================================
+    // ⭐⭐ رمز التحقق (6 أرقام) — تدفّق Code / OTP
+    // ============================================
+    /** ⭐ البريد الذي ينتظر التأكيد (من الرابط أو من التسجيل) */
+    function getPendingEmail() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const fromQuery = (params.get('email') || '').trim();
+        if (fromQuery) return fromQuery.toLowerCase();
+      } catch (e) {}
+      try {
+        const stored = (localStorage.getItem(PENDING_EMAIL_KEY) || '').trim();
+        if (stored) return stored.toLowerCase();
+      } catch (e) {}
+      try {
+        const stored = (sessionStorage.getItem(PENDING_EMAIL_KEY) || '').trim();
+        if (stored) return stored.toLowerCase();
+      } catch (e) {}
+      return '';
+    }
+
+    const OTP_LENGTH = 6;
+    const RESEND_SECONDS = 60;
+    const PENDING_EMAIL_KEY = 'medapp_pending_email';
+
+    let otpBoxes = [];
+    let otpEmail = '';
+    let resendTimer = null;
+    let resendRemaining = 0;
+    let verifying = false;
+
+    function getOtpBoxes() {
+      if (!otpBoxes.length) {
+        otpBoxes = Array.from(document.querySelectorAll('#otpRow .otp-box'));
+      }
+      return otpBoxes;
+    }
+
+    function readOtpCode() {
+      return getOtpBoxes().map(b => (b.value || '').trim()).join('');
+    }
+
+    function setOtpMessage(text, kind) {
+      const el = document.getElementById('otpMessage');
+      if (!el) return;
+      el.textContent = text || '';
+      el.className = 'otp-message' + (kind ? ' ' + kind : '');
+    }
+
+    function shakeOtp() {
+      getOtpBoxes().forEach(b => {
+        b.classList.remove('shake');
+        void b.offsetWidth;      // ⭐ إعادة تشغيل الحركة
+        b.classList.add('shake');
+      });
+    }
+
+    function clearOtp() {
+      getOtpBoxes().forEach(b => { b.value = ''; b.classList.remove('filled'); });
+      const first = getOtpBoxes()[0];
+      if (first) first.focus();
+    }
+
+    /** ⭐ الانتقال التلقائي + اللصق + الحذف */
+    function setupOtpInputs() {
+      const boxes = getOtpBoxes();
+      if (!boxes.length) return;
+
+      boxes.forEach((box, index) => {
+        box.addEventListener('input', function () {
+          // ⭐ لصق الرمز كاملاً في صندوق واحد
+          const value = (box.value || '').replace(/\D/g, '');
+          if (value.length > 1) {
+            value.split('').slice(0, OTP_LENGTH).forEach((digit, i) => {
+              if (boxes[i]) { boxes[i].value = digit; boxes[i].classList.add('filled'); }
+            });
+            const last = Math.min(OTP_LENGTH - 1, value.length - 1);
+            if (boxes[last]) boxes[last].focus();
+            if (readOtpCode().length === OTP_LENGTH) submitOtpCode();
+            return;
+          }
+
+          box.value = value.slice(-1);
+          box.classList.toggle('filled', !!box.value);
+          if (box.value && index < OTP_LENGTH - 1) {
+            boxes[index + 1].focus();
+          }
+          if (readOtpCode().length === OTP_LENGTH) submitOtpCode();
+        });
+
+        box.addEventListener('keydown', function (event) {
+          if (event.key === 'Backspace' && !box.value && index > 0) {
+            boxes[index - 1].value = '';
+            boxes[index - 1].classList.remove('filled');
+            boxes[index - 1].focus();
+          }
+          if (event.key === 'ArrowLeft' && index < OTP_LENGTH - 1) boxes[index + 1].focus();
+          if (event.key === 'ArrowRight' && index > 0) boxes[index - 1].focus();
+        });
+
+        box.addEventListener('paste', function (event) {
+          event.preventDefault();
+          const pasted = (event.clipboardData || window.clipboardData).getData('text') || '';
+          const digits = pasted.replace(/\D/g, '').slice(0, OTP_LENGTH);
+          if (!digits) return;
+          digits.split('').forEach((digit, i) => {
+            if (boxes[i]) { boxes[i].value = digit; boxes[i].classList.add('filled'); }
+          });
+          const last = Math.min(OTP_LENGTH - 1, digits.length - 1);
+          if (boxes[last]) boxes[last].focus();
+          if (readOtpCode().length === OTP_LENGTH) submitOtpCode();
+        });
+
+        box.addEventListener('focus', function () { box.select(); });
+      });
+    }
+
+    /** ⭐ إرسال الرمز إلى Supabase */
+    async function submitOtpCode() {
+      if (verifying) return;
+      const code = readOtpCode();
+      if (code.length !== OTP_LENGTH) return;
+      if (!otpEmail) {
+        setOtpMessage('لا نعرف البريد الإلكتروني — أعد التسجيل من فضلك.', 'error');
+        return;
+      }
+
+      verifying = true;
+      setOtpMessage('جارٍ التحقق من الرمز…');
+
+      try {
+        const result = (typeof verifyOtpCode === 'function')
+          ? await verifyOtpCode(otpEmail, code, 'signup')
+          : await supabaseClient.auth.verifyOtp({ email: otpEmail, token: code, type: 'signup' })
+                .then(r => ({ success: !r.error, error: r.error }));
+
+        if (!result.success) {
+          verifying = false;
+          setOtpMessage((result.error && result.error.message) || result.error ||
+                        'الرمز غير صحيح — تأكّد من الأرقام وحاول مجدداً.', 'error');
+          shakeOtp();
+          clearOtp();
+          return;
+        }
+
+        setOtpMessage('تم تأكيد حسابك بنجاح ✅', 'success');
+        try { localStorage.removeItem(PENDING_EMAIL_KEY); } catch (e) {}
+
+        // ⭐ نجاح → الرئيسية
+        setTimeout(function () {
+          window.location.href = 'index.html';
+        }, 900);
+      } catch (err) {
+        verifying = false;
+        setOtpMessage((err && err.message) || 'تعذّر التحقق — حاول مجدداً.', 'error');
+        shakeOtp();
+      }
+    }
+
+    /** ⭐ إعادة إرسال الرمز + عدّاد 60 ثانية */
+    function startResendTimer(seconds) {
+      resendRemaining = seconds;
+      const btn = document.getElementById('resendCodeBtn');
+      const label = document.getElementById('resendCodeLabel');
+      if (!btn || !label) return;
+
+      btn.disabled = true;
+      label.textContent = 'إعادة الإرسال بعد ' + resendRemaining + ' ثانية';
+
+      if (resendTimer) clearInterval(resendTimer);
+      resendTimer = setInterval(function () {
+        resendRemaining--;
+        if (resendRemaining <= 0) {
+          clearInterval(resendTimer);
+          resendTimer = null;
+          btn.disabled = false;
+          label.textContent = 'إعادة إرسال الرمز';
+        } else {
+          label.textContent = 'إعادة الإرسال بعد ' + resendRemaining + ' ثانية';
+        }
+      }, 1000);
+    }
+
+    async function resendOtpCode() {
+      const btn = document.getElementById('resendCodeBtn');
+      const label = document.getElementById('resendCodeLabel');
+      if (!otpEmail) {
+        setOtpMessage('لا نعرف البريد الإلكتروني — أعد التسجيل من فضلك.', 'error');
+        return;
+      }
+
+      btn.disabled = true;
+      label.textContent = 'جارٍ الإرسال…';
+
+      try {
+        const { error } = await supabaseClient.auth.resend({
+          type: 'signup',
+          email: otpEmail,
+          options: { emailRedirectTo: getAuthRedirectUrl() }
+        });
+        if (error) throw error;
+        setOtpMessage('تم إرسال رمز جديد إلى بريدك ✅', 'success');
+      } catch (err) {
+        setOtpMessage((err && err.message) || 'تعذّر إعادة الإرسال — حاول بعد قليل.', 'error');
+        btn.disabled = false;
+        label.textContent = 'إعادة إرسال الرمز';
+        return;
+      }
+
+      startResendTimer(RESEND_SECONDS);
+    }
+
+    /** ⭐ فتح شاشة إدخال الرمز */
+    function showOtpState(email) {
+      otpEmail = (email || '').trim().toLowerCase();
+      try { if (otpEmail) localStorage.setItem(PENDING_EMAIL_KEY, otpEmail); } catch (e) {}
+
+      const chip = document.getElementById('otpEmailText');
+      if (chip) chip.textContent = otpEmail || '—';
+
+      showState('code');
+      setupOtpInputs();
+      clearOtp();
+      startResendTimer(RESEND_SECONDS);
+    }
+
+    // ============================================
     // التحقق من الرابط عند فتح الصفحة
     // ============================================
     async function processConfirmation() {
@@ -610,13 +960,21 @@ sw: true
         }
 
         // ═══════════════════════════════════════════
-        // الحالة 4: لا يوجد أي توكن
+        // الحالة 4: لا يوجد أي توكن في الرابط
         // ═══════════════════════════════════════════
-        console.warn('⚠️ لا يوجد توكن في الرابط');
+        // ⭐⭐ التدفّق الجديد: نطلب الرمز من المستخدم (6 أرقام)
+        console.warn('⚠️ لا يوجد توكن في الرابط — ننتقل إلى إدخال الرمز');
+
+        const pendingEmail = getPendingEmail();
+        if (pendingEmail) {
+          showOtpState(pendingEmail);
+          return;
+        }
+
         showError(
-          'رابط غير صالح',
-          'لم نتمكن من العثور على رابط التأكيد.<br>تأكد من فتح الرابط الصحيح من بريدك الإلكتروني.',
-          'إذا نسخت الرابط يدوياً، تأكد من نسخه كاملاً دون قطع.'
+          'لا يوجد رمز تأكيد',
+          'لم نتمكن من العثور على طلب تأكيد.<br>سجّل الدخول من جديد وسنرسل لك رمزاً من 6 أرقام.',
+          'إن كان بريدك مسجّلاً بالفعل يمكنك طلب رمز جديد.'
         );
 
       } catch (err) {
@@ -850,7 +1208,28 @@ sw: true
     // ============================================
     // تشغيل
     // ============================================
-    processConfirmation();
+    // ⭐⭐ إن كان التطبيق فُتح على الصفحة مباشرة (بلا رابط) والبريد
+    //    معروف → نعرض شاشة إدخال الرمز مباشرة.
+    (function bootstrap() {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const queryParams = new URLSearchParams(window.location.search);
+      const hasLink = !!(hashParams.get('access_token') || hashParams.get('token_hash') ||
+                         queryParams.get('access_token') || queryParams.get('token_hash'));
+      if (hasLink) {
+        processConfirmation();
+        return;
+      }
+      const email = getPendingEmail();
+      if (email) {
+        showOtpState(email);
+      } else {
+        showError(
+          'لا يوجد طلب تأكيد',
+          'افتح هذه الصفحة من رابط التأكيد في بريدك الإلكتروني،<br>أو سجّل الدخول من جديد.',
+          null
+        );
+      }
+    })();
 
     // ============================================
     // تنظيف عند مغادرة الصفحة
