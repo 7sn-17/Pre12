@@ -18,6 +18,10 @@ export interface FcmMessage {
   title: string;
   body: string;
   data?: Record<string, string>;
+  /** ⭐ v4.5.0 — Android notification channel (streak/tasks/content/updates). */
+  channelId?: string;
+  /** ⭐ v4.5.0 — override the notification sound; defaults to "default". */
+  sound?: string;
 }
 
 export interface FcmSender {
@@ -185,8 +189,8 @@ async function sendV1(token: string, message: FcmMessage, sa: ServiceAccount): P
           android: {
             priority: 'HIGH',
             notification: {
-              channel_id: 'medapp_reminders',
-              sound: 'default',
+              channel_id: message.channelId || 'medapp_reminders',
+              sound: message.sound || 'default',
               icon: 'ic_stat_icon',
               color: '#10b981',
             },

@@ -64,8 +64,10 @@ Deno.serve(async (req) => {
     const title = String(payload?.title || '').trim();
     const body = String(payload?.body || '').trim();
     const url = String(payload?.url || '').trim();
-    const target = payload?.target || { type: 'all' };
-    const type = String(target.type || 'all');
+    const target = payload?.target || {};
+    const type = String(payload?.target_type || target.type || 'all').toLowerCase();
+    const email = String(payload?.email || target.email || '').trim().toLowerCase();
+    const subjectId = String(payload?.subject_id || target.subjectId || '').trim();
 
     if (!title || !body) {
       return json({ error: 'title and body are required' }, 400);
@@ -73,42 +75,68 @@ Deno.serve(async (req) => {
 
     /* ── 4) تحديد الجمهور ── */
     let tokens: string[] = [];
+    let subjectName = '';
+    let subjectSlug = '';
 
-    if (type === 'email') {
-      const email = String(target.email || '').trim().toLowerCase();
+    if (type === 'user' || type === 'email') {
       if (!email) return json({ error: 'the email is required' }, 400);
       const { data, error } = await admin
         .from('profiles')
         .select('fcm_token')
-        .eq('email', email)
+        .ilike('email', email)
         .not('fcm_token', 'is', null);
       if (error) throw error;
       tokens = (data || []).map((r) => r.fcm_token).filter(Boolean);
     } else if (type === 'subject') {
-      const subjectId = String(target.subjectId || '').trim();
       if (!subjectId) return json({ error: 'the subject is required' }, 400);
 
       const { data: subject, error: subjectError } = await admin
         .from('subjects')
-        .select('id, name')
+        .select('id, name, slug')
         .eq('id', subjectId)
         .maybeSingle();
       if (subjectError) throw subjectError;
       if (!subject) return json({ error: 'the subject was not found' }, 404);
 
+      subjectName = String(subject.name || '');
+      subjectSlug = String(subject.slug || '');
+
+      const userIds = new Set<string>();
+
       // ⭐ من لديه مهام في هذه المادة
-      const { data: rows, error } = await admin
+      const { data: taskRows, error: taskError } = await admin
         .from('task_progress')
         .select('user_id')
-        .eq('subject', subject.name);
-      if (error) throw error;
+        .eq('subject', subjectName);
+      if (taskError) throw taskError;
+      for (const row of taskRows || []) {
+        if (row.user_id) userIds.add(row.user_id);
+      }
 
-      const userIds = Array.from(new Set((rows || []).map((r) => r.user_id).filter(Boolean)));
-      if (userIds.length) {
+      // ⭐ ومن حفظ ملفاً من ملفات المادة في المفضلة
+      const { data: subjectFiles, error: filesError } = await admin
+        .from('files')
+        .select('id')
+        .eq('subject_id', subjectId);
+      if (filesError) throw filesError;
+
+      const fileIds = (subjectFiles || []).map((f) => f.id).filter(Boolean);
+      if (fileIds.length) {
+        const { data: favRows, error: favError } = await admin
+          .from('favorites')
+          .select('user_id')
+          .in('file_id', fileIds);
+        if (favError) throw favError;
+        for (const row of favRows || []) {
+          if (row.user_id) userIds.add(row.user_id);
+        }
+      }
+
+      if (userIds.size) {
         const { data: profiles, error: pError } = await admin
           .from('profiles')
           .select('fcm_token')
-          .in('id', userIds)
+          .in('id', Array.from(userIds))
           .not('fcm_token', 'is', null);
         if (pError) throw pError;
         tokens = (profiles || []).map((r) => r.fcm_token).filter(Boolean);
@@ -135,10 +163,30 @@ Deno.serve(async (req) => {
       }, 500);
     }
 
+    const channelId = type === 'subject' ? 'medapp_content' : 'medapp_updates';
+    const action = (type === 'subject' || !!url) ? 'content' : 'tasks';
+    const targetUrl = url || (subjectSlug
+      ? `subject.html?subject=${encodeURIComponent(subjectSlug)}`
+      : 'index.html');
+
+    const data: Record<string, string> = {
+      action,
+      target: targetUrl,
+      url: targetUrl,
+      source: 'admin',
+      channel: channelId,
+    };
+    if (subjectId) {
+      data.subject_id = subjectId;
+      data.subject_name = subjectName;
+      data.subject_slug = subjectSlug;
+    }
+
     const result = await sendBatch(sender, tokens, {
       title,
       body,
-      data: { target: url || 'index.html', source: 'admin' },
+      data,
+      channelId,
     });
 
     /* ── 6) السجلّ ── */

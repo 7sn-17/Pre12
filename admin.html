@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="4.4.2">
+<meta name="app-version" content="4.5.0">
 <title>لوحة التحكم — المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -2182,11 +2182,23 @@ header {
   padding: 6px;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 4px;
   box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.8), 0 0 30px rgba(251, 191, 36, 0.15);
   width: 100%;
   max-width: 460px;
   position: relative;
+  /* ⭐ v4.5.0 — TASK 6: شريط أفقي قابل للتمرير بسلاسة */
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+}
+
+.admin-nav::-webkit-scrollbar {
+  display: none;
 }
 
 [data-theme="light"] .admin-nav {
@@ -2195,7 +2207,9 @@ header {
 }
 
 .admin-nav-btn {
-  flex: 1;
+  flex: 0 0 auto;
+  min-width: 64px;
+  white-space: nowrap;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2223,7 +2237,7 @@ header {
   border-radius: 50%;
   background: linear-gradient(135deg, var(--gold), #d97706);
   color: white;
-  margin-top: -28px;
+  margin-top: 0;
   box-shadow:
     0 8px 20px rgba(251, 191, 36, 0.5),
     0 0 0 4px var(--bg-main),
@@ -2768,7 +2782,7 @@ header {
 @media (max-width: 380px) {
   .stat-card { padding: 10px 6px; }
   .stat-number { font-size: 1.15rem; }
-  .admin-nav-btn.center { width: 56px; height: 56px; margin-top: -24px; }
+  .admin-nav-btn.center { width: 56px; height: 56px; margin-top: 0; }
   .admin-nav-btn.center i { font-size: 1.3rem; }
 }
 
@@ -3083,9 +3097,9 @@ header {
         </span>
       </label>
       <select id="pushTargetType" class="filter-select" style="width: 100%;" onchange="updatePushTargetFields()">
-        <option value="all">كل المستخدمين</option>
-        <option value="subject">مادة محدّدة</option>
-        <option value="email">بريد إلكتروني محدّد</option>
+        <option value="all">الجميع</option>
+        <option value="user">مستخدم محدد</option>
+        <option value="subject">مادة محددة</option>
       </select>
     </div>
 
@@ -3104,11 +3118,17 @@ header {
     <div class="form-group" id="pushEmailGroup" style="display: none;">
       <label class="form-label">
         <span class="form-label-text">
-          <i class="fa-solid fa-envelope"></i>
-          <span>البريد الإلكتروني</span>
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <span>ابحث عن مستخدم</span>
         </span>
+        <span class="form-label-hint">بالبريد الإلكتروني</span>
       </label>
-      <input type="email" id="pushEmail" class="form-input" placeholder="user@example.com" dir="ltr">
+      <input type="email" id="pushEmail" class="form-input" list="pushUserEmails"
+             placeholder="ابحث بالبريد الإلكتروني..." dir="ltr" autocomplete="off">
+      <datalist id="pushUserEmails"></datalist>
+      <small id="pushUserHint" style="display: block; margin-top: 7px; color: var(--text-secondary); font-size: 0.75rem;">
+        اكتب البريد أو اختر من قائمة المستخدمين المسجّلين.
+      </small>
     </div>
 
     <div class="form-group">
@@ -3417,7 +3437,7 @@ header {
 <script src="notifications.js"></script>
 
 
-<script src="app.js?v=4.4.2"></script>
+<script src="app.js?v=4.5.0"></script>
 <script>
 
 /* ═══════════════════════════════════════════════════════
@@ -5050,7 +5070,7 @@ function closeEditModalIfOutside(event) {
    تبديل التبويبات
    ═══════════════════════════════════════════════════════ */
 var ADMIN_VIEW_KEY = 'medapp_admin_view';
-var ADMIN_VIEWS = { overview: 1, files: 1, subjects: 1, users: 1, progressUsers: 1, notes: 1 };
+var ADMIN_VIEWS = { overview: 1, files: 1, subjects: 1, users: 1, progressUsers: 1, notes: 1, notifications: 1 };
 
 function saveAdminView(viewName) {
   if (!ADMIN_VIEWS[viewName]) return;
@@ -5091,6 +5111,15 @@ function switchView(viewName) {
   }
   if (viewName === 'notifications') {
     loadPushSubjects();
+    loadPushUsers();
+  }
+
+  // ⭐ v4.5.0 — أبقِ زر التبويب النشط مرئياً في الشريط القابل للتمرير.
+  const activeBtn = document.querySelector('.admin-nav-btn.active');
+  if (activeBtn && typeof activeBtn.scrollIntoView === 'function') {
+    try {
+      activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    } catch (e) {}
   }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -5103,7 +5132,8 @@ function switchView(viewName) {
 function updatePushTargetFields() {
   const type = document.getElementById('pushTargetType').value;
   document.getElementById('pushSubjectGroup').style.display = type === 'subject' ? '' : 'none';
-  document.getElementById('pushEmailGroup').style.display = type === 'email' ? '' : 'none';
+  document.getElementById('pushEmailGroup').style.display = (type === 'user' || type === 'email') ? '' : 'none';
+  if (type === 'user' || type === 'email') loadPushUsers();
 }
 
 /** ⭐ يحمّل المواد لاختيار الجمهور */
@@ -5124,6 +5154,36 @@ async function loadPushSubjects() {
   }
 }
 
+/** ⭐ v4.5.0 — قائمة بحث المستخدمين (بريد إلكتروني) */
+async function loadPushUsers() {
+  const datalist = document.getElementById('pushUserEmails');
+  if (!datalist || datalist.dataset.loaded === '1') return;
+
+  try {
+    let users = adminState.users || [];
+    if (!users.length) {
+      const { data, error } = await supabaseClient
+        .from('profiles')
+        .select('email, full_name, role')
+        .not('email', 'is', null)
+        .order('email');
+      if (error) throw error;
+      users = data || [];
+    }
+
+    const withEmail = users.filter(u => u && u.email);
+    datalist.innerHTML = withEmail.map(u =>
+      `<option value="${escapeHtml(u.email)}">${escapeHtml(u.full_name || u.email)}</option>`
+    ).join('');
+    datalist.dataset.loaded = '1';
+
+    const hint = document.getElementById('pushUserHint');
+    if (hint) hint.textContent = `تم تحميل ${withEmail.length} مستخدم — اكتب للبحث أو اختر.`;
+  } catch (e) {
+    console.warn('[admin] could not load notification users:', e);
+  }
+}
+
 /** ⭐ يرسل الإشعار عبر Edge Function */
 async function sendAdminNotification() {
   const btn = document.getElementById('pushSendBtn');
@@ -5135,6 +5195,7 @@ async function sendAdminNotification() {
 
   if (!title || !body) {
     result.innerHTML = '<span style="color: var(--medapp-red);">العنوان ونص الإشعار مطلوبان.</span>';
+    showToast('العنوان ونص الإشعار مطلوبان', 'error');
     return;
   }
 
@@ -5143,15 +5204,18 @@ async function sendAdminNotification() {
     const subjectId = document.getElementById('pushSubject').value;
     if (!subjectId) {
       result.innerHTML = '<span style="color: var(--medapp-red);">اختر المادة.</span>';
+      showToast('اختر المادة أولاً', 'error');
       return;
     }
     target.subjectId = subjectId;
-  } else if (targetType === 'email') {
+  } else if (targetType === 'user' || targetType === 'email') {
     const email = (document.getElementById('pushEmail').value || '').trim().toLowerCase();
     if (!email) {
       result.innerHTML = '<span style="color: var(--medapp-red);">اكتب البريد الإلكتروني.</span>';
+      showToast('اكتب بريد المستخدم', 'error');
       return;
     }
+    target.type = 'user';
     target.email = email;
   }
 
@@ -5164,27 +5228,39 @@ async function sendAdminNotification() {
     const accessToken = sessionData && sessionData.session ? sessionData.session.access_token : '';
 
     const response = await supabaseClient.functions.invoke('send-admin-notification', {
-      body: { title, body, target, url }
+      body: {
+        title,
+        body,
+        target,
+        target_type: target.type,
+        url
+      }
     });
 
     const error = response && response.error;
     if (error) throw error;
 
     const payload = response.data || {};
+    if (payload.error) throw new Error(payload.error);
     const sent = payload.sent || 0;
     const failed = payload.failed || 0;
 
     result.innerHTML = sent
       ? `<span style="color: var(--medapp-emerald);">تم الإرسال إلى ${sent} جهاز${failed ? ` (فشل ${failed})` : ''}.</span>`
-      : `<span style="color: var(--medapp-amber);">لم يتم العثور على أجهزة.</span>`;
+      : `<span style="color: var(--medapp-amber);">لم يتم العثور على أجهزة لهذا الجمهور.</span>`;
 
     if (sent) {
+      showToast(`تم إرسال الإشعار إلى ${sent} جهاز`, 'success');
       document.getElementById('pushTitle').value = '';
       document.getElementById('pushBody').value = '';
+    } else {
+      showToast('لم يتم العثور على أجهزة لهذا الجمهور', 'info');
     }
   } catch (e) {
     console.error('[admin] the notification could not be sent:', e);
-    result.innerHTML = `<span style="color: var(--medapp-red);">فشل الإرسال: ${(e && e.message) || e}</span>`;
+    const message = (e && e.message) || String(e);
+    result.innerHTML = `<span style="color: var(--medapp-red);">فشل الإرسال: ${escapeHtml(message)}</span>`;
+    showToast('فشل إرسال الإشعار: ' + message, 'error');
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i><span>إرسال الإشعار</span>';

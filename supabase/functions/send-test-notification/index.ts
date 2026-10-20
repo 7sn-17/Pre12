@@ -189,13 +189,14 @@ Deno.serve(async (req) => {
       data: {
         action: 'tasks',
         source: 'test',
+        channel: 'medapp_tasks',
         title,
         body,
       },
       android: {
         priority: 'high' as const,
         notification: {
-          channelId: 'medapp_reminders',
+          channelId: 'medapp_tasks',
           icon: 'ic_stat_icon',
           color: '#10b981',
           sound: 'default',

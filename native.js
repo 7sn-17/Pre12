@@ -661,12 +661,25 @@
     }
   }
 
-  /** ⭐ يجعل قناة `medapp_reminders` جاهزة قبل عرض إشعار المقدمة. */
-  function ensureForegroundChannel() {
+  /**
+   * ⭐ v4.5.0 — TASK 3: قنوات إشعارات متعددة بهويات مختلفة.
+   *   high + default sound: السلسلة، المهام، التحديثات.
+   *   default + silent: المحتوى الجديد.
+   */
+  var NOTIFICATION_CHANNELS = [
+    { id: 'medapp_reminders', name: 'تذكيرات المنصة', description: 'تذكيرات عامة من المنصة الطبية', importance: 5, visibility: 1, sound: 'default', vibration: true, lights: true, lightColor: '#10b981' },
+    { id: 'medapp_streak', name: 'سلسلة الدراسة', description: 'تنبيهات حماية سلسلة الأيام المتتالية', importance: 5, visibility: 1, sound: 'default', vibration: true, lights: true, lightColor: '#f59e0b' },
+    { id: 'medapp_tasks', name: 'المهام اليومية', description: 'تذكير بالمهام وجدول اليوم', importance: 5, visibility: 1, sound: 'default', vibration: true, lights: true, lightColor: '#10b981' },
+    { id: 'medapp_content', name: 'محتوى جديد', description: 'ملخصات وملفات جديدة في المواد', importance: 3, visibility: 1, vibration: false, lights: false },
+    { id: 'medapp_updates', name: 'تحديثات التطبيق', description: 'إصدارات جديدة وإعلانات مهمة', importance: 5, visibility: 1, sound: 'default', vibration: true, lights: true, lightColor: '#3b82f6' },
+  ];
+
+  /** ⭐ ينشئ كل قنوات الإشعارات، مع استخدام محرّك الإشعارات إن توفّر. */
+  function ensureNotificationChannels() {
     try {
       if (global.MedAppNotifications &&
-          typeof global.MedAppNotifications.ensureChannel === 'function') {
-        return Promise.resolve(global.MedAppNotifications.ensureChannel());
+          typeof global.MedAppNotifications.ensureChannels === 'function') {
+        return Promise.resolve(global.MedAppNotifications.ensureChannels());
       }
     } catch (e) {}
 
@@ -674,30 +687,49 @@
     if (!LocalNotifications || typeof LocalNotifications.createChannel !== 'function') {
       return Promise.resolve(false);
     }
-    try {
-      var channel = {
-        id: 'medapp_reminders',
-        name: 'تذكيرات المنصة',
-        description: 'تذكير بالمهام وحماية سلسلة الدراسة',
-        importance: 5,
-        visibility: 1,
-        sound: 'default',
-        vibration: true,
-        lights: true,
-        lightColor: '#10b981',
-      };
 
-      // ⭐ v4.4.2 — see notifications.js: omit the literal "default" so
-      //   Android uses the system notification sound instead of a
-      //   non-existent res/raw/default resource.
+    var jobs = NOTIFICATION_CHANNELS.map(function (config) {
+      var channel = Object.assign({}, config);
       if (channel.sound === 'default') delete channel.sound;
+      try {
+        var result = LocalNotifications.createChannel(channel);
+        if (result && typeof result.then === 'function') {
+          return result.then(function () { return true; }).catch(function () { return false; });
+        }
+        return Promise.resolve(true);
+      } catch (e) {
+        return Promise.resolve(false);
+      }
+    });
 
-      return Promise.resolve(LocalNotifications.createChannel(channel))
-        .then(function () { return true; })
-        .catch(function () { return false; });
-    } catch (e) {
-      return Promise.resolve(false);
-    }
+    return Promise.all(jobs).then(function (results) {
+      return results.every(Boolean);
+    });
+  }
+
+  /** ⭐ توافق خلفي: يستخدمه مسار عرض إشعار المقدمة. */
+  function ensureForegroundChannel() {
+    return ensureNotificationChannels();
+  }
+
+  /** ⭐ v4.5.0 — يختار قناة الإشعار حسب نوع المحتوى/الإجراء. */
+  function notificationChannelFor(data, action) {
+    var requested = String((data && (data.channel || data.channelId)) || '').toLowerCase();
+    var allowed = {
+      medapp_reminders: 1,
+      medapp_streak: 1,
+      medapp_tasks: 1,
+      medapp_content: 1,
+      medapp_updates: 1,
+    };
+    if (allowed[requested]) return requested;
+
+    var value = String(action || (data && data.action) || '').toLowerCase();
+    if (value === 'streak') return 'medapp_streak';
+    if (value === 'content') return 'medapp_content';
+    if (value === 'update') return 'medapp_updates';
+    if (value === 'tasks' || value === 'lectures') return 'medapp_tasks';
+    return 'medapp_reminders';
   }
 
   /**
@@ -742,18 +774,20 @@
     } catch (e) {}
 
     var id = (now % 2000000000) + Math.floor(Math.random() * 1000);
-    var schedule = {
-      notifications: [{
-        id: id,
-        title: title,
-        body: body,
-        smallIcon: 'ic_stat_icon',
-        channelId: 'medapp_reminders',
-        sound: 'default',
-        schedule: { at: new Date(now + 350) },
-        extra: data,
-      }]
+    var channelId = notificationChannelFor(data, data.action);
+    var localNotification = {
+      id: id,
+      title: title,
+      body: body,
+      smallIcon: 'ic_stat_icon',
+      channelId: channelId,
+      sound: 'default',
+      schedule: { at: new Date(now + 350) },
+      extra: data,
     };
+    if (channelId === 'medapp_content') delete localNotification.sound;
+
+    var schedule = { notifications: [localNotification] };
 
     Promise.resolve(ensureForegroundChannel())
       .then(function () { return LocalNotifications.schedule(schedule); })
@@ -763,6 +797,37 @@
       .catch(function (e) {
         console.warn('[native] foreground local notification failed:', e);
       });
+  }
+
+  /** ⭐ v4.5.0 — يتحقق من أن هدف الإشعار صفحة داخلية آمنة. */
+  function safeInternalTarget(target) {
+    var value = String(target || '').trim();
+    if (!value) return '';
+    if (value.charAt(0) === '/') value = value.slice(1);
+    if (!/^(index|subject|viewer|my-lectures|goals|gpa|notes|plans|progress|about|settings)\.html(\?[^#]*)?$/i.test(value)) {
+      return '';
+    }
+    return value;
+  }
+
+  /** ⭐ v4.5.0 — يبني هدف إشعار المحتوى (مادة/ملف/رابط صريح). */
+  function contentNotificationTarget(data) {
+    var explicit = safeInternalTarget(data && (data.url || data.target || data.path));
+    if (explicit) return explicit;
+
+    var subjectSlug = data && (data.subject_slug || data.subjectSlug);
+    if (subjectSlug) return 'subject.html?subject=' + encodeURIComponent(String(subjectSlug));
+
+    var subjectId = data && (data.subject_id || data.subjectId);
+    if (subjectId && global.supabaseClient) {
+      // لا نستطيع الانتظار هنا؛ نعيد الوعد عبر مسار خاص.
+      return 'subject-id:' + String(subjectId);
+    }
+
+    var fileId = data && (data.file_id || data.fileId);
+    if (fileId) return 'viewer.html?id=' + encodeURIComponent(String(fileId));
+
+    return 'index.html';
   }
 
   function routeNotification(payload) {
@@ -778,6 +843,25 @@
         global.location.href = 'index.html#' + action;
       } else if (action === 'lectures') {
         global.location.href = 'my-lectures.html';
+      } else if (action === 'content') {
+        var target = contentNotificationTarget(data);
+        if (target.indexOf('subject-id:') === 0) {
+          var subjectId = target.slice('subject-id:'.length);
+          Promise.resolve(global.supabaseClient
+            .from('subjects')
+            .select('slug')
+            .eq('id', subjectId)
+            .maybeSingle())
+            .then(function (result) {
+              var slug = result && result.data && result.data.slug;
+              global.location.href = slug
+                ? 'subject.html?subject=' + encodeURIComponent(slug)
+                : 'index.html';
+            })
+            .catch(function () { global.location.href = 'index.html'; });
+        } else {
+          global.location.href = target;
+        }
       } else if (action === 'update') {
         if (global.MedAppUpdate) global.MedAppUpdate.check({ silent: true });
       }
@@ -945,6 +1029,8 @@
     bindNetwork();
     bindFirebase();
     bindDeepLinks();
+    // ⭐ v4.5.0 — أنشئ قنوات الإشعارات المتنوّعة مبكراً.
+    ensureNotificationChannels();
     bindNotificationRouting();
 
     // ⭐ منع قائمة الضغط المطوّل (Context Menu) على الصور

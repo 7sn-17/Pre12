@@ -398,6 +398,14 @@
       .replace(/'/g, '&#39;');
   }
 
+  /**
+   * ⭐ v4.5.0 — إغلاق أي نافذة مفتوحة فوراً (يُستخدم بعد إجراء
+   *   حساس مثل حذف الحساب حتى لا تبقى طبقة عالقة تمنع اللمس).
+   */
+  function closeAll() {
+    closeCurrent(null);
+  }
+
   global.showCustomAlert = showCustomAlert;
   global.showCustomConfirm = showCustomConfirm;
   global.showCustomPrompt = showCustomPrompt;
@@ -408,6 +416,7 @@
     confirm: showCustomConfirm,
     prompt: showCustomPrompt,
     loginPrompt: showLoginPrompt,
-    openExternal: openExternal
+    openExternal: openExternal,
+    closeAll: closeAll
   };
 })(window);

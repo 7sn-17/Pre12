@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="4.4.2">
+<meta name="app-version" content="4.5.0">
 <title>السنة التحضيرية - المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -6365,7 +6365,7 @@ i.fab {
         <div class="settings-icon"><i data-lucide="info"></i></div>
         <div class="settings-text">
           <h4>حول التطبيق</h4>
-          <p id="aboutVersionText">الإصدار 4.4.2 • السنة التحضيرية</p>
+          <p id="aboutVersionText">الإصدار 4.5.0 • السنة التحضيرية</p>
         </div>
       </div>
       <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
@@ -6668,7 +6668,7 @@ i.fab {
 <script src="notifications.js"></script>
 
 
-  <script src="app.js?v=4.4.2"></script>
+  <script src="app.js?v=4.5.0"></script>
 <script>
 
     lucide.createIcons();
@@ -7367,7 +7367,21 @@ function openLastActivity() {
       await deleteCurrentAccount();
     }
 
-    /** ⭐⭐⭐ يستدعي دالة الحذف ثم يخرج */
+    /** ⭐ v4.5.0 — مهلة زمنية تمنع تجمّد الواجهة إلى الأبد. */
+    function withTimeout(promise, ms, label) {
+      return new Promise(function (resolve, reject) {
+        var timer = setTimeout(function () {
+          reject(new Error(label || 'timeout'));
+        }, Math.max(1000, Number(ms) || 10000));
+
+        Promise.resolve(promise).then(
+          function (value) { clearTimeout(timer); resolve(value); },
+          function (error) { clearTimeout(timer); reject(error); }
+        );
+      });
+    }
+
+    /** ⭐⭐⭐ يستدعي دالة الحذف ثم يخرج — مع تحرير الواجهة دائماً */
     async function deleteCurrentAccount() {
       const user = (typeof getAuthUser === 'function') ? getAuthUser() : null;
       if (!user) {
@@ -7375,41 +7389,94 @@ function openLastActivity() {
         return;
       }
 
-      showToast('جارٍ حذف الحساب…', 'info');
-
+      // ⭐ أغلِق أي طبقة متبقية قبل بدء العملية (يمنع تجمّد اللمس).
       try {
-        const { error } = await supabaseClient.functions.invoke('delete-user-account', {
-          body: { confirm: 'DELETE' }
-        });
-        if (error) throw error;
-      } catch (e) {
-        console.error('[delete-account]', e);
-        showToast('تعذّر حذف الحساب: ' + ((e && e.message) || 'خطأ غير معروف'), 'error');
-        if (typeof showCustomAlert === 'function') {
-          showCustomAlert(
-            'تعذّر حذف الحساب',
-            'السبب: ' + ((e && e.message) || 'خطأ غير معروف'),
-            'error'
-          );
+        if (window.MedAppUI && typeof window.MedAppUI.closeAll === 'function') {
+          window.MedAppUI.closeAll();
         }
-        return;
+      } catch (e) {}
+
+      const btn = document.getElementById('deleteAccountItem');
+      if (btn && btn.dataset.deleting === '1') return;
+
+      const originalHtml = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.dataset.deleting = '1';
+        btn.disabled = true;
+        btn.setAttribute('aria-busy', 'true');
+        btn.innerHTML =
+          '<div class="settings-item-left">' +
+            '<div class="settings-icon"><i class="fa-solid fa-spinner fa-spin"></i></div>' +
+            '<div class="settings-text">' +
+              '<h4>جارٍ حذف الحساب…</h4>' +
+              '<p>يرجى الانتظار، لا تغلق التطبيق</p>' +
+            '</div>' +
+          '</div>';
       }
 
-      // ⭐ تنظيف محلي ثم خروج
       try {
-        if (typeof clearCachedProfile === 'function') clearCachedProfile();
-        localStorage.removeItem('pending_verification');
-        localStorage.removeItem('medapp_pending_email');
-        sessionStorage.removeItem('pending_verification');
-        sessionStorage.removeItem('medapp_pending_email');
-      } catch (e) {}
+        showToast('جارٍ حذف الحساب…', 'info');
 
-      try {
-        if (typeof signOut === 'function') await signOut();
-      } catch (e) {}
+        // ⭐ لا ننتظر أكثر من 10 ثوانٍ — وإلا نُحرّر الواجهة ونُظهر خطأً.
+        const response = await withTimeout(
+          supabaseClient.functions.invoke('delete-user-account', {
+            body: { confirm: 'DELETE' }
+          }),
+          10000,
+          'delete-account-timeout'
+        );
 
-      showToast('تم حذف الحساب', 'success');
-      setTimeout(function () { window.location.href = 'index.html'; }, 900);
+        if (response && response.error) throw response.error;
+        if (response && response.data && response.data.error) {
+          throw new Error(response.data.error);
+        }
+
+        // ⭐ إغلاق أي نافذة/طبقة عالقة قبل المغادرة.
+        try {
+          if (window.MedAppUI && typeof window.MedAppUI.closeAll === 'function') {
+            window.MedAppUI.closeAll();
+          }
+        } catch (e) {}
+
+        // ⭐ تنظيف محلي ثم خروج فوري — بلا مزامنة قد تتعلّق بعد حذف الحساب.
+        try {
+          if (typeof clearCachedProfile === 'function') clearCachedProfile();
+          localStorage.removeItem('pending_verification');
+          localStorage.removeItem('medapp_pending_email');
+          sessionStorage.removeItem('pending_verification');
+          sessionStorage.removeItem('medapp_pending_email');
+        } catch (e) {}
+
+        try {
+          if (supabaseClient && supabaseClient.auth && typeof supabaseClient.auth.signOut === 'function') {
+            await withTimeout(
+              supabaseClient.auth.signOut({ scope: 'local' }),
+              4000,
+              'signout-timeout'
+            );
+          }
+        } catch (e) {
+          console.warn('[delete-account] local sign-out timed out:', e);
+        }
+
+        showToast('تم حذف الحساب', 'success');
+        setTimeout(function () { window.location.replace('index.html'); }, 700);
+      } catch (e) {
+        console.error('[delete-account]', e);
+        try {
+          if (window.MedAppUI && typeof window.MedAppUI.closeAll === 'function') {
+            window.MedAppUI.closeAll();
+          }
+        } catch (closeError) {}
+        showToast('تعذر حذف الحساب. يرجى المحاولة لاحقاً.', 'error');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.removeAttribute('aria-busy');
+          delete btn.dataset.deleting;
+          btn.innerHTML = originalHtml;
+        }
+      }
     }
 
     // ============================================

@@ -598,48 +598,108 @@
      ══════════════════════════════════════════════════════════ */
 
   /**
-   * ⭐ v4.4.1 — قناة `medapp_reminders` عالية الأهمية وظاهرة على شاشة القفل.
-   *   importance: 5 (IMPORTANCE_MAX) و visibility: 1 (PUBLIC) حتى يظهر
-   *   الإشعار كـ heads-up banner. تُستدعى عند الإقلاع وعند كل جدولة.
-   * @returns {Promise<boolean>} true إذا أصبحت القناة جاهزة.
+   * ⭐ v4.5.0 — عائلة قنوات الإشعارات (TASK 3).
+   *   كل قناة لها هوية وصوت مختلفان حتى يفهم المستخدم نوع الإشعار
+   *   من دون فتحه: السلسلة، المهام، المحتوى، التحديثات.
    */
-  function ensureChannel() {
+  var NOTIFICATION_CHANNELS = [
+    {
+      id: 'medapp_reminders',
+      name: 'تذكيرات المنصة',
+      description: 'تذكيرات عامة من المنصة الطبية',
+      importance: 5,
+      visibility: 1,
+      sound: 'default',
+      vibration: true,
+      lights: true,
+      lightColor: '#10b981',
+    },
+    {
+      id: 'medapp_streak',
+      name: 'سلسلة الدراسة',
+      description: 'تنبيهات حماية سلسلة الأيام المتتالية',
+      importance: 5,
+      visibility: 1,
+      sound: 'default',
+      vibration: true,
+      lights: true,
+      lightColor: '#f59e0b',
+    },
+    {
+      id: 'medapp_tasks',
+      name: 'المهام اليومية',
+      description: 'تذكير بالمهام وجدول اليوم',
+      importance: 5,
+      visibility: 1,
+      sound: 'default',
+      vibration: true,
+      lights: true,
+      lightColor: '#10b981',
+    },
+    {
+      id: 'medapp_content',
+      name: 'محتوى جديد',
+      description: 'ملخصات وملفات جديدة في المواد',
+      importance: 3,
+      visibility: 1,
+      vibration: false,
+      lights: false,
+    },
+    {
+      id: 'medapp_updates',
+      name: 'تحديثات التطبيق',
+      description: 'إصدارات جديدة وإعلانات مهمة',
+      importance: 5,
+      visibility: 1,
+      sound: 'default',
+      vibration: true,
+      lights: true,
+      lightColor: '#3b82f6',
+    },
+  ];
+
+  /**
+   * ⭐ v4.5.0 — ينشئ كل القنوات مرّة واحدة. إنشاء القناة آمن ومتكرّر
+   *   (Android يتجاهل الطلب إذا كانت القناة موجودة مسبقاً).
+   * @returns {Promise<boolean>} true إذا أصبحت كل القنوات جاهزة.
+   */
+  function ensureChannels() {
     var LocalNotifications = plugin('LocalNotifications');
     if (!LocalNotifications || typeof LocalNotifications.createChannel !== 'function') {
       return Promise.resolve(false);
     }
 
-    try {
-      var channel = {
-        id: 'medapp_reminders',
-        name: 'تذكيرات المنصة',
-        description: 'تذكير بالمهام وحماية سلسلة الدراسة',
-        importance: 5,
-        visibility: 1,
-        sound: 'default',
-        vibration: true,
-        lights: true,
-        lightColor: '#10b981',
-      };
+    var jobs = NOTIFICATION_CHANNELS.map(function (config) {
+      var channel = Object.assign({}, config);
 
-      // ⭐ v4.4.2 — Capacitor interprets `sound` as a res/raw resource
-      //   name, so the literal "default" would point at a missing file.
-      //   Omitting the key lets Android use the system default sound.
+      // ⭐ Capacitor interprets `sound` as a res/raw resource name, so
+      //   the literal "default" would point at a missing file. Omitting
+      //   the key lets Android use the system default notification sound.
       if (channel.sound === 'default') delete channel.sound;
 
-      var result = LocalNotifications.createChannel(channel);
-
-      if (result && typeof result.then === 'function') {
-        return result.then(function () { return true; }).catch(function (e) {
-          console.warn('[notifications] could not create the channel:', e);
-          return false;
-        });
+      try {
+        var result = LocalNotifications.createChannel(channel);
+        if (result && typeof result.then === 'function') {
+          return result.then(function () { return true; }).catch(function (e) {
+            console.warn('[notifications] could not create the channel ' + channel.id + ':', e);
+            return false;
+          });
+        }
+        return Promise.resolve(true);
+      } catch (e) {
+        console.warn('[notifications] could not create the channel ' + channel.id + ':', e);
+        return Promise.resolve(false);
       }
-      return Promise.resolve(true);
-    } catch (e) {
-      console.warn('[notifications] could not create the channel:', e);
-      return Promise.resolve(false);
-    }
+    });
+
+    return Promise.all(jobs).then(function (results) {
+      return results.every(Boolean);
+    });
+  }
+
+  /** ⭐ توافق خلفي: الاسم القديم يشير إلى إنشاء كل القنوات. */
+  function ensureChannel() {
+    return ensureChannels();
   }
 
   /**
@@ -670,7 +730,7 @@
         title: message.title,
         body: message.body,
         smallIcon: 'ic_stat_icon',
-        channelId: 'medapp_reminders',
+        channelId: 'medapp_tasks',
         sound: 'default',
         schedule: { at: new Date(Date.now() + delay) },
         extra: { category: message.category }
@@ -722,7 +782,7 @@
             title: '⏰ اختبار التذكير المحلي',
             body: 'إذا وصلتك هذه الرسالة فالتذكير المحلي يعمل — بعد ' + wait + ' ثوانٍ.',
             smallIcon: 'ic_stat_icon',
-            channelId: 'medapp_reminders',
+            channelId: 'medapp_tasks',
             sound: 'default',
             schedule: { at: at },
             extra: { action: 'tasks', test: 'local' }
@@ -877,7 +937,7 @@
         title: '📚 مراجعة يومية',
         body: '📚 لا تنسَ مراجعة مهامك اليومية. أنت تستطيع!',
         smallIcon: 'ic_stat_icon',
-        channelId: 'medapp_reminders',
+        channelId: 'medapp_tasks',
         sound: 'default',
         schedule: { on: { hour: DAILY_REMINDER_HOUR, minute: 0 }, every: 'day' },
         extra: { action: 'tasks' }
@@ -904,11 +964,42 @@
    *   streak  → ورقة السلسلة
    *   lectures → محاضراتي
    */
+  /** ⭐ v4.5.0 — هدف داخلي آمن فقط. */
+  function safeInternalTarget(target) {
+    var value = String(target || '').trim();
+    if (!value) return '';
+    if (value.charAt(0) === '/') value = value.slice(1);
+    if (!/^(index|subject|viewer|my-lectures|goals|gpa|notes|plans|progress|about|settings)\.html(\?[^#]*)?$/i.test(value)) {
+      return '';
+    }
+    return value;
+  }
+
+  /** ⭐ v4.5.0 — يبني هدف إشعار المحتوى. */
+  function contentTarget(data) {
+    var explicit = safeInternalTarget(data && (data.url || data.target || data.path));
+    if (explicit) return explicit;
+
+    var subjectSlug = data && (data.subject_slug || data.subjectSlug);
+    if (subjectSlug) return 'subject.html?subject=' + encodeURIComponent(String(subjectSlug));
+
+    var subjectId = data && (data.subject_id || data.subjectId);
+    if (subjectId && global.supabaseClient) return 'subject-id:' + String(subjectId);
+
+    var fileId = data && (data.file_id || data.fileId);
+    if (fileId) return 'viewer.html?id=' + encodeURIComponent(String(fileId));
+
+    return 'index.html';
+  }
+
   function routeNotificationAction(payload) {
     var data = payload || {};
     if (typeof data === 'string') {
       try { data = JSON.parse(data); } catch (e) { data = { action: data }; }
     }
+    // ⭐ v4.5.0 — بعض الإضافات تمرّر الحمولة داخل data.
+    if (data && data.data && typeof data.data === 'object') data = data.data;
+
     var action = String(data.action || data.target || '').toLowerCase();
 
     if (!action) return false;
@@ -943,6 +1034,28 @@
 
     if (action === 'lectures') {
       try { global.location.href = 'my-lectures.html'; } catch (e) {}
+      return true;
+    }
+
+    if (action === 'content') {
+      var target = contentTarget(data);
+      if (target.indexOf('subject-id:') === 0) {
+        var subjectId = target.slice('subject-id:'.length);
+        Promise.resolve(global.supabaseClient
+          .from('subjects')
+          .select('slug')
+          .eq('id', subjectId)
+          .maybeSingle())
+          .then(function (result) {
+            var slug = result && result.data && result.data.slug;
+            global.location.href = slug
+              ? 'subject.html?subject=' + encodeURIComponent(slug)
+              : 'index.html';
+          })
+          .catch(function () { global.location.href = 'index.html'; });
+      } else {
+        try { global.location.href = target; } catch (e) {}
+      }
       return true;
     }
 
@@ -1003,6 +1116,7 @@
     refreshPushToken: refreshPushToken,
     ensurePushToken: ensurePushToken,
     ensureChannel: ensureChannel,
+    ensureChannels: ensureChannels,
     readAndSavePushToken: readAndSavePushToken,
     attachPushListener: attachPushListener,
     scheduleDailyReminder: scheduleDailyReminder,

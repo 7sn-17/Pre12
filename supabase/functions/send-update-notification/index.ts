@@ -186,11 +186,13 @@ Deno.serve(async (req) => {
     const result = await sendBatch(sender, tokens, {
       title,
       body,
+      channelId: 'medapp_updates',
       data: {
         action: 'update',
         version: version,
         notes: notes,
         target: 'index.html',
+        channel: 'medapp_updates',
       },
     });
 

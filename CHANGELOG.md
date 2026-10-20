@@ -2,7 +2,18 @@
 
 **التطبيق الرسمي لطلاب الطب في سوريا**
 
-⬇️ [تحميل v4.4.2](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+⬇️ [تحميل v4.5.0](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+
+## ✨ v4.5.0 — النظام الذكي للإشعارات ولوحة الإدارة
+
+- **حذف الحساب بلا تجمّد**: مهلة 10 ثوانٍ، مؤشر تحميل، إغلاق النوافذ،
+  وخروج محلي فوري مع رسالة خطأ واضحة عند الفشل.
+- **توجيه وقنوات ذكية**: `data.action` يفتح التحديث أو المهام أو السلسلة أو
+  المحاضرات أو المادة/الملف، مع قنوات `medapp_streak` و`medapp_tasks`
+  و`medapp_updates` عالية الأهمية وصوت النظام، و`medapp_content` هادئة.
+- **محرّك ولوحة إدارة**: رسائل الغياب والمحتوى والسلسلة، وتبويب إشعارات
+  باستهداف الجميع/مستخدم/مادة وشريط تنقل أفقي قابل للتمرير.
+- **الإصدار**: 4.5.0 (‏versionCode 27).
 
 ## ✨ v4.4.2 — أيقونة السماعة الدقيقة + الصوت الافتراضي
 

@@ -128,7 +128,7 @@ function dayKey(date: Date): string {
 function firstName(fullName: string | null, email: string | null): string {
   if (fullName && fullName.trim()) return fullName.trim().split(' ')[0];
   if (email) return email.split('@')[0];
-  return 'يا بطل';
+  return 'بطل';
 }
 
 function json(body: unknown, status = 200) {
@@ -214,11 +214,33 @@ Deno.serve(async (req) => {
       .select('user_id, plan_date, subject, task_title, completed, completed_at');
     if (progressError) throw progressError;
 
-    const { data: recentFiles } = await admin
+    const { data: recentFiles, error: recentFilesError } = await admin
       .from('files')
-      .select('title, subjects')
+      .select('title, subject_id, created_at')
       .gte('created_at', new Date(Date.now() - 24 * 3600 * 1000).toISOString())
+      .order('created_at', { ascending: false })
       .limit(5);
+    if (recentFilesError) {
+      console.warn('[smart-engine] could not read recent files:', recentFilesError.message);
+    }
+
+    // ⭐ v4.5.0 — نربط كل ملف بمادته (الاسم + slug) لبناء رابط المحتوى.
+    const recentSubjectIds: string[] = Array.from(new Set(
+      (recentFiles || []).map((f: any) => f.subject_id).filter(Boolean),
+    ));
+    const subjectById = new Map<string, { id: string; name: string; slug: string }>();
+    if (recentSubjectIds.length) {
+      const { data: subjects, error: subjectsError } = await admin
+        .from('subjects')
+        .select('id, name, slug')
+        .in('id', recentSubjectIds);
+      if (subjectsError) {
+        console.warn('[smart-engine] could not read recent subjects:', subjectsError.message);
+      }
+      for (const subject of subjects || []) {
+        subjectById.set(subject.id, subject as any);
+      }
+    }
 
     /* ── 3) حساب حالة كل مستخدم ── */
     const byUser = new Map<string, any[]>();
@@ -272,24 +294,26 @@ Deno.serve(async (req) => {
 
       /* ── 4) اختيار الفئة ── */
       let category: keyof typeof TEMPLATES | null = null;
-      let subjectName = '';
+      let contentSubject: { id: string; name: string; slug: string } | null = null;
+      let contentFileTitle = '';
 
       if (totalDone === 0 && inactiveDays <= 1) {
         category = 'onboarding';
-      } else if (inactiveDays >= 7) {
-        category = 'reengagement';
-      } else if (inactiveDays >= 3) {
-        category = 'reengagement';
-      } else if (inactiveDays >= 1 && todayTotal === 0) {
+      } else if (inactiveDays >= 1) {
+        // ⭐ v4.5.0 — Dormancy: رسالة واضحة وموحّدة لكل من غاب يوماً أو أكثر.
         category = 'reengagement';
       } else if (hour >= 20 && todayDone === 0 && streak > 0) {
         category = 'streak';
       } else if (recentFiles && recentFiles.length) {
-        const file = pick(recentFiles);
-        subjectName = (file as any).subjects || '';
-        if (subjectName) {
-          category = 'content';
-          vars.subject = subjectName;
+        const candidates = recentFiles.filter((f: any) => f.subject_id && subjectById.has(f.subject_id));
+        if (candidates.length) {
+          const file: any = pick(candidates);
+          contentSubject = subjectById.get(file.subject_id) || null;
+          contentFileTitle = String(file.title || '');
+          if (contentSubject) {
+            category = 'content';
+            vars.subject = contentSubject.name;
+          }
         }
       }
 
@@ -307,13 +331,50 @@ Deno.serve(async (req) => {
       }
 
       const templates = TEMPLATES[category];
-      const title = fill(pick(templates.titles), vars);
-      const body = fill(pick(templates.bodies), vars);
+      let title = fill(pick(templates.titles), vars);
+      let body = fill(pick(templates.bodies), vars);
+
+      // ⭐ v4.5.0 — قنوات وإجراءات ذكية (TASK 3 + TASK 4).
+      let channelId = 'medapp_tasks';
+      const data: Record<string, string> = {
+        category,
+        action: 'tasks',
+        target: 'index.html',
+        url: 'index.html',
+        source: 'smart-engine',
+        channel: 'medapp_tasks',
+      };
+
+      if (category === 'reengagement') {
+        body = `👋 اشتقنا لك يا ${vars.name}! عد لمهامك الآن.`;
+        data.action = 'tasks';
+        data.target = 'index.html#tasks';
+        data.url = 'index.html#tasks';
+      } else if (category === 'content' && contentSubject) {
+        body = `📚 تمت إضافة ملخص جديد في مادة ${contentSubject.name}.`;
+        channelId = 'medapp_content';
+        data.action = 'content';
+        data.channel = 'medapp_content';
+        data.subject_id = contentSubject.id;
+        data.subject_name = contentSubject.name;
+        data.subject_slug = contentSubject.slug;
+        const subjectUrl = `subject.html?subject=${encodeURIComponent(contentSubject.slug)}`;
+        data.target = subjectUrl;
+        data.url = subjectUrl;
+        if (contentFileTitle) data.file_title = contentFileTitle;
+      } else if (category === 'streak') {
+        channelId = 'medapp_streak';
+        data.action = 'streak';
+        data.channel = 'medapp_streak';
+        data.target = 'index.html#streak';
+        data.url = 'index.html#streak';
+      }
 
       const message: FcmMessage = {
         title,
         body,
-        data: { category, target: 'index.html', source: 'smart-engine' },
+        data,
+        channelId,
       };
 
       const result = await sendBatch(sender, [profile.fcm_token], message, 1);
