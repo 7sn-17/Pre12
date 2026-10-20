@@ -93,7 +93,8 @@
     var assets = release.assets || [];
     for (var i = 0; i < assets.length; i++) {
       var name = String(assets[i].name || '');
-      if (name.indexOf('.apk') > -1) {
+      // ⭐ TASK 3: يجب أن ينتهي الاسم بـ .apk (لا ملف .apk.sha256)
+      if (/\.apk$/i.test(name)) {
         apkUrl = assets[i].browser_download_url || '';
         break;
       }

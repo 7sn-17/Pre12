@@ -344,9 +344,14 @@ jobs:
           echo
 
           if [ "$STATUS" != "200" ]; then
-            echo "::error::the update notification failed (HTTP $STATUS) — verify SUPABASE_SERVICE_ROLE_KEY matches the project's service key."
+            echo "::error::the update notification failed (HTTP $STATUS) — verify the notification credentials."
           else
-            echo "✅ the update notification was sent to all registered devices."
+            SENT=$(sed -n 's/.*"sent":\([0-9]\+\).*/\1/p' /tmp/announce.json | head -1)
+            if [ "${SENT:-0}" = "0" ]; then
+              echo "::warning::the notification was accepted, but no device has an FCM token yet — open v$VERSION, sign in, and allow notifications."
+            else
+              echo "✅ the update notification was sent to $SENT device(s)."
+            fi
           fi
 
       - name: 🌐 Verify the published asset
