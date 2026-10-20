@@ -1,22 +1,27 @@
 // ============================================================
 // search.js — محرّك البحث الشامل (Universal Search)
 // ------------------------------------------------------------
-// ⭐ Phase 29 — أُعيد بناؤه من الصفر
-//
-//   • بحث مؤجَّر (debounce) 300 مللي ثانية
-//   • الملفات:  supabase.from('files').select('*').ilike('title', '%q%')
+// ⭐⭐ v4.6.4 — إعادة بناء كاملة (Phase 33)
+//   • بحث حيّ حقيقي: مستمع 'input' واحد فقط، بلا مفاتيح مخصّصة
+//     وبلا keydown/keyup/change/submit على حقل البحث.
+//   • تأخير صارم 250ms مع إلغاء الطلبات القديمة.
+//   • تصفية محلية بـ includes() (تجاهل حالة الأحرف) قبل الشبكة.
+//   • حدّ 50 نتيجة + رسم عبر requestAnimationFrame (منع التجمّد).
+//   • الملفّات:  supabase.from('files').select('*').ilike('title', '%q%')
 //   • المواد:  supabase.from('subjects').select('id, name').ilike('name', '%q%')
 //   • دمج مع الذاكرة المحلية + إزالة التكرار
-//   • "لا توجد نتائج" عند الفراغ
 //
 // ⭐ يعمل على الويب والتطبيق معاً ( supabaseClient عامّ ).
 // ============================================================
 (function (global) {
   'use strict';
 
-  var DEBOUNCE_MS = 150;
+  // ⭐ v4.6.4 — تأخير صارم واحد لكل شيء.
+  var DEBOUNCE_MS = 250;
   var MAX_FILES = 40;
   var MAX_SUBJECTS = 12;
+  // ⭐ حدّ النتائج المعروضة — يمنع تجميد الواجهة مع الملفات الكبيرة.
+  var MAX_RESULTS = 50;
 
   var timer = null;
   var requestId = 0;
@@ -26,17 +31,47 @@
   }
 
   function normalize(value) {
-    return String(value || '').toLowerCase().trim();
+    return String(value === undefined || value === null ? '' : value).toLowerCase().trim();
   }
 
-  /** ⭐ البحث المحلي (الذاكرة) */
+  /** ⭐ اسم المادة من الملف (يدعم السلسلة والعنصر) */
+  function subjectNameOf(file) {
+    if (!file) return '';
+    if (typeof file.subjects === 'string') return file.subjects;
+    if (file.subjects && file.subjects.name) return file.subjects.name;
+    if (file.subject_name) return file.subject_name;
+    if (file.subject) return file.subject;
+    return '';
+  }
+
+  /**
+   * ⭐ التصفية المحلية — includes() مع تجاهل حالة الأحرف.
+   *   ⭐ v4.6.4: تُطبّع الاستعلام داخلياً، فتصحّ مع أي حرف صغير/كبير.
+   */
+  function matchesText(file, q) {
+    if (!file) return false;
+    var needle = normalize(q);
+    if (!needle) return false;
+    var title = String(file.title || '').toLowerCase();
+    if (title.includes(needle)) return true;
+    var description = String(file.description || '').toLowerCase();
+    if (description.includes(needle)) return true;
+    var subject = String(subjectNameOf(file) || '').toLowerCase();
+    if (subject.includes(needle)) return true;
+    return false;
+  }
+
+  /** ⭐ البحث المحلي (الذاكرة) — بحدّ أقصى للنتائج */
   function searchLocal(cache, q) {
     var list = Array.isArray(cache) ? cache : [];
-    return list.filter(function (file) {
-      return (file.title || '').toLowerCase().indexOf(q) > -1 ||
-        (file.description || '').toLowerCase().indexOf(q) > -1 ||
-        ((file.subjects && file.subjects.name) || '').toLowerCase().indexOf(q) > -1;
-    });
+    var out = [];
+    for (var i = 0; i < list.length; i++) {
+      if (matchesText(list[i], q)) {
+        out.push(list[i]);
+        if (out.length >= MAX_RESULTS) break;
+      }
+    }
+    return out;
   }
 
   /** ⭐ البحث السحابي: الملفات + المواد */
@@ -44,7 +79,7 @@
     var supa = client();
     var out = { files: [], subjects: [], error: null };
 
-    if (!supa || !navigator.onLine) return out;
+    if (!supa || !global.navigator || global.navigator.onLine === false) return out;
 
     try {
       var filesRes = await supa
@@ -52,8 +87,8 @@
         .select('*, subjects(name)')
         .ilike('title', '%' + q + '%')
         .limit(MAX_FILES);
-      if (filesRes.error) throw filesRes.error;
-      out.files = filesRes.data || [];
+      if (filesRes && filesRes.error) throw filesRes.error;
+      out.files = (filesRes && filesRes.data) || [];
     } catch (e) {
       out.error = e;
     }
@@ -64,12 +99,29 @@
         .select('id, name, slug')
         .ilike('name', '%' + q + '%')
         .limit(MAX_SUBJECTS);
-      if (!subjectsRes.error) out.subjects = subjectsRes.data || [];
+      if (subjectsRes && !subjectsRes.error) out.subjects = subjectsRes.data || [];
     } catch (e) {
-      // ⭐ MATERIAL خطأ غير قاتل — الملفات تكفي
+      // ⭐ خطأ غير قاتل — الملفات تكفي
     }
 
     return out;
+  }
+
+  /** ⭐ دمج النتائج المحلية مع السحابية + إزالة التكرار + حدّ 50 */
+  function mergeFiles(local, cloud) {
+    var seen = Object.create(null);
+    var files = [];
+    var list = (local || []).concat(cloud || []);
+    for (var i = 0; i < list.length; i++) {
+      var file = list[i];
+      if (!file) continue;
+      var key = file.id || ('t:' + (file.title || ''));
+      if (!key || seen[key]) continue;
+      seen[key] = 1;
+      files.push(file);
+      if (files.length >= MAX_RESULTS) break;
+    }
+    return files;
   }
 
   /**
@@ -78,56 +130,64 @@
   async function run(query, options) {
     options = options || {};
     var q = normalize(query);
-    if (!q) return { files: [], subjects: [], query: q };
+    if (!q) return { files: [], subjects: [], query: '', error: null };
 
     var local = searchLocal(options.cache, q);
     var cloud = await searchCloud(q);
 
-    // ⭐ دمج + إزالة التكرار
-    var seen = Object.create(null);
-    var files = [];
-    local.concat(cloud.files || []).forEach(function (file) {
-      var key = file.id || ('t:' + (file.title || ''));
-      if (!key || seen[key]) return;
-      seen[key] = 1;
-      files.push(file);
-    });
-
-    var seenSubjects = Object.create(null);
-    var subjects = [];
-    (cloud.subjects || []).forEach(function (subject) {
-      var key = subject.id || subject.name;
-      if (!key || seenSubjects[key]) return;
-      seenSubjects[key] = 1;
-      subjects.push(subject);
-    });
-
-    return { files: files, subjects: subjects, query: q, error: cloud.error || null };
+    return {
+      files: mergeFiles(local, cloud.files),
+      subjects: (cloud.subjects || []).slice(0, MAX_SUBJECTS),
+      query: q,
+      error: cloud.error || null
+    };
   }
 
   /**
-   * ⭐⭐ بحث مؤجَّر — يُستدعى عند كل ضغطة مفتاح.
+   * ⭐⭐ debounce صحيح: آخر استدعاء فقط هو الذي ينفّذ.
+   * @param {function} fn
+   * @param {number} wait
+   */
+  function debounce(fn, wait) {
+    var handle = null;
+    return function () {
+      var args = arguments;
+      var self = this;
+      if (handle) clearTimeout(handle);
+      handle = setTimeout(function () {
+        handle = null;
+        fn.apply(self, args);
+      }, Math.max(0, Number(wait) || 0));
+    };
+  }
+
+  /**
+   * ⭐⭐ بحث مؤجَّر — يُستدعى من مستمع 'input' فقط.
    * @param {string} query
    * @param {function} onResult  (result) => void
    * @param {function} onLoading () => void
-   * @param {object} options     { cache, debounce, onLocal }
+   * @param {object} options     { cache, onLocal }
    *
-   * ⭐ v4.6.1: options.onLocal (localFiles) => void — تُستدعى فوراً
-   *   بالنتائج المحلية، فلا ينتظر المستخدم السحابة لأرى أول حرف.
+   * ⭐ v4.6.4: التأخير صارم 250ms، والنتائج المحلية تظهر فوراً
+   *   (بلا شبكة) فلا يضطر المستخدم للانتظار.
    */
   function debounced(query, onResult, onLoading, options) {
+    options = options || {};
     var q = normalize(query);
 
-    if (timer) clearTimeout(timer);
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
 
     if (!q) {
       requestId++;
-      if (typeof onResult === 'function') onResult({ files: [], subjects: [], query: '' });
+      if (typeof onResult === 'function') onResult({ files: [], subjects: [], query: '', error: null });
       return;
     }
 
-    // ⭐ النتائج المحلية فوراً.
-    if (options && typeof options.onLocal === 'function') {
+    // ⭐ 1) النتائج المحلية فوراً — أول حرف يعطي نتيجة.
+    if (typeof options.onLocal === 'function') {
       try {
         options.onLocal(searchLocal(options.cache, q));
       } catch (e) {
@@ -138,24 +198,24 @@
     if (typeof onLoading === 'function') onLoading();
 
     var id = ++requestId;
-    // ⭐ v4.6.3 — HOTFIX: البحث الحيّ — لا ننتظر أكثر من 150ms مهما
-    //   كان التأخير الذي يطلبه المستدعي (150ms = فوري عملياً).
-    var wait = options && options.debounce
-      ? Math.min(Number(options.debounce) || DEBOUNCE_MS, DEBOUNCE_MS)
-      : DEBOUNCE_MS;
     timer = setTimeout(async function () {
+      timer = null;
       var result = await run(q, options);
       // ⭐ نتجاهل النتائج القديمة إن وصل بحث أحدث
       if (id !== requestId) return;
       if (typeof onResult === 'function') onResult(result);
-    }, wait);
+    }, DEBOUNCE_MS);
   }
 
   global.MedAppSearch = {
     DEBOUNCE_MS: DEBOUNCE_MS,
+    MAX_RESULTS: MAX_RESULTS,
     run: run,
     debounced: debounced,
+    debounce: debounce,
     searchLocal: searchLocal,
+    matchesText: matchesText,
+    mergeFiles: mergeFiles,
     normalize: normalize
   };
 })(window);

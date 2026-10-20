@@ -525,7 +525,9 @@ body.single-page .pdf-page.current { margin-bottom: 0; }
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 70px 16px 16px;
+  /* ⭐ v4.6.4 — دفع نافذة البحث أسفل النتش/شريط الحالة */
+  padding: 16px;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
   opacity: 0;
   visibility: hidden;
   transition: all 0.25s;
@@ -537,12 +539,15 @@ body.single-page .pdf-page.current { margin-bottom: 0; }
   width: 100%;
   max-width: 500px;
   background: var(--bg-overlay);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong, rgba(16, 185, 129, 0.35));
   border-radius: 20px;
   padding: 14px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   transform: translateY(-20px);
   transition: transform 0.25s;
+  /* ⭐ v4.6.4 — زجاج نظيف */
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 .search-overlay.visible .search-box { transform: translateY(0); }
@@ -846,6 +851,10 @@ main.viewer {
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ⭐ v4.6.4 — حدّ أقصى للمطابقات المعروضة (منع التجمّد)
+const MAX_SEARCH_MATCHES = 300;
+const MAX_SEARCH_RESULTS = 50;
 
 const state = {
   fileId: null,
@@ -1533,9 +1542,12 @@ function searchDocument(term) {
     const entry = state.textIndex.get(page);
     if (!entry || !entry.text) continue;
     const hay = entry.text.toLowerCase();
+    // ⭐ v4.6.4 — includes(): مطابقة متجاهلة لحالة الأحرف
+    if (!hay.includes(q)) continue;
     let idx = hay.indexOf(q);
     let guard = 0;
-    while (idx >= 0 && guard < 300) {
+    // ⭐ v4.6.4 — حدّ أعلى للمطابقات (منع التجمّد مع الملفات الضخمة)
+    while (idx >= 0 && guard < 300 && matches.length < MAX_SEARCH_MATCHES) {
       let item = null;
       for (const it of entry.items) {
         if (idx >= it.start && idx < it.end) { item = it; break; }
@@ -1592,7 +1604,11 @@ function renderSearchResults() {
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'
   }[c]));
 
-  els.searchResults.innerHTML = groups.map((g) => {
+  // ⭐ v4.6.4 — حدّ 50 نتيجة + رسم عبر requestAnimationFrame
+  const shown = groups.slice(0, MAX_SEARCH_RESULTS);
+
+  const paintResults = () => {
+  els.searchResults.innerHTML = shown.map((g) => {
     const idx = g.first;
     const active = idx === state.searchMatchIndex ? ' active' : '';
     const snippet = escapeHtml(g.snippet).replace(
@@ -1617,6 +1633,14 @@ function renderSearchResults() {
       }
     });
   });
+  };
+
+  // ⭐ v4.6.4 — الرسم عبر requestAnimationFrame (لا تجميد الواجهة)
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(paintResults);
+  } else {
+    paintResults();
+  }
 }
 
 /** ⭐ عدّاد النتائج + تفعيل الأسهم */
@@ -1907,25 +1931,24 @@ els.searchOverlay.addEventListener('click', (e) => {
   if (e.target === els.searchOverlay) closeSearch();
 });
 
-let searchTimeout;
+// ⭐⭐ v4.6.4 — مستمع واحد فقط: 'input'. لا keydown ولا keyup ولا
+//   change ولا submit على حقل البحث — بحث حيّ حقيقي من أول حرف.
+let searchTimeout = null;
 els.searchInput.addEventListener('input', (e) => {
-  clearTimeout(searchTimeout);
+  if (searchTimeout) {
+    clearTimeout(searchTimeout);
+    searchTimeout = null;
+  }
   const value = e.target.value;
   if (!String(value || '').trim()) {
     searchDocument('');
     return;
   }
-  // ⭐ v4.6.3 — HOTFIX: البحث ينفّذ مباشرةً أثناء الكتابة (150ms).
-  searchTimeout = setTimeout(() => performSearch(value), 150);
-});
-
-// ⭐ v4.6.3 — HOTFIX: أزلنا تشغيل البحث بـEnter (كان يتطلّب ضغط
-//   Enter). البحث صار تلقائياً من أول حرف. بقي Escape يغلق النافذة.
-els.searchInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    e.preventDefault();
-    closeSearch();
-  }
+  // ⭐ v4.6.4 — تأخير صارم 250ms (يمنع التجمّد) والنتيجة فورية عملياً.
+  searchTimeout = setTimeout(() => {
+    searchTimeout = null;
+    performSearch(value);
+  }, 250);
 });
 
 // ⭐ v4.6.2 — أسهما «التالي/السابق» للتنقّل بين المطابقات

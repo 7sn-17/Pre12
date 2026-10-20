@@ -1,6 +1,6 @@
 {
   "name": "medical-year-platform",
-  "version": "4.6.3",
+  "version": "4.6.4",
   "private": true,
   "description": "المنصة الطبية — السنة التحضيرية (static site + partials build)",
   "scripts": {

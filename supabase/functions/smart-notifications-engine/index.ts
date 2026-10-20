@@ -147,6 +147,39 @@ function dayKey(date: Date): string {
   ).padStart(2, '0')}`;
 }
 
+/**
+ * ⭐⭐ v4.6.4 — Quiet Hours: الساعة المحلية للمستخدم (من profiles.timezone).
+ *   إن كانت المنطقة الزمنية غير معروفة نستخدم ساعة UTC.
+ */
+function localHour(date: Date, timezone: string | null): number {
+  const tz = String(timezone || '').trim();
+  if (tz) {
+    try {
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        hour: 'numeric',
+        hour12: false,
+        timeZone: tz,
+      });
+      const parts = formatter.formatToParts(date);
+      const hourPart = parts.find((p) => p.type === 'hour');
+      if (hourPart) {
+        const hour = parseInt(hourPart.value, 10);
+        if (!isNaN(hour)) return hour % 24;   // ⭐ 24 = منتصف الليل
+      }
+    } catch (e) {
+      // ⭐ منطقة زمنية غير معروفة — نستخدم UTC
+    }
+  }
+  return date.getUTCHours();
+}
+
+/**
+ * ⭐⭐ v4.6.4 — Quiet Hours: بين 00:00 و 08:00 لا يُرسل أي إشعار ذكي.
+ */
+function isQuietHour(hour: number): boolean {
+  return hour >= 0 && hour < 8;
+}
+
 function firstName(fullName: string | null, email: string | null): string {
   if (fullName && fullName.trim()) return fullName.trim().split(' ')[0];
   if (email) return email.split('@')[0];
@@ -223,11 +256,10 @@ Deno.serve(async (req) => {
     /* ── 2) جلب البيانات ── */
     const now = new Date();
     const today = dayKey(now);
-    const hour = now.getUTCHours();
 
     const { data: profiles, error: profilesError } = await admin
       .from('profiles')
-      .select('id, email, full_name, fcm_token, notify_enabled, last_notification_at, created_at')
+      .select('id, email, full_name, fcm_token, notify_enabled, last_notification_at, created_at, timezone')
       .not('fcm_token', 'is', null);
     if (profilesError) throw profilesError;
 
@@ -281,6 +313,14 @@ Deno.serve(async (req) => {
 
     for (const profile of profiles || []) {
       if (profile.notify_enabled === false) { skipped++; continue; }
+
+      // ⭐⭐ v4.6.4 — Quiet Hours: بين 00:00 و 08:00 بالتوقيت المحلي
+      //   لا تتسرّب أي إشعارات ذكية (خطر السلسلة، المهام الفائتة، …).
+      const userHour = localHour(now, profile.timezone);
+      if (isQuietHour(userHour)) {
+        skipped++;
+        continue;
+      }
 
       /* ⭐ خمول: لا نرسل أكثر من إشعار كل 4 ساعات */
       if (profile.last_notification_at) {
@@ -336,7 +376,7 @@ Deno.serve(async (req) => {
       } else if (inactiveDays >= 2) {
         // ⭐ v4.5.1 — Dormancy: غاب التطبيق يومين أو أكثر.
         category = 'reengagement';
-      } else if (hour >= 20 && todayDone === 0 && streak > 0) {
+      } else if (userHour >= 20 && todayDone === 0 && streak > 0) {
         // ⭐ v4.6.0 — TASK 2: «Streak Risk» فقط لسلسلة نشطة ولا إنجاز اليوم.
         category = 'streak';
       } else {
@@ -358,7 +398,7 @@ Deno.serve(async (req) => {
         } else if (todayTotal > 0 && todayDone >= todayTotal) {
           // ⭐ أنهى كل مهام اليوم.
           category = 'achievement';
-        } else if (todayTotal > 0 && todayDone < todayTotal && hour >= 9 && hour < 20) {
+        } else if (todayTotal > 0 && todayDone < todayTotal && userHour >= 9 && userHour < 20) {
           // ⭐ تذكير نهاري بالجدول (خارج نافذة التذكير الصباحي 8:00).
           category = 'agenda';
         } else if (recentFiles && recentFiles.length) {

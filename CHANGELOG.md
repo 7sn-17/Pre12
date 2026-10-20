@@ -2,7 +2,19 @@
 
 **التطبيق الرسمي لطلاب الطب في سوريا**
 
-⬇️ [تحميل v4.6.3](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+⬇️ [تحميل v4.6.4](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+
+## ✨ v4.6.4 — إعادة بناء البحث + ساعات الهدوء
+
+- **بحث حيّ حقيقي**: مستمع 'input' واحد فقط بلا keydown/keyup/change،
+  تأخير صارم 250ms، تصفية محلية بـ includes() تظهر مع أول حرف، وحدّ
+  50 نتيجة مع رسم عبر requestAnimationFrame (لا تجمّد).
+- **واجهة نظيفة**: نافذة البحث صارت تحت النتش/شريط الحالة
+  (env(safe-area-inset-top) + 16px) بتصميم زجاجي نظيف.
+- **ساعات الهدوء**: محرّك الإشعارات الذكية لا يرسل أي إشعار بين
+  00:00 و 08:00 بتوقيت كل مستخدم — والتذكيرات الثابتة (8 ص/8 م) تعمل
+  كالمعتاد.
+- **الإصدار**: 4.6.4 (‏versionCode 34).
 
 ## ✨ v4.6.3 — إصلاح قارئ PDF والبحث الحيّ
 

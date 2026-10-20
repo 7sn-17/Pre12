@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="4.6.3">
+<meta name="app-version" content="4.6.4">
 <title>السنة التحضيرية - المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -5203,7 +5203,9 @@ i.fab {
       opacity: 0;
       pointer-events: none;
       transition: opacity var(--transition-smooth);
+      /* ⭐ v4.6.4 — لا تداخل مع النتش/شريط الحالة */
       padding: 20px;
+      padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
       overflow-y: auto;
     }
 
@@ -5216,6 +5218,19 @@ i.fab {
       margin: 0 auto;
       transform: translateY(-30px);
       transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      /* ⭐ v4.6.4 — بطاقة زجاجية نظيفة بحدّ واضح */
+      background: linear-gradient(160deg, rgba(16, 34, 27, 0.72), rgba(8, 20, 15, 0.82));
+      border: 1px solid var(--border-strong, rgba(16, 185, 129, 0.35));
+      border-radius: 22px;
+      padding: 16px;
+      box-shadow: 0 24px 60px -28px rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+
+    [data-theme="light"] .search-modal-container {
+      background: linear-gradient(160deg, rgba(255, 255, 255, 0.94), rgba(241, 245, 249, 0.9));
+      border-color: rgba(5, 150, 105, 0.22);
     }
 
     .search-modal-overlay.active .search-modal-container { transform: translateY(0); }
@@ -6365,7 +6380,7 @@ i.fab {
         <div class="settings-icon"><i data-lucide="info"></i></div>
         <div class="settings-text">
           <h4>حول التطبيق</h4>
-          <p id="aboutVersionText">الإصدار 4.6.3 • السنة التحضيرية</p>
+          <p id="aboutVersionText">الإصدار 4.6.4 • السنة التحضيرية</p>
         </div>
       </div>
       <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
@@ -6669,7 +6684,7 @@ i.fab {
 <script src="notifications.js"></script>
 
 
-  <script src="app.js?v=4.6.3"></script>
+  <script src="app.js?v=4.6.4"></script>
 <script>
 
     lucide.createIcons();
@@ -8934,30 +8949,24 @@ async function openFileInViewer(fileId) {
      */
     function bindGlobalSearchInput() {
       var input = document.getElementById('globalSearchInput');
-      if (!input || input.dataset.searchBound === '1') return;
+      if (!input) return;
+
+      // ⭐⭐ v4.6.4 — مستمع واحد فقط: 'input'. لا keydown ولا keyup
+      //   ولا change ولا submit على حقل البحث — بحث حيّ حقيقي.
+      if (input.dataset.searchBound === '1') return;
       input.dataset.searchBound = '1';
 
       input.addEventListener('input', function (event) {
         handleGlobalSearch(event.target.value);
       });
-
-      // ⭐ v4.6.3 — HOTFIX: أزلنا تشغيل البحث بـEnter؛ البحث صار
-      //   تلقائياً من أول حرف (150ms) ولا يحتاج ضغط Enter.
-      input.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape') {
-          event.preventDefault();
-          closeSearchModal();
-        }
-      });
-
-      // ⭐ paste / cut / autofill لا تُطلق 'input' في كل المتصفّحات.
-      ['paste', 'cut', 'change'].forEach(function (name) {
-        input.addEventListener(name, function (event) {
-          var value = event.target && event.target.value;
-          if (value !== undefined) handleGlobalSearch(value);
-        });
-      });
     }
+
+    // ⭐ v4.6.4 — Escape يغلق النافذة (مستمع على المستند، لا على الحقل).
+    document.addEventListener('keydown', function (event) {
+      if (event.key !== 'Escape') return;
+      var modal = document.getElementById('searchModal');
+      if (modal && modal.classList.contains('active')) closeSearchModal();
+    });
 
     /**
      * ⭐ v4.6.1 — Enter: بحث فوري (بلا debounce) ثم فتح أول نتيجة.
@@ -9079,25 +9088,41 @@ async function openFileInViewer(fileId) {
      */
     function handleGlobalSearch(query) {
       const container = document.getElementById('searchResultsContainer');
+      if (!container) return;
       const engine = window.MedAppSearch;
+      const q = String(query || '').toLowerCase().trim();
+
+      // ⭐⭐ v4.6.4 — نرسم النتائج عبر requestAnimationFrame حتى لا
+      //   يتجمّد المتصفّح أثناء الكتابة.
+      function paint(fn) {
+        if (typeof window.requestAnimationFrame === 'function') {
+          window.requestAnimationFrame(fn);
+        } else {
+          setTimeout(fn, 0);
+        }
+      }
 
       if (!engine || typeof engine.debounced !== 'function') {
-        // ⭐ احتياطي: بحث محلي فقط
-        const q = String(query || '').toLowerCase().trim();
-        renderSearchResults(q, (appState.allFilesCache || []).filter(function (f) {
-          return (f.title || '').toLowerCase().indexOf(q) > -1;
-        }), [], container);
+        // ⭐ احتياطي: بحث محلي فقط (includes)
+        const files = engine && typeof engine.searchLocal === 'function'
+          ? engine.searchLocal(appState.allFilesCache, q)
+          : (appState.allFilesCache || []).filter(function (f) {
+              return String(f.title || '').toLowerCase().includes(q);
+            });
+        paint(function () { renderSearchResults(q, files, [], container); });
         return;
       }
 
       engine.debounced(
         query,
         function (result) {
-          renderSearchResults(result.query, result.files, result.subjects, container);
+          // ⭐ النتيجة النهائية (محلية + سحابية)
+          paint(function () {
+            renderSearchResults(result.query, result.files, result.subjects, container);
+          });
         },
         function () {
-          // ⭐ لا نُظهر مؤشّر تحميل إن كانت هناك نتائج محلية — حتى
-          //   لا نخفي النتائج التي ظهرت فوراً مع أول حرف.
+          // ⭐ لا نُظهر مؤشّر تحميل إن كانت هناك نتائج محلية
           if (container.querySelector('.search-results-list')) return;
           container.innerHTML = `
             <div class="search-loading">
@@ -9109,12 +9134,12 @@ async function openFileInViewer(fileId) {
         },
         {
           cache: appState.allFilesCache,
-          // ⭐ v4.6.3 — HOTFIX: 150ms — البحث الحيّ أثناء الكتابة.
-          debounce: 150,
-          // ⭐ v4.6.1 — النتائج المحلية تظهر فوراً (بلا تأخير).
+          // ⭐ v4.6.4 — النتائج المحلية تظهر فوراً (بلا شبكة) مع أول حرف.
           onLocal: function (localFiles) {
             if (!localFiles || !localFiles.length) return;
-            renderSearchResults(String(query || '').toLowerCase().trim(), localFiles, [], container);
+            paint(function () {
+              renderSearchResults(q, localFiles, [], container);
+            });
           }
         }
       );
