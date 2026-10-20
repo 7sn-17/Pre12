@@ -598,17 +598,20 @@
      ══════════════════════════════════════════════════════════ */
 
   /**
-   * ⭐ v4.4.0 — قناة إشعارات احترافية بصوت chime واهتزاز.
-   *   غيّرنا المعرّف إلى v2 لأن Android لا يسمح بتعديل صوت/اهتزاز قناة
-   *   أُنشئت سابقاً؛ المعرّف الجديد يضمن أن المستخدمين الحاليين يحصلون
-   *   على الإعدادات الجديدة دون حذف قنواتهم يدوياً.
+   * ⭐ v4.4.1 — قناة `medapp_reminders` عالية الأهمية وظاهرة على شاشة القفل.
+   *   importance: 5 (IMPORTANCE_MAX) و visibility: 1 (PUBLIC) حتى يظهر
+   *   الإشعار كـ heads-up banner. تُستدعى عند الإقلاع وعند كل جدولة.
+   * @returns {Promise<boolean>} true إذا أصبحت القناة جاهزة.
    */
   function ensureChannel() {
     var LocalNotifications = plugin('LocalNotifications');
-    if (!LocalNotifications || typeof LocalNotifications.createChannel !== 'function') return;
+    if (!LocalNotifications || typeof LocalNotifications.createChannel !== 'function') {
+      return Promise.resolve(false);
+    }
+
     try {
-      LocalNotifications.createChannel({
-        id: 'medapp_reminders_v2',
+      var result = LocalNotifications.createChannel({
+        id: 'medapp_reminders',
         name: 'تذكيرات المنصة',
         description: 'تذكير بالمهام وحماية سلسلة الدراسة',
         importance: 5,
@@ -618,8 +621,17 @@
         lights: true,
         lightColor: '#10b981',
       });
+
+      if (result && typeof result.then === 'function') {
+        return result.then(function () { return true; }).catch(function (e) {
+          console.warn('[notifications] could not create the channel:', e);
+          return false;
+        });
+      }
+      return Promise.resolve(true);
     } catch (e) {
       console.warn('[notifications] could not create the channel:', e);
+      return Promise.resolve(false);
     }
   }
 
@@ -651,7 +663,7 @@
         title: message.title,
         body: message.body,
         smallIcon: 'ic_stat_icon',
-        channelId: 'medapp_reminders_v2',
+        channelId: 'medapp_reminders',
         sound: 'beep.wav',
         schedule: { at: new Date(Date.now() + delay) },
         extra: { category: message.category }
@@ -703,7 +715,7 @@
             title: '⏰ اختبار التذكير المحلي',
             body: 'إذا وصلتك هذه الرسالة فالتذكير المحلي يعمل — بعد ' + wait + ' ثوانٍ.',
             smallIcon: 'ic_stat_icon',
-            channelId: 'medapp_reminders_v2',
+            channelId: 'medapp_reminders',
             sound: 'beep.wav',
             schedule: { at: at },
             extra: { action: 'tasks', test: 'local' }
@@ -768,6 +780,10 @@
   function init(options) {
     if (!isNative()) return Promise.resolve(null);
     options = options || {};
+
+    // ⭐ v4.4.1 — أنشئ قناة heads-up فوراً عند الإقلاع، حتى تصل
+    //   إشعارات FCM قبل أن يفتح المستخدم أي شاشة إشعارات.
+    ensureChannel();
 
     // ⭐ نعيد جدولة التذكير اليومي عند كل إقلاع
     try { restoreDailyReminder(); } catch (e) {}
@@ -854,7 +870,7 @@
         title: '📚 مراجعة يومية',
         body: '📚 لا تنسَ مراجعة مهامك اليومية. أنت تستطيع!',
         smallIcon: 'ic_stat_icon',
-        channelId: 'medapp_reminders_v2',
+        channelId: 'medapp_reminders',
         sound: 'beep.wav',
         schedule: { on: { hour: DAILY_REMINDER_HOUR, minute: 0 }, every: 'day' },
         extra: { action: 'tasks' }
@@ -979,6 +995,7 @@
     openAppSettings: openAppSettings,
     refreshPushToken: refreshPushToken,
     ensurePushToken: ensurePushToken,
+    ensureChannel: ensureChannel,
     readAndSavePushToken: readAndSavePushToken,
     attachPushListener: attachPushListener,
     scheduleDailyReminder: scheduleDailyReminder,

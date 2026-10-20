@@ -195,7 +195,7 @@ Deno.serve(async (req) => {
       android: {
         priority: 'high' as const,
         notification: {
-          channelId: 'medapp_reminders_v2',
+          channelId: 'medapp_reminders',
           icon: 'ic_stat_icon',
           color: '#10b981',
           sound: 'beep.wav',

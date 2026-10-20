@@ -2,7 +2,19 @@
 
 **التطبيق الرسمي لطلاب الطب في سوريا**
 
-⬇️ [تحميل v4.4.0](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+⬇️ [تحميل v4.4.1](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+
+## ✨ v4.4.1 — إصلاح وصول إشعارات FCM الفعلية
+
+- **حمولة FCM كاملة**: كل إشعار خادم يحمل الآن `notification` (العنوان
+  والنص) و`data` معاً، بأولوية `high` وقناة `medapp_reminders`، فلا يعتمد
+  على معالجة التطبيق فقط.
+- **إشعارات المقدمة**: عند وصول FCM والتطبيق مفتوح، يُعاد عرضه فوراً
+  كإشعار محلي عبر `@capacitor/local-notifications` مع الصوت والاهتزاز،
+  لأن Android لا يرسم إشعارات FCM تلقائياً في المقدمة.
+- **قناة heads-up**: قناة `medapp_reminders` تُنشأ بـ`importance: 5`
+  و`visibility: 1` (Public) لتظهر كبانر منبثق فوق الشاشة.
+- **الإصدار**: 4.4.1 (‏versionCode 25).
 
 ## ✨ v4.4.0 — رمز FCM نصّي + CORS احترافي + هوية الإشعارات
 

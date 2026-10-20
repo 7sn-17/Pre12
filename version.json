@@ -1,5 +1,5 @@
 {
-  "latest_version": "4.4.0",
+  "latest_version": "4.4.1",
   "download_url": "https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk",
-  "changelog": "إصلاح جذري لرمز FCM: استخراج الرمز الحقيقي من { token } أو { value } أو registrationId قبل الحفظ، ورفض أي كائن أو قيمة مثل [object Object]، وتنظيف القيمة الفاسدة من profiles.fcm_token تلقائياً.\nإصلاح CORS و502: استخدام corsHeaders الرسمي من Supabase SDK في send-test-notification، وإرجاع JSON واضح لأخطاء FCM بدل انهيار 502، مع التحقّق من الرمز قبل الإرسال ومسحه إن كان غير صالح.\nهوية إشعارات موحّدة: أيقونة سماعة طبية بيضاء 24×24dp، وقناة medapp_reminders_v2 بصوت beep.wav واهتزاز، مع تحديث نص التذكير اليومي: «📚 لا تنسَ مراجعة مهامك اليومية. أنت تستطيع!».\nنافذة تحديث احترافية: تصميم أخضر بهوية التطبيق، رقم الإصدار والانتقال من النسخة الحالية، 3–4 نقاط من سجل التغييرات، زر «تحديث الآن» عبر Browser.open وزر «لاحقاً»، وقراءة version.json بلا كاش."
+  "changelog": "حمولة FCM كاملة: كل إشعار خادم يحمل الآن notification (العنوان والنص) وdata معاً، بأولوية high وقناة medapp_reminders، فلا يعتمد على معالجة التطبيق فقط.\nإشعارات المقدمة: عند وصول FCM والتطبيق مفتوح، يُعاد عرضه فوراً كإشعار محلي عبر @capacitor/local-notifications مع الصوت والاهتزاز، لأن Android لا يرسم إشعارات FCM تلقائياً في المقدمة.\nقناة heads-up: قناة medapp_reminders تُنشأ بـimportance: 5 وvisibility: 1 (Public) لتظهر كبانر منبثق فوق الشاشة.\nالإصدار: 4.4.1 (‏versionCode 25)."
 }

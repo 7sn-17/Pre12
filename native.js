@@ -25,8 +25,11 @@
     fcmToken: '',
     pendingFcmToken: '',
     pushListenerBound: false,
+    foregroundPushBound: false,
     authTokenListenerBound: false,
     lastNotificationTap: null,
+    lastForegroundNotificationKey: '',
+    lastForegroundNotificationAt: 0,
     permissionRequested: false,
     notificationPermission: null
   };
@@ -553,13 +556,11 @@
           queueFcmTokenSave(nativeState.fcmToken);
         });
 
-        Messaging.addListener('messageReceived', function (action) {
-          // رسالة وال التطبيق في المقدمة
-          try {
-            global.dispatchEvent(new CustomEvent('medapp:notification', {
-              detail: action || {}
-            }));
-          } catch (e) {}
+        // ⭐ v4.4.1 — @capacitor-firebase/messaging v8 emits
+        //   `notificationReceived` (not `messageReceived`). We still
+        //   use PushNotifications as the primary foreground path below.
+        Messaging.addListener('notificationReceived', function (action) {
+          displayForegroundNotification(action, 'messaging');
         });
 
         Messaging.addListener('notificationActionPerformed', function (action) {
@@ -633,6 +634,126 @@
         });
       } catch (e) {}
     }
+
+    // ⭐ v4.4.1 — TASK 2: FCM لا يعرض شيئاً تلقائياً والتطبيق في المقدمة.
+    bindForegroundPushDisplay();
+  }
+
+  /**
+   * ⭐ v4.4.1 — TASK 2: when the app is open, Android does not draw an
+   * FCM notification. We mirror the incoming title/body into a local
+   * notification so the user always sees it.
+   */
+  function bindForegroundPushDisplay() {
+    if (!isNative || nativeState.foregroundPushBound) return;
+
+    var PushNotifications = plugin('PushNotifications');
+    if (!PushNotifications || typeof PushNotifications.addListener !== 'function') return;
+
+    try {
+      PushNotifications.addListener('pushNotificationReceived', function (notification) {
+        displayForegroundNotification(notification, 'push');
+      });
+      nativeState.foregroundPushBound = true;
+      console.info('[native] foreground push listener bound');
+    } catch (e) {
+      console.warn('[native] the foreground push listener failed:', e);
+    }
+  }
+
+  /** ⭐ يجعل قناة `medapp_reminders` جاهزة قبل عرض إشعار المقدمة. */
+  function ensureForegroundChannel() {
+    try {
+      if (global.MedAppNotifications &&
+          typeof global.MedAppNotifications.ensureChannel === 'function') {
+        return Promise.resolve(global.MedAppNotifications.ensureChannel());
+      }
+    } catch (e) {}
+
+    var LocalNotifications = plugin('LocalNotifications');
+    if (!LocalNotifications || typeof LocalNotifications.createChannel !== 'function') {
+      return Promise.resolve(false);
+    }
+    try {
+      return Promise.resolve(LocalNotifications.createChannel({
+        id: 'medapp_reminders',
+        name: 'تذكيرات المنصة',
+        description: 'تذكير بالمهام وحماية سلسلة الدراسة',
+        importance: 5,
+        visibility: 1,
+        sound: 'beep.wav',
+        vibration: true,
+        lights: true,
+        lightColor: '#10b981',
+      })).then(function () { return true; }).catch(function () { return false; });
+    } catch (e) {
+      return Promise.resolve(false);
+    }
+  }
+
+  /**
+   * ⭐ v4.4.1 — mirror a foreground FCM message into a local notification.
+   *   Supports both PushNotifications (flat schema) and
+   *   FirebaseMessaging ({ notification: { title, body, data } }).
+   */
+  function displayForegroundNotification(payload, source) {
+    if (!isNative) return;
+
+    var LocalNotifications = plugin('LocalNotifications');
+    if (!LocalNotifications || typeof LocalNotifications.schedule !== 'function') return;
+
+    var raw = payload || {};
+    var notification = raw.notification || raw;
+    var data = (notification && notification.data) || raw.data || {};
+    var title = (notification && notification.title) || data.title || '🔔 المنصة الطبية';
+    var body = (notification && notification.body) || data.body || '';
+
+    title = String(title || '').trim();
+    body = String(body || '').trim();
+    if (!title && !body) return;
+    if (!title) title = '🔔 المنصة الطبية';
+    if (!body) body = 'لديك إشعار جديد من المنصة الطبية.';
+
+    // ⭐ منع التكرار: قد يصل نفس الإشعار من PushNotifications
+    //   وFirebaseMessaging معاً في نفس اللحظة.
+    var key = title + '|' + body;
+    var now = Date.now();
+    if (nativeState.lastForegroundNotificationKey === key &&
+        now - nativeState.lastForegroundNotificationAt < 2500) {
+      return;
+    }
+    nativeState.lastForegroundNotificationKey = key;
+    nativeState.lastForegroundNotificationAt = now;
+
+    // ⭐ أبقِ حدث الواجهة الحالي يعمل أيضاً.
+    try {
+      global.dispatchEvent(new CustomEvent('medapp:notification', {
+        detail: raw
+      }));
+    } catch (e) {}
+
+    var id = (now % 2000000000) + Math.floor(Math.random() * 1000);
+    var schedule = {
+      notifications: [{
+        id: id,
+        title: title,
+        body: body,
+        smallIcon: 'ic_stat_icon',
+        channelId: 'medapp_reminders',
+        sound: 'beep.wav',
+        schedule: { at: new Date(now + 350) },
+        extra: data,
+      }]
+    };
+
+    Promise.resolve(ensureForegroundChannel())
+      .then(function () { return LocalNotifications.schedule(schedule); })
+      .then(function () {
+        console.info('[native] foreground FCM displayed locally (' + source + '):', title);
+      })
+      .catch(function (e) {
+        console.warn('[native] foreground local notification failed:', e);
+      });
   }
 
   function routeNotification(payload) {

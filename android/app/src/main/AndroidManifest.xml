@@ -54,7 +54,7 @@
             android:resource="@color/notification_color" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="medapp_reminders_v2" />
+            android:value="medapp_reminders" />
     </application>
 
     <!-- Permissions -->
