@@ -92,3 +92,7 @@ android/app/debug/
 *.keystore
 !debug.keystore
 android/app/google-services.json.enc
+
+# أداة Firebase MCP (ملف محلي)
+opencode.json
+firebase.json

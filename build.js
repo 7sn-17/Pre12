@@ -321,6 +321,9 @@ const EXCLUDE_TOP = new Set([
   'build.js', 'package.json', 'package-lock.json', 'vercel.json',
   // ⭐ إعداد Firebase — نسخة المشروع الأصلية (لا يُنشر على الويب)
   'google-services.json',
+  // ⭐ ملفات أدوات Firebase المحلية
+  'opencode.json',
+  'firebase.json',
   '.git', '.gitignore',
   // Documentation (kept in the repo, not shipped to users)
   'README.md', 'ARCHITECTURE.md',
