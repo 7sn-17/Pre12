@@ -1379,6 +1379,25 @@ body {
   overscroll-behavior: contain;
 }
 
+/* ⭐⭐ v4.6.6 — TASK 6: مسرح التحويل (scale/translate) + منع تدخّل المتصفّح */
+.pdf-stage {
+  position: relative;
+  transform-origin: 0 0;
+  will-change: transform;
+  /* ⭐ عند التكبير نتحكّم بالتمرير بأنفسنا (none)، وبعده pan-y للتمرير العادي */
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.pdf-stage.zoomed {
+  touch-action: none;
+}
+
+.pdf-stage.gesture {
+  transition: none;
+}
+
 .viewer::-webkit-scrollbar { width: 5px; }
 .viewer::-webkit-scrollbar-track { background: transparent; }
 .viewer::-webkit-scrollbar-thumb {
@@ -1516,6 +1535,12 @@ body {
   left: 14px;
   bottom: calc(14px + env(safe-area-inset-bottom, 0px));
   z-index: 120;
+  /* ⭐⭐ v4.6.6 — TASK 5: قابل للسحب (Pointer Events) */
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: transform 0.18s ease-out;
+  will-change: transform;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1541,6 +1566,18 @@ body {
   cursor: pointer;
   transition: all var(--transition);
   padding: 0;
+}
+
+.fab-bar.dragging {
+  transition: none;
+  cursor: grabbing;
+  transform-origin: center;
+  box-shadow: 0 18px 40px -16px rgba(0, 0, 0, 0.7);
+  border-color: var(--accent);
+}
+
+.fab-bar.snapping {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .fab-btn:hover { border-color: var(--accent); color: var(--accent); }
@@ -1985,6 +2022,8 @@ main.viewer {
 
 <!-- منطقة العرض -->
 <main class="viewer" id="viewer">
+  <div class="pdf-stage" id="pdfStage"></div>
+
   <div class="error-state" id="errorState">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="10"/>
@@ -2098,6 +2137,9 @@ var state = {
 
   /* ⭐ v4.6.2 — Phase 31: العرض الافتراضي + فهرس البحث */
   zoom: 1,
+  panX: 0,
+  panY: 0,
+  quality: 1,
   singlePage: false,
   currentPage: 1,
   pageRatio: 1.414,
@@ -2121,6 +2163,8 @@ var els = {
   skeleton:      $('skeleton'),
   progressFill:  $('progressFill'),
   headerPagePill:$('headerPagePill'),
+  stage:         $('pdfStage'),
+  fabBar:        $('fabBar'),
   zoomInBtn:     $('zoomInBtn'),
   zoomOutBtn:    $('zoomOutBtn'),
   pageModeBtn:   $('pageModeBtn'),
@@ -2313,7 +2357,8 @@ function calcContainerWidth() {
 
 /* ═══ إنشاء Placeholders ═══ */
 async function createPlaceholders() {
-  state.containerWidth = Math.round(calcContainerWidth() * state.zoom);
+  // ⭐ v4.6.6 — العرض يبقى بعرض الشاشة، والتكبير يتم بالتحويل (transform)
+  state.containerWidth = Math.round(calcContainerWidth());
 
   // أبعاد الصفحة الأولى
   const firstPage = await state.pdfDoc.getPage(1);
@@ -2331,41 +2376,120 @@ async function createPlaceholders() {
     div.style.height = pageHeight + 'px';
     frag.appendChild(div);
   }
-  els.viewer.appendChild(frag);
+  // ⭐ v4.6.6 — الصفحات داخل مسرح التحويل
+  (els.stage || els.viewer).appendChild(frag);
+  applyStageTransform();
 }
 
-/* ⭐ v4.6.2 — تغيير التكبير: نعيد حساب المقاسات ونعيد رسم المرئي */
-async function setZoom(next) {
-  var zoom = Math.max(0.6, Math.min(2.6, Number(next) || 1));
-  if (Math.abs(zoom - state.zoom) < 0.01) return;
-  state.zoom = zoom;
+/* ═══════════════════════════════════════════════════════
+   ⭐⭐ v4.6.6 — TASK 6: التكبير/التصغير عبر CSS transform
+   ------------------------------------------------------------
+   • المسرح (pdfStage) يحمل scale() و translate().
+   • الأزرار والإيماءة (pinch) يمرّان بنفس الدالة ⇒ متزامنة دائماً.
+   • بعد استقرار التكبير نعيد رسم الصفحات الظاهرة بدقة أعلى
+     (رسم أنظف) دون تغيير المقاسات.
+   ═══════════════════════════════════════════════════════ */
+var STAGE_MIN_ZOOM = 0.6;
+var STAGE_MAX_ZOOM = 3;
 
-  var width = Math.round(calcContainerWidth() * zoom);
-  var height = Math.round(width * state.pageRatio);
-  state.containerWidth = width;
+function clampNumber(value, min, max) {
+  var n = Number(value);
+  if (isNaN(n)) return min;
+  return Math.max(min, Math.min(max, n));
+}
 
-  document.querySelectorAll('.pdf-page').forEach(function (el) {
-    el.style.width = width + 'px';
-    if (el.classList.contains('placeholder')) el.style.height = height + 'px';
-  });
+/** ⭐ أصل المسرح في إحداثيات الشاشة (قبل التحويل) */
+function stageOrigin() {
+  var stage = els.stage;
+  if (!stage) return { x: 0, y: 0 };
+  var r = stage.getBoundingClientRect();
+  return { x: r.left - state.panX, y: r.top - state.panY };
+}
 
-  // ⭐ نحرّر المرسوم ونعيد رسم ما هو ظاهر فقط.
-  state.renderedPages.forEach(function (num) {
-    var el = document.querySelector('.pdf-page[data-page-num="' + num + '"]');
-    if (el) {
+/** ⭐ يطبّق التحويل ويوسّع منطقة التمرير بمقدار الزيادة */
+function applyStageTransform() {
+  var stage = els.stage;
+  if (!stage) return;
+  var k = state.zoom;
+
+  stage.style.transform = 'translate3d(' + state.panX + 'px,' + state.panY + 'px,0) scale(' + k + ')';
+
+  var w = stage.offsetWidth || 0;
+  var h = stage.offsetHeight || 0;
+  stage.style.marginRight = Math.max(0, Math.round(w * (k - 1))) + 'px';
+  stage.style.marginBottom = Math.max(0, Math.round(h * (k - 1))) + 'px';
+
+  // ⭐ عند التكبير نتحكّم بالتمرير بأنفسنا.
+  stage.classList.toggle('zoomed', k > 1.01);
+}
+
+/** ⭐ يحدّزاحة التمرير ضمن حدود المحتوى */
+function clampPan() {
+  var stage = els.stage;
+  if (!stage) return;
+  if (state.zoom <= 1.01) { state.panX = 0; state.panY = 0; return; }
+  var w = stage.offsetWidth || 0;
+  var h = stage.offsetHeight || 0;
+  var viewW = els.viewer ? els.viewer.clientWidth : window.innerWidth;
+  var viewH = els.viewer ? els.viewer.clientHeight : window.innerHeight;
+  var maxX = Math.max(0, (w * state.zoom - viewW) / 2);
+  var maxY = Math.max(0, (h * state.zoom - viewH) / 2);
+  state.panX = clampNumber(state.panX, -maxX, maxX);
+  state.panY = clampNumber(state.panY, -maxY, maxY);
+}
+
+/**
+ * ⭐⭐ تكبير/تصغير موحّد — تستدعيه الأزرار والإيماءة معاً.
+ * @param {number} next
+ * @param {object} [options] { anchor: {x, y} } — نقطة تُثبَّت أثناء التكبير
+ */
+function setZoom(next, options) {
+  options = options || {};
+  var k = clampNumber(next, STAGE_MIN_ZOOM, STAGE_MAX_ZOOM);
+  var changed = Math.abs(k - state.zoom) > 0.001;
+
+  if (changed && options.anchor) {
+    // ⭐ نُبقي نقطة البؤرة تحت الإصبع/القرص.
+    var origin = stageOrigin();
+    var k0 = state.zoom || 1;
+    var contentX = (options.anchor.x - origin.x - state.panX) / k0;
+    var contentY = (options.anchor.y - origin.y - state.panY) / k0;
+    state.zoom = k;
+    state.panX = options.anchor.x - origin.x - contentX * k;
+    state.panY = options.anchor.y - origin.y - contentY * k;
+  } else {
+    state.zoom = k;
+  }
+
+  clampPan();
+  applyStageTransform();
+  scheduleQualityRerender();
+
+  if (els.fileSub) els.fileSub.textContent = 'التكبير ' + Math.round(state.zoom * 100) + '%';
+  if (changed && options.silent !== true) {
+    showToast('التكبير ' + Math.round(state.zoom * 100) + '%', 'info');
+  }
+}
+
+/* ⭐ إعادة الرسم بدقة أعلى بعد استقرار التكبير (نصّ أوضح) */
+var qualityTimer = null;
+function scheduleQualityRerender() {
+  if (qualityTimer) clearTimeout(qualityTimer);
+  qualityTimer = setTimeout(function () {
+    qualityTimer = null;
+    var quality = Math.min(2.2, Math.max(1, state.zoom));
+    if (Math.abs(quality - state.quality) < 0.05) return;
+    state.quality = quality;
+    state.renderedPages.forEach(function (num) {
+      var el = document.querySelector('.pdf-page[data-page-num="' + num + '"]');
+      if (!el) return;
       el.innerHTML = '';
       el.classList.add('placeholder');
       el.classList.remove('rendered');
-      el.style.height = height + 'px';
-    }
-  });
-  state.renderedPages.clear();
-
-  if (els.fileSub) {
-    els.fileSub.textContent = 'التكبير ' + Math.round(zoom * 100) + '%';
-  }
-  renderVisiblePages();
-  showToast('التكبير ' + Math.round(zoom * 100) + '%', 'info');
+    });
+    state.renderedPages.clear();
+    renderVisiblePages();
+  }, 320);
 }
 
 /* ⭐ v4.6.2 — وضع صفحة واحدة ↔ تمرير متواصل */
@@ -2488,7 +2612,8 @@ async function renderPage(pageEl) {
     var viewport = page.getViewport({ scale });
 
     // Canvas
-    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    // ⭐ v4.6.6 — دقة أعلى عند التكبير (رسم أنظف) دون تغيير المقاس
+    var dpr = Math.min(window.devicePixelRatio || 1, 2) * (state.quality || 1);
     var canvas = document.createElement('canvas');
     canvas.width = Math.max(1, Math.floor(viewport.width * dpr));
     canvas.height = Math.max(1, Math.floor(viewport.height * dpr));
@@ -2935,6 +3060,232 @@ async function jumpToMatch(match) {
   }
 }
 
+/* ═══════════════════════════════════════════════════════
+   ⭐⭐ v4.6.6 — TASK 6: إيماءات التكبير (pinch) والتمرير (pan)
+   ------------------------------------------------------------
+   • إصبعان: المسافة بينهما ⇒ تكبير/تصغير حول نقطة البؤرة.
+   • إصبع واحد (عند التكبير): سحب المحتوى للتنقّل.
+   • touch-action: none على المسرح عند التكبير حتى لا يتدخّل
+     المتصفّح (وفي وضع Fit نبقي pan-y للتمرير العمودي المعتاد).
+   ═══════════════════════════════════════════════════════ */
+function bindStageGestures() {
+  const stage = els.stage;
+  if (!stage) return;
+
+  let touchDist = 0;
+  let startZoom = 1;
+  let startPanX = 0;
+  let startPanY = 0;
+  let startMid = null;
+  let startOrigin = { x: 0, y: 0 };
+  let panning = false;
+  let lastX = 0;
+  let lastY = 0;
+
+  function distance(t1, t2) {
+    const dx = t1.clientX - t2.clientX;
+    const dy = t1.clientY - t2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+  function midpoint(t1, t2) {
+    return { x: (t1.clientX + t2.clientX) / 2, y: (t1.clientY + t2.clientY) / 2 };
+  }
+
+  stage.addEventListener('touchstart', function (e) {
+    if (e.touches.length === 2) {
+      // ⭐ بداية التكبير
+      touchDist = distance(e.touches[0], e.touches[1]);
+      startZoom = state.zoom || 1;
+      startPanX = state.panX;
+      startPanY = state.panY;
+      startMid = midpoint(e.touches[0], e.touches[1]);
+      startOrigin = stageOrigin();
+      panning = false;
+      stage.classList.add('gesture');
+      e.preventDefault();
+      return;
+    }
+    if (e.touches.length === 1 && state.zoom > 1.01) {
+      // ⭐ سحب المحتوى (pan) عند التكبير
+      panning = true;
+      lastX = e.touches[0].clientX;
+      lastY = e.touches[0].clientY;
+    }
+  }, { passive: false });
+
+  stage.addEventListener('touchmove', function (e) {
+    if (e.touches.length === 2 && touchDist > 0 && startMid) {
+      e.preventDefault();
+      const d = distance(e.touches[0], e.touches[1]);
+      const mid = midpoint(e.touches[0], e.touches[1]);
+      const k = clampNumber(startZoom * (d / touchDist), STAGE_MIN_ZOOM, STAGE_MAX_ZOOM);
+
+      // ⭐ نقطة البؤرة تبقى تحت الأصابع
+      const contentX = (startMid.x - startOrigin.x - startPanX) / (startZoom || 1);
+      const contentY = (startMid.y - startOrigin.y - startPanY) / (startZoom || 1);
+      state.zoom = k;
+      state.panX = mid.x - startOrigin.x - contentX * k;
+      state.panY = mid.y - startOrigin.y - contentY * k;
+      clampPan();
+      applyStageTransform();
+      return;
+    }
+    if (panning && e.touches.length === 1) {
+      e.preventDefault();
+      state.panX += e.touches[0].clientX - lastX;
+      state.panY += e.touches[0].clientY - lastY;
+      lastX = e.touches[0].clientX;
+      lastY = e.touches[0].clientY;
+      clampPan();
+      applyStageTransform();
+    }
+  }, { passive: false });
+
+  function endGesture(e) {
+    if (e && e.touches && e.touches.length < 2) {
+      touchDist = 0;
+      startMid = null;
+    }
+    if (!e || !e.touches || e.touches.length === 0) {
+      panning = false;
+      stage.classList.remove('gesture');
+      // ⭐ بعد الإيماءة: رسم أوضح للتكبير النهائي
+      scheduleQualityRerender();
+    }
+  }
+
+  stage.addEventListener('touchend', endGesture);
+  stage.addEventListener('touchcancel', endGesture);
+}
+
+/* ═══ TASK 5: شريط عائم قابل للسحب ═══ */
+var FAB_POS_KEY = 'medapp_fab_position';
+
+function restoreFabPosition() {
+  const bar = els.fabBar;
+  if (!bar) return;
+  try {
+    const raw = localStorage.getItem(FAB_POS_KEY);
+    if (!raw) return;
+    const pos = JSON.parse(raw);
+    if (!pos || typeof pos.x !== 'number' || typeof pos.y !== 'number') return;
+    const rect = bar.getBoundingClientRect();
+    const maxX = Math.max(8, window.innerWidth - rect.width - 8);
+    const maxY = Math.max(8, window.innerHeight - rect.height - 8);
+    bar.style.left = clampNumber(pos.x, 8, maxX) + 'px';
+    bar.style.top = clampNumber(pos.y, 8, maxY) + 'px';
+    bar.style.bottom = 'auto';
+    bar.style.right = 'auto';
+  } catch (e) {}
+}
+
+function saveFabPosition() {
+  const bar = els.fabBar;
+  if (!bar) return;
+  try {
+    const rect = bar.getBoundingClientRect();
+    localStorage.setItem(FAB_POS_KEY, JSON.stringify({ x: rect.left, y: rect.top }));
+  } catch (e) {}
+}
+
+/** ⭐ يثبّت الشريط في أقرب زاوية */
+function snapFabToCorner() {
+  const bar = els.fabBar;
+  if (!bar) return;
+  const rect = bar.getBoundingClientRect();
+  const margin = 14;
+  const nearLeft = rect.left < (window.innerWidth - rect.right);
+  const nearTop = rect.top < (window.innerHeight - rect.bottom);
+  const targetX = nearLeft ? margin : Math.max(margin, window.innerWidth - rect.width - margin);
+  const targetY = nearTop ? margin : Math.max(margin, window.innerHeight - rect.height - margin);
+  bar.classList.add('snapping');
+  bar.style.left = targetX + 'px';
+  bar.style.top = targetY + 'px';
+  bar.style.bottom = 'auto';
+  bar.style.right = 'auto';
+  setTimeout(function () { bar.classList.remove('snapping'); }, 240);
+}
+
+function bindFabDrag() {
+  const bar = els.fabBar;
+  if (!bar) return;
+
+  let pressing = false;
+  let dragging = false;
+  let suppressClick = false;
+  let holdTimer = null;
+  let startX = 0;
+  let startY = 0;
+  let startLeft = 0;
+  let startTop = 0;
+
+  function beginDrag(e) {
+    dragging = true;
+    bar.classList.add('dragging');
+    bar.classList.remove('snapping');
+    try { bar.setPointerCapture(e.pointerId); } catch (err) {}
+  }
+
+  bar.addEventListener('pointerdown', function (e) {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    pressing = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    const rect = bar.getBoundingClientRect();
+    startLeft = rect.left;
+    startTop = rect.top;
+    // ⭐ ضغط مطوّل (350ms) لفتح السحب — واللمسة العادية تبقى ضغطة زرّ.
+    if (holdTimer) clearTimeout(holdTimer);
+    holdTimer = setTimeout(function () { if (pressing) beginDrag(e); }, 350);
+  });
+
+  bar.addEventListener('pointermove', function (e) {
+    if (!pressing) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    if (!dragging) {
+      // ⭐ السحب الفوري مسموح أيضاً (أسرع).
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      beginDrag(e);
+    }
+    const rect = bar.getBoundingClientRect();
+    const maxX = Math.max(8, window.innerWidth - rect.width - 8);
+    const maxY = Math.max(8, window.innerHeight - rect.height - 8);
+    bar.style.left = clampNumber(startLeft + dx, 8, maxX) + 'px';
+    bar.style.top = clampNumber(startTop + dy, 8, maxY) + 'px';
+    bar.style.bottom = 'auto';
+    bar.style.right = 'auto';
+    e.preventDefault();
+  });
+
+  function endPointer(e) {
+    if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+    if (!pressing) return;
+    pressing = false;
+    if (dragging) {
+      dragging = false;
+      bar.classList.remove('dragging');
+      snapFabToCorner();
+      saveFabPosition();
+      suppressClick = true;   // ⭐ نمنع ضغطة الزرّ بعد السحب
+      setTimeout(function () { suppressClick = false; }, 120);
+    }
+    try { bar.releasePointerCapture(e.pointerId); } catch (err) {}
+  }
+
+  bar.addEventListener('pointerup', endPointer);
+  bar.addEventListener('pointercancel', endPointer);
+
+  // ⭐ نمنع تنفيذ الزرّ إذا كان آخر تفاعل سحباً.
+  bar.addEventListener('click', function (e) {
+    if (suppressClick) {
+      e.preventDefault();
+      e.stopPropagation();
+      suppressClick = false;
+    }
+  }, true);
+}
+
 /** ⭐ تظليل كل مطابقات الصفحة + المطابقة الحالية بلون أقوى */
 function highlightMatch(match) {
   document.querySelectorAll('.text-layer span.hit, .text-layer span.current')
@@ -3173,6 +3524,11 @@ async function init() {
     hideLoading();
     setupObserver();
     setupScrollHUD();
+
+    // ⭐⭐ v4.6.6 — TASK 5/6: إيماءات التكبير والتمرير + الشريط القابل للسحب
+    bindStageGestures();
+    bindFabDrag();
+    restoreFabPosition();
 
     // ⭐ v4.6.2 — الفهرسة الكاملة في الخلفية (بحث فوري من أول حرف)
     setTimeout(() => { buildSearchIndex(); }, 400);
