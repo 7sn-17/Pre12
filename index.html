@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="4.6.4">
+<meta name="app-version" content="4.6.5">
 <title>السنة التحضيرية - المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -6380,7 +6380,7 @@ i.fab {
         <div class="settings-icon"><i data-lucide="info"></i></div>
         <div class="settings-text">
           <h4>حول التطبيق</h4>
-          <p id="aboutVersionText">الإصدار 4.6.4 • السنة التحضيرية</p>
+          <p id="aboutVersionText">الإصدار 4.6.5 • السنة التحضيرية</p>
         </div>
       </div>
       <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
@@ -6684,7 +6684,7 @@ i.fab {
 <script src="notifications.js"></script>
 
 
-  <script src="app.js?v=4.6.4"></script>
+  <script src="app.js?v=4.6.5"></script>
 <script>
 
     lucide.createIcons();
@@ -8951,14 +8951,22 @@ async function openFileInViewer(fileId) {
       var input = document.getElementById('globalSearchInput');
       if (!input) return;
 
-      // ⭐⭐ v4.6.4 — مستمع واحد فقط: 'input'. لا keydown ولا keyup
-      //   ولا change ولا submit على حقل البحث — بحث حيّ حقيقي.
-      if (input.dataset.searchBound === '1') return;
-      input.dataset.searchBound = '1';
-
-      input.addEventListener('input', function (event) {
-        handleGlobalSearch(event.target.value);
-      });
+      // ⭐⭐⭐ v4.6.5 — تدمير وإعادة بناء المستمعين عبر search.js:
+      //   مستمع 'input' واحد بلا أي شرط + 'compositionend' للوحة
+      //   المفاتيح العربية. لا keydown ولا keyup ولا change على الحقل.
+      var engine = window.MedAppSearch;
+      if (engine && typeof engine.bindSearchInput === 'function') {
+        engine.bindSearchInput(input, function (value) {
+          handleGlobalSearch(value);
+        });
+      } else {
+        // ⭐ احتياط: نفس السلوك بدون المحرّك.
+        var onChange = function (event) {
+          handleGlobalSearch(event.target.value);
+        };
+        input.addEventListener('input', onChange);
+        input.addEventListener('compositionend', onChange);
+      }
     }
 
     // ⭐ v4.6.4 — Escape يغلق النافذة (مستمع على المستند، لا على الحقل).
@@ -9181,6 +9189,7 @@ async function openFileInViewer(fileId) {
         item.className = 'search-result-item';
         item.style.animationDelay = (i * 0.03) + 's';
         item.onclick = function () {
+          // ⭐ v4.6.5 — STEP 1: إغلاق النافذة فوراً، ثم STEP 2: التنقّل.
           closeSearchModal();
           window.location.href = 'subject.html?subject=' + encodeURIComponent(subject.slug || subject.id);
         };

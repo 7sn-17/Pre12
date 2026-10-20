@@ -207,12 +207,57 @@
     }, DEBOUNCE_MS);
   }
 
+  /**
+   * ⭐⭐⭐ v4.6.5 — ربط حقل البحث بطريقة «آمنة» لا تُخطئ أبداً.
+   *
+   *   المشكلة: مع لوحة المفاتيح العربية (IME) في WebView، كانت بعض
+   *   محاولات الكتابة لا تُطلق 'input' — بينما يعمل الحذف — فيبدو
+   *   أنّ البحث لا يستجيب إلّا بعد الحذف.
+   *
+   *   الحل:
+   *   1) تدمير أي مستمعين سابقين على الحقل (input/keyup/change/…).
+   *   2) مستمع 'input' واحد فقط **بلا أي شرط** — لا نفحص inputType
+   *      ولا isComposing، فيغطّي insertText وdeleteContentBackward
+   *      واللصق والتصحيح التلقائي.
+   *   3) مستمع 'compositionend' لالتقاط الكلمة العربية بعد انتهاء
+   *      التكوين (لحظة إتمام الكتابة في لوحة المفاتيح العربية).
+   *
+   * @param {HTMLInputElement} input
+   * @param {function} handler  (value, event) => void
+   */
+  function bindSearchInput(input, handler) {
+    if (!input || typeof handler !== 'function') return;
+
+    // ⭐ 1) تدمير كل المستمعين السابقين على هذا الحقل.
+    var previous = input.__medappSearchHandlers;
+    if (previous) {
+      ['input', 'compositionend', 'compositionstart', 'keyup', 'keydown', 'change', 'paste', 'cut', 'submit'].forEach(function (type) {
+        var fn = previous[type];
+        if (!fn) return;
+        try { input.removeEventListener(type, fn); } catch (e) {}
+      });
+      input.__medappSearchHandlers = null;
+    }
+
+    // ⭐ 2) المعالج الموحّد — بلا أي شرط على نوع الإدخال.
+    var onChange = function (event) {
+      var value = event && event.target ? event.target.value : input.value;
+      handler(String(value === undefined || value === null ? '' : value), event);
+    };
+
+    input.__medappSearchHandlers = { input: onChange, compositionend: onChange };
+    input.addEventListener('input', onChange);
+    // ⭐ 3)Compositionend — آخر الكلمة العربية.
+    input.addEventListener('compositionend', onChange);
+  }
+
   global.MedAppSearch = {
     DEBOUNCE_MS: DEBOUNCE_MS,
     MAX_RESULTS: MAX_RESULTS,
     run: run,
     debounced: debounced,
     debounce: debounce,
+    bindSearchInput: bindSearchInput,
     searchLocal: searchLocal,
     matchesText: matchesText,
     mergeFiles: mergeFiles,

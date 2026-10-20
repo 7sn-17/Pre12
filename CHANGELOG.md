@@ -2,7 +2,19 @@
 
 **التطبيق الرسمي لطلاب الطب في سوريا**
 
-⬇️ [تحميل v4.6.4](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+⬇️ [تحميل v4.6.5](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+
+## ✨ v4.6.5 — إصلاح الكتابة في الإشعارات والبحث
+
+- **إصلاح الكتابة (IME)**: تدمير وإعادة بناء مستمعي حقل البحث —
+  مستمع 'input' واحد بلا أي شرط + 'compositionend' لالتقاط الكلمة
+  العربية بعد انتهاء التكوين، فصار البحث يستجيب من أول حرف (لصق/حذف/
+  تصحيح تلقائي تعمل جميعها).
+- **النقر على النتيجة**: تُغلق نافذة البحث فوراً ثم ينتقل التطبيق إلى
+  الصفحة والموضع الدقيق.
+- **تظليل واضح**:Yellow ساطع (rgba(255,235,59,0.6)) فوق الـcanvas مع
+  z-index 9999 وpointer-events none وmix-blend-mode multiply.
+- **الإصدار**: 4.6.5 (‏versionCode 35).
 
 ## ✨ v4.6.4 — إعادة بناء البحث + ساعات الهدوء
 

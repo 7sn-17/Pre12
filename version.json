@@ -1,5 +1,5 @@
 {
-  "latest_version": "4.6.4",
+  "latest_version": "4.6.5",
   "download_url": "https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk",
-  "changelog": "بحث حيّ حقيقي: مستمع 'input' واحد فقط بلا keydown/keyup/change، تأخير صارم 250ms، تصفية محلية بـ includes() تظهر مع أول حرف، وحدّ 50 نتيجة مع رسم عبر requestAnimationFrame (لا تجمّد).\nواجهة نظيفة: نافذة البحث صارت تحت النتش/شريط الحالة (env(safe-area-inset-top) + 16px) بتصميم زجاجي نظيف.\nساعات الهدوء: محرّك الإشعارات الذكية لا يرسل أي إشعار بين 00:00 و 08:00 بتوقيت كل مستخدم — والتذكيرات الثابتة (8 ص/8 م) تعمل كالمعتاد.\nالإصدار: 4.6.4 (‏versionCode 34)."
+  "changelog": "إصلاح الكتابة (IME): تدمير وإعادة بناء مستمعي حقل البحث — مستمع 'input' واحد بلا أي شرط + 'compositionend' لالتقاط الكلمة العربية بعد انتهاء التكوين، فصار البحث يستجيب من أول حرف (لصق/حذف/ تصحيح تلقائي تعمل جميعها).\nالنقر على النتيجة: تُغلق نافذة البحث فوراً ثم ينتقل التطبيق إلى الصفحة والموضع الدقيق.\nتظليل واضح:Yellow ساطع (rgba(255,235,59,0.6)) فوق الـcanvas مع z-index 9999 وpointer-events none وmix-blend-mode multiply.\nالإصدار: 4.6.5 (‏versionCode 35)."
 }
