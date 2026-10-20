@@ -244,7 +244,13 @@ export async function createSender(): Promise<FcmSender | null> {
         try {
           return await sendV1(token, message, sa);
         } catch (e) {
-          console.warn('[fcm] v1 failed:', (e as Error).message);
+          const text = (e as Error).message || '';
+          // ⭐ v4.5.2 — رموز لم تُسجَّل anymore (إعادة تثبيت/تبديل جهاز)
+          //   أو مميّزة/ملغاة: نُسجّلها لتنظيف قاعدة البيانات.
+          if (/UNREGISTERED|NotRegistered|not a valid FCM registration token|Requested entity was not found/i.test(text)) {
+            invalidTokens.add(token);
+          }
+          console.warn('[fcm] v1 failed:', text);
           return false;
         }
       },
@@ -257,6 +263,19 @@ export async function createSender(): Promise<FcmSender | null> {
     '(Edge Function secret) or the "fcm_service_account" Vault secret.',
   );
   return null;
+}
+
+/**
+ * ⭐ v4.5.2 — الرموز التي رفضها FCM نهائياً (UNREGISTERED).
+ *   الدوالّ تستدعي takeInvalidTokens() بعد الإرسال وتمسحها من profiles
+ *   حتى لا تُعاد المحاولة doomed مرّة بعد أخرى.
+ */
+const invalidTokens = new Set<string>();
+
+export function takeInvalidTokens(): string[] {
+  const list = Array.from(invalidTokens);
+  invalidTokens.clear();
+  return list;
 }
 
 /** ⭐ هل FCM مهيّأ؟ (للفحص قبل الإرسال) */

@@ -11,7 +11,7 @@
 // ============================================================
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { createSender, sendBatch } from '../_shared/fcm.ts';
+import { createSender, sendBatch, takeInvalidTokens } from '../_shared/fcm.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -195,6 +195,17 @@ Deno.serve(async (req) => {
         channel: 'medapp_updates',
       },
     });
+
+    // ⭐ v4.5.2 — رموز لم تُسجَّل anymore → امسحها من profiles.
+    try {
+      const invalid = takeInvalidTokens();
+      if (invalid.length) {
+        await admin.from('profiles').update({ fcm_token: null }).in('fcm_token', invalid);
+        console.warn('[update-notification] cleared ' + invalid.length + ' stale FCM token(s)');
+      }
+    } catch (e) {
+      console.warn('[update-notification] could not clear the stale tokens:', e);
+    }
 
     /* ── 5) السجلّ ── */
     try {

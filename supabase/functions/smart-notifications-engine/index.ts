@@ -15,7 +15,7 @@
 // ============================================================
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { createSender, sendBatch, type FcmMessage } from '../_shared/fcm.ts';
+import { createSender, sendBatch, takeInvalidTokens, type FcmMessage } from '../_shared/fcm.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -407,6 +407,17 @@ Deno.serve(async (req) => {
       const result = await sendBatch(sender, [profile.fcm_token], message, 1);
       sent += result.sent;
       failed += result.failed;
+
+      // ⭐ v4.5.2 — رموز لم تُسجَّل anymore → امسح رمز هذا المستخدم.
+      try {
+        const invalid = takeInvalidTokens();
+        if (invalid.includes(profile.fcm_token)) {
+          await admin.from('profiles').update({ fcm_token: null }).eq('id', profile.id);
+          console.warn('[smart-engine] cleared a stale FCM token for ' + profile.email);
+        }
+      } catch (e) {
+        console.warn('[smart-engine] could not clear the stale token:', e);
+      }
 
       logRows.push({
         user_id: profile.id,
