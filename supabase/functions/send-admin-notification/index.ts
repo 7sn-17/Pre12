@@ -163,7 +163,9 @@ Deno.serve(async (req) => {
       }, 500);
     }
 
-    const channelId = type === 'subject' ? 'medapp_content' : 'medapp_updates';
+    // ⭐ v4.6.0 — TASK 3: إشعارات لوحة الإدارة تُرسل على قناة
+    //   medapp_content (هادئة بلا صوت) حتى لا تُزعج المستخدم بنغمة.
+    const channelId = 'medapp_content';
     const action = (type === 'subject' || !!url) ? 'content' : 'tasks';
     const targetUrl = url || (subjectSlug
       ? `subject.html?subject=${encodeURIComponent(subjectSlug)}`

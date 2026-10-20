@@ -46,7 +46,6 @@ const TEMPLATES = {
       'يوم جديد، فرصة جديدة للتفوق. مهامك بانتظارك 📚.',
       'طالب الطب لا ينام على مهامه! ابدأ يومك الآن 💪.',
       'مر الوقت ولم تبدأ بعد! تذكّر هدفك، ابدأ بمهمة واحدة الآن ⏳.',
-      'أنت في منتصف الطريق! أنجزت نصف المهام. واصل التقدم 🚀.',
       'رائع يا {name}! أكملت جميع مهام اليوم. أنت أسطورة 🏆.',
       'مهمة واحدة الآن تكفي لتُكمل يومك بنجاح — خلّينا نبدأ.',
       'جدولك جاهز: {task_count} مهام. أتمم واحدة منهم وابدأ.',
@@ -100,6 +99,17 @@ const TEMPLATES = {
       'أنجزت {count} مهمة — الفارق بين طالب وطالب متفوق هو الاستمرارية.',
       'وسام جديد باسمك 🏅 — استمر، القمة أقرب مما تظن.',
       '{count} مهمة… هذا ليس صدفة، هذا انضباط. احتفل 🎉'
+    ],
+  },
+  // ⭐ v4.6.0 — TASK 2: «Halfway there!» — لا تُرسل إلا لمن بدأ فعلاً
+  //   وأنجز نصف مهام يومه بالضبط (completed > 0 && completed === floor(total/2)).
+  halfway: {
+    titles: ['أنت في منتصف الطريق!', 'نصف الطريق… واصل!', 'وصلت إلى المنتصف'],
+    bodies: [
+      'أنت في منتصف الطريق! أنجزت نصف مهام اليوم. واصل التقدم 🚀.',
+      'وصلت إلى المنتصف — {completed_count} من {total_count} مهام. الباقي أسهل! 💪.',
+      'نصف مهام اليوم منجزة! أنهيتَ الأصعب، يكفيك إكمال ما تبقّى 🔥.',
+      'المنتصف خلفك — {completed_count} من {total_count}. خطوة أخيرة وتُكمل ✨.'
     ],
   },
 };
@@ -262,8 +272,9 @@ Deno.serve(async (req) => {
 
       /* ⭐ خمول: لا نرسل أكثر من إشعار كل 4 ساعات */
       if (profile.last_notification_at) {
-        const hoursSince = (Date.now() - new Date(profile.last_notification_at).getTime()) / 3600000;
-        if (hoursSince < 4) { skipped++; continue; }
+        // ⭐ v4.6.0 — TASK 2: حدّ إرسال 60 دقيقة (لا نُزعج المستخدم).
+        const minutesSince = (Date.now() - new Date(profile.last_notification_at).getTime()) / 60000;
+        if (minutesSince < 60) { skipped++; continue; }
       }
 
       const rows = byUser.get(profile.id) || [];
@@ -297,6 +308,9 @@ Deno.serve(async (req) => {
         task_count: todayTotal,
         count: totalDone,
         subject: '',
+        // ⭐ v4.6.0 — TASK 2: عدّاد «نصف الطريق».
+        completed_count: 0,
+        total_count: 0,
       };
 
       /* ── 4) اختيار الفئة ── */
@@ -310,16 +324,31 @@ Deno.serve(async (req) => {
         // ⭐ v4.5.1 — Dormancy: غاب التطبيق يومين أو أكثر.
         category = 'reengagement';
       } else if (hour >= 20 && todayDone === 0 && streak > 0) {
+        // ⭐ v4.6.0 — TASK 2: «Streak Risk» فقط لسلسلة نشطة ولا إنجاز اليوم.
         category = 'streak';
-      } else if (recentFiles && recentFiles.length) {
-        const candidates = recentFiles.filter((f: any) => f.subject_id && subjectById.has(f.subject_id));
-        if (candidates.length) {
-          const file: any = pick(candidates);
-          contentSubject = subjectById.get(file.subject_id) || null;
-          contentFileTitle = String(file.title || '');
-          if (contentSubject) {
-            category = 'content';
-            vars.subject = contentSubject.name;
+      } else {
+        // ⭐ v4.6.0 — TASK 2: «Halfway there!» لا تُرسل إلا لمن بدأ
+        //   (completed_count > 0) وأنجز نصف مهام اليوم بالضبط.
+        const completedCount = todayDone;
+        const totalCount = todayTotal;
+        const isHalfway = totalCount >= 2 &&
+          completedCount > 0 &&
+          completedCount === Math.floor(totalCount / 2);
+
+        if (isHalfway) {
+          category = 'halfway';
+          vars.completed_count = completedCount;
+          vars.total_count = totalCount;
+        } else if (recentFiles && recentFiles.length) {
+          const candidates = recentFiles.filter((f: any) => f.subject_id && subjectById.has(f.subject_id));
+          if (candidates.length) {
+            const file: any = pick(candidates);
+            contentSubject = subjectById.get(file.subject_id) || null;
+            contentFileTitle = String(file.title || '');
+            if (contentSubject) {
+              category = 'content';
+              vars.subject = contentSubject.name;
+            }
           }
         }
       }
@@ -384,7 +413,7 @@ Deno.serve(async (req) => {
         data.target = 'index.html#streak';
         data.url = 'index.html#streak';
         actions = taskActions;
-      } else if (category === 'agenda' || category === 'onboarding') {
+      } else if (category === 'agenda' || category === 'onboarding' || category === 'halfway') {
         actions = taskActions;
       }
 

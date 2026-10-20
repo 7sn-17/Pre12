@@ -401,9 +401,19 @@
   /**
    * ⭐ v4.5.0 — إغلاق أي نافذة مفتوحة فوراً (يُستخدم بعد إجراء
    *   حساس مثل حذف الحساب حتى لا تبقى طبقة عالقة تمنع اللمس).
+   * ⭐ v4.6.0 — TASK 1: إغلاق قسري — حتى لو ضاع مرجع النافذة
+   *   (current = null) نُزيل الـoverlay من الـDOM كي لا تتجمّد الواجهة.
    */
   function closeAll() {
     closeCurrent(null);
+    try {
+      var root = document.getElementById('medappUiRoot');
+      if (root) {
+        root.classList.remove('open');
+        var overlay = root.querySelector('.medapp-ui-overlay');
+        if (overlay) root.innerHTML = '';
+      }
+    } catch (e) {}
   }
 
   global.showCustomAlert = showCustomAlert;

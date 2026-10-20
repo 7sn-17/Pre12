@@ -6267,6 +6267,15 @@ function openLastActivity() {
         } catch (closeError) {}
         showToast('تعذر حذف الحساب. يرجى المحاولة لاحقاً.', 'error');
       } finally {
+        // ⭐ v4.6.0 — TASK 1: إغلاق النافذة وإخفاء المؤشّر دائماً،
+        //   حتى لو فشلت دالة Edge أو انتهت المهلة (وليس مجرّداً
+        //   عند النجاح) — لا يبقى أي طبقة عالقة تمنع اللمس.
+        try {
+          if (window.MedAppUI && typeof window.MedAppUI.closeAll === 'function') {
+            window.MedAppUI.closeAll();
+          }
+        } catch (closeError) {}
+
         if (btn) {
           btn.disabled = false;
           btn.removeAttribute('aria-busy');

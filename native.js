@@ -31,7 +31,8 @@
     lastForegroundNotificationKey: '',
     lastForegroundNotificationAt: 0,
     permissionRequested: false,
-    notificationPermission: null
+    notificationPermission: null,
+    cacheKillerRunning: false
   };
 
   // ⭐ v4.3.0 — آخر رمز FCM معروف. نحتفظ به محلياً حتى تستعيد الجلسة
@@ -1381,6 +1382,133 @@
   // ─────────────────────────────────────────────
   // 10) الإقلاع
   // ─────────────────────────────────────────────
+  /**
+   * ⭐⭐⭐ v4.6.0 — TASK 1: «Cache Killer».
+   *   المشكلة: ملفات JS قديمة تُقدَّم من كاش الـWebView أو الـService
+   *   Worker، فتبقى أخطاء قديمة (مثل تجمّد حذف الحساب) بعد التحديث.
+   *   الحل: نقارن إصدار التطبيق المثبَّت بالإصدار المخزَّن؛ وعند
+   *   الاختلاف نُلغي كل Service Workers، ونمسح كل الكاش، ونمسح
+   *   بيانات التطبيق (مع استثناء رموز الدخول)، ثم نعيد التحميل قسراً.
+   */
+  var CACHE_KILLER_KEY = 'app_version';
+  // ⭐ مفاتيح لا نمسحها أبداً: جلسة Supabase (+ مفاتيح تدفّق الدخول)،
+  //   وتفضيلات المستخدم (الثيم) وعلامة إتمام التعريف، ورمز FCM.
+  var CACHE_KILLER_KEEP = new RegExp([
+    'auth-token', 'auth_token', 'session',
+    'pending_verification', 'medapp_pending_email',
+    'medfav_onboarding_done', 'medfav_theme',
+    'medapp_fcm_token'
+  ].join('|'), 'i');
+
+  /** ⭐ الإصدار الحالي: من App.getInfo() أو من meta[name=app-version]. */
+  function getCurrentAppVersion() {
+    return new Promise(function (resolve) {
+      var meta = '';
+      try {
+        var el = document.querySelector('meta[name="app-version"]');
+        meta = el ? String(el.getAttribute('content') || '').trim() : '';
+      } catch (e) {}
+
+      if (!isNative) { resolve(meta); return; }
+
+      try {
+        var App = plugin('App');
+        if (App && typeof App.getInfo === 'function') {
+          Promise.resolve(App.getInfo()).then(function (info) {
+            var version = info && (info.version || info.versionName);
+            resolve(String(version || meta || '').trim());
+          }).catch(function () { resolve(meta); });
+          return;
+        }
+      } catch (e) {}
+
+      resolve(meta);
+    });
+  }
+
+  /** ⭐ يمسح localStorage ما عدا رموز الدخول والجلسة. */
+  function clearStaleLocalStorage() {
+    try {
+      var keys = [];
+      for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        if (key) keys.push(key);
+      }
+      keys.forEach(function (key) {
+        if (CACHE_KILLER_KEEP.test(key)) return;
+        try { localStorage.removeItem(key); } catch (e) {}
+      });
+    } catch (e) {}
+  }
+
+  /**
+   * ⭐ ينفّذ «Cache Killer» عند تغيّر الإصدار.
+   * @returns {Promise<boolean>} true إذا تمّت التنظيف (وسيُعاد التحميل).
+   */
+  function runCacheKiller() {
+    if (!isNative) return Promise.resolve(false);
+    if (nativeState.cacheKillerRunning) return Promise.resolve(false);
+
+    return getCurrentAppVersion().then(function (current) {
+      if (!current) return false;
+
+      var stored = null;
+      try { stored = localStorage.getItem(CACHE_KILLER_KEY); } catch (e) {}
+
+      if (stored === current) return false;
+
+      var firstRun = !stored;
+      try { localStorage.setItem(CACHE_KILLER_KEY, current); } catch (e) {}
+
+      if (firstRun) {
+        console.info('[native] the cache killer: first run — nothing to clean.');
+        return false;
+      }
+
+      nativeState.cacheKillerRunning = true;
+      console.warn('[native] the cache killer: ' + stored + ' → ' + current + ' — cleaning the old cache.');
+
+      // 1) إلغاء كل Service Workers.
+      var unregister = Promise.resolve();
+      try {
+        if (navigator.serviceWorker && typeof navigator.serviceWorker.getRegistrations === 'function') {
+          unregister = navigator.serviceWorker.getRegistrations().then(function (registrations) {
+            return Promise.all((registrations || []).map(function (registration) {
+              try { return registration.unregister(); } catch (e) { return null; }
+            }));
+          }).catch(function () {});
+        }
+      } catch (e) {}
+
+      // 2) مسح كل الكاش.
+      var clearCaches = Promise.resolve();
+      try {
+        if (global.caches && typeof global.caches.keys === 'function') {
+          clearCaches = global.caches.keys().then(function (names) {
+            return Promise.all((names || []).map(function (name) {
+              try { return global.caches.delete(name); } catch (e) { return null; }
+            }));
+          }).catch(function () {});
+        }
+      } catch (e) {}
+
+      return unregister.then(function () { return clearCaches; })
+        .then(function () {
+          // 3) مسح بيانات التطبيق (مع استثناء رموز الدخول).
+          clearStaleLocalStorage();
+          // 4) تثبيت الإصدار الجديد + إعادة تحميل قسرية.
+          try { localStorage.setItem(CACHE_KILLER_KEY, current); } catch (e) {}
+          try { global.location.reload(true); } catch (e) {
+            try { global.location.reload(); } catch (e2) {}
+          }
+          return true;
+        });
+    }).catch(function (e) {
+      console.warn('[native] the cache killer failed:', e);
+      return false;
+    });
+  }
+
   function initNative() {
     nativeState.ready = true;
 
@@ -1395,6 +1523,8 @@
     // ⭐ v4.5.0 — أنشئ قنوات الإشعارات المتنوّعة مبكراً.
     ensureNotificationChannels();
     bindNotificationRouting();
+    // ⭐ v4.6.0 — TASK 1: «Cache Killer» — يُلغي الكاش القديم عند تغيّر الإصدار.
+    runCacheKiller();
 
     // ⭐ منع قائمة الضغط المطوّل (Context Menu) على الصور
     try {
@@ -1500,6 +1630,7 @@
     saveFcmToken: saveFcmToken,
     ensureFcmToken: ensureFcmToken,
     readAndSaveFcmToken: readAndSaveFcmToken,
+    runCacheKiller: runCacheKiller,
     closeBrowser: closeNativeBrowser
   };
   global.closeNativeBrowser = closeNativeBrowser;
