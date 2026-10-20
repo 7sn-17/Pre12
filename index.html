@@ -333,9 +333,9 @@
   /* ============================================================
      ⭐⭐ شبكة أمان: أي طبقة مخفية يجب ألّا تعترض النقرات
      ------------------------------------------------------------
-     كانت طبقة "تسجيل الدخول" (وه,iPhone) بلا CSS فتُعرض كنصّ
+     كانت طبقة "تسجيل الدخول" (و iPhone) بلا CSS فتُعرض كنصّ
      دائم أسفل الشاشة وتبتلع كل الضغقات. هذه القاعدة تمنع ذلك
-     أبداً: أي طبقة غير مفعّلة تُخفى تماماً ولا تلتقط_pointer.
+     أبداً: أي طبقة غير مفعّلة تُخفى تماماً ولا تلتقط أي نقرة.
      ============================================================ */
   .auth-required-overlay:not(.active),
   .modal-backdrop:not(.active),
@@ -5630,7 +5630,7 @@ i.fab {
           <p>تأكد من وصول الإشعارات إلى جهازك</p>
         </div>
       </div>
-      <button class="settings-item-arrow" id="testNotificationBtn" onclick="sendTestNotification()"
+      <button type="button" class="settings-item-arrow" id="testNotificationBtn"
               style="
                 flex-shrink: 0;
                 padding: 8px 14px;
@@ -5813,7 +5813,7 @@ i.fab {
       <button class="nav-btn active" data-view="home" onclick="switchTab('home')">
         <i data-lucide="home"></i>
 
-    <button type="button" class="settings-item danger-item" id="deleteAccountItem" style="display: none; width: 100%; text-align: right; cursor: pointer;" onclick="confirmDeleteAccount()">
+    <button type="button" class="settings-item danger-item" id="deleteAccountItem" style="display: none; width: 100%; text-align: right; cursor: pointer;">
       <div class="settings-item-left">
         <div class="settings-icon" style="background: rgba(239, 68, 68, 0.14); border-color: rgba(239, 68, 68, 0.32); color: var(--medapp-red, #f87171);">
           <i data-lucide="user-x"></i>
@@ -6590,6 +6590,25 @@ function openLastActivity() {
       }
     }
 
+    /** ⭐ زر "حذف الحساب نهائياً" */
+    function bindDeleteAccountButton() {
+      const btn = document.getElementById('deleteAccountItem');
+      if (!btn || btn.dataset.delBound === '1') return;
+      btn.dataset.delBound = '1';
+
+      btn.addEventListener('click', async function (event) {
+        if (event) event.preventDefault();
+        try {
+          await confirmDeleteAccount();
+        } catch (err) {
+          console.error('[delete-account]', err);
+          if (typeof showCustomAlert === 'function') {
+            showCustomAlert('خطأ في حذف الحساب', String((err && err.message) || err), 'error');
+          }
+        }
+      });
+    }
+
     /**
      * ⭐⭐⭐ مزامنة منطقة الخطر (تسجيل الخروج + حذف الحساب).
      * تُستدعى عند فتح الإعدادات — حتى لا يبقى الزرّ مخفياً لمجرّد
@@ -6693,10 +6712,33 @@ function openLastActivity() {
     var suppressDiagnosticClick = false;
 
     /** ⭐ الضغط المطوّل يكشف قسم التشخيص */
-    function setupNotificationDiagnostics() {
+    /**
+     * ⭐⭐ ربط أزرار الإعدادات (addEventListener — أدقّ من onclick المضمّن،
+     *    ويمنع التنفيذ مرّتين إن نُسخ السكربت مع إعادة رسم الصفحة).
+     */
+    function setupSettingsActions() {
+      bindTestNotificationButton();
+      bindDeleteAccountButton();
+    }
+
+    /** ⭐ زر "إرسال إشعار تجريبي" + كاشف الضغط المطوّل */
+    function bindTestNotificationButton() {
       const btn = document.getElementById('testNotificationBtn');
       if (!btn || btn.dataset.diagBound === '1') return;
       btn.dataset.diagBound = '1';
+
+      // ⭐⭐ النقر (مع منع التكرار)
+      btn.addEventListener('click', async function (event) {
+        if (event) event.preventDefault();
+        try {
+          await sendTestNotification();
+        } catch (err) {
+          console.error('[test-notification]', err);
+          if (typeof showCustomAlert === 'function') {
+            showCustomAlert('خطأ في الإشعار', String((err && err.message) || err), 'error');
+          }
+        }
+      });
 
       function start(event) {
         // ⭐⭐ لا نستدعي preventDefault هنا أبداً:
@@ -7593,7 +7635,7 @@ function openRecentFile(fileId) {
       if (viewName === 'settings') {
         refreshNotificationToggle();
         refreshDailyReminderToggle();
-        setupNotificationDiagnostics();
+        setupSettingsActions();
         syncDangerZoneVisibility();
       }
       if (viewName === 'home') {
@@ -9610,6 +9652,9 @@ function showAbout() {
       ]);
       
     }
+
+    // ⭐ ربط أزرار الإعدادات فوراً (حتى لو فُتحت الإعدادات لاحقاً)
+    try { setupSettingsActions(); } catch (e) {}
 
     init();
 
