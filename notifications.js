@@ -963,6 +963,8 @@
    *   tasks   → مهام اليوم
    *   streak  → ورقة السلسلة
    *   lectures → محاضراتي
+   *   notes   → الملاحظات
+   *   content → المادة أو الملف
    */
   /** ⭐ v4.5.0 — هدف داخلي آمن فقط. */
   function safeInternalTarget(target) {
@@ -1034,6 +1036,11 @@
 
     if (action === 'lectures') {
       try { global.location.href = 'my-lectures.html'; } catch (e) {}
+      return true;
+    }
+
+    if (action === 'notes') {
+      try { global.location.href = 'notes.html'; } catch (e) {}
       return true;
     }
 

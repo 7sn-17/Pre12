@@ -596,7 +596,9 @@
   /**
    * ⭐⭐⭐ التوجيه الذكي — يستمع لضغطة الإشعار (محلي أو بعيد)
    * ويقرأ data.action لتحديد ما يُفتح:
-   *   update · tasks · streak · lectures
+   *   update · tasks · streak · lectures · notes · content
+   *
+   * ⭐ v4.5.1 — TASK 4: أزرار الإجراء «تم الإنجاز» و«لاحقاً».
    */
   function bindNotificationRouting() {
     if (!isNative) return;
@@ -606,6 +608,7 @@
       try {
         LocalNotifications.addListener('localNotificationActionPerformed', function (event) {
           var payload = (event && event.notification) || event || {};
+          if (handleNotificationAction(event && event.actionId, payload, event)) return;
           routeNotification(payload);
         });
       } catch (e) {
@@ -618,6 +621,7 @@
       try {
         PushNotifications.addListener('pushNotificationActionPerformed', function (event) {
           var payload = (event && event.notification) || event || {};
+          if (handleNotificationAction(event && event.actionId, payload, event)) return;
           routeNotification(payload);
         });
       } catch (e) {
@@ -630,6 +634,7 @@
       try {
         Messaging.addListener('notificationActionPerformed', function (action) {
           var payload = (action && action.notification) || action || {};
+          if (handleNotificationAction(action && action.actionId, payload, action)) return;
           routeNotification(payload);
         });
       } catch (e) {}
@@ -637,6 +642,215 @@
 
     // ⭐ v4.4.1 — TASK 2: FCM لا يعرض شيئاً تلقائياً والتطبيق في المقدمة.
     bindForegroundPushDisplay();
+  }
+
+  /**
+   * ⭐ v4.5.1 — TASK 4: يقرأ زر الإجراء المضغوط في الإشعار.
+   * @returns {boolean} true إذا كان ضغطاً على زر إجراء (لا نوجّه بعدها).
+   */
+  function handleNotificationAction(actionId, payload, event) {
+    var id = String(actionId || '').toLowerCase();
+    if (id !== 'mark_done' && id !== 'later') return false;
+
+    var data = (payload && (payload.data || payload)) || {};
+    if (!data || typeof data !== 'object') data = {};
+
+    try {
+      global.dispatchEvent(new CustomEvent('medapp:notification-action', {
+        detail: { actionId: id, data: data }
+      }));
+    } catch (e) {}
+
+    if (id === 'mark_done') markNotificationTaskDone(data, event);
+    else snoozeNotificationTask(data, event);
+
+    return true;
+  }
+
+  /**
+   * ⭐ v4.5.1 — TASK 4: يزيل الإشعار الظاهر من شاشة الإشعارات.
+   */
+  function dismissDeliveredNotification(event) {
+    try {
+      var LocalNotifications = plugin('LocalNotifications');
+      if (!LocalNotifications) return;
+      var raw = event && event.notification && event.notification.id;
+      if (raw === undefined || raw === null) return;
+      var numeric = parseInt(raw, 10);
+      if (isNaN(numeric)) return;
+      if (typeof LocalNotifications.removeDeliveredNotificationsById === 'function') {
+        Promise.resolve(LocalNotifications.removeDeliveredNotificationsById({ ids: [numeric] }))
+          .catch(function () {});
+      }
+    } catch (e) {}
+  }
+
+  /** ⭐ تاريخ اليوم بصيغة YYYY-MM-DD. */
+  function todayPlanKey() {
+    var now = new Date();
+    return now.getFullYear() + '-' +
+      String(now.getMonth() + 1).padStart(2, '0') + '-' +
+      String(now.getDate()).padStart(2, '0');
+  }
+
+  /** ⭐ إشعار قصير للمستخدم (Toast). */
+  function notifyUser(message, type) {
+    try {
+      if (typeof global.showToast === 'function') {
+        global.showToast(message, type || 'info');
+      } else {
+        console.info('[native] ' + message);
+      }
+    } catch (e) {
+      console.info('[native] ' + message);
+    }
+  }
+
+  /** ⭐ يحدّث بطاقة «مهام اليوم» إن كانت ظاهرة. */
+  function refreshTodayUi() {
+    try {
+      if (typeof global.renderTodayCard === 'function') global.renderTodayCard();
+    } catch (e) {}
+    try {
+      if (typeof global.updateStreakCounter === 'function') global.updateStreakCounter();
+    } catch (e) {}
+  }
+
+  /**
+   * ⭐ v4.5.1 — TASK 4: زر «تم الإنجاز» → يحدّث المهمة في Supabase
+   *   ويلغي الإشعار ويحدّث الواجهة.
+   */
+  function markNotificationTaskDone(data, event) {
+    data = data || {};
+    var taskId = String(data.task_id || data.taskId || '');
+    var planDate = String(data.plan_date || data.planDate || '');
+
+    dismissDeliveredNotification(event);
+
+    if (!taskId) {
+      notifyUser('لا توجد مهمة مرتبطة بهذا الإشعار', 'info');
+      return;
+    }
+
+    var user = null;
+    try {
+      user = typeof global.getAuthUser === 'function' ? global.getAuthUser() : null;
+    } catch (e) {}
+    if (!user || !user.id) {
+      notifyUser('سجّل الدخول أولاً لتحديث المهمة', 'info');
+      return;
+    }
+
+    if (!planDate) planDate = todayPlanKey();
+
+    var title = String(data.task_title || data.taskTitle || '');
+    var task = {
+      id: taskId,
+      date: planDate,
+      subject: String(data.subject || ''),
+      task: title,
+      title: title
+    };
+
+    // ⭐ المسار المفضّل: نفس دالة التطبيق (محلي + طابور + حدث + رفع سحابي).
+    var handled = false;
+    try {
+      if (typeof global.setTaskCompleted === 'function') {
+        handled = true;
+        Promise.resolve(global.setTaskCompleted(planDate, taskId, true, task, 'notification'))
+          .then(function (result) {
+            if (result && result.ok === false) {
+              notifyUser('تعذّر تحديث المهمة', 'error');
+              return;
+            }
+            notifyUser('تم إنجاز المهمة ✔', 'success');
+            refreshTodayUi();
+          })
+          .catch(function (e) {
+            console.warn('[native] the task could not be updated:', e);
+            notifyUser('تعذّر تحديث المهمة', 'error');
+          });
+      }
+    } catch (e) {
+      handled = false;
+    }
+
+    if (handled) return;
+
+    // ⭐ احتياط: رفع مباشر إلى جدول task_progress.
+    try {
+      if (global.supabaseClient) {
+        handled = true;
+        Promise.resolve(global.supabaseClient
+          .from('task_progress')
+          .upsert({
+            user_id: user.id,
+            plan_date: planDate,
+            task_id: taskId,
+            subject: task.subject || null,
+            task_title: title || null,
+            completed: true,
+            completed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id,plan_date,task_id' }))
+          .then(function (result) {
+            if (result && result.error) {
+              console.warn('[native] the task could not be saved:', result.error);
+              notifyUser('تعذّر تحديث المهمة', 'error');
+              return;
+            }
+            notifyUser('تم إنجاز المهمة ✔', 'success');
+            refreshTodayUi();
+          })
+          .catch(function (e) {
+            console.warn('[native] the task could not be saved:', e);
+            notifyUser('تعذّر تحديث المهمة', 'error');
+          });
+      }
+    } catch (e) {
+      handled = false;
+    }
+
+    if (!handled) notifyUser('تعذّر تحديث المهمة', 'error');
+  }
+
+  /**
+   * ⭐ v4.5.1 — TASK 4: زر «لاحقاً» → يؤجّل التذكير 30 دقيقة.
+   */
+  function snoozeNotificationTask(data, event) {
+    data = data || {};
+    dismissDeliveredNotification(event);
+
+    var LocalNotifications = plugin('LocalNotifications');
+    if (!LocalNotifications || typeof LocalNotifications.schedule !== 'function') {
+      notifyUser('سنُذكّرك بعد 30 دقيقة', 'info');
+      return;
+    }
+
+    var title = String(data.title || '⏰ تذكير بمهامك');
+    var body = String(data.body || 'عد لمهامك الآن.');
+    var id = Math.floor(Date.now() / 1000) % 2147483647;
+
+    try {
+      Promise.resolve(LocalNotifications.schedule({
+        notifications: [{
+          id: id,
+          title: title,
+          body: body,
+          smallIcon: 'ic_stat_icon',
+          channelId: 'medapp_tasks',
+          sound: 'default',
+          schedule: { at: new Date(Date.now() + 30 * 60 * 1000) },
+          extra: { action: 'tasks' }
+        }]
+      })).then(function () {
+        notifyUser('سنُذكّرك بعد 30 دقيقة', 'info');
+      }).catch(function (e) {
+        console.warn('[native] the snooze could not be scheduled:', e);
+      });
+    } catch (e) {
+      console.warn('[native] the snooze could not be scheduled:', e);
+    }
   }
 
   /**
@@ -830,19 +1044,132 @@
     return 'index.html';
   }
 
-  function routeNotification(payload) {
+  /**
+   * ⭐ v4.5.1 — TASK 4: أزرار الإشعار القادمة من الخادم.
+   *   (FCM v1 لا يسمح بـ actions داخل الإشعار، فنرسلها في البيانات.)
+   */
+  function notificationActionButtons(data) {
+    var ids = String((data && data.actions) || '').split(',');
+    ids = ids.map(function (id) { return String(id || '').trim(); }).filter(Boolean);
+    if (!ids.length) return [];
+    var titles = String((data && data.actions_titles) || '').split('|');
+    return ids.map(function (id, index) {
+      return { id: id, title: String(titles[index] || id) };
+    });
+  }
+
+  /**
+   * ⭐ v4.5.1 — TASK 4: شريط إجراءات حقيقي داخل التطبيق
+   *   (بديل عملي لأزرار أندرويد التي لا تدعمها FCM v1).
+   * @returns {boolean} true إذا عُرض الشريط.
+   */
+  function showNotificationActionSheet(data) {
+    var buttons = notificationActionButtons(data);
+    if (!buttons.length) return false;
+
     try {
-      if (global.MedAppNotifications && typeof global.MedAppNotifications.routeNotificationAction === 'function') {
-        var handled = global.MedAppNotifications.routeNotificationAction(payload);
-        if (handled) return;
+      if (!global.document || !global.document.body) return false;
+      if (global.document.getElementById('medappNotifActions')) return true;
+
+      var overlay = global.document.createElement('div');
+      overlay.id = 'medappNotifActions';
+      overlay.setAttribute('dir', 'rtl');
+      overlay.style.cssText =
+        'position:fixed;inset:0;z-index:200000;display:flex;align-items:flex-end;' +
+        'justify-content:center;background:rgba(3,10,8,0.74);' +
+        'backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding:18px;';
+
+      var card = global.document.createElement('div');
+      card.style.cssText =
+        'width:100%;max-width:420px;background:rgba(9,23,17,0.97);' +
+        'border:1px solid rgba(251,191,36,0.28);border-radius:22px;padding:18px;' +
+        'box-shadow:0 24px 60px rgba(0,0,0,0.55);color:#fff;font-family:inherit;';
+
+      var title = global.document.createElement('div');
+      title.style.cssText = 'font-size:1.02rem;font-weight:800;margin-bottom:6px;';
+      title.textContent = String((data && data.title) || 'لديك إشعار جديد');
+
+      var body = global.document.createElement('div');
+      body.style.cssText =
+        'font-size:0.88rem;line-height:1.7;color:rgba(255,255,255,0.82);margin-bottom:14px;';
+      body.textContent = String((data && data.body) || '');
+
+      var row = global.document.createElement('div');
+      row.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;';
+
+      function close() {
+        try { overlay.remove(); } catch (e) {}
       }
-      // ⭐ احتياطي: افتح الصفحة المطلوبة
-      var data = (payload && payload.data) || payload || {};
-      var action = String(data.action || '').toLowerCase();
+
+      buttons.forEach(function (button) {
+        var element = global.document.createElement('button');
+        element.type = 'button';
+        element.textContent = button.title;
+        element.style.cssText =
+          'flex:1 1 0;min-width:110px;border:none;border-radius:14px;padding:12px 14px;' +
+          'font:inherit;font-weight:800;font-size:0.88rem;cursor:pointer;' +
+          'background:linear-gradient(135deg,#10b981,#047857);color:#fff;';
+        if (button.id === 'later') {
+          element.style.background = 'rgba(255,255,255,0.10)';
+          element.style.color = '#ffffff';
+          element.style.border = '1px solid rgba(255,255,255,0.18)';
+        }
+        element.addEventListener('click', function () {
+          close();
+          handleNotificationAction(button.id, data, null);
+        });
+        row.appendChild(element);
+      });
+
+      // ⭐ زر «فتح» ينقل إلى الوجهة (المهام/السلسلة/…) دون تكرار الشريط.
+      var open = global.document.createElement('button');
+      open.type = 'button';
+      open.textContent = 'فتح';
+      open.style.cssText =
+        'flex:0 0 auto;border:none;border-radius:14px;padding:12px 16px;font:inherit;' +
+        'font-weight:800;font-size:0.85rem;cursor:pointer;background:transparent;' +
+        'color:rgba(255,255,255,0.65);border:1px solid rgba(255,255,255,0.14);';
+      open.addEventListener('click', function () {
+        close();
+        openNotificationTarget(data);
+      });
+      row.appendChild(open);
+
+      card.appendChild(title);
+      card.appendChild(body);
+      card.appendChild(row);
+      overlay.appendChild(card);
+
+      overlay.addEventListener('click', function (event) {
+        if (event.target === overlay) close();
+      });
+
+      function onKeyDown(event) {
+        if (event.key === 'Escape') {
+          close();
+          global.document.removeEventListener('keydown', onKeyDown);
+        }
+      }
+      global.document.addEventListener('keydown', onKeyDown);
+
+      global.document.body.appendChild(overlay);
+      return true;
+    } catch (e) {
+      console.warn('[native] the notification action sheet failed:', e);
+      return false;
+    }
+  }
+
+  /** ⭐ يفتح وجهة الإشعار (بدون شريط الإجراءات). */
+  function openNotificationTarget(data) {
+    try {
+      var action = String((data && data.action) || '').toLowerCase();
       if (action === 'tasks' || action === 'streak') {
         global.location.href = 'index.html#' + action;
       } else if (action === 'lectures') {
         global.location.href = 'my-lectures.html';
+      } else if (action === 'notes') {
+        global.location.href = 'notes.html';
       } else if (action === 'content') {
         var target = contentNotificationTarget(data);
         if (target.indexOf('subject-id:') === 0) {
@@ -864,7 +1191,27 @@
         }
       } else if (action === 'update') {
         if (global.MedAppUpdate) global.MedAppUpdate.check({ silent: true });
+      } else {
+        var explicit = safeInternalTarget(data && (data.url || data.target || data.path));
+        global.location.href = explicit || 'index.html';
       }
+    } catch (e) {
+      console.warn('[native] the notification target failed:', e);
+    }
+  }
+
+  function routeNotification(payload) {
+    try {
+      // ⭐ v4.5.1 — TASK 4: شريط الإجراءات (تم الإنجاز / لاحقاً) قبل التنقّل.
+      var payloadData = (payload && (payload.data || payload.extra)) || payload || {};
+      if (showNotificationActionSheet(payloadData)) return;
+
+      if (global.MedAppNotifications && typeof global.MedAppNotifications.routeNotificationAction === 'function') {
+        var handled = global.MedAppNotifications.routeNotificationAction(payload);
+        if (handled) return;
+      }
+      // ⭐ احتياطي: افتح الصفحة المطلوبة
+      openNotificationTarget(payloadData);
     } catch (e) {
       console.warn('[native] the notification routing failed:', e);
     }
@@ -900,10 +1247,26 @@
 
   function navigateFromNotification(action) {
     var data = (action && (action.data || action.notification)) || {};
+    var act = String(data.action || '').toLowerCase();
+
+    // ⭐ v4.5.1 — إجراءات معروفة لها وجهتها الثابتة.
+    if (act === 'notes') {
+      try { global.location.href = 'notes.html'; } catch (e) {}
+      return;
+    }
+    if (act === 'tasks' || act === 'streak') {
+      try { global.location.href = 'index.html#' + act; } catch (e) {}
+      return;
+    }
+    if (act === 'lectures') {
+      try { global.location.href = 'my-lectures.html'; } catch (e) {}
+      return;
+    }
+
     var target = data.target || data.url || data.path || '';
     if (!target) target = 'index.html';
     if (target.indexOf('/') === 0) target = target.slice(1);
-    if (!/^[\w./-]+\.html(\?.*)?$/.test(target)) target = 'index.html';
+    if (!/^[\w./-]+\.html([?#].*)?$/.test(target)) target = 'index.html';
     try {
       global.location.href = target;
     } catch (e) {}

@@ -2,7 +2,18 @@
 
 **التطبيق الرسمي لطلاب الطب في سوريا**
 
-⬇️ [تحميل v4.5.0](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+⬇️ [تحميل v4.5.1](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+
+## ✨ v4.5.1 — إشعارات غنية بأزرار إجراء
+
+- **أزرار داخل الإشعار**: «تم الإنجاز» و«لاحقاً» على إشعارات المهام
+  (الخادم + التطبيق)، وضغط «تم الإنجاز» يحدّث المهمة في Supabase ويلغي
+  الإشعار ويحدّث بطاقة اليوم، و«لاحقاً» يؤجّل التذكير 30 دقيقة.
+- **توجيه أوسع**: `data.action` يدعم `notes` (الملاحظات) إلى جانب
+  `update` و`tasks` و`streak` و`lectures` و`content`.
+- **محرّك أدقّ**: الخمول يبدأ بعد يومين من الغياب مع رسالة «طلاب الطب لا
+  يستسلمون»، وإشعار المحتوى صامت «ألقِ نظرة!» عبر قناة `medapp_content`.
+- **الإصدار**: 4.5.1 (‏versionCode 28).
 
 ## ✨ v4.5.0 — النظام الذكي للإشعارات ولوحة الإدارة
 

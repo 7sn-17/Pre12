@@ -14,6 +14,13 @@
 // ⭐ لا نُسجّل أبداً المفتاح الخاص في السجلّات.
 // ============================================================
 
+export interface FcmAction {
+  /** النص الظاهر على الزر. */
+  title: string;
+  /** معرّف الإجراء (مثل mark_done) الذي يصل إلى التطبيق. */
+  action: string;
+  icon?: string;
+}
 export interface FcmMessage {
   title: string;
   body: string;
@@ -22,6 +29,8 @@ export interface FcmMessage {
   channelId?: string;
   /** ⭐ v4.5.0 — override the notification sound; defaults to "default". */
   sound?: string;
+  /** ⭐ v4.5.1 — أزرار الإجراء داخل الإشعار (تم الإنجاز / لاحقاً). */
+  actions?: FcmAction[];
 }
 
 export interface FcmSender {
@@ -173,6 +182,17 @@ async function getAccessToken(sa: ServiceAccount): Promise<string> {
 
 async function sendV1(token: string, message: FcmMessage, sa: ServiceAccount): Promise<boolean> {
   const accessToken = await getAccessToken(sa);
+
+  // ⭐ v4.5.1 — FCM HTTP v1 لا يدعم أزرار الإجراء داخل الإشعار
+  //   (خاصية android.notification.actions غير موجودة في v1 ولا تتوفّر
+  //   إلا في الواجهة القديمة المهجورة). لذلك نرسل الأزرار ضمن حمولة
+  //   البيانات، ويعرضها التطبيق كشريط إجراءات حقيقي عند فتح الإشعار.
+  const data: Record<string, string> = { ...(message.data || {}) };
+  if (message.actions && message.actions.length) {
+    data.actions = message.actions.map((a) => a.action).join(',');
+    data.actions_titles = message.actions.map((a) => a.title).join('|');
+  }
+
   const response = await fetch(
     `https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`,
     {
@@ -185,7 +205,7 @@ async function sendV1(token: string, message: FcmMessage, sa: ServiceAccount): P
         message: {
           token,
           notification: { title: message.title, body: message.body },
-          data: message.data || {},
+          data,
           android: {
             priority: 'HIGH',
             notification: {

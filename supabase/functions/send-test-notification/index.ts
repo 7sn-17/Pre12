@@ -184,14 +184,54 @@ Deno.serve(async (req) => {
     const title = '🔔 إشعار تجريبي';
     const body = 'مرحباً ' + name + '! هذا إشعار تجريبي من المنصة الطبية — الإشعارات تعمل بنجاح';
 
+    /* ⭐ v4.5.1 — TASK 3: نسمح باختبار أي إجراء (tasks / streak / content …). */
+    let payload: any = {};
+    try {
+      payload = await req.json();
+    } catch (e) {
+      payload = {};
+    }
+    const requestedAction = String(payload?.action || 'tasks').toLowerCase();
+    const allowedActions = ['tasks', 'streak', 'content', 'lectures', 'notes', 'update'];
+    const action = allowedActions.indexOf(requestedAction) >= 0 ? requestedAction : 'tasks';
+
+    /* ⭐ v4.5.1 — TASK 4: أول مهمة معلّقة اليوم (لزر «تم الإنجاز»). */
+    const taskData: Record<string, string> = {};
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data: pending, error: pendingError } = await admin
+        .from('task_progress')
+        .select('plan_date, task_id, subject, task_title')
+        .eq('user_id', userId)
+        .eq('plan_date', today)
+        .eq('completed', false)
+        .limit(1);
+      if (pendingError) throw pendingError;
+      const row = (pending || [])[0];
+      if (row) {
+        if (row.plan_date) taskData.plan_date = String(row.plan_date);
+        if (row.task_id) taskData.task_id = String(row.task_id);
+        if (row.subject) taskData.subject = String(row.subject);
+        if (row.task_title) taskData.task_title = String(row.task_title);
+      }
+    } catch (e) {
+      console.warn('[test-notification] could not read the pending task:', e);
+    }
+
     const message = {
       notification: { title, body },
       data: {
-        action: 'tasks',
+        action,
         source: 'test',
         channel: 'medapp_tasks',
         title,
         body,
+        // ⭐ v4.5.1 — TASK 4: أزرار الإجراء. FCM v1 لا يقبل خاصية
+        //   actions داخل الإشعار، لذلك نرسلها ضمن البيانات ويعرضها
+        //   التطبيق كشريط إجراءات (تم الإنجاز / لاحقاً).
+        actions: 'mark_done,later',
+        actions_titles: 'تم الإنجاز|لاحقاً',
+        ...taskData,
       },
       android: {
         priority: 'high' as const,

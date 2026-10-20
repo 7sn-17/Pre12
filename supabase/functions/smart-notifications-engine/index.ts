@@ -211,7 +211,7 @@ Deno.serve(async (req) => {
 
     const { data: progress, error: progressError } = await admin
       .from('task_progress')
-      .select('user_id, plan_date, subject, task_title, completed, completed_at');
+      .select('user_id, plan_date, task_id, subject, task_title, completed, completed_at');
     if (progressError) throw progressError;
 
     const { data: recentFiles, error: recentFilesError } = await admin
@@ -273,6 +273,13 @@ Deno.serve(async (req) => {
       const missedCount = rows.filter((r) => r.plan_date && r.plan_date < today && !r.completed).length;
       const totalDone = rows.filter((r) => r.completed).length;
       const streak = streaks.get(profile.id) || 0;
+
+      // ⭐ v4.5.1 — أول مهمة معلّقة (لزر «تم الإنجاز»).
+      const pendingTask = todayRows.find((r) => !r.completed) ||
+        rows.filter((r) => !r.completed && r.plan_date && r.plan_date <= today)
+          .sort((a, b) => String(a.plan_date).localeCompare(String(b.plan_date)))[0] ||
+        null;
+
       const lastActive = rows.reduce<string | null>((acc, r) => {
         if (!r.completed_at) return acc;
         if (!acc || r.completed_at > acc) return r.completed_at;
@@ -299,8 +306,8 @@ Deno.serve(async (req) => {
 
       if (totalDone === 0 && inactiveDays <= 1) {
         category = 'onboarding';
-      } else if (inactiveDays >= 1) {
-        // ⭐ v4.5.0 — Dormancy: رسالة واضحة وموحّدة لكل من غاب يوماً أو أكثر.
+      } else if (inactiveDays >= 2) {
+        // ⭐ v4.5.1 — Dormancy: غاب التطبيق يومين أو أكثر.
         category = 'reengagement';
       } else if (hour >= 20 && todayDone === 0 && streak > 0) {
         category = 'streak';
@@ -345,13 +352,21 @@ Deno.serve(async (req) => {
         channel: 'medapp_tasks',
       };
 
+      // ⭐ v4.5.1 — TASK 4: أزرار الإجراء داخل إشعارات المهام.
+      const taskActions = [
+        { title: 'تم الإنجاز', action: 'mark_done' },
+        { title: 'لاحقاً', action: 'later' },
+      ];
+      let actions: typeof taskActions | undefined;
+
       if (category === 'reengagement') {
-        body = `👋 اشتقنا لك يا ${vars.name}! عد لمهامك الآن.`;
+        body = `👋 اشتقنا لك يا ${vars.name}! طلاب الطب لا يستسلمون. عد لمهامك الآن.`;
         data.action = 'tasks';
         data.target = 'index.html#tasks';
         data.url = 'index.html#tasks';
+        actions = taskActions;
       } else if (category === 'content' && contentSubject) {
-        body = `📚 تمت إضافة ملخص جديد في مادة ${contentSubject.name}.`;
+        body = `📚 تمت إضافة ملخص جديد في مادة ${contentSubject.name}. ألقِ نظرة!`;
         channelId = 'medapp_content';
         data.action = 'content';
         data.channel = 'medapp_content';
@@ -368,6 +383,17 @@ Deno.serve(async (req) => {
         data.channel = 'medapp_streak';
         data.target = 'index.html#streak';
         data.url = 'index.html#streak';
+        actions = taskActions;
+      } else if (category === 'agenda' || category === 'onboarding') {
+        actions = taskActions;
+      }
+
+      // ⭐ v4.5.1 — بيانات المهمة التي يُنجزها زر «تم الإنجاز».
+      if (actions && pendingTask) {
+        if (pendingTask.task_id) data.task_id = String(pendingTask.task_id);
+        if (pendingTask.plan_date) data.plan_date = String(pendingTask.plan_date);
+        if (pendingTask.subject) data.subject = String(pendingTask.subject);
+        if (pendingTask.task_title) data.task_title = String(pendingTask.task_title);
       }
 
       const message: FcmMessage = {
@@ -375,6 +401,7 @@ Deno.serve(async (req) => {
         body,
         data,
         channelId,
+        ...(actions ? { actions } : {}),
       };
 
       const result = await sendBatch(sender, [profile.fcm_token], message, 1);
