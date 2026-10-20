@@ -331,6 +331,28 @@
   }
 
   /* ============================================================
+     ⭐⭐ شبكة أمان: أي طبقة مخفية يجب ألّا تعترض النقرات
+     ------------------------------------------------------------
+     كانت طبقة "تسجيل الدخول" (وه,iPhone) بلا CSS فتُعرض كنصّ
+     دائم أسفل الشاشة وتبتلع كل الضغقات. هذه القاعدة تمنع ذلك
+     أبداً: أي طبقة غير مفعّلة تُخفى تماماً ولا تلتقط_pointer.
+     ============================================================ */
+  .auth-required-overlay:not(.active),
+  .modal-backdrop:not(.active),
+  .medapp-ui-root:not(.open),
+  .medapp-update-overlay:not(.open) {
+    display: none !important;
+    pointer-events: none !important;
+  }
+
+  /* ⭐ الطبقات المفعّلة وحدها تلتقط النقرات */
+  .auth-required-overlay.active,
+  .medapp-ui-root.open,
+  .medapp-update-overlay.open {
+    pointer-events: auto;
+  }
+
+  /* ============================================================
      ⭐⭐⭐ نافذة التحديث داخل التطبيق (In-App Update) — Premium
      ------------------------------------------------------------
      خلفية متدرّجة خضراء داكنة + أيقونة متوهّجة + شارة الإصدار.
@@ -5693,7 +5715,7 @@ i.fab {
         <div class="settings-icon"><i data-lucide="info"></i></div>
         <div class="settings-text">
           <h4>حول التطبيق</h4>
-          <p id="aboutVersionText">الإصدار 3.7.0 • السنة التحضيرية</p>
+          <p id="aboutVersionText">الإصدار 3.7.2 • السنة التحضيرية</p>
         </div>
       </div>
       <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
@@ -5963,7 +5985,7 @@ i.fab {
 <script src="notifications.js"></script>
 
 
-  <script src="app.js?v=3.7.0"></script>
+  <script src="app.js?v=3.7.2"></script>
 <script>
 
     lucide.createIcons();
@@ -6567,6 +6589,27 @@ function openLastActivity() {
       }
     }
 
+    /**
+     * ⭐⭐⭐ مزامنة منطقة الخطر (تسجيل الخروج + حذف الحساب).
+     * تُستدعى عند فتح الإعدادات — حتى لا يبقى الزرّ مخفياً لمجرّد
+     * أن renderUserCard لم يعمل بعد.
+     */
+    function syncDangerZoneVisibility() {
+      var loggedIn = false;
+      try { loggedIn = typeof isUserLoggedIn === 'function' ? isUserLoggedIn() : false; } catch (e) {}
+      if (!loggedIn) {
+        try {
+          var user = (typeof getAuthUser === 'function') ? getAuthUser() : null;
+          loggedIn = !!(user && user.id);
+        } catch (e) {}
+      }
+
+      var logoutItem = document.getElementById('logoutItem');
+      var deleteItem = document.getElementById('deleteAccountItem');
+      if (logoutItem) logoutItem.style.display = loggedIn ? '' : 'none';
+      if (deleteItem) deleteItem.style.display = loggedIn ? '' : 'none';
+    }
+
     // ============================================
     // ⭐⭐⭐ حذف الحساب نهائياً
     // ============================================
@@ -6615,6 +6658,13 @@ function openLastActivity() {
       } catch (e) {
         console.error('[delete-account]', e);
         showToast('تعذّر حذف الحساب: ' + ((e && e.message) || 'خطأ غير معروف'), 'error');
+        if (typeof showCustomAlert === 'function') {
+          showCustomAlert(
+            'تعذّر حذف الحساب',
+            'السبب: ' + ((e && e.message) || 'خطأ غير معروف'),
+            'error'
+          );
+        }
         return;
       }
 
@@ -6648,7 +6698,9 @@ function openLastActivity() {
       btn.dataset.diagBound = '1';
 
       function start(event) {
-        if (event) event.preventDefault();
+        // ⭐⭐ لا نستدعي preventDefault هنا أبداً:
+        //    منعُه على touchstart يُلغي حدث النقر (click) فلا يعمل الزرّ أبداً.
+        //    الاكتشاف الطويل يتم عبر suppressDiagnosticClick بعد إطلاق الحدث.
         clearTimeout(diagnosticPressTimer);
         diagnosticPressTimer = setTimeout(function () {
           diagnosticPressTimer = null;
@@ -6750,24 +6802,47 @@ function openLastActivity() {
       const btn = document.getElementById('testNotificationBtn');
 
       if (btn) { btn.disabled = true; btn.textContent = 'جارٍ…'; }
+      // ⭐ تغذية راجعة فورية — يتأكّد المستخدم أن الزرّ يعمل
+      if (typeof showToast === 'function') showToast('جارٍ إرسال الإشعار التجريبي…', 'info');
 
       try {
         // ⭐⭐ نتأكّد من وجود رمز الإشعارات لهذا الجهاز أولاً —
         //    بدونه لا يستطيع الخادم إرسال أي شيء.
         await ensureNotificationToken();
 
-        const { error } = await supabaseClient.functions.invoke('send-test-notification');
+        const { data, error } = await supabaseClient.functions.invoke('send-test-notification');
 
         if (error) {
           console.error('[test-notification]', error);
-          showToast('تعذر إرسال الإشعار التجريبي. يرجى التواصل مع المطور لحل هذه المشكلة.', 'error');
+          // ⭐ نعرض سبب الخلل الحقيقي (مثل FCM غير مُهيّأ)
+          const reason = String((error && (error.message || error.error_code)) || '');
+          showToast(
+            reason.indexOf('fcm-not-configured') > -1
+              ? 'الإشعارات غير مُهيّأة على الخادم — أضف سرّ FIREBASE_SERVICE_ACCOUNT_JSON'
+              : 'تعذر إرسال الإشعار التجريبي. يرجى التواصل مع المطور لحل هذه المشكلة.',
+            'error'
+          );
+          return;
+        }
+
+        if (data && data.error === 'no-device-token') {
+          showToast('لا يوجد رمز إشعارات لهذا الجهاز — فعّل الإشعارات ثم أعد المحاولة', 'error');
           return;
         }
 
         showToast('تم إرسال الإشعار التجريبي', 'success');
       } catch (e) {
         console.error('[test-notification]', e);
+        // ⭐ نعرض سبب الخطأ على الشاشة (لا نخفيه)
         showToast('تعذر إرسال الإشعار التجريبي. يرجى التواصل مع المطور لحل هذه المشكلة.', 'error');
+        if (typeof showCustomAlert === 'function') {
+          showCustomAlert(
+            'تعذّر إرسال الإشعار',
+            'السبب: ' + ((e && e.message) || 'خطأ غير معروف') +
+            '<br><br>تأكّد من سجلّات الإشعارات ومن Firestore / FCM.',
+            'error'
+          );
+        }
       } finally {
         if (btn) { btn.disabled = false; btn.textContent = 'إرسال'; }
       }
@@ -6947,6 +7022,7 @@ function openLastActivity() {
       if (logoutItem) logoutItem.style.display = hideAuth ? '' : 'none';
       const deleteItem = document.getElementById('deleteAccountItem');
       if (deleteItem) deleteItem.style.display = hideAuth ? 'none' : '';
+      if (typeof syncDangerZoneVisibility === 'function') syncDangerZoneVisibility();
       
       const adminItem = document.getElementById('adminPanelItem');
 if (adminItem && (role === 'admin' || role === 'moderator')) {
@@ -7517,6 +7593,7 @@ function openRecentFile(fileId) {
         refreshNotificationToggle();
         refreshDailyReminderToggle();
         setupNotificationDiagnostics();
+        syncDangerZoneVisibility();
       }
       if (viewName === 'home') {
         loadLastActivity();
@@ -9328,7 +9405,7 @@ function showAbout() {
 
     // ⭐⭐ رابط التحميل المباشر — نشاركه مع السلسلة
     // ⭐ رابط التحميل — يتبع إصدار التطبيق الحالي
-    var APP_DOWNLOAD_URL = 'https://github.com/7sn-17/Pre12/releases/latest/download/Medical_Platform_v3.7.0.apk';
+    var APP_DOWNLOAD_URL = 'https://github.com/7sn-17/Pre12/releases/latest/download/Medical_Platform_v3.7.2.apk';
 
     async function shareStreak() {
       var text = streakShareText();

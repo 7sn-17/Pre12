@@ -2105,6 +2105,48 @@ also documents every previous version.
 - The custom animated splash screen was **deleted entirely** (markup,
   CSS, animation and the sessionStorage flag).
 
+### 5.25 Phase 31b — v3.7.2 (the dead button + the missing button)
+
+#### ⭐⭐ Why the test button did nothing
+
+**The long-press detector cancelled the click.** The diagnostics
+long-press called `event.preventDefault()` on **`touchstart`**, and
+cancelling `touchstart` cancels the synthesised `click` — so the
+button's `onclick` never ran at all: no toast, no spinner, no error,
+no console line. The handler now never calls `preventDefault()`; the
+long press is detected with a timer and the following click is
+suppressed by a flag instead.
+
+#### ⭐ Why the delete-account button was missing
+
+Its visibility depended entirely on `renderUserCard()` running. The
+new `syncDangerZoneVisibility()` is called whenever the settings tab
+opens **and** after the profile card is drawn, and it derives the state
+from the session itself — so the button appears even if the card render
+fails.
+
+#### ⭐ The safety net
+
+```css
+.auth-required-overlay:not(.active),
+.modal-backdrop:not(.active),
+.medapp-ui-root:not(.open),
+.medapp-update-overlay:not(.open) {
+  display: none !important;
+  pointer-events: none !important;
+}
+```
+
+Any hidden layer is now completely inert — it can never swallow a
+click, whatever happens to its markup.
+
+#### ⭐ Visible errors
+
+Both actions now report failures on screen (a toast **and** a modal
+with the real reason) instead of only in the console — for example the
+`fcm-not-configured` case, which tells the user exactly which secret
+is missing.
+
 ### 5.24 Phase 31 / v3.7.0 (the overlays, the account deletion, a solid push flow)
 
 #### ⭐⭐ The root cause of the "blocking overlay"

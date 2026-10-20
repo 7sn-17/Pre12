@@ -5944,6 +5944,27 @@ function openLastActivity() {
       }
     }
 
+    /**
+     * ⭐⭐⭐ مزامنة منطقة الخطر (تسجيل الخروج + حذف الحساب).
+     * تُستدعى عند فتح الإعدادات — حتى لا يبقى الزرّ مخفياً لمجرّد
+     * أن renderUserCard لم يعمل بعد.
+     */
+    function syncDangerZoneVisibility() {
+      var loggedIn = false;
+      try { loggedIn = typeof isUserLoggedIn === 'function' ? isUserLoggedIn() : false; } catch (e) {}
+      if (!loggedIn) {
+        try {
+          var user = (typeof getAuthUser === 'function') ? getAuthUser() : null;
+          loggedIn = !!(user && user.id);
+        } catch (e) {}
+      }
+
+      var logoutItem = document.getElementById('logoutItem');
+      var deleteItem = document.getElementById('deleteAccountItem');
+      if (logoutItem) logoutItem.style.display = loggedIn ? '' : 'none';
+      if (deleteItem) deleteItem.style.display = loggedIn ? '' : 'none';
+    }
+
     // ============================================
     // ⭐⭐⭐ حذف الحساب نهائياً
     // ============================================
@@ -5992,6 +6013,13 @@ function openLastActivity() {
       } catch (e) {
         console.error('[delete-account]', e);
         showToast('تعذّر حذف الحساب: ' + ((e && e.message) || 'خطأ غير معروف'), 'error');
+        if (typeof showCustomAlert === 'function') {
+          showCustomAlert(
+            'تعذّر حذف الحساب',
+            'السبب: ' + ((e && e.message) || 'خطأ غير معروف'),
+            'error'
+          );
+        }
         return;
       }
 
@@ -6025,7 +6053,9 @@ function openLastActivity() {
       btn.dataset.diagBound = '1';
 
       function start(event) {
-        if (event) event.preventDefault();
+        // ⭐⭐ لا نستدعي preventDefault هنا أبداً:
+        //    منعُه على touchstart يُلغي حدث النقر (click) فلا يعمل الزرّ أبداً.
+        //    الاكتشاف الطويل يتم عبر suppressDiagnosticClick بعد إطلاق الحدث.
         clearTimeout(diagnosticPressTimer);
         diagnosticPressTimer = setTimeout(function () {
           diagnosticPressTimer = null;
@@ -6127,24 +6157,47 @@ function openLastActivity() {
       const btn = document.getElementById('testNotificationBtn');
 
       if (btn) { btn.disabled = true; btn.textContent = 'جارٍ…'; }
+      // ⭐ تغذية راجعة فورية — يتأكّد المستخدم أن الزرّ يعمل
+      if (typeof showToast === 'function') showToast('جارٍ إرسال الإشعار التجريبي…', 'info');
 
       try {
         // ⭐⭐ نتأكّد من وجود رمز الإشعارات لهذا الجهاز أولاً —
         //    بدونه لا يستطيع الخادم إرسال أي شيء.
         await ensureNotificationToken();
 
-        const { error } = await supabaseClient.functions.invoke('send-test-notification');
+        const { data, error } = await supabaseClient.functions.invoke('send-test-notification');
 
         if (error) {
           console.error('[test-notification]', error);
-          showToast('تعذر إرسال الإشعار التجريبي. يرجى التواصل مع المطور لحل هذه المشكلة.', 'error');
+          // ⭐ نعرض سبب الخلل الحقيقي (مثل FCM غير مُهيّأ)
+          const reason = String((error && (error.message || error.error_code)) || '');
+          showToast(
+            reason.indexOf('fcm-not-configured') > -1
+              ? 'الإشعارات غير مُهيّأة على الخادم — أضف سرّ FIREBASE_SERVICE_ACCOUNT_JSON'
+              : 'تعذر إرسال الإشعار التجريبي. يرجى التواصل مع المطور لحل هذه المشكلة.',
+            'error'
+          );
+          return;
+        }
+
+        if (data && data.error === 'no-device-token') {
+          showToast('لا يوجد رمز إشعارات لهذا الجهاز — فعّل الإشعارات ثم أعد المحاولة', 'error');
           return;
         }
 
         showToast('تم إرسال الإشعار التجريبي', 'success');
       } catch (e) {
         console.error('[test-notification]', e);
+        // ⭐ نعرض سبب الخطأ على الشاشة (لا نخفيه)
         showToast('تعذر إرسال الإشعار التجريبي. يرجى التواصل مع المطور لحل هذه المشكلة.', 'error');
+        if (typeof showCustomAlert === 'function') {
+          showCustomAlert(
+            'تعذّر إرسال الإشعار',
+            'السبب: ' + ((e && e.message) || 'خطأ غير معروف') +
+            '<br><br>تأكّد من سجلّات الإشعارات ومن Firestore / FCM.',
+            'error'
+          );
+        }
       } finally {
         if (btn) { btn.disabled = false; btn.textContent = 'إرسال'; }
       }
@@ -6324,6 +6377,7 @@ function openLastActivity() {
       if (logoutItem) logoutItem.style.display = hideAuth ? '' : 'none';
       const deleteItem = document.getElementById('deleteAccountItem');
       if (deleteItem) deleteItem.style.display = hideAuth ? 'none' : '';
+      if (typeof syncDangerZoneVisibility === 'function') syncDangerZoneVisibility();
       
       const adminItem = document.getElementById('adminPanelItem');
 if (adminItem && (role === 'admin' || role === 'moderator')) {
@@ -6894,6 +6948,7 @@ function openRecentFile(fileId) {
         refreshNotificationToggle();
         refreshDailyReminderToggle();
         setupNotificationDiagnostics();
+        syncDangerZoneVisibility();
       }
       if (viewName === 'home') {
         loadLastActivity();

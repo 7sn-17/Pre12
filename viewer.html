@@ -318,6 +318,28 @@
   }
 
   /* ============================================================
+     ⭐⭐ شبكة أمان: أي طبقة مخفية يجب ألّا تعترض النقرات
+     ------------------------------------------------------------
+     كانت طبقة "تسجيل الدخول" (وه,iPhone) بلا CSS فتُعرض كنصّ
+     دائم أسفل الشاشة وتبتلع كل الضغقات. هذه القاعدة تمنع ذلك
+     أبداً: أي طبقة غير مفعّلة تُخفى تماماً ولا تلتقط_pointer.
+     ============================================================ */
+  .auth-required-overlay:not(.active),
+  .modal-backdrop:not(.active),
+  .medapp-ui-root:not(.open),
+  .medapp-update-overlay:not(.open) {
+    display: none !important;
+    pointer-events: none !important;
+  }
+
+  /* ⭐ الطبقات المفعّلة وحدها تلتقط النقرات */
+  .auth-required-overlay.active,
+  .medapp-ui-root.open,
+  .medapp-update-overlay.open {
+    pointer-events: auto;
+  }
+
+  /* ============================================================
      ⭐⭐⭐ نافذة التحديث داخل التطبيق (In-App Update) — Premium
      ------------------------------------------------------------
      خلفية متدرّجة خضراء داكنة + أيقونة متوهّجة + شارة الإصدار.
@@ -1244,7 +1266,7 @@ body {
 <script src="notifications.js"></script>
 
 
-<script src="app.js?v=3.7.0"></script>
+<script src="app.js?v=3.7.2"></script>
 <script>
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
