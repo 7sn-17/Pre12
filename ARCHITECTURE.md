@@ -2105,6 +2105,46 @@ also documents every previous version.
 - The custom animated splash screen was **deleted entirely** (markup,
   CSS, animation and the sessionStorage flag).
 
+### 5.23 Phase 30 — v3.6.1 (a simpler update + a premium modal)
+
+#### The update is handed to the browser
+
+The in-app downloader is **gone**:
+
+| Removed | Why |
+|---|---|
+| `@capacitor/file-transfer` | the browser downloads the APK |
+| `@capgo/capacitor-android-inline-install` | it only supports the Google Play flow |
+| `ApkInstallerPlugin.java` (custom) | no longer needed |
+
+"تحديث الآن" is now a single call:
+
+```js
+Browser.open({ url: update.url });   // the direct APK link
+```
+
+The device's own browser downloads and installs it — no progress bar,
+no "جارٍ التحميل…" state, no disabled buttons, and no silent install.
+
+#### The premium modal
+
+- A deep **green gradient** card (`radial-gradient` + `linear-gradient`),
+  a **glowing** icon with a breathing halo (`@keyframes updateGlow`), the
+  version in a **pill badge**, and RTL-aligned notes.
+- The release notes are a clean `<ul>`: `cleanMarkdown()` strips
+  `**bold**`, `*italic*`, `` `code` ``, `[links](…)`, headings, quotes
+  and list markers before rendering, so only readable Arabic bullets
+  remain (max 3).
+- The two buttons sit side by side: a filled green "تحديث الآن" and an
+  outline "لاحقاً".
+
+> Two latent bugs were fixed along the way:
+> the changelog parser split on a literal `\n` instead of a real
+> newline (so it never found a single bullet), and the shared shell had
+> a **corrupted CSS block** — the update-modal styles had been inserted
+> in the middle of `.auth-required-btn.primary`, which left the login
+> button without its background.
+
 ### 5.22 Phase 29 — v3.6.0 (the search rebuilt + FCM v1 + diagnostics)
 
 #### 🔍 The search, rebuilt from scratch
