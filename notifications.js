@@ -855,6 +855,19 @@
     // ⭐ نعيد جدولة التذكير اليومي عند كل إقلاع
     try { restoreDailyReminder(); } catch (e) {}
 
+    // ⭐⭐ v4.6.1 — نصّ التذكير المسائي يتبع حالة المهام: نحدّثه
+    //   كلما تغيّرت حالة أي مهمة.
+    try {
+      global.addEventListener('taskUpdated', function () {
+        setTimeout(function () { refreshDailyReminderContent(); }, 400);
+      });
+    } catch (e) {}
+    try {
+      global.addEventListener('medapp:progress-synced', function () {
+        setTimeout(function () { refreshDailyReminderContent(); }, 800);
+      });
+    } catch (e) {}
+
     return Promise.all([collectState(), loadPlan()]).then(function (results) {
       var state = results[0] || {};
       var plan = results[1];
@@ -890,12 +903,26 @@
   }
 
   /* ══════════════════════════════════════════════════════════
-     ⭐ التذكير اليومي الثابت (8 مساءً) + التوجيه الذكي
+     ⭐ التذكير اليومي على مرحلتين + التوجيه الذكي
+     ------------------------------------------------------------
+     ⭐ v4.6.1 — TASK 1: كان التذكير ثابتاً عند 8 مساءً فقط.
+     الآن مرحلتان:
+       • صباحاً (8:00 ص): «هذه مهامك لليوم…»
+       • مساءً (8:00 م): رسالة سياقية — «أحسنت! أكملت كل شيء» أو
+         «لا تنسَ إكمال مهامك المتبقّية قبل نهاية اليوم».
+     الرسالة المسائية تُحدَّث تلقائياً (LocalNotifications.update)
+     كلما تغيّرت حالة المهام.
      ══════════════════════════════════════════════════════════ */
 
-  var DAILY_REMINDER_ID = 9001;
-  var DAILY_REMINDER_HOUR = 20;     // 8 مساءً
+  var DAILY_REMINDER_ID = 9001;          // ⭐ مُهمَل (التذكير القديم)
+  var MORNING_REMINDER_ID = 9002;
+  var EVENING_REMINDER_ID = 9003;
+  var MORNING_REMINDER_HOUR = 8;         // 8 صباحاً
+  var EVENING_REMINDER_HOUR = 20;        // 8 مساءً
   var DAILY_REMINDER_KEY = 'medapp_daily_reminder_v1';
+
+  var MORNING_REMINDER_TITLE = '☀️ مهام اليوم';
+  var MORNING_REMINDER_BODY = '☀️ هذه مهامك لليوم — ابدأ بمهمة واحدة وواصل! 📚';
 
   /** ⭐ هل التذكير اليومي مفعّل؟ */
   function isDailyReminderEnabled() {
@@ -907,7 +934,82 @@
   }
 
   /**
-   * ⭐⭐ يجدول التذكير اليومي (8 مساءً) أو يلغيه.
+   * ⭐⭐ v4.6.1 — نصّ التذكير المسائي حسب حالة المهام.
+   * @param {number} done
+   * @param {number} total
+   */
+  function eveningReminderBody(done, total) {
+    if (!total || total <= 0) {
+      return '🌙 لا مهام معلّقة اليوم — استراحة مستحقة!';
+    }
+    if (done >= total) {
+      return '🎉 أحسنت! أكملت كل مهام اليوم — Bravo!';
+    }
+    return '⏳ لا تنسَ إكمال مهامك المتبقّية (' + (total - done) + ') قبل نهاية اليوم.';
+  }
+
+  /**
+   * ⭐⭐ v4.6.1 — حالة مهام اليوم (منجزة/إجمالي) من خطة اليوم
+   *   والحالة المحلية — بالضبط كما يحسبها التطبيق.
+   */
+  function collectTodayProgress() {
+    var date = todayKey();
+    var result = { done: 0, total: 0 };
+
+    return loadPlan().then(function (plan) {
+      var tasks = (plan && plan[date] && Array.isArray(plan[date])) ? plan[date] : [];
+      result.total = tasks.length;
+      tasks.forEach(function (task) {
+        var id = task && task.id;
+        if (!id) return;
+        try {
+          if (localStorage.getItem('task_' + date + '_' + id) === '1') result.done++;
+        } catch (e) {}
+      });
+      return result;
+    }).catch(function () { return result; });
+  }
+
+  /**
+   * ⭐⭐ v4.6.1 — تحديث نصّ التذكير المسائي حسب الحالة الحالية.
+   *   تُستدعى عند بدء التطبيق وعند تغيّر حالة المهام.
+   */
+  function refreshDailyReminderContent() {
+    if (!isDailyReminderEnabled()) return Promise.resolve(false);
+
+    var LocalNotifications = plugin('LocalNotifications');
+    if (!LocalNotifications || typeof LocalNotifications.update !== 'function') {
+      return Promise.resolve(false);
+    }
+
+    return collectTodayProgress().then(function (progress) {
+      var body = eveningReminderBody(progress.done, progress.total);
+
+      try {
+        return Promise.resolve(LocalNotifications.update({
+          notifications: [{
+            id: EVENING_REMINDER_ID,
+            title: '🌙 مراجعة مسائية',
+            body: body,
+            smallIcon: 'ic_stat_icon',
+            channelId: 'medapp_tasks',
+            sound: 'default',
+            schedule: { on: { hour: EVENING_REMINDER_HOUR, minute: 0 }, every: 'day' },
+            extra: { action: 'tasks' }
+          }]
+        })).then(function () { return true; })
+          .catch(function (err) {
+            console.warn('[notifications] the evening reminder could not be refreshed:', err);
+            return false;
+          });
+      } catch (e) {
+        return false;
+      }
+    }).catch(function () { return false; });
+  }
+
+  /**
+   * ⭐⭐ يجدول التذكير اليومي (صباحاً + مساءً) أو يلغيه.
    * @param {boolean} enabled
    */
   function scheduleDailyReminder(enabled) {
@@ -920,10 +1022,16 @@
       localStorage.setItem(DAILY_REMINDER_KEY, enabled ? '1' : '0');
     } catch (e) {}
 
-    // ⭐ نلغي التذكير القديم أولاً
+    // ⭐ نلغي التذكيرات القديمة أولاً
     try {
       if (typeof LocalNotifications.cancel === 'function') {
-        LocalNotifications.cancel({ notifications: [{ id: DAILY_REMINDER_ID }] });
+        LocalNotifications.cancel({
+          notifications: [
+            { id: DAILY_REMINDER_ID },
+            { id: MORNING_REMINDER_ID },
+            { id: EVENING_REMINDER_ID }
+          ]
+        });
       }
     } catch (e) {}
 
@@ -931,20 +1039,39 @@
 
     ensureChannel();
 
+    var morning = {
+      id: MORNING_REMINDER_ID,
+      title: MORNING_REMINDER_TITLE,
+      body: MORNING_REMINDER_BODY,
+      smallIcon: 'ic_stat_icon',
+      channelId: 'medapp_tasks',
+      sound: 'default',
+      schedule: { on: { hour: MORNING_REMINDER_HOUR, minute: 0 }, every: 'day' },
+      extra: { action: 'tasks', phase: 'morning' }
+    };
+
+    var evening = {
+      id: EVENING_REMINDER_ID,
+      title: '🌙 مراجعة مسائية',
+      body: eveningReminderBody(0, 0),
+      smallIcon: 'ic_stat_icon',
+      channelId: 'medapp_tasks',
+      sound: 'default',
+      schedule: { on: { hour: EVENING_REMINDER_HOUR, minute: 0 }, every: 'day' },
+      extra: { action: 'tasks', phase: 'evening' }
+    };
+
     return LocalNotifications.schedule({
-      notifications: [{
-        id: DAILY_REMINDER_ID,
-        title: '📚 مراجعة يومية',
-        body: '📚 لا تنسَ مراجعة مهامك اليومية. أنت تستطيع!',
-        smallIcon: 'ic_stat_icon',
-        channelId: 'medapp_tasks',
-        sound: 'default',
-        schedule: { on: { hour: DAILY_REMINDER_HOUR, minute: 0 }, every: 'day' },
-        extra: { action: 'tasks' }
-      }]
+      notifications: [morning, evening]
     }).then(function () {
-      writeState({ dailyReminder: true, dailyReminderAt: DAILY_REMINDER_HOUR });
-      return true;
+      writeState({
+        dailyReminder: true,
+        dailyReminderAt: EVENING_REMINDER_HOUR,
+        dailyReminderMorningAt: MORNING_REMINDER_HOUR,
+        dailyReminderEveningAt: EVENING_REMINDER_HOUR
+      });
+      // ⭐ نصّ المسائي يتبع حالة المهام الحقيقية.
+      return refreshDailyReminderContent().then(function () { return true; });
     }).catch(function (err) {
       console.warn('[notifications] the daily reminder could not be scheduled:', err);
       return false;
@@ -1129,8 +1256,14 @@
     scheduleDailyReminder: scheduleDailyReminder,
     isDailyReminderEnabled: isDailyReminderEnabled,
     restoreDailyReminder: restoreDailyReminder,
+    refreshDailyReminderContent: refreshDailyReminderContent,
+    collectTodayProgress: collectTodayProgress,
     routeNotificationAction: routeNotificationAction,
     DAILY_REMINDER_ID: DAILY_REMINDER_ID,
+    MORNING_REMINDER_ID: MORNING_REMINDER_ID,
+    EVENING_REMINDER_ID: EVENING_REMINDER_ID,
+    MORNING_REMINDER_HOUR: MORNING_REMINDER_HOUR,
+    EVENING_REMINDER_HOUR: EVENING_REMINDER_HOUR,
     saveFcmToken: saveFcmToken,
     readState: readState
   };

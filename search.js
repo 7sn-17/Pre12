@@ -110,6 +110,10 @@
    * @param {string} query
    * @param {function} onResult  (result) => void
    * @param {function} onLoading () => void
+   * @param {object} options     { cache, debounce, onLocal }
+   *
+   * ⭐ v4.6.1: options.onLocal (localFiles) => void — تُستدعى فوراً
+   *   بالنتائج المحلية، فلا ينتظر المستخدم السحابة لأرى أول حرف.
    */
   function debounced(query, onResult, onLoading, options) {
     var q = normalize(query);
@@ -120,6 +124,15 @@
       requestId++;
       if (typeof onResult === 'function') onResult({ files: [], subjects: [], query: '' });
       return;
+    }
+
+    // ⭐ النتائج المحلية فوراً.
+    if (options && typeof options.onLocal === 'function') {
+      try {
+        options.onLocal(searchLocal(options.cache, q));
+      } catch (e) {
+        console.warn('[search] the local pass failed:', e);
+      }
     }
 
     if (typeof onLoading === 'function') onLoading();

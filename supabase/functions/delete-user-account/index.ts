@@ -28,6 +28,30 @@ function json(body: unknown, status = 200) {
   });
 }
 
+/**
+ * ⭐ v4.6.1 — يحذف مجلّداً كاملاً من Storage (مع المجلّدات الفرعية).
+ * @returns {Promise<number>} عدد الملفات المحذوفة.
+ */
+async function removeFolder(admin: any, bucket: string, prefix: string): Promise<number> {
+  let removed = 0;
+  const { data: entries, error } = await admin.storage.from(bucket).list(prefix, { limit: 1000 });
+  if (error || !entries || !entries.length) return 0;
+
+  for (const entry of entries) {
+    if (!entry || !entry.name) continue;
+    const path = prefix + '/' + entry.name;
+    if (entry.id) {
+      // ملف
+      const { error: removeError } = await admin.storage.from(bucket).remove([path]);
+      if (!removeError) removed++;
+      continue;
+    }
+    // مجلّد فرعي
+    removed += await removeFolder(admin, bucket, path);
+  }
+  return removed;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'method not allowed' }, 405);
@@ -68,7 +92,7 @@ Deno.serve(async (req) => {
     }
 
     /* ── 3) حذف البيانات المرتبطة أولاً (تنظيف مضمون) ── */
-    const tables = ['task_progress', 'favorites', 'notes', 'streak_freezes', 'notification_log', 'lecture_albums', 'schedule_image_likes', 'schedule_image_saves'];
+    const tables = ['task_progress', 'favorites', 'notes', 'streak_freezes', 'notification_log', 'lecture_albums', 'schedule_image_likes', 'schedule_image_saves', 'schedule_images'];
     for (const table of tables) {
       try {
         const { error } = await admin.from(table).delete().eq('user_id', userId);
@@ -86,12 +110,46 @@ Deno.serve(async (req) => {
       console.warn('[delete-account] could not delete the profile:', e);
     }
 
-    // ⭐ الملفات التي رفعها المستخدم
+    // ⭐⭐ v4.6.1 — الملفات التي رفعها المستخدم.
+    //   ملاحظة: عمود الملكية في جدول files هو uploaded_by (وليس user_id) —
+    //   فكان الحذف يفشل بصمت وتبقى الملفات في القاعدة.
+    let storedFilePaths: string[] = [];
     try {
-      const { error } = await admin.from('files').delete().eq('user_id', userId);
+      const { data: userFiles, error: filesReadError } = await admin
+        .from('files')
+        .select('id, file_path, source')
+        .eq('uploaded_by', userId);
+      if (filesReadError) throw filesReadError;
+      storedFilePaths = (userFiles || [])
+        .map((f: any) => f.file_path)
+        .filter((path: unknown): path is string => typeof path === 'string' && path.length > 0);
+    } catch (e) {
+      console.warn('[delete-account] could not read the user files:', e);
+    }
+
+    try {
+      const { error } = await admin.from('files').delete().eq('uploaded_by', userId);
       if (error) console.warn('[delete-account] could not delete the files:', error.message);
     } catch (e) {
       console.warn('[delete-account] could not delete the files:', e);
+    }
+
+    /* ── 3.1) ⭐ v4.6.1 — تنظيف Storage: لا يبقى ملف على الخادم ── */
+    try {
+      if (storedFilePaths.length) {
+        const { error: storageError } = await admin.storage.from('files').remove(storedFilePaths);
+        if (storageError) console.warn('[delete-account] could not remove the stored files:', storageError.message);
+      }
+    } catch (e) {
+      console.warn('[delete-account] could not remove the stored files:', e);
+    }
+
+    // ⭐ صور الجدول + أغلفة المحاضرات (مجلّد المستخدم داخل bucket schedule-images)
+    try {
+      const removed = await removeFolder(admin, 'schedule-images', userId);
+      if (removed) console.info('[delete-account] removed ' + removed + ' stored image(s) of the user.');
+    } catch (e) {
+      console.warn('[delete-account] could not remove the stored images:', e);
     }
 
     /* ── 4) حذف الحساب نفسه ── */

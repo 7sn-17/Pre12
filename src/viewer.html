@@ -544,6 +544,29 @@ body {
 @media (min-width: 768px) {
   .viewer { padding: 20px 16px 60px; gap: 18px; }
 }
+
+/* ═══════════════════════════════════════════════════════
+   ⭐⭐ v4.6.1 — TASK 4: لا تداخل بين الشريط العلوي والنتش
+   ------------------------------------------------------------
+   كان محتوى العارض (main.viewer) يبدأ تحت الشريط العلوي الثابت،
+   فكانت الصفحة الأولى مختفية خلف الشريط أو داخل منطقة النتش.
+   الحل: حشوة علوية = ارتفاع الشريط + المنطقة الآمنة (النتش).
+   ═══════════════════════════════════════════════════════ */
+body > header.header {
+  padding-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) !important;
+  min-height: calc(
+    var(--app-header-h, 60px) +
+    var(--safe-area-inset-top, env(safe-area-inset-top, 0px))
+  ) !important;
+}
+
+main.viewer {
+  padding-top: calc(
+    var(--app-header-h, 60px) +
+    var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) +
+    12px
+  ) !important;
+}
 </style>
 </head>
 <body>
@@ -1002,10 +1025,15 @@ function setupScrollHUD() {
 }
 
 /* ═══ البحث ═══ */
+/**
+ * ⭐⭐ v4.6.1 — بحث داخل الملف: يعمل من أول حرف.
+ *   كان يقبل حرفين على الأقل (فلا يستجيب للحرف الأول) ولا يستمع
+ *   لمفتاح Enter إطلاقاً.
+ */
 async function performSearch(query) {
-  const q = query.trim();
-  if (q.length < 2) {
-    els.searchResults.innerHTML = '<div class="search-hint">اكتب حرفين على الأقل</div>';
+  const q = String(query || '').trim();
+  if (!q) {
+    els.searchResults.innerHTML = '<div class="search-hint">اكتب كلمة للبحث في جميع الصفحات</div>';
     return;
   }
 
@@ -1070,13 +1098,36 @@ function scrollToPage(pageNum) {
 
 function openSearch() {
   els.searchOverlay.classList.add('visible');
-  setTimeout(() => els.searchInput.focus(), 100);
+  // ⭐ v4.6.1 — تركيز فوري: لا نفقد أول حرف يكتبه المستخدم.
+  try {
+    els.searchInput.focus();
+    els.searchInput.setSelectionRange(els.searchInput.value.length, els.searchInput.value.length);
+  } catch (e) {
+    setTimeout(() => els.searchInput.focus(), 50);
+  }
 }
 
 function closeSearch() {
   els.searchOverlay.classList.remove('visible');
   els.searchInput.value = '';
   els.searchResults.innerHTML = '<div class="search-hint">اكتب كلمة للبحث في جميع الصفحات</div>';
+}
+
+/**
+ * ⭐⭐ v4.6.1 — Enter: بحث فوري ثم القفز إلى أول نتيجة.
+ */
+function runSearchNow() {
+  const value = els.searchInput.value;
+  performSearch(value).then(() => {
+    const first = els.searchResults.querySelector('.search-result-item');
+    if (first) {
+      const page = parseInt(first.dataset.page, 10);
+      if (!isNaN(page)) {
+        scrollToPage(page);
+        closeSearch();
+      }
+    }
+  });
 }
 
 /* ═══ خطأ ═══ */
@@ -1182,12 +1233,10 @@ async function init() {
     setupObserver();
     setupScrollHUD();
 
-    // ابدأ الصفحات التالية القريبة فوراً في الخلفية.
-    [2, 3].forEach((n, i) => {
-      const el = document.querySelector(`.pdf-page[data-page-num="${n}"]`);
-      if (!el) return;
-      setTimeout(() => renderPage(el), i * 60);
-    });
+    // ⭐⭐ v4.6.1 — TASK 4: عرض تدريجي — نرسم بقية الصفحات في الخلفية
+    //   واحدة تلو الأخرى بعد أن تصبح الصفحة الأولى قابلة للقراءة،
+    //   فالقارئ لا ينتظر نهاية الملف.
+    scheduleProgressiveRender();
 
     // تتبع المشاهدة
     try { incrementFileViews(state.fileId); } catch (e) {}
@@ -1207,6 +1256,52 @@ async function init() {
   }
 }
 
+/**
+ * ⭐⭐ v4.6.1 — TASK 4: العرض التدريجي.
+ *   بعد رسم الصفحة الأولى نُكمل رسم بقية الصفحات في الخلفية،
+ *   مع إفساح المجال للتمرير والقراءة (requestIdleCallback).
+ */
+function scheduleProgressiveRender() {
+  const total = state.totalPages || 0;
+  if (total < 2) return;
+
+  let page = 2;
+  let cancelled = false;
+
+  function next() {
+    if (cancelled) return;
+    if (page > total) return;
+
+    const current = page++;
+    const el = document.querySelector(`.pdf-page[data-page-num="${current}"]`);
+    if (el) {
+      Promise.resolve(renderPage(el))
+        .catch(() => {})
+        .then(() => schedule());
+    } else {
+      schedule();
+    }
+  }
+
+  function schedule() {
+    if (cancelled || page > total) return;
+    if (typeof globalThis.requestIdleCallback === 'function') {
+      globalThis.requestIdleCallback(next, { timeout: 800 });
+    } else {
+      setTimeout(next, 120);
+    }
+  }
+
+  // ⭐ أول صفحتين فوراً (والباقي في الخلفية) ليجد القارئ محتوى جاهزاً.
+  [2, 3].forEach((n, i) => {
+    const el = document.querySelector(`.pdf-page[data-page-num="${n}"]`);
+    if (!el) return;
+    setTimeout(() => renderPage(el).catch(() => {}), i * 60);
+  });
+
+  schedule();
+}
+
 /* ═══ الأحداث ═══ */
 els.themeBtn.addEventListener('click', toggleTheme);
 els.searchBtn.addEventListener('click', openSearch);
@@ -1218,7 +1313,28 @@ els.searchOverlay.addEventListener('click', (e) => {
 let searchTimeout;
 els.searchInput.addEventListener('input', (e) => {
   clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => performSearch(e.target.value), 300);
+  const value = e.target.value;
+  if (!String(value || '').trim()) {
+    els.searchResults.innerHTML = '<div class="search-hint">اكتب كلمة للبحث في جميع الصفحات</div>';
+    return;
+  }
+  // ⭐ v4.6.1 — تأخير قصير (200ms) بعد أول حرف.
+  searchTimeout = setTimeout(() => performSearch(value), 200);
+});
+
+// ⭐⭐ v4.6.1 — Enter ينفّذ البحث فوراً وينتقل إلى أول نتيجة؛
+//   Escape يغلق النافذة.
+els.searchInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    clearTimeout(searchTimeout);
+    runSearchNow();
+    return;
+  }
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    closeSearch();
+  }
 });
 
 document.addEventListener('keydown', (e) => {

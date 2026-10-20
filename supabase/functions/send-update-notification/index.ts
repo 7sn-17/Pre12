@@ -156,6 +156,35 @@ Deno.serve(async (req) => {
     const body = payload.body || 'اضغط للتحديث.';
     const notes = String(payload.notes || '').slice(0, 800);
 
+    /* ── 2.5) ⭐ v4.6.1 — TASK 1: منع التكرار.
+       كان المستخدم يتلقّى إشعار التحديث مرّتين (مرّة لكل تشغيل
+       للـCI على نفس الإصدار). الآن: نُسجّل إعلان كل إصدار مرّة
+       واحدة فقط، ونتخطّى الطلب المكرّر. ── */
+    if (version) {
+      try {
+        const { data: previous, error: previousError } = await admin
+          .from('notification_log')
+          .select('id, created_at')
+          .eq('category', 'update')
+          .like('title', '%v' + version + '%')
+          .gte('created_at', new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString())
+          .limit(1);
+        if (previousError) throw previousError;
+        if (previous && previous.length) {
+          console.info('[update-notification] v' + version + ' was already announced — skipped.');
+          return json({
+            ok: true,
+            sent: 0,
+            failed: 0,
+            duplicate: true,
+            message: 'v' + version + ' was already announced',
+          });
+        }
+      } catch (e) {
+        console.warn('[update-notification] the duplicate check failed:', e);
+      }
+    }
+
     /* ── 3) الأجهزة ── */
     const { data: profiles, error } = await admin
       .from('profiles')

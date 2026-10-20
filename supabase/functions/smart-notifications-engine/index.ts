@@ -114,6 +114,16 @@ const TEMPLATES = {
       'المنتصف خلفك — {completed_count} من {total_count}. خطوة أخيرة وتُكمل ✨.'
     ],
   },
+  // ⭐ v4.6.1 — TASK 1: «مهام فائتة» — سيناريو قائم بذاته.
+  missed: {
+    titles: ['مهام فائتة', 'لديك مهام مؤجّلة', 'لا تتراكم المؤجّل'],
+    bodies: [
+      'لديك {missed_count} مهمة فائتة من الأيام الماضية — خمس دقائق تكفي لتبدأ.',
+      'مهامك المؤجّلة ({missed_count}) تنتظرك. ابدأ بالأهم منها الآن.',
+      'بقيت {missed_count} مهمة لم تُنجَز — لا تدعها تتراكم 📌.',
+      'خلّص {missed_count} مهمة متأخّرة وستشعر براحة كبيرة ✨.'
+    ],
+  },
 };
 
 /* ══════════════════════════════════════════════════════════
@@ -274,9 +284,9 @@ Deno.serve(async (req) => {
 
       /* ⭐ خمول: لا نرسل أكثر من إشعار كل 4 ساعات */
       if (profile.last_notification_at) {
-        // ⭐ v4.6.0 — TASK 2: حدّ إرسال 60 دقيقة (لا نُزعج المستخدم).
+        // ⭐ v4.6.1 — TASK 1: حدّ إرسال 120 دقيقة (ساعتان) لكل مستخدم.
         const minutesSince = (Date.now() - new Date(profile.last_notification_at).getTime()) / 60000;
-        if (minutesSince < 60) { skipped++; continue; }
+        if (minutesSince < 120) { skipped++; continue; }
       }
 
       const rows = byUser.get(profile.id) || [];
@@ -315,12 +325,13 @@ Deno.serve(async (req) => {
         total_count: 0,
       };
 
-      /* ── 4) اختيار الفئة ── */
+      /* ── 4) اختيار الفئة — بالسيناريو فقط (لا إشعار بلا سبب) ── */
       let category: keyof typeof TEMPLATES | null = null;
       let contentSubject: { id: string; name: string; slug: string } | null = null;
       let contentFileTitle = '';
 
       if (totalDone === 0 && inactiveDays <= 1) {
+        // ⭐ مستخدم جديد: نرحّب به مرّة واحدة.
         category = 'onboarding';
       } else if (inactiveDays >= 2) {
         // ⭐ v4.5.1 — Dormancy: غاب التطبيق يومين أو أكثر.
@@ -341,6 +352,15 @@ Deno.serve(async (req) => {
           category = 'halfway';
           vars.completed_count = completedCount;
           vars.total_count = totalCount;
+        } else if (missedCount > 0 && todayTotal > 0 && todayDone < todayTotal) {
+          // ⭐ v4.6.1 — TASK 1: سيناريو «مهام فائتة» (مستخدم نشط تأخّر).
+          category = 'missed';
+        } else if (todayTotal > 0 && todayDone >= todayTotal) {
+          // ⭐ أنهى كل مهام اليوم.
+          category = 'achievement';
+        } else if (todayTotal > 0 && todayDone < todayTotal && hour >= 9 && hour < 20) {
+          // ⭐ تذكير نهاري بالجدول (خارج نافذة التذكير الصباحي 8:00).
+          category = 'agenda';
         } else if (recentFiles && recentFiles.length) {
           const candidates = recentFiles.filter((f: any) => f.subject_id && subjectById.has(f.subject_id));
           if (candidates.length) {
@@ -355,17 +375,11 @@ Deno.serve(async (req) => {
         }
       }
 
-      if (!category && todayTotal > 0) {
-        category = 'agenda';
-        if (todayDone >= todayTotal) {
-          category = 'achievement';
-        }
-      }
-
+      // ⭐ v4.6.1 — TASK 1: لا سيناريو = لا إشعار. لا نُرسل لمجرد
+      //   مرور ساعتين؛ نُخطّي المستخدم بهدوء.
       if (!category) {
-        if (streak > 0) category = 'streak';
-        else if (totalDone >= 3) category = 'achievement';
-        else category = 'onboarding';
+        skipped++;
+        continue;
       }
 
       const templates = TEMPLATES[category];
@@ -416,6 +430,11 @@ Deno.serve(async (req) => {
         data.url = 'index.html#streak';
         actions = taskActions;
       } else if (category === 'agenda' || category === 'onboarding' || category === 'halfway') {
+        actions = taskActions;
+      } else if (category === 'missed') {
+        // ⭐ v4.6.1 — TASK 1: المهام الفائتة → تفتح لوحة مهام اليوم.
+        data.target = 'index.html#tasks';
+        data.url = 'index.html#tasks';
         actions = taskActions;
       }
 

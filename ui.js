@@ -276,6 +276,124 @@
   }
 
   /**
+   * ⭐⭐⭐ v4.6.1 — TASK 2: نافذة تأكيد واحدة للإجراءات الخطرة.
+   *   تحوي الرسالة + حقل كتابة، ولا يُفعَّل زرّ التأكيد الأحمر
+   *   إلّا بعد كتابة الكلمة المطلوبة بالضبط (مثل "delete").
+   *
+   * @param {object} options {
+   *   title, message, confirmWord, confirmText, cancelText, tone
+   * }
+   * @returns {Promise<boolean>} true بعد الضغط على التأكيد.
+   */
+  function showDangerConfirm(options) {
+    options = options || {};
+    var root = ensureRoot();
+    var type = options.tone || 'warning';
+    var word = String(options.confirmWord || 'delete');
+
+    return new Promise(function (resolve) {
+      var settled = false;
+      current = {
+        resolve: function (value) { if (!settled) { settled = true; resolve(!!value); } },
+        onCancel: null
+      };
+
+      root.innerHTML =
+        '<div class="medapp-ui-overlay" data-tone="' + type + '">' +
+          '<div class="medapp-ui-card" role="dialog" aria-modal="true">' +
+            '<div class="medapp-ui-icon"><i data-lucide="' + (ICONS[type] || 'alert-triangle') + '"></i></div>' +
+            '<div class="medapp-ui-title">' + escapeHtml(options.title || 'هل أنت متأكد؟') + '</div>' +
+            (options.message ? '<div class="medapp-ui-message">' + options.message + '</div>' : '') +
+            '<div class="medapp-ui-message" style="margin-top:-4px;font-size:0.82rem;opacity:0.85;">' +
+              'اكتب <strong style="letter-spacing:1px;">' + escapeHtml(word) + '</strong> لتأكيد الإجراء.' +
+            '</div>' +
+            '<input class="medapp-ui-input" id="medappUiDangerInput" type="text" ' +
+              'placeholder="' + escapeHtml(word) + '" ' +
+              'maxlength="40" autocomplete="off" spellcheck="false" ' +
+              'aria-label="' + escapeHtml(options.title || 'confirm') + '">' +
+            '<div class="medapp-ui-actions">' +
+              '<button class="medapp-ui-btn ghost" data-medapp-ui-cancel>' +
+                '<span>' + escapeHtml(options.cancelText || 'إلغاء') + '</span>' +
+              '</button>' +
+              '<button class="medapp-ui-btn danger" data-medapp-ui-confirm disabled>' +
+                '<i data-lucide="trash-2" style="width:16px;height:16px;"></i>' +
+                '<span>' + escapeHtml(options.confirmText || 'تأكيد') + '</span>' +
+              '</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+
+      root.classList.add('open');
+
+      var input = document.getElementById('medappUiDangerInput');
+      var cancelBtn = root.querySelector('[data-medapp-ui-cancel]');
+      var confirmBtn = root.querySelector('[data-medapp-ui-confirm]');
+      var overlay = root.querySelector('.medapp-ui-overlay');
+
+      /** ⭐ يفعّل زر التأكيد فقط عند كتابة الكلمة المطلوبة. */
+      function syncConfirmState() {
+        if (!input || !confirmBtn) return;
+        var value = String(input.value || '').trim().toLowerCase();
+        var ok = value === word.toLowerCase();
+        confirmBtn.disabled = !ok;
+        confirmBtn.style.opacity = ok ? '1' : '0.45';
+        confirmBtn.style.filter = ok ? 'none' : 'grayscale(0.4)';
+        confirmBtn.style.cursor = ok ? 'pointer' : 'not-allowed';
+      }
+
+      /** ⭐ الكلمات المقبولة (الكلمة الأساسية + مرادفات). */
+      function isAccepted(value) {
+        var v = String(value || '').trim().toLowerCase();
+        if (v === word.toLowerCase()) return true;
+        var extra = options.alsoAccept || [];
+        for (var i = 0; i < extra.length; i++) {
+          if (v === String(extra[i]).trim().toLowerCase()) return true;
+        }
+        return false;
+      }
+
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', function () { closeCurrent(false); });
+      }
+      if (confirmBtn) {
+        confirmBtn.addEventListener('click', function () {
+          var value = input ? String(input.value || '').trim().toLowerCase() : '';
+          if (!isAccepted(value)) {
+            if (input) { input.focus(); input.classList.add('shake'); }
+            return;
+          }
+          closeCurrent(true);
+        });
+      }
+      if (input) {
+        input.addEventListener('input', function () {
+          if (input) input.classList.remove('shake');
+          syncConfirmState();
+        });
+        input.addEventListener('keydown', function (event) {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            if (confirmBtn && !confirmBtn.disabled) confirmBtn.click();
+          }
+        });
+        syncConfirmState();
+      }
+      if (overlay) {
+        overlay.addEventListener('click', function (event) {
+          if (event.target === overlay) closeCurrent(false);
+        });
+      }
+
+      document.addEventListener('keydown', onKeyDown, true);
+      refreshIcons();
+      if (input) {
+        input.focus();
+        try { input.setSelectionRange(input.value.length, input.value.length); } catch (e) {}
+      }
+    });
+  }
+
+  /**
    * ⭐⭐⭐ نافذة "تسجيل الدخول مطلوب".
    *
    * ⭐ القاعدة: **لا تُستدعى إلا** عندما يحاول زائر (غير مسجّل) تنفيذ
@@ -425,6 +543,7 @@
     alert: showCustomAlert,
     confirm: showCustomConfirm,
     prompt: showCustomPrompt,
+    dangerConfirm: showDangerConfirm,
     loginPrompt: showLoginPrompt,
     openExternal: openExternal,
     closeAll: closeAll

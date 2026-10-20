@@ -5069,7 +5069,7 @@ i.fab {
         </div>
         <div class="settings-text">
           <h4>التذكير اليومي</h4>
-          <p id="dailyReminderStatus">تذكير ثابت في الساعة 8 مساءً</p>
+          <p id="dailyReminderStatus">تذكير صباحي 8:00 + تذكير مسائي 8:00</p>
         </div>
       </div>
       <div class="toggle-switch" id="dailyReminderToggle" role="switch" aria-checked="true"
@@ -5437,13 +5437,14 @@ i.fab {
     <div class="search-modal-container" onclick="event.stopPropagation()">
       <div class="search-modal-header">
         <div class="search-modal-input-wrapper">
-          <input 
-            type="text" 
+          <input
+            type="text"
             id="globalSearchInput"
-            class="search-modal-input" 
+            class="search-modal-input"
             placeholder="ابحث هنا..."
-            oninput="handleGlobalSearch(this.value)"
             autocomplete="off"
+            enterkeyhint="search"
+            spellcheck="false"
           >
           <i data-lucide="search" class="icon-search" style="width: 20px; height: 20px;"></i>
         </div>
@@ -6069,7 +6070,7 @@ function openLastActivity() {
           toggle.setAttribute('aria-checked', enabled ? 'true' : 'false');
         }
         if (status) {
-          status.textContent = enabled ? 'تذكير ثابت في الساعة 8 مساءً' : 'التذكير اليومي متوقف';
+          status.textContent = enabled ? 'تذكير صباحي 8:00 + تذكير مسائي 8:00' : 'التذكير اليومي متوقف';
         }
         if (ok) {
           showToast(enabled ? 'تم تفعيل التذكير اليومي' : 'تم إيقاف التذكير اليومي', enabled ? 'success' : 'info');
@@ -6090,7 +6091,7 @@ function openLastActivity() {
         toggle.setAttribute('aria-checked', enabled ? 'true' : 'false');
       }
       if (status) {
-        status.textContent = enabled ? 'تذكير ثابت في الساعة 8 مساءً' : 'التذكير اليومي متوقف';
+        status.textContent = enabled ? 'تذكير صباحي 8:00 + تذكير مسائي 8:00' : 'التذكير اليومي متوقف';
       }
     }
 
@@ -6137,30 +6138,39 @@ function openLastActivity() {
     // ============================================
     // ⭐⭐⭐ حذف الحساب نهائياً
     // ============================================
+    /**
+     * ⭐⭐⭐ v4.6.1 — TASK 2: نافذة تأكيد واحدة فقط.
+     *   نافذة تحوي التحذير + حقل كتابة، ولا يُفعَّل الزرّ الأحمر
+     *   إلّا بعد كتابة كلمة "delete" (أو "حذف") — بلا نافذتَي تأكيد.
+     */
     async function confirmDeleteAccount() {
-      const confirmed = await showCustomConfirm(
-        'حذف الحساب نهائياً',
-        'سيُحذف حسابك وكل بياناتك (الملفات، المحاضرات، الملاحظات، التقدّم) نهائياً.<br>' +
-        '<strong style="color:#fca5a5;">هذا الإجراء لا يمكن التراجع عنه.</strong>',
-        null,
-        { confirmText: 'حذف حسابي', cancelText: 'إلغاء', type: 'warning', danger: true }
-      );
-      if (!confirmed) return;
+      const show = (window.MedAppUI && typeof window.MedAppUI.dangerConfirm === 'function')
+        ? window.MedAppUI.dangerConfirm
+        : null;
 
-      // ⭐ تأكيد ثانٍ — كتابة كلمة "حذف" للتأكيد
-      const typed = await showCustomPrompt(
-        'تأكيد أخير',
-        'اكتب كلمة <strong>حذف</strong> لتأكيد حذف الحساب.',
-        '',
-        null,
-        { placeholder: 'حذف', confirmText: 'حذف نهائي', maxLength: 10 }
-      ).catch(function () { return null; });
-
-      if (String(typed || '').trim() !== 'حذف') {
-        showToast('تم إلغاء الحذف', 'info');
-        return;
+      let confirmed = false;
+      if (show) {
+        confirmed = await show({
+          title: 'حذف الحساب نهائياً',
+          message: 'سيُحذف حسابك وكل بياناتك (الملفات، المحاضرات، الملاحظات، التقدّم) نهائياً.' +
+                   '<br><strong style="color:#fca5a5;">لا يمكن التراجع عن هذا الإجراء.</strong>',
+          confirmWord: 'delete',
+          alsoAccept: ['حذف'],
+          confirmText: 'حذف حسابي',
+          cancelText: 'إلغاء',
+          tone: 'warning'
+        });
+      } else {
+        // ⭐ احتياط: تأكيد بسيط إن لم تكن النافذة متاحة.
+        confirmed = await showCustomConfirm(
+          'حذف الحساب نهائياً',
+          'لا يمكن التراجع عن هذا الإجراء.',
+          null,
+          { confirmText: 'حذف حسابي', cancelText: 'إلغاء', type: 'warning', danger: true }
+        );
       }
 
+      if (!confirmed) return;
       await deleteCurrentAccount();
     }
 
@@ -7711,11 +7721,97 @@ async function openFileInViewer(fileId) {
     // ============================================
     // البحث الشامل
     // ============================================
+    /**
+     * ⭐ v4.6.1 — TASK 3: ربط أحداث البحث فعلياً:
+     *   • 'input'  → بحث فوري (محلي بلا تأخير + سحابي بتأخير قصير)
+     *   • 'keydown' → Enter ينفّذ البحث فوراً ويفتح أول نتيجة،
+     *                 Escape يغلق النافذة.
+     *Previously the first letter was lost (the input was focused 300ms
+     * after opening) and Enter did nothing at all.
+     */
+    function bindGlobalSearchInput() {
+      var input = document.getElementById('globalSearchInput');
+      if (!input || input.dataset.searchBound === '1') return;
+      input.dataset.searchBound = '1';
+
+      input.addEventListener('input', function (event) {
+        handleGlobalSearch(event.target.value);
+      });
+
+      input.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          handleGlobalSearchSubmit(input.value);
+          return;
+        }
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          closeSearchModal();
+        }
+      });
+
+      // ⭐ paste / cut / autofill لا تُطلق 'input' في كل المتصفّحات.
+      ['paste', 'cut', 'change'].forEach(function (name) {
+        input.addEventListener(name, function (event) {
+          var value = event.target && event.target.value;
+          if (value !== undefined) handleGlobalSearch(value);
+        });
+      });
+    }
+
+    /**
+     * ⭐ v4.6.1 — Enter: بحث فوري (بلا debounce) ثم فتح أول نتيجة.
+     */
+    async function handleGlobalSearchSubmit(query) {
+      var container = document.getElementById('searchResultsContainer');
+      var engine = window.MedAppSearch;
+      var q = String(query || '').trim();
+
+      if (!q) return;
+
+      if (!engine || typeof engine.run !== 'function') {
+        var local = (appState.allFilesCache || []).filter(function (f) {
+          return (f.title || '').toLowerCase().indexOf(q.toLowerCase()) > -1;
+        });
+        renderSearchResults(q, local, [], container);
+        openFirstSearchResult();
+        return;
+      }
+
+      try {
+        var result = await engine.run(q, { cache: appState.allFilesCache });
+        renderSearchResults(result.query, result.files, result.subjects, container);
+        openFirstSearchResult();
+      } catch (e) {
+        console.warn('the search failed:', e);
+      }
+    }
+
+    /** ⭐ يفتح أول نتيجة في قائمة البحث (بعد رسمها). */
+    function openFirstSearchResult() {
+      setTimeout(function () {
+        var list = document.getElementById('searchResultsList');
+        if (!list) return;
+        var first = list.querySelector('.search-result-item');
+        if (first && typeof first.click === 'function') first.click();
+      }, 60);
+    }
+
     async function openSearchModal() {
       const modal = document.getElementById('searchModal');
       modal.classList.add('active');
       document.body.style.overflow = 'hidden';
-      
+
+      // ⭐ v4.6.1 — تركيز فوري: لا نفقد أول حرف يكتبه المستخدم.
+      bindGlobalSearchInput();
+      try {
+        const input = document.getElementById('globalSearchInput');
+        if (input) {
+          input.focus();
+          input.setSelectionRange(input.value.length, input.value.length);
+        }
+      } catch (e) {}
+
       if (!appState.allFilesCache) {
         const container = document.getElementById('searchResultsContainer');
         container.innerHTML = `
@@ -7725,14 +7821,14 @@ async function openFileInViewer(fileId) {
           </div>
         `;
         lucide.createIcons();
-        
+
         try {
           const { data, error } = await supabaseClient
             .from('files')
             .select(`*, subjects(name, slug, icon, color)`)
             .eq('is_published', true)
             .order('created_at', { ascending: false });
-          
+
           if (error) throw error;
           appState.allFilesCache = data || [];
         } catch (err) {
@@ -7740,18 +7836,23 @@ async function openFileInViewer(fileId) {
           appState.allFilesCache = [];
         }
       }
-      
-      document.getElementById('searchResultsContainer').innerHTML = `
-        <div class="search-hint">
-          <i data-lucide="sparkles"></i>
-          <span>اكتب للبحث في ${appState.allFilesCache.length} ملف</span>
-        </div>
-      `;
-      lucide.createIcons();
-      
-      setTimeout(() => {
-        document.getElementById('globalSearchInput').focus();
-      }, 300);
+
+      const container = document.getElementById('searchResultsContainer');
+      if (container && !container.querySelector('.search-results-list')) {
+        container.innerHTML = `
+          <div class="search-hint">
+            <i data-lucide="sparkles"></i>
+            <span>اكتب للبحث في ${appState.allFilesCache.length} ملف</span>
+          </div>
+        `;
+        lucide.createIcons();
+      }
+
+      // ⭐ إعادة التركيز بعد اكتمال التحميل (دون إزاحة المؤشّر).
+      try {
+        const input = document.getElementById('globalSearchInput');
+        if (input && document.activeElement !== input) input.focus();
+      } catch (e) {}
     }
 
     function closeSearchModal() {
@@ -7795,6 +7896,9 @@ async function openFileInViewer(fileId) {
           renderSearchResults(result.query, result.files, result.subjects, container);
         },
         function () {
+          // ⭐ لا نُظهر مؤشّر تحميل إن كانت هناك نتائج محلية — حتى
+          //   لا نخفي النتائج التي ظهرت فوراً مع أول حرف.
+          if (container.querySelector('.search-results-list')) return;
           container.innerHTML = `
             <div class="search-loading">
               <i data-lucide="loader-2"></i>
@@ -7803,7 +7907,15 @@ async function openFileInViewer(fileId) {
           `;
           lucide.createIcons();
         },
-        { cache: appState.allFilesCache, debounce: 300 }
+        {
+          cache: appState.allFilesCache,
+          debounce: 250,
+          // ⭐ v4.6.1 — النتائج المحلية تظهر فوراً (بلا تأخير).
+          onLocal: function (localFiles) {
+            if (!localFiles || !localFiles.length) return;
+            renderSearchResults(String(query || '').toLowerCase().trim(), localFiles, [], container);
+          }
+        }
       );
     }
 
@@ -9329,6 +9441,54 @@ function showAbout() {
         try { updateStreakCounter(); } catch (e) {}
       });
     }
+
+    // ============================================
+    // ⭐⭐ v4.6.1 — TASK 1: التوجيه العميق (Deep Linking)
+    // ------------------------------------------------------------
+    // عند فتح إشعار بمهمة «tasks» أو «streak» كان التطبيق ينتقل
+    // إلى index.html#tasks فقط، دون فتح اللوحة المطلوبة.
+    // الآن: نقرأ الـhash ونفتح اللوحة المناسبة فوراً.
+    // ============================================
+    function handleNotificationHash() {
+      var hash = (window.location.hash || '').replace(/^#/, '').split('?')[0].toLowerCase();
+      if (!hash) return;
+
+      try {
+        if (hash === 'tasks' || hash === 'today' || hash === 'missed') {
+          setTimeout(function () {
+            if (typeof openTodaySheet === 'function') openTodaySheet(hash === 'missed' ? 'missed' : 'today');
+          }, 350);
+          return;
+        }
+        if (hash === 'streak') {
+          setTimeout(function () {
+            if (typeof openStreakSheet === 'function') openStreakSheet();
+          }, 350);
+          return;
+        }
+        if (hash === 'lectures') {
+          window.location.href = 'my-lectures.html';
+          return;
+        }
+        if (hash === 'notes') {
+          window.location.href = 'notes.html';
+          return;
+        }
+        if (hash === 'content') {
+          window.location.href = 'all-files.html';
+          return;
+        }
+      } catch (e) {
+        console.warn('[deep-link] the hash could not be handled:', e);
+      }
+    }
+
+    // ⭐⭐ v4.6.1 — TASK 1: نستمع للـhash ونفتح
+    //   اللوحة المناسبة (المهام/السلسلة) فور فتح التطبيق.
+    window.addEventListener('hashchange', handleNotificationHash);
+    document.addEventListener('DOMContentLoaded', function () {
+      setTimeout(handleNotificationHash, 500);
+    });
 
     // ============================================
     // ⭐ تشغيل الاستماع (مرة واحدة)
