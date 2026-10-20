@@ -340,6 +340,10 @@
         flushPushWaiters(value);
       });
 
+      // ⭐⭐ Firebase قد يُنشئ الرمز بعد ثانية أو ثانيتين — ننتظر 3 ثوانٍ
+      //    ثم نقرأ الرمز من جديد ونحفظه (حتى لا يبقى فارغاً).
+      setTimeout(function () { readAndSavePushToken(); }, 3000);
+
       PushNotifications.addListener('registrationError', function (error) {
         console.warn('[notifications] the FCM registration failed:', error);
         flushPushWaiters('');
@@ -359,7 +363,17 @@
   function ensurePushToken() {
     if (!isNative()) return Promise.resolve('');
     attachPushListener();
-    return registerForPush();
+
+    // ⭐⭐⭐ لا بدّ من طلب الإذن **قبل** التسجيل:
+    //    بدون إذن الإشعارات (Android 13+) لا يُنشئ Firebase الرمز ✗
+    //    فتبقى profiles.fcm_token فارغة ("Token not found").
+    return requestNotificationPermission().then(function (permission) {
+      if (!permission || !permission.granted) {
+        console.warn('[notifications] the notification permission was not granted.');
+        return '';
+      }
+      return registerForPush();
+    });
   }
 
 
@@ -792,6 +806,30 @@
   }
 
   /**
+   * ⭐⭐ يقرأ رمز FCM من الجهاز (إن وُجد) ويحفظه في Supabase.
+   *    يُستدعى بعد 3 ثوانٍ من التسجيل لأن Firebase قد يتأخّر.
+   */
+  function readAndSavePushToken() {
+    var PushNotifications = plugin('PushNotifications');
+    if (!PushNotifications || typeof PushNotifications.getToken !== 'function') return Promise.resolve('');
+
+    return Promise.resolve(PushNotifications.getToken())
+      .then(function (result) {
+        var value = (result && (result.value || result.token)) || (typeof result === 'string' ? result : '');
+        if (!value) {
+          console.warn('[notifications] the device still has no FCM token.');
+          return '';
+        }
+        console.info('[notifications] the FCM token saved:', String(value).slice(0, 18) + '…');
+        return saveFcmToken(value).then(function () { return value; });
+      })
+      .catch(function (e) {
+        console.warn('[notifications] the token could not be read:', e);
+        return '';
+      });
+  }
+
+  /**
    * ⭐⭐ يجدّد رمز الإشعارات يدوياً (زر في الإعدادات) — يُرجع
    *    { ok, token, error }.
    */
@@ -819,6 +857,7 @@
     openAppSettings: openAppSettings,
     refreshPushToken: refreshPushToken,
     ensurePushToken: ensurePushToken,
+    readAndSavePushToken: readAndSavePushToken,
     attachPushListener: attachPushListener,
     scheduleDailyReminder: scheduleDailyReminder,
     isDailyReminderEnabled: isDailyReminderEnabled,

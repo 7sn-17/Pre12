@@ -1,9 +1,9 @@
 // ============================================
 // sw.js — Service Worker
-// Version 3.7.2 — SPA shell + network-first HTML + cache-first JSON
+// Version 3.8.0 — SPA shell + network-first HTML + cache-first JSON
 // ============================================
 
-const CACHE_VERSION = 'v3.7.2';
+const CACHE_VERSION = 'v3.8.0';
 const STATIC_CACHE  = `medfav-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `medfav-runtime-${CACHE_VERSION}`;
 const PDF_CACHE     = `medfav-pdf-${CACHE_VERSION}`;
@@ -49,7 +49,7 @@ const PRECACHE_URLS = [
   '/ui.js',
   '/search.js',
   '/app.js',
-  '/app.js?v=3.7.2',
+  '/app.js?v=3.8.0',
   '/streak.js',
   '/native.js',
   '/notifications.js',
@@ -278,17 +278,25 @@ async function handleHTMLRequest(request) {
 // ملفات محلية — Cache First + Network update
 async function handleLocalRequest(request) {
   try {
-    let cached = await caches.match(request);
-    if (cached) {
-      updateCacheInBackground(request);
-      return cached;
-    }
+    // ⭐⭐⭐ الأصول ذات النسخة (?v=…) — network-first دائماً.
+    //    الرجوع إلى النسخة "بلا استعلام" كان يعيد الملف القديم ✗،
+    //    فتخلط الصفحة الجديدة (HTML) مع JavaScript قديم ✗
+    //    فيظهر التطبيق مكسوراً بعد التحديث.
+    const isVersioned = /[?&]v=/.test(request.url);
 
-    const urlNoQ = request.url.split('?')[0];
-    cached = await caches.match(urlNoQ);
-    if (cached) {
-      updateCacheInBackground(request);
-      return cached;
+    if (!isVersioned) {
+      let cached = await caches.match(request);
+      if (cached) {
+        updateCacheInBackground(request);
+        return cached;
+      }
+
+      const urlNoQ = request.url.split('?')[0];
+      cached = await caches.match(urlNoQ);
+      if (cached) {
+        updateCacheInBackground(request);
+        return cached;
+      }
     }
 
     const network = await fetch(request);

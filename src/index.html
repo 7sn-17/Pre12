@@ -3458,11 +3458,17 @@ i.fab {
     .settings-card-btn:hover { transform: translateY(-2px); }
     .settings-card-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
-    /* ⭐ عنصر الخطر */
+    /* ⭐ عنصر الخطر — عنصر قائمة عادي (لا عائم ولا مطلق) */
     .settings-item.danger-item {
+      position: static;
+      transform: none;
+      float: none;
+      width: 100%;
+      text-align: right;
       border-color: rgba(239, 68, 68, 0.3);
       background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(239, 68, 68, 0.03));
     }
+    .settings-item.danger-item:hover { transform: translateX(-3px); }
 
     .settings-item {
       background: var(--bg-card);
@@ -3535,31 +3541,38 @@ i.fab {
     /* ============================================ */
     /* Bottom Nav */
     /* ============================================ */
+    /* ⭐⭐ الشريط السفلي — مثبّت في الأسفل، يحترم المنطقة الآمنة */
     .floating-nav-wrapper {
       position: fixed;
-      bottom: 20px; left: 0; right: 0;
-      display: flex; justify-content: center;
-      z-index: 1000;
-      padding: 0 20px;
+      bottom: 0; left: 0; right: 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      z-index: 9999;
+      padding: 0 16px;
+      /* ⭐ لا يغطّي أزرار الشاشة ولا يلتقط نقرة واحدة */
       pointer-events: none;
     }
 
+    /* ⭐⭐ الشريط نفسه — تخطيط صارم يمنع التداخل وسوء المحاذاة */
     .floating-nav {
       pointer-events: auto;
-      background: rgba(8, 22, 17, 0.9);
+      background: rgba(8, 22, 17, 0.94);
       backdrop-filter: blur(24px);
       -webkit-backdrop-filter: blur(24px);
       border: 1px solid rgba(16, 185, 129, 0.3);
-      border-radius: 32px;
-      padding: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 2px;
+      border-radius: 30px;
+      padding: 7px 6px calc(7px + env(safe-area-inset-bottom));
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-around !important;
+      gap: 0;
       box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.8), 0 0 30px rgba(16, 185, 129, 0.15);
       width: 100%;
       max-width: 460px;
       position: relative;
+      /* ⭐ يسمح بطفح الزرّ الأوسط فوق الشريط */
+      overflow: visible;
     }
 
     [data-theme="light"] .floating-nav {
@@ -3567,20 +3580,24 @@ i.fab {
       box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.15), 0 0 30px rgba(16, 185, 129, 0.1);
     }
 
+    /* ⭐⭐ عنصر واحد في الشريط — عمود موسَّط، نصّ لا يلتفّ ولا يتداخل */
     .nav-btn {
-      flex: 1;
+      flex: 1 1 0;
+      min-width: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 9px 4px;
+      text-align: center;
+      gap: 4px;
+      padding: 8px 2px;
       border-radius: 24px;
       color: var(--text-secondary);
       background: transparent;
       border: none;
-      font-size: 0.65rem;
+      font-size: 0.64rem;
       font-weight: 700;
-      gap: 3px;
+      line-height: 1.2;
       cursor: pointer;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       font-family: inherit;
@@ -3588,7 +3605,15 @@ i.fab {
       min-width: 0;
     }
 
-    .nav-btn i { width: 20px; height: 20px; transition: transform 0.3s ease; }
+    .nav-btn i { width: 20px; height: 20px; flex-shrink: 0; transition: transform 0.3s ease; }
+    .nav-btn span {
+      display: block;
+      max-width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.15;
+    }
 
     .nav-btn.active {
       color: #ffffff;
@@ -3599,10 +3624,15 @@ i.fab {
     .nav-btn.active i { transform: translateY(-1px) scale(1.1); }
     .nav-btn:not(.active):hover { color: var(--text-primary); background: rgba(128, 128, 128, 0.08); }
 
+    /* ⭐⭐ الزرّ الأوسط "+" — متمركز تماماً فوق الشريط */
     .nav-btn-center {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      transform: translate(-50%, -50%);
       flex: 0 0 auto;
-      width: 60px;
-      height: 60px;
+      width: 58px;
+      height: 58px;
       border-radius: 50%;
       border: none;
       padding: 0;
@@ -3614,12 +3644,12 @@ i.fab {
       justify-content: center;
       cursor: pointer;
       text-decoration: none;
-      margin-top: -26px;
-      box-shadow: 
+      box-shadow:
         0 8px 20px var(--accent-glow-strong),
         0 0 0 4px var(--bg-main),
         0 0 0 5px rgba(16, 185, 129, 0.3);
       transition: all var(--transition-smooth);
+      z-index: 2;
       z-index: 2;
       position: relative;
       flex-shrink: 0;
@@ -3632,14 +3662,14 @@ i.fab {
     }
 
     .nav-btn-center:hover {
-      transform: translateY(-4px) rotate(90deg);
+      transform: translate(-50%, calc(-50% - 4px)) rotate(90deg);
       box-shadow: 
         0 12px 28px var(--accent-glow-strong),
         0 0 0 4px var(--bg-main),
         0 0 0 5px rgba(16, 185, 129, 0.5);
     }
 
-    .nav-btn-center:active { transform: translateY(-2px) scale(0.95); }
+    .nav-btn-center:active { transform: translate(-50%, calc(-50% - 2px)) scale(0.95); }
     .nav-btn-center[aria-expanded="true"] i { transform: rotate(45deg); }
 
     /* ============================================ */
@@ -5459,6 +5489,19 @@ i.fab {
       if (event) event.stopPropagation();
       const toggle = document.getElementById('notificationToggle');
       const text = document.getElementById('notificationStatusText');
+
+      // ⭐⭐⭐ الزائر لا يستطيع تهيئة الإشعارات (تحتاج حساباً)
+      var signedIn = await requireSignedInForNotifications(
+        'سجّل الدخول أولاً لتفعيل إشعارات التطبيق.'
+      );
+      if (!signedIn) {
+        if (toggle) {
+          toggle.classList.remove('active');
+          toggle.setAttribute('aria-checked', 'false');
+        }
+        return;
+      }
+
       if (typeof MedAppNotifications === 'undefined') return;
 
       let status = 'unknown';
@@ -5904,6 +5947,18 @@ function openLastActivity() {
       const toggle = document.getElementById('dailyReminderToggle');
       const status = document.getElementById('dailyReminderStatus');
 
+      // ⭐⭐⭐ نفس القاعدة: الزائر لا يعدّل إعدادات الإشعارات
+      var signedIn = await requireSignedInForNotifications(
+        'سجّل الدخول أولاً لتفعيل التذكير اليومي.'
+      );
+      if (!signedIn) {
+        if (toggle) {
+          toggle.classList.remove('active');
+          toggle.setAttribute('aria-checked', 'false');
+        }
+        return;
+      }
+
       if (typeof MedAppNotifications === 'undefined' ||
           typeof MedAppNotifications.scheduleDailyReminder !== 'function') {
         if (status) status.textContent = 'غير متاح في الويب';
@@ -6190,12 +6245,56 @@ function openLastActivity() {
     // ============================================
     // ⭐⭐⭐ إرسال إشعار تجريبي
     // ============================================
+    /**
+     * ⭐⭐⭐ هل المستخدم مسجّل الدخول؟ (فحص حيّ من Supabase)
+     * @returns {Promise<boolean>}
+     */
+    async function isUserSignedIn() {
+      try {
+        if (typeof supabaseClient !== 'undefined' && supabaseClient && supabaseClient.auth) {
+          const { data, error } = await supabaseClient.auth.getSession();
+          if (!error && data && data.session && data.session.user) return true;
+        }
+      } catch (e) {}
+      try {
+        if (typeof getAuthUser === 'function') {
+          var user = getAuthUser();
+          if (user && user.id) return true;
+        }
+      } catch (e) {}
+      return false;
+    }
+
+    /**
+     * ⭐⭐⭐ بوابة تسجيل الدخول لإجراءات الإشعارات.
+     * دالة `send-test-notification` تتطلّب JWT (verify_jwt) ⇒
+     * استدعاؤها كزائر يُرجع 401 ويفشل صامتاً.
+     */
+    async function requireSignedInForNotifications(message) {
+      var signedIn = await isUserSignedIn();
+      if (signedIn) return true;
+
+      if (typeof showLoginPrompt === 'function') {
+        showLoginPrompt(message || 'يجب عليك تسجيل الدخول أولاً لتتمكن من اختبار الإشعارات.');
+      } else if (typeof showToast === 'function') {
+        showToast('سجّل الدخول أولاً لتتمكن من اختبار الإشعارات.', 'info');
+      }
+      return false;
+    }
+
+
     async function sendTestNotification() {
       // ⭐ بعد الضغط المطوّل (للكشف) لا نرسل إشعاراً
       if (suppressDiagnosticClick) {
         suppressDiagnosticClick = false;
         return;
       }
+
+      // ⭐⭐⭐ لا تُستدعى الدالة إلا لمستخدم مسجّل (تحتاج JWT)
+      var signedIn = await requireSignedInForNotifications(
+        'يجب عليك تسجيل الدخول أولاً لتتمكن من اختبار الإشعارات.'
+      );
+      if (!signedIn) return;
 
       const btn = document.getElementById('testNotificationBtn');
 

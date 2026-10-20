@@ -1412,6 +1412,19 @@ if ('serviceWorker' in navigator) {
     window.location.reload();
   });
 
+  // ⭐⭐⭐ عامل خدمة جديد — نُعيد تحميل الصفحة فوراً حتى لا تخلط
+  //    الصفحة الجديدة (HTML) مع JavaScript قديم
+  navigator.serviceWorker.addEventListener('updatefound', function () {
+    var reg = navigator.serviceWorker.controller;
+    if (!reg) return;
+    reg.addEventListener('statechange', function () {
+      if (reg.state === 'installed' && navigator.serviceWorker.controller) {
+        try { reg.update(); } catch (e) {}
+        if (!reloading) { reloading = true; window.location.reload(); }
+      }
+    });
+  });
+
   window.addEventListener('load', () => {
     // Force a fresh check so a previously cached (possibly outdated) worker
     // is replaced as soon as a new sw.js is deployed.
@@ -1419,7 +1432,7 @@ if ('serviceWorker' in navigator) {
       if (reg) { try { reg.update(); } catch (e) {} }
     }).catch(() => {});
 
-    navigator.serviceWorker.register('sw.js')
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
       .then(reg => {
         console.log('✅ SW registered:', reg.scope);
         try { reg.update(); } catch (e) {}

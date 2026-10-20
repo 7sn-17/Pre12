@@ -2105,6 +2105,76 @@ also documents every previous version.
 - The custom animated splash screen was **deleted entirely** (markup,
   CSS, animation and the sessionStorage flag).
 
+### 5.26 Phase 43 — v3.8.0 (the layout, the token, and the stale JS)
+
+#### ⭐⭐⭐ The real cause of "the UI is still broken after the update"
+
+The Service Worker's `handleLocalRequest()` fell back to a **query-less**
+cache lookup:
+
+```js
+const urlNoQ = request.url.split('?')[0];
+cached = await caches.match(urlNoQ);   // ⚠️ نسخة قديمة!
+```
+
+Every asset is requested with a version (`app.js?v=3.8.0`), so the
+versioned lookup missed and the **old** copy was served — the page
+rendered with the **new HTML** and the **old JavaScript** ✗. That is
+exactly the "the layout is broken / the fix did nothing" symptom, and
+it survived several releases.
+
+Now versioned assets are **network-first** and never fall back to the
+query-less copy, the registration uses `updateViaCache: 'none'`, and
+the page reloads as soon as a new worker appears.
+
+#### The bottom navigation
+
+A strict layout, applied to the real classes:
+
+```css
+.floating-nav {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-around !important;
+  padding: 7px 6px calc(7px + env(safe-area-inset-bottom));
+  position: relative;      /* ليطفح الزرّ الأوسط فوق الشريط */
+  overflow: visible;
+}
+.nav-btn {
+  flex: 1 1 0; min-width: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center; gap: 4px;
+}
+.nav-btn-center {
+  position: absolute; left: 50%; top: 0;
+  transform: translate(-50%, -50%);   /* متمركز تماماً */
+}
+```
+
+The labels never wrap (`white-space: nowrap` + ellipsis) and the hover
+/active transforms keep the centre offset.
+
+#### "Token not found" — the real cause
+
+`ensurePushToken()` called `register()` **without asking for the
+notification permission**, so on Android 13+ Firebase never issued a
+token. The order is now **permission → register → wait 3 s → read +
+save** (`readAndSavePushToken()`), because Firebase may need a second
+or two to mint it.
+
+#### The notification actions need an account
+
+`send-test-notification` runs with `verify_jwt`, so a guest's click
+returned **401** and failed silently. Every notification action now
+checks the session first:
+
+```js
+if (!await requireSignedInForNotifications('سجّل الدخول أولاً…')) return;
+```
+
+and the guest gets the custom login modal instead of a dead click.
+
 ### 5.25 Phase 31b — v3.7.2 (the dead button + the missing button)
 
 #### ⭐⭐ Why the test button did nothing
