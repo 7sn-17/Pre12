@@ -436,6 +436,24 @@
     font-weight: 700;
     color: #94a3b8;
   }
+  .medapp-update-link {
+    margin-top: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(16, 185, 129, 0.28);
+    background: transparent;
+    color: #34d399;
+    font-family: inherit;
+    font-size: 0.76rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+  .medapp-update-link:hover { background: rgba(16, 185, 129, 0.1); }
+
   .medapp-update-actions {
     margin-top: 20px;
     display: flex;
@@ -2501,7 +2519,7 @@ document.getElementById('uploadForm').addEventListener('submit', async e => {
 
     fill.style.width = '100%';
     pct.textContent = '100%';
-    status.textContent = 'تم ✅';
+    status.textContent = 'تم';
     showToast('تم رفع الملف بنجاح', 'success');
 
     setTimeout(() => location.href = 'index.html', 1200);

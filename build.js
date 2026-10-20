@@ -32,7 +32,7 @@ const DIST = path.join(ROOT, 'dist');
 
 // Bumped whenever app.js changes. The query string is what makes returning
 // visitors pick up the new router even though static JS is served immutable.
-const APP_VERSION = '3.5.0';
+const APP_VERSION = '3.5.1';
 const APP_JS = `app.js?v=${APP_VERSION}`;
 
 // ------------------------------------------------------------------
@@ -292,7 +292,7 @@ function transformAppPage(html) {
 function renderPage(file) {
   const src = read(file);
   const { vars: raw, body } = parseFrontMatter(src);
-  const vars = computeVars(raw);
+  const vars = Object.assign({}, computeVars(raw), { appVersion: APP_VERSION });
   let out = resolveIncludes(body.replace(/^\s+/, ''));
   out = expandConditionals(out, vars);
   out = replaceTokens(out, vars);

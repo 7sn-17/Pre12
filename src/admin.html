@@ -3822,7 +3822,7 @@ async function sendAdminNotification() {
   const url = (document.getElementById('pushUrl').value || '').trim();
 
   if (!title || !body) {
-    result.innerHTML = '<span style="color: var(--medapp-red);">⚠️ العنوان ونص الإشعار مطلوبان.</span>';
+    result.innerHTML = '<span style="color: var(--medapp-red);">العنوان ونص الإشعار مطلوبان.</span>';
     return;
   }
 
@@ -3830,14 +3830,14 @@ async function sendAdminNotification() {
   if (targetType === 'subject') {
     const subjectId = document.getElementById('pushSubject').value;
     if (!subjectId) {
-      result.innerHTML = '<span style="color: var(--medapp-red);">⚠️ اختر المادة.</span>';
+      result.innerHTML = '<span style="color: var(--medapp-red);">اختر المادة.</span>';
       return;
     }
     target.subjectId = subjectId;
   } else if (targetType === 'email') {
     const email = (document.getElementById('pushEmail').value || '').trim().toLowerCase();
     if (!email) {
-      result.innerHTML = '<span style="color: var(--medapp-red);">⚠️ اكتب البريد الإلكتروني.</span>';
+      result.innerHTML = '<span style="color: var(--medapp-red);">اكتب البريد الإلكتروني.</span>';
       return;
     }
     target.email = email;
@@ -3863,8 +3863,8 @@ async function sendAdminNotification() {
     const failed = payload.failed || 0;
 
     result.innerHTML = sent
-      ? `<span style="color: var(--medapp-emerald);">✅ تم الإرسال إلى ${sent} جهاز${failed ? ` (فشل ${failed})` : ''}.</span>`
-      : `<span style="color: var(--medapp-amber);">⚠️ لم يتم العثور على أجهزة.</span>`;
+      ? `<span style="color: var(--medapp-emerald);">تم الإرسال إلى ${sent} جهاز${failed ? ` (فشل ${failed})` : ''}.</span>`
+      : `<span style="color: var(--medapp-amber);">لم يتم العثور على أجهزة.</span>`;
 
     if (sent) {
       document.getElementById('pushTitle').value = '';
@@ -3872,7 +3872,7 @@ async function sendAdminNotification() {
     }
   } catch (e) {
     console.error('[admin] the notification could not be sent:', e);
-    result.innerHTML = `<span style="color: var(--medapp-red);">❌ فشل الإرسال: ${(e && e.message) || e}</span>`;
+    result.innerHTML = `<span style="color: var(--medapp-red);">فشل الإرسال: ${(e && e.message) || e}</span>`;
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i><span>إرسال الإشعار</span>';

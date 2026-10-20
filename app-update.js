@@ -182,8 +182,8 @@
     overlay.className = 'medapp-update-overlay';
     overlay.id = 'medappUpdateOverlay';
 
-    var notes = String(update.notes || '').trim();
-    if (notes.length > 1500) notes = notes.slice(0, 1500) + '\n…';
+    // ⭐⭐ نقصّ سجلّ التغييرات إلى آخر 3 نقاط فقط
+    var notes = extractChangelogHighlights(update.notes);
 
     overlay.innerHTML =
       '<div class="medapp-update-card" role="dialog" aria-modal="true">' +
@@ -192,6 +192,9 @@
         '<div class="medapp-update-title">إصدار جديد متاح!</div>' +
         '<div class="medapp-update-version">v' + escapeHtml(update.version || '') + '</div>' +
         (notes ? '<div class="medapp-update-notes">' + escapeHtml(notes) + '</div>' : '') +
+        (update.htmlUrl ? '<button class="medapp-update-link" id="medappUpdateChangelog">' +
+          '<i data-lucide="file-text" style="width:14px;height:14px;"></i>عرض التغييرات' +
+        '</button>' : '') +
         '<div class="medapp-update-progress" id="medappUpdateProgress">' +
           '<div class="medapp-update-bar"><span id="medappUpdateBar"></span></div>' +
           '<div class="medapp-update-status" id="medappUpdateStatus">جارٍ التحضير…</div>' +
@@ -222,6 +225,14 @@
 
     var laterBtn = document.getElementById('medappUpdateLater');
     if (laterBtn) laterBtn.addEventListener('click', close);
+
+    // ⭐ عرض كل التغييرات في المتصفّح
+    var changelogBtn = document.getElementById('medappUpdateChangelog');
+    if (changelogBtn) {
+      changelogBtn.addEventListener('click', function () {
+        openChangelog(update.htmlUrl);
+      });
+    }
 
     var nowBtn = document.getElementById('medappUpdateNow');
     if (nowBtn) {
@@ -259,6 +270,56 @@
     }
   }
 
+  /**
+   * ⭐⭐ يستخرج آخر 3 نقاط من سجلّ التغييرات (بدل عرض الملف كاملاً).
+   */
+  function extractChangelogHighlights(notes) {
+    var text = String(notes || '').trim();
+    if (!text) return '';
+
+    var lines = text.split('\n');
+    var bullets = [];
+
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim();
+      if (!line) continue;
+      // ⭐ نتجاهل العناوين والروابط ونأخذ النقاط فقط
+      if (line.charAt(0) === '#' || line.charAt(0) === '<' || line.charAt(0) === '[') continue;
+      if (line.indexOf('---') === 0) continue;
+      if (line.indexOf('- ') === 0 || line.indexOf('* ') === 0) {
+        bullets.push(line.replace(/^[-*]\s+/, ''));
+        if (bullets.length >= 3) break;
+      }
+    }
+
+    if (!bullets.length) {
+      // ⭐ لا نقاط → نعرض أول 3 أسطر مفيدة
+      var fallback = lines.filter(function (l) {
+        var t = l.trim();
+        return t && t.charAt(0) !== '#' && t.charAt(0) !== '<' && t.indexOf('---') !== 0;
+      }).slice(0, 3);
+      return fallback.join('\n');
+    }
+
+    return bullets.map(function (b) { return '• ' + b; }).join('\n');
+  }
+
+  /** ⭐ يفتح سجلّ التغييرات كاملاً في المتصفّح */
+  function openChangelog(url) {
+    var target = url || 'https://github.com/7sn-17/Pre12/blob/main/CHANGELOG.md';
+    var Browser = (global.Capacitor && global.Capacitor.Plugins && global.Capacitor.Plugins.Browser) || null;
+    if (Browser && typeof Browser.open === 'function') {
+      try {
+        var result = Browser.open({ url: target });
+        if (result && typeof result.catch === 'function') {
+          result.catch(function () { global.open(target, '_blank', 'noopener,noreferrer'); });
+        }
+        return;
+      } catch (e) {}
+    }
+    try { global.open(target, '_blank', 'noopener,noreferrer'); } catch (e) {}
+  }
+
   function escapeHtml(text) {
     return String(text === undefined || text === null ? '' : text)
       .replace(/&/g, '&amp;')
@@ -275,6 +336,8 @@
     checkForAppUpdate: checkForAppUpdate,
     downloadAndInstall: downloadAndInstall,
     showModal: showUpdateModal,
+    extractChangelogHighlights: extractChangelogHighlights,
+    openChangelog: openChangelog,
     compareVersions: compareVersions,
     isNative: isNative
   };

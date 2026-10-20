@@ -2105,6 +2105,81 @@ also documents every previous version.
 - The custom animated splash screen was **deleted entirely** (markup,
   CSS, animation and the sessionStorage flag).
 
+### 5.21 Phase 28 — v3.5.1 (the polish & the bug fixes)
+
+#### 🔔 The test notification
+
+The button failed because the device had **no FCM token** yet. Now the
+app calls `ensureNotificationToken()` first: it reads `profiles.fcm_token`
+and, if it is missing, requests the permission and registers the device
+before calling the Edge Function. The function itself logs the exact
+reason (`no FCM token for user …` / `FCM is not configured`).
+
+#### 🧹 No emojis in the toasts
+
+Every `showToast` / `showCustomAlert` message is now plain text — the
+toast already renders a **Lucide icon** per type (`check-circle-2`,
+`alert-circle`, `info`), so the emojis were redundant. Even the streak
+"burst" animation now uses Lucide icons (`flame`, `sparkles`, `star`)
+instead of emoji characters.
+
+#### ⚙️ The settings redesign
+
+The flat list became five logical groups:
+
+| Group | Items |
+|---|---|
+| الحساب | the profile card (+ the edit-name pencil), login, the admin panel |
+| الإشعارات | the push toggle, the daily-reminder toggle, the test button |
+| إعدادات التطبيق | install, theme, the connection status, clear cache, about |
+| التحديثات | the update card |
+| منطقة الخطر | logout |
+
+"رفع ملف جديد" was **removed** (the "+" button does it), the logout
+moved to its own danger-zone card, and the update entry became a
+**proper card** (a big icon, a title, a subtitle and a button) instead of
+a single line.
+
+> The version is no longer hard-coded: `build.js` now exposes
+> `{{appVersion}}`, so both the settings card and the about page always
+> show the real version.
+
+#### 🔍 A real search
+
+The global search is now **debounced (300 ms)** and queries the cloud:
+
+```js
+supabase.from('files').select('*, subjects(name)').ilike('title', '%' + q + '%')
+supabase.from('subjects').select('id, name').ilike('name', '%' + q + '%')
+```
+
+The local cache is merged with the cloud results (deduplicated), the
+subjects are listed first, and the input keeps `padding-left: 44px` so
+the search icon never covers the text.
+
+#### 📚 My Lectures
+
+- The back button is a real `<button>` (`onclick="goBackFromLectures()"`
+  → `history.back()`, `z-index: 99999`).
+- The **guest mode no longer spins forever**: the loader is hidden
+  immediately and a "سجّل الدخول أولاً" card with a login button is
+  shown.
+
+#### 📣 The share message & the changelog
+
+The share text is now:
+
+```
+🔥 أنا أذاكر الآن على المنصة الطبية!
+سلسلة إنجازي: 12 أيام.
+لتحميل التطبيق:
+https://github.com/…/Medical_Platform_v3.5.1.apk
+```
+
+(and "بدأت رحلتي اليوم" when the streak is 0). The update modal shows
+only the **last 3 changelog bullets** plus a "عرض التغييرات" button that
+opens the full changelog in the browser.
+
 ## 12. Cheatsheet
 
 ### Commands

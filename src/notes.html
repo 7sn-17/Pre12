@@ -1402,7 +1402,7 @@ headerTitle: الملاحظات
       
       if (isOnline) {
         banner.classList.add('online');
-        text.textContent = 'تم استعادة الاتصال ✓';
+        text.textContent = 'تم استعادة الاتصال';
         icon.setAttribute('data-lucide', 'wifi');
       } else {
         banner.classList.add('offline');
@@ -1582,7 +1582,7 @@ headerTitle: الملاحظات
         const successCount = Math.max(0, before - remaining);
         if (result && result.ok) {
           if (successCount > 0 && remaining === 0) {
-            showToast(`تمت مزامنة ${successCount} ملاحظة ✓`);
+            showToast(`تمت مزامنة ${successCount} ملاحظة`);
           } else if (successCount > 0 && remaining > 0) {
             showToast(`تمت مزامنة ${successCount} — فشل ${remaining}`, 'info');
           }
@@ -2057,14 +2057,14 @@ headerTitle: الملاحظات
             state.sharedNotes = [cloudNote].concat(state.sharedNotes.filter(n => n.id !== cloudNote.id));
             saveToStorage(KEYS.SHARED_CACHE, state.sharedNotes);
             updateSharedCount();
-            showToast('تم نشر الملاحظة ✓');
+            showToast('تم نشر الملاحظة');
             closeAddModal();
             switchNotesTab('shared');
           } else {
             state.myNotes = [cloudNote].concat(state.myNotes.filter(n => n.id !== cloudNote.id));
             saveToStorage(KEYS.MY_NOTES, state.myNotes);
             updateMineCount();
-            showToast('تم حفظ ملاحظتك ✓');
+            showToast('تم حفظ ملاحظتك');
             closeAddModal();
             switchNotesTab('mine');
           }

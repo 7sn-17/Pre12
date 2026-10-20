@@ -58,15 +58,22 @@ Deno.serve(async (req) => {
     if (profileError) throw profileError;
 
     if (!profile || !profile.fcm_token) {
+      // ⭐ سجلّ واضح: المستخدم يحتاج أن يفعّل الإشعارات من التطبيق
+      console.warn(
+        '[test-notification] no FCM token for user ' + userId +
+        ' — the app must register the device first (POST_NOTIFICATIONS + register()).',
+      );
       return json({
         error: 'no-device-token',
-        message: 'لا يوجد رمز إشعارات لهذا الجهاز — فعّل الإشعارات من إعدادات التطبيق أولاً.',
+        message:
+          'لا يوجد رمز إشعارات لهذا الجهاز — فعّل الإشعارات من إعدادات التطبيق ثم أعد المحاولة.',
       }, 404);
     }
 
     /* ── 3) الإرسال ── */
     const sender = await createSender();
     if (!sender) {
+      console.error('[test-notification] FCM is not configured (no service account and no API key).');
       return json({
         error: 'fcm-not-configured',
         message:
@@ -81,8 +88,13 @@ Deno.serve(async (req) => {
       data: { action: 'tasks', source: 'test' },
     };
 
+    console.info(
+      '[test-notification] sending to ' + profile.fcm_token.slice(0, 18) + '… (mode: ' + sender.mode + ')',
+    );
+
     const ok = await sender.send(profile.fcm_token, message);
     if (!ok) {
+      console.error('[test-notification] the FCM send failed.');
       return json({ error: 'send-failed', message: 'تعذّر إرسال الإشعار' }, 502);
     }
 

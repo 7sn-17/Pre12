@@ -728,7 +728,7 @@ async function handleAuthDeepLink(url) {
       }));
     } catch (e) {}
 
-    authToast(isRecovery ? 'تم التحقق — عيّن كلمة المرور الآن' : 'تم تأكيد حسابك بنجاح ✅', 'success');
+    authToast(isRecovery ? 'تم التحقق — عيّن كلمة المرور الآن' : 'تم تأكيد حسابك بنجاح', 'success');
 
     // ⭐ استعادة كلمة المرور → صفحة تعيين كلمة المرور، غيرها → الرئيسية
     setTimeout(function () {

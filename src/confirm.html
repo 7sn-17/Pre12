@@ -501,7 +501,7 @@ sw: true
         <div class="state-icon success">
           <i data-lucide="check-circle-2"></i>
         </div>
-        <h1 class="state-title" id="successTitle">🎉 تم تأكيد بريدك!</h1>
+        <h1 class="state-title" id="successTitle">تم تأكيد بريدك!</h1>
         <p class="state-text" id="successText">
           حسابك جاهز الآن للاستخدام.<br>
           سيتم تحويلك لصفحة تسجيل الدخول تلقائياً.
@@ -838,7 +838,7 @@ sw: true
           return;
         }
 
-        setOtpMessage('تم تأكيد حسابك بنجاح ✅', 'success');
+        setOtpMessage('تم تأكيد حسابك بنجاح', 'success');
         try { localStorage.removeItem(PENDING_EMAIL_KEY); } catch (e) {}
         // ⭐⭐ نمسح علامة "بانتظار التأكيد" — لن يُعاد التوجيه بعد الآن
         try { localStorage.removeItem('pending_verification'); } catch (e) {}
@@ -897,7 +897,7 @@ sw: true
           options: { emailRedirectTo: getAuthRedirectUrl() }
         });
         if (error) throw error;
-        setOtpMessage('تم إرسال رمز جديد إلى بريدك ✅', 'success');
+        setOtpMessage('تم إرسال رمز جديد إلى بريدك', 'success');
       } catch (err) {
         setOtpMessage((err && err.message) || 'تعذّر إعادة الإرسال — حاول بعد قليل.', 'error');
         btn.disabled = false;
@@ -1027,7 +1027,7 @@ sw: true
           // حالة خاصة: إعادة تعيين كلمة المرور
           if (verifyType === 'recovery') {
             showSuccess(
-              '✅ رابط صالح!',
+              'رابط صالح!',
               'تم التحقق من هويتك.<br>سيتم تحويلك لصفحة إعادة تعيين كلمة المرور.'
             );
             
@@ -1041,7 +1041,7 @@ sw: true
 
           // الحالة الطبيعية: تأكيد البريد
           showSuccess(
-            '🎉 تم تأكيد بريدك!',
+            'تم تأكيد بريدك!',
             'حسابك جاهز الآن للاستخدام.<br>سيتم تحويلك لصفحة تسجيل الدخول تلقائياً.'
           );
         } else {
@@ -1128,7 +1128,7 @@ sw: true
         // حالة خاصة: إعادة تعيين كلمة المرور
         if (type === 'recovery') {
           showSuccess(
-            '✅ رابط صالح!',
+            'رابط صالح!',
             'تم التحقق من هويتك.<br>سيتم تحويلك لصفحة إعادة تعيين كلمة المرور.'
           );
           
@@ -1141,7 +1141,7 @@ sw: true
 
         // الحالة الطبيعية
         showSuccess(
-          '🎉 تم تأكيد بريدك!',
+          'تم تأكيد بريدك!',
           'حسابك جاهز الآن للاستخدام.<br>سيتم تحويلك لصفحة تسجيل الدخول تلقائياً.'
         );
 

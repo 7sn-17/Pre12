@@ -436,6 +436,24 @@
     font-weight: 700;
     color: #94a3b8;
   }
+  .medapp-update-link {
+    margin-top: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(16, 185, 129, 0.28);
+    background: transparent;
+    color: #34d399;
+    font-family: inherit;
+    font-size: 0.76rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+  .medapp-update-link:hover { background: rgba(16, 185, 129, 0.1); }
+
   .medapp-update-actions {
     margin-top: 20px;
     display: flex;
@@ -3242,7 +3260,7 @@ header {
 <script src="notifications.js"></script>
 
 
-<script src="app.js?v=3.5.0"></script>
+<script src="app.js?v=3.5.1"></script>
 <script>
 
 /* ═══════════════════════════════════════════════════════
@@ -4959,7 +4977,7 @@ async function sendAdminNotification() {
   const url = (document.getElementById('pushUrl').value || '').trim();
 
   if (!title || !body) {
-    result.innerHTML = '<span style="color: var(--medapp-red);">⚠️ العنوان ونص الإشعار مطلوبان.</span>';
+    result.innerHTML = '<span style="color: var(--medapp-red);">العنوان ونص الإشعار مطلوبان.</span>';
     return;
   }
 
@@ -4967,14 +4985,14 @@ async function sendAdminNotification() {
   if (targetType === 'subject') {
     const subjectId = document.getElementById('pushSubject').value;
     if (!subjectId) {
-      result.innerHTML = '<span style="color: var(--medapp-red);">⚠️ اختر المادة.</span>';
+      result.innerHTML = '<span style="color: var(--medapp-red);">اختر المادة.</span>';
       return;
     }
     target.subjectId = subjectId;
   } else if (targetType === 'email') {
     const email = (document.getElementById('pushEmail').value || '').trim().toLowerCase();
     if (!email) {
-      result.innerHTML = '<span style="color: var(--medapp-red);">⚠️ اكتب البريد الإلكتروني.</span>';
+      result.innerHTML = '<span style="color: var(--medapp-red);">اكتب البريد الإلكتروني.</span>';
       return;
     }
     target.email = email;
@@ -5000,8 +5018,8 @@ async function sendAdminNotification() {
     const failed = payload.failed || 0;
 
     result.innerHTML = sent
-      ? `<span style="color: var(--medapp-emerald);">✅ تم الإرسال إلى ${sent} جهاز${failed ? ` (فشل ${failed})` : ''}.</span>`
-      : `<span style="color: var(--medapp-amber);">⚠️ لم يتم العثور على أجهزة.</span>`;
+      ? `<span style="color: var(--medapp-emerald);">تم الإرسال إلى ${sent} جهاز${failed ? ` (فشل ${failed})` : ''}.</span>`
+      : `<span style="color: var(--medapp-amber);">لم يتم العثور على أجهزة.</span>`;
 
     if (sent) {
       document.getElementById('pushTitle').value = '';
@@ -5009,7 +5027,7 @@ async function sendAdminNotification() {
     }
   } catch (e) {
     console.error('[admin] the notification could not be sent:', e);
-    result.innerHTML = `<span style="color: var(--medapp-red);">❌ فشل الإرسال: ${(e && e.message) || e}</span>`;
+    result.innerHTML = `<span style="color: var(--medapp-red);">فشل الإرسال: ${(e && e.message) || e}</span>`;
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i><span>إرسال الإشعار</span>';

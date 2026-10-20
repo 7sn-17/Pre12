@@ -1,9 +1,9 @@
 // ============================================
 // sw.js — Service Worker
-// Version 3.5.0 — SPA shell + network-first HTML + cache-first JSON
+// Version 3.5.1 — SPA shell + network-first HTML + cache-first JSON
 // ============================================
 
-const CACHE_VERSION = 'v3.5.0';
+const CACHE_VERSION = 'v3.5.1';
 const STATIC_CACHE  = `medfav-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `medfav-runtime-${CACHE_VERSION}`;
 const PDF_CACHE     = `medfav-pdf-${CACHE_VERSION}`;
@@ -48,7 +48,7 @@ const PRECACHE_URLS = [
   '/theme-init.js',
   '/ui.js',
   '/app.js',
-  '/app.js?v=3.5.0',
+  '/app.js?v=3.5.1',
   '/streak.js',
   '/native.js',
   '/notifications.js',

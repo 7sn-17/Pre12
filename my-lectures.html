@@ -436,6 +436,24 @@
     font-weight: 700;
     color: #94a3b8;
   }
+  .medapp-update-link {
+    margin-top: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(16, 185, 129, 0.28);
+    background: transparent;
+    color: #34d399;
+    font-family: inherit;
+    font-size: 0.76rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+  .medapp-update-link:hover { background: rgba(16, 185, 129, 0.1); }
+
   .medapp-update-actions {
     margin-top: 20px;
     display: flex;
@@ -1049,10 +1067,68 @@
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
 }
 
+/* ⭐⭐ شاشة الزائر */
+.guest-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 52px 24px 44px;
+  margin: 18px 0 0;
+  border-radius: 22px;
+  border: 1px solid var(--border-card);
+  background: var(--bg-card);
+}
+.guest-state-icon {
+  width: 74px; height: 74px;
+  border-radius: 24px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: var(--accent-light, #34d399);
+  font-size: 1.7rem;
+}
+.guest-state h2 {
+  font-size: 1.06rem;
+  font-weight: 900;
+  color: var(--text-primary);
+}
+.guest-state p {
+  max-width: 420px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.85;
+  color: var(--text-secondary);
+}
+.guest-state-btn {
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 13px 24px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--accent-emerald, #10b981), var(--accent-dark, #059669));
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 12px 28px -16px rgba(16, 185, 129, 0.9);
+  transition: transform 0.18s ease;
+}
+.guest-state-btn:hover { transform: translateY(-2px); }
+
 /* ⭐ زر الرجوع — 48×48 مرئي + هامش لمس إضافي */
 .ml-back {
   position: relative;
-  z-index: 3;
+  z-index: 99999;
+  padding: 0;
+  border: 1px solid var(--border-card);
+  font-family: inherit;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
   width: 48px;
   height: 48px;
   min-width: 48px;
@@ -2127,9 +2203,10 @@ body {
 
 <!-- ⭐ شريط علوي معزول — زر الرجوع مضمون الاستجابة في كل مكان -->
 <div class="ml-topbar">
-  <a href="index.html" class="ml-back" aria-label="رجوع إلى الرئيسية">
+  <button type="button" class="ml-back" id="mlBackBtn" onclick="goBackFromLectures()"
+          aria-label="رجوع" style="position: relative; z-index: 99999;">
     <i class="fa-solid fa-arrow-right"></i>
-  </a>
+  </button>
   <div class="ml-topbar-title">محاضراتي</div>
   <div class="ml-topbar-spacer"></div>
 </div>
@@ -2415,7 +2492,7 @@ body {
 <script src="notifications.js"></script>
 
 
-<script src="app.js?v=3.5.0"></script>
+<script src="app.js?v=3.5.1"></script>
 <script>
 
 var LECTURE_BUCKET = 'schedule-images';
@@ -5003,6 +5080,53 @@ async function handleLectureAction() {
   }
 }
 
+/**
+ * ⭐⭐ شاشة الزائر — "سجّل الدخول أولاً" بدل التحميل اللانهائي.
+ */
+function showLectureGuestState() {
+  const app = document.getElementById('lectureApp');
+  const loading = document.getElementById('lectureLoading');
+  if (loading) loading.style.display = 'none';
+
+  if (!app) return;
+  app.style.display = 'block';
+
+  let guest = document.getElementById('lectureGuestState');
+  if (!guest) {
+    guest = document.createElement('div');
+    guest.id = 'lectureGuestState';
+    guest.className = 'guest-state';
+    guest.innerHTML =
+      '<div class="guest-state-icon"><i class="fa-solid fa-user-lock"></i></div>' +
+      '<h2>سجّل الدخول أولاً</h2>' +
+      '<p>محاضراتك وألبوماتك محفوظة في حسابك — سجّل الدخول لتتمكّن من رفع الصور ومشاركتها مع زملائك.</p>' +
+      '<a href="login.html" class="guest-state-btn">' +
+        '<i class="fa-solid fa-right-to-bracket"></i><span>تسجيل الدخول</span>' +
+      '</a>';
+    app.insertBefore(guest, app.firstChild);
+  }
+  guest.style.display = '';
+
+  // ⭐ نخفي محتوى الألبومات (لا معنى لعرضه للزائر)
+  const browser = document.getElementById('albumBrowser');
+  if (browser) browser.style.display = 'none';
+
+  try { if (window.lucide) lucide.createIcons(); } catch (e) {}
+}
+
+/**
+ * ⭐ زر الرجوع — يستخدم سجلّ المتصفّح (يعمل داخل التطبيق).
+ */
+function goBackFromLectures() {
+  try {
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+  } catch (e) {}
+  window.location.href = 'index.html';
+}
+
 async function initLecturePage() {
   const loading = document.getElementById('lectureLoading');
   const app = document.getElementById('lectureApp');
@@ -5014,14 +5138,12 @@ async function initLecturePage() {
   }
 
   try {
-    // ⭐ وضع الزائر: نعرض نافذة "سجّل الدخول" بدل إعادة التوجيه.
+    // ⭐⭐ وضع الزائر: نوقف التحميل **فوراً** ونعرض رسالة واضحة
+    //    (كان المؤشّر يدور إلى الأبد ✗)
     const user = await getSessionUser();
     if (!user) {
-      if (typeof showAuthPrompt === 'function') {
-        showAuthPrompt('سجّل الدخول لإدارة ألبوماتك وصورك ومشاركتها مع زملائك.');
-      } else {
-        window.location.href = 'login.html';
-      }
+      if (loading) loading.style.display = 'none';
+      showLectureGuestState();
       return;
     }
     lectureState.user = user;

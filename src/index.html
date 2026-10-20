@@ -279,11 +279,14 @@ sw: true
     .streak-burst-piece {
       position: absolute;
       font-size: 1.15rem;
+      color: #fbbf24;
       line-height: 1;
       transform: translate(-50%, -50%);
       animation: streak-burst-fly 1.1s cubic-bezier(0.22, 0.9, 0.3, 1) forwards;
       filter: drop-shadow(0 2px 6px rgba(251, 146, 60, 0.5));
     }
+
+    .streak-burst-piece svg { width: 19px; height: 19px; }
 
     @keyframes streak-burst-fly {
       0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
@@ -3378,6 +3381,89 @@ i.fab {
     /* ============================================ */
     .settings-list { display: flex; flex-direction: column; gap: 12px; }
 
+    /* ⭐⭐ مجموعات الإعدادات (Phase 28) */
+    .settings-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .settings-group:last-child { margin-bottom: 0; }
+    .settings-group-title {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 4px;
+      font-size: 0.72rem;
+      font-weight: 900;
+      color: var(--text-muted, #64748b);
+      letter-spacing: 0.2px;
+    }
+    .settings-group-title i { width: 15px; height: 15px; }
+
+    /* ⭐ بطاقة التحديثات — بطاقة كاملة لا سطراً واحداً */
+    .settings-card {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      padding: 15px 16px;
+      border-radius: var(--radius-lg, 18px);
+      border: 1px solid var(--border-card-hover, rgba(16, 185, 129, 0.46));
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(5, 150, 105, 0.05));
+      box-shadow: 0 10px 30px -20px rgba(16, 185, 129, 0.5);
+    }
+    .settings-card-icon {
+      width: 46px;
+      height: 46px;
+      flex-shrink: 0;
+      border-radius: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.24), rgba(5, 150, 105, 0.12));
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: var(--accent-light, #34d399);
+    }
+    .settings-card-icon i { width: 22px; height: 22px; }
+    .settings-card-body { flex: 1; min-width: 0; }
+    .settings-card-body h4 {
+      font-size: 0.92rem;
+      font-weight: 900;
+      color: var(--text-primary);
+      margin-bottom: 3px;
+    }
+    .settings-card-body p {
+      font-size: 0.74rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+    .settings-card-btn {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 15px;
+      border-radius: 12px;
+      border: none;
+      background: linear-gradient(135deg, var(--accent-emerald, #10b981), var(--accent-dark, #059669));
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.74rem;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 10px 24px -14px rgba(16, 185, 129, 0.9);
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+    .settings-card-btn:hover { transform: translateY(-2px); }
+    .settings-card-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    /* ⭐ عنصر الخطر */
+    .settings-item.danger-item {
+      border-color: rgba(239, 68, 68, 0.3);
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(239, 68, 68, 0.03));
+    }
+
     .settings-item {
       background: var(--bg-card);
       border: 1px solid var(--border-card);
@@ -3859,7 +3945,8 @@ i.fab {
        نحدّد كل خصائصه صراحةً حتى لا يرث شيئاً غير مرئي. */
     .search-modal-input {
       width: 100%;
-      padding: 12px 20px;
+      /* ⭐ الحشو الأيسر يترك مكاناً لأيقونة البحث داخل الحقل */
+      padding: 12px 20px 12px 44px;
       border-radius: 12px;
       background-color: var(--bg-card, rgba(16, 34, 27, 0.68));
       border: 2px solid var(--accent-emerald, #10b981);
@@ -3904,13 +3991,30 @@ i.fab {
       opacity: 1;
     }
 
+    /* ⭐⭐ الأيقونة داخل الحقل — لا يغطّي النصّ (Phase 28) */
     .search-modal-input-wrapper .icon-search {
       position: absolute;
-      right: 16px; top: 50%;
+      left: 14px; top: 50%;
       transform: translateY(-50%);
-      color: var(--accent-light);
+      color: var(--accent-light, #34d399);
       pointer-events: none;
+      z-index: 1;
     }
+
+
+    /* ⭐ حالة البحث (جارٍ…) */
+    .search-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      padding: 26px 10px;
+      color: var(--text-secondary, #94a3b8);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+    .search-loading i { width: 16px; height: 16px; animation: search-spin 0.9s linear infinite; }
+    @keyframes search-spin { to { transform: rotate(360deg); } }
 
     .search-modal-close {
       width: 48px; height: 48px;
@@ -4803,194 +4907,227 @@ i.fab {
         </div>
       </div>
 
-      <div id="userCard" style="display: none; margin-bottom: 16px;"></div>
-
       <div class="settings-list" id="settingsList">
-  
-  <!-- ⭐ زر تثبيت التطبيق — أول بطاقة -->
-  <button class="settings-item install-item" id="installAppBtn" onclick="handleInstallClick()" style="display: none;">
-    <div class="settings-item-left">
-      <div class="settings-icon">
-        <i data-lucide="download"></i>
-      </div>
-      <div class="settings-text">
-        <h4 id="installBtnTitle">تثبيت التطبيق</h4>
-        <p id="installBtnDesc">احصل على التطبيق على شاشتك الرئيسية</p>
-      </div>
+
+  <!-- ⭐⭐ 1) الحساب -->
+  <div class="settings-group">
+    <div class="settings-group-title">
+      <i data-lucide="user-round"></i>
+      <span>الحساب</span>
     </div>
-    <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
-  </button>
 
-  <a href="login.html" class="settings-item" id="settingsAuthItem">
-          <div class="settings-item-left">
-            <div class="settings-icon"><i data-lucide="log-in"></i></div>
-            <div class="settings-text">
-              <h4>تسجيل الدخول</h4>
-              <p>ادخل إلى حسابك للوصول الكامل</p>
-            </div>
-          </div>
-          <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
-        </a>
+    <!-- ⭐ بطاقة الملف الشخصي (تُبنى ديناميكياً) -->
+    <div id="userCard" style="display: none;"></div>
 
-        <a href="upload.html" class="settings-item">
-          <div class="settings-item-left">
-            <div class="settings-icon"><i data-lucide="upload-cloud"></i></div>
-            <div class="settings-text">
-              <h4>رفع ملف جديد</h4>
-              <p>ساهم في إثراء المنصة بمحتوى تعليمي</p>
-            </div>
-          </div>
-          <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
-        </a>
-
-        <!-- لوحة التحكم — للمشرف فقط -->
-        <a href="admin.html" class="settings-item" id="adminPanelItem" style="display: none; border-color: rgba(251, 191, 36, 0.35); background: linear-gradient(135deg, rgba(251, 191, 36, 0.08), rgba(245, 158, 11, 0.05));">
-          <div class="settings-item-left">
-            <div class="settings-icon" style="background: rgba(251, 191, 36, 0.15); border-color: rgba(251, 191, 36, 0.35); color: var(--medapp-amber);">
-              <i data-lucide="crown"></i>
-            </div>
-            <div class="settings-text">
-              <h4 style="color: var(--medapp-amber);">لوحة التحكم</h4>
-              <p>إدارة الملفات والمواد والمستخدمين</p>
-            </div>
-          </div>
-          <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px; color: var(--medapp-amber);"></i>
-        </a>
-
-        <!-- المظهر -->
-        <div class="settings-item" onclick="toggleTheme()">
-          <div class="settings-item-left">
-            <div class="settings-icon" style="background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.25); color: var(--medapp-amber);">
-              <i data-lucide="palette" id="themeSettingsIcon"></i>
-            </div>
-            <div class="settings-text">
-              <h4>المظهر</h4>
-              <p id="themeSettingsText">الوضع الليلي</p>
-            </div>
-          </div>
-          <div class="toggle-switch" id="themeToggle"></div>
+    <a href="login.html" class="settings-item" id="settingsAuthItem">
+      <div class="settings-item-left">
+        <div class="settings-icon"><i data-lucide="log-in"></i></div>
+        <div class="settings-text">
+          <h4>تسجيل الدخول</h4>
+          <p>ادخل إلى حسابك للوصول الكامل</p>
         </div>
+      </div>
+      <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
+    </a>
 
-        <!-- ⭐⭐ الإشعارات — مفتاح + وضع بديل (إعدادات الهاتف) -->
-        <div class="settings-item" id="notificationSettingsItem" style="cursor: default;">
-          <div class="settings-item-left">
-            <div class="settings-icon" style="background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.25); color: var(--medapp-emerald);">
-              <i data-lucide="bell"></i>
-            </div>
-            <div class="settings-text">
-              <h4>الإشعارات</h4>
-              <p id="notificationStatusText">تذكير بالمهام وحماية سلسلتك</p>
-            </div>
-          </div>
-          <div class="toggle-switch" id="notificationToggle" role="switch" aria-checked="false" aria-label="تفعيل الإشعارات" onclick="toggleNotifications(event)"></div>
+    <!-- لوحة التحكم — للمشرف فقط -->
+    <a href="admin.html" class="settings-item" id="adminPanelItem" style="display: none; border-color: rgba(251, 191, 36, 0.35); background: linear-gradient(135deg, rgba(251, 191, 36, 0.08), rgba(245, 158, 11, 0.05));">
+      <div class="settings-item-left">
+        <div class="settings-icon" style="background: rgba(251, 191, 36, 0.15); border-color: rgba(251, 191, 36, 0.35); color: var(--medapp-amber);">
+          <i data-lucide="crown"></i>
         </div>
+        <div class="settings-text">
+          <h4 style="color: var(--medapp-amber);">لوحة التحكم</h4>
+          <p>إدارة الملفات والمواد والمستخدمين</p>
+        </div>
+      </div>
+      <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px; color: var(--medapp-amber);"></i>
+    </a>
+  </div>
 
-        <!-- ⭐⭐⭐ تحديثات التطبيق -->
-        <div class="settings-item" id="appUpdateItem" style="cursor: default;">
-          <div class="settings-item-left">
-            <div class="settings-icon" style="background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.28); color: var(--accent-light, #34d399);">
-              <i data-lucide="download"></i>
-            </div>
-            <div class="settings-text">
-              <h4>تحديثات التطبيق</h4>
-              <p id="appUpdateStatus">تثبيت أحدث إصدار مباشرة من داخل التطبيق</p>
-            </div>
-          </div>
-          <button class="settings-item-arrow" id="checkUpdateBtn" onclick="checkForAppUpdateNow()"
-                  style="
-                    flex-shrink: 0;
-                    padding: 8px 14px;
-                    border-radius: 10px;
-                    border: 1px solid var(--border-card-hover, rgba(16, 185, 129, 0.46));
-                    background: transparent;
-                    color: var(--accent-light, #34d399);
-                    font-family: inherit;
-                    font-size: 0.72rem;
-                    font-weight: 800;
-                    cursor: pointer;
-                  ">التحقق من التحديثات</button>
-        </div>
+  <!-- ⭐⭐ 2) الإشعارات -->
+  <div class="settings-group">
+    <div class="settings-group-title">
+      <i data-lucide="bell"></i>
+      <span>الإشعارات</span>
+    </div>
 
-        <!-- ⭐⭐⭐ التذكير اليومي (8 مساءً) -->
-        <div class="settings-item" id="dailyReminderItem" style="cursor: default;">
-          <div class="settings-item-left">
-            <div class="settings-icon" style="background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.28); color: var(--medapp-amber, #fbbf24);">
-              <i data-lucide="bell-ring"></i>
-            </div>
-            <div class="settings-text">
-              <h4>التذكير اليومي</h4>
-              <p id="dailyReminderStatus">تذكير ثابت في الساعة 8 مساءً</p>
-            </div>
-          </div>
-          <div class="toggle-switch" id="dailyReminderToggle" role="switch" aria-checked="true"
-               aria-label="تفعيل التذكير اليومي" onclick="toggleDailyReminder(event)"></div>
+    <!-- إشعارات.Push -->
+    <div class="settings-item" id="notificationSettingsItem" style="cursor: default;">
+      <div class="settings-item-left">
+        <div class="settings-icon" style="background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.25); color: var(--medapp-emerald);">
+          <i data-lucide="bell-ring"></i>
         </div>
+        <div class="settings-text">
+          <h4>إشعارات التطبيق</h4>
+          <p id="notificationStatusText">استقبل تنبيهات المهام والتحديثات</p>
+        </div>
+      </div>
+      <div class="toggle-switch" id="notificationToggle" role="switch" aria-checked="false" aria-label="تفعيل الإشعارات" onclick="toggleNotifications(event)"></div>
+    </div>
 
-        <!-- ⭐⭐⭐ إرسال إشعار تجريبي -->
-        <div class="settings-item" id="testNotificationItem" style="cursor: default;">
-          <div class="settings-item-left">
-            <div class="settings-icon" style="background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.25); color: var(--medapp-blue, #60a5fa);">
-              <i data-lucide="send"></i>
-            </div>
-            <div class="settings-text">
-              <h4>إرسال إشعار تجريبي</h4>
-              <p>تأكد من وصول الإشعارات إلى جهازك</p>
-            </div>
-          </div>
-          <button class="settings-item-arrow" id="testNotificationBtn" onclick="sendTestNotification()"
-                  style="
-                    flex-shrink: 0;
-                    padding: 8px 14px;
-                    border-radius: 10px;
-                    border: 1px solid var(--border-card-hover, rgba(16, 185, 129, 0.46));
-                    background: transparent;
-                    color: var(--accent-light, #34d399);
-                    font-family: inherit;
-                    font-size: 0.72rem;
-                    font-weight: 800;
-                    cursor: pointer;
-                  ">إرسال</button>
+    <!-- التذكير اليومي (محلي) -->
+    <div class="settings-item" id="dailyReminderItem" style="cursor: default;">
+      <div class="settings-item-left">
+        <div class="settings-icon" style="background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.28); color: var(--medapp-amber, #fbbf24);">
+          <i data-lucide="alarm-clock"></i>
         </div>
+        <div class="settings-text">
+          <h4>التذكير اليومي</h4>
+          <p id="dailyReminderStatus">تذكير ثابت في الساعة 8 مساءً</p>
+        </div>
+      </div>
+      <div class="toggle-switch" id="dailyReminderToggle" role="switch" aria-checked="true"
+           aria-label="تفعيل التذكير اليومي" onclick="toggleDailyReminder(event)"></div>
+    </div>
 
-        <!-- حالة الاتصال -->
-        <div class="settings-item" style="cursor: default;">
-          <div class="settings-item-left">
-            <div class="settings-icon" id="connectionIcon" style="background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.25); color: var(--medapp-blue);">
-              <i data-lucide="wifi"></i>
-            </div>
-            <div class="settings-text">
-              <h4>حالة الاتصال</h4>
-              <p id="connectionStatus">جاري التحقق...</p>
-            </div>
-          </div>
-          <span id="connectionBadge" style="font-size: 0.7rem; font-weight: 700; padding: 4px 10px; border-radius: 8px; background: rgba(59, 130, 246, 0.15); color: var(--medapp-blue);">—</span>
+    <!-- إشعار تجريبي -->
+    <div class="settings-item" id="testNotificationItem" style="cursor: default;">
+      <div class="settings-item-left">
+        <div class="settings-icon" style="background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.25); color: var(--medapp-blue, #60a5fa);">
+          <i data-lucide="send"></i>
         </div>
+        <div class="settings-text">
+          <h4>إرسال إشعار تجريبي</h4>
+          <p>تأكد من وصول الإشعارات إلى جهازك</p>
+        </div>
+      </div>
+      <button class="settings-item-arrow" id="testNotificationBtn" onclick="sendTestNotification()"
+              style="
+                flex-shrink: 0;
+                padding: 8px 14px;
+                border-radius: 10px;
+                border: 1px solid var(--border-card-hover, rgba(16, 185, 129, 0.46));
+                background: transparent;
+                color: var(--accent-light, #34d399);
+                font-family: inherit;
+                font-size: 0.72rem;
+                font-weight: 800;
+                cursor: pointer;
+              ">إرسال</button>
+    </div>
+  </div>
 
-        <!-- مسح الملفات المحمّلة -->
-        <div class="settings-item" onclick="clearAllDownloaded()">
-          <div class="settings-item-left">
-            <div class="settings-icon" style="background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.25); color: var(--medapp-red);">
-              <i data-lucide="trash-2"></i>
-            </div>
-            <div class="settings-text">
-              <h4>مسح الملفات المحمّلة</h4>
-              <p>حذف كل الملفات المحفوظة للعمل بدون إنترنت</p>
-            </div>
-          </div>
-          <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
-        </div>
+  <!-- ⭐⭐ 3) إعدادات التطبيق -->
+  <div class="settings-group">
+    <div class="settings-group-title">
+      <i data-lucide="settings-2"></i>
+      <span>إعدادات التطبيق</span>
+    </div>
 
-        <!-- حول التطبيق -->
-        <div class="settings-item" onclick="showAbout()">
-          <div class="settings-item-left">
-            <div class="settings-icon"><i data-lucide="info"></i></div>
-            <div class="settings-text">
-              <h4>حول التطبيق</h4>
-              <p>النسخة 2.1.0 • السنة التحضيرية</p>
-            </div>
-          </div>
-          <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
+    <!-- ⭐ زر تثبيت التطبيق -->
+    <button class="settings-item install-item" id="installAppBtn" onclick="handleInstallClick()" style="display: none;">
+      <div class="settings-item-left">
+        <div class="settings-icon">
+          <i data-lucide="download"></i>
         </div>
+        <div class="settings-text">
+          <h4 id="installBtnTitle">تثبيت التطبيق</h4>
+          <p id="installBtnDesc">احصل على التطبيق على شاشتك الرئيسية</p>
+        </div>
+      </div>
+      <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
+    </button>
+
+    <!-- المظهر -->
+    <div class="settings-item" onclick="toggleTheme()">
+      <div class="settings-item-left">
+        <div class="settings-icon" style="background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.25); color: var(--medapp-amber);">
+          <i data-lucide="palette" id="themeSettingsIcon"></i>
+        </div>
+        <div class="settings-text">
+          <h4>المظهر</h4>
+          <p id="themeSettingsText">الوضع الليلي</p>
+        </div>
+      </div>
+      <div class="toggle-switch" id="themeToggle"></div>
+    </div>
+
+    <!-- حالة الاتصال -->
+    <div class="settings-item" style="cursor: default;">
+      <div class="settings-item-left">
+        <div class="settings-icon" id="connectionIcon" style="background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.25); color: var(--medapp-blue);">
+          <i data-lucide="wifi"></i>
+        </div>
+        <div class="settings-text">
+          <h4>حالة الاتصال</h4>
+          <p id="connectionStatus">جاري التحقق...</p>
+        </div>
+      </div>
+      <span id="connectionBadge" style="font-size: 0.7rem; font-weight: 700; padding: 4px 10px; border-radius: 8px; background: rgba(59, 130, 246, 0.15); color: var(--medapp-blue);">—</span>
+    </div>
+
+    <!-- مسح الملفات المحمّلة -->
+    <div class="settings-item" onclick="clearAllDownloaded()">
+      <div class="settings-item-left">
+        <div class="settings-icon" style="background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.25); color: var(--medapp-red);">
+          <i data-lucide="trash-2"></i>
+        </div>
+        <div class="settings-text">
+          <h4>مسح الملفات المحمّلة</h4>
+          <p>حذف كل الملفات المحفوظة للعمل بدون إنترنت</p>
+        </div>
+      </div>
+      <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
+    </div>
+
+    <!-- حول التطبيق -->
+    <div class="settings-item" onclick="showAbout()">
+      <div class="settings-item-left">
+        <div class="settings-icon"><i data-lucide="info"></i></div>
+        <div class="settings-text">
+          <h4>حول التطبيق</h4>
+          <p id="aboutVersionText">الإصدار {{appVersion}} • السنة التحضيرية</p>
+        </div>
+      </div>
+      <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
+    </div>
+  </div>
+
+  <!-- ⭐⭐ 4) التحديثات -->
+  <div class="settings-group">
+    <div class="settings-group-title">
+      <i data-lucide="download"></i>
+      <span>التحديثات</span>
+    </div>
+
+    <!-- ⭐ بطاقة تحديثات التطبيق -->
+    <div class="settings-card" id="appUpdateItem">
+      <div class="settings-card-icon">
+        <i data-lucide="sparkles"></i>
+      </div>
+      <div class="settings-card-body">
+        <h4>تحديثات التطبيق</h4>
+        <p id="appUpdateStatus">تثبيت أحدث إصدار مباشرة من داخل التطبيق</p>
+      </div>
+      <button class="settings-card-btn" id="checkUpdateBtn" onclick="checkForAppUpdateNow()">
+        <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i>
+        <span>التحقق من التحديثات</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ⭐⭐ 5) منطقة الخطر -->
+  <div class="settings-group">
+    <div class="settings-group-title" style="color: var(--medapp-red, #f87171);">
+      <i data-lucide="triangle-alert"></i>
+      <span>منطقة الخطر</span>
+    </div>
+
+    <!-- ⭐ تسجيل الخروج (يظهر للمستخدم المسجّل فقط) -->
+    <div class="settings-item danger-item" id="logoutItem" style="display: none;" onclick="handleLogout()">
+      <div class="settings-item-left">
+        <div class="settings-icon" style="background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.28); color: var(--medapp-red, #f87171);">
+          <i data-lucide="log-out"></i>
+        </div>
+        <div class="settings-text">
+          <h4 style="color: var(--medapp-red, #f87171);">تسجيل الخروج</h4>
+          <p>الخروج من حسابك الحالي</p>
+        </div>
+      </div>
+      <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px; color: var(--medapp-red, #f87171);"></i>
+    </div>
+  </div>
 
       </div>
 
@@ -5352,7 +5489,7 @@ i.fab {
       if (result && result.granted) {
         if (toggle) { toggle.classList.add('active'); toggle.setAttribute('aria-checked', 'true'); }
         if (text) text.textContent = 'مفعّلة — تذكير بالمهام والسلسلة';
-        showToast('تم تفعيل الإشعارات بنجاح ✅', 'success');
+        showToast('تم تفعيل الإشعارات بنجاح', 'success');
         MedAppNotifications.init();
         return;
       }
@@ -5759,11 +5896,11 @@ function openLastActivity() {
         const result = await MedAppUpdate.check({ silent: true });
         if (result && result.updateAvailable) {
           if (status) status.textContent = 'إصدار جديد v' + result.version + ' متاح!';
-          showToast('🚀 إصدار جديد متاح: v' + result.version, 'success');
+          showToast('إصدار جديد متاح: v' + result.version, 'success');
           if (typeof showUpdateModal === 'function') showUpdateModal(result);
         } else {
-          if (status) status.textContent = 'أنت على أحدث إصدار ✅';
-          showToast('أنت على أحدث إصدار ✅', 'success');
+          if (status) status.textContent = 'أنت على أحدث إصدار';
+          showToast('أنت على أحدث إصدار', 'success');
         }
         return result;
       } catch (e) {
@@ -5803,7 +5940,7 @@ function openLastActivity() {
           status.textContent = enabled ? 'تذكير ثابت في الساعة 8 مساءً' : 'التذكير اليومي متوقف';
         }
         if (ok) {
-          showToast(enabled ? 'تم تفعيل التذكير اليومي ✅' : 'تم إيقاف التذكير اليومي', enabled ? 'success' : 'info');
+          showToast(enabled ? 'تم تفعيل التذكير اليومي' : 'تم إيقاف التذكير اليومي', enabled ? 'success' : 'info');
         }
       } catch (e) {
         showToast('تعذّر تغيير إعداد التذكير', 'error');
@@ -5834,6 +5971,10 @@ function openLastActivity() {
       if (btn) { btn.disabled = true; btn.textContent = 'جارٍ…'; }
 
       try {
+        // ⭐⭐ نتأكّد من وجود رمز الإشعارات لهذا الجهاز أولاً —
+        //    بدونه لا يستطيع الخادم إرسال أي شيء.
+        await ensureNotificationToken();
+
         const { error } = await supabaseClient.functions.invoke('send-test-notification');
 
         if (error) {
@@ -5842,13 +5983,42 @@ function openLastActivity() {
           return;
         }
 
-        showToast('تم إرسال الإشعار التجريبي ✅', 'success');
+        showToast('تم إرسال الإشعار التجريبي', 'success');
       } catch (e) {
         console.error('[test-notification]', e);
         showToast('تعذر إرسال الإشعار التجريبي. يرجى التواصل مع المطور لحل هذه المشكلة.', 'error');
       } finally {
         if (btn) { btn.disabled = false; btn.textContent = 'إرسال'; }
       }
+    }
+
+    /**
+     * ⭐⭐ يتأكّد من وجود رمز FCM محفوظ — ويطلب الإذن إن لزم.
+     * @returns {Promise<string>} الرمز (أو نص فارغ)
+     */
+    async function ensureNotificationToken() {
+      if (typeof MedAppNotifications === 'undefined') return '';
+
+      try {
+        const user = (typeof getAuthUser === 'function') ? getAuthUser() : null;
+        if (user && user.id && typeof getProfile === 'function') {
+          const profile = await getProfile(user.id);
+          if (profile && profile.fcm_token) return profile.fcm_token;
+        }
+      } catch (e) {}
+
+      // ⭐ لا رمز → نطلب الإذن ثم نُسجّل الجهاز
+      try {
+        const permission = await MedAppNotifications.requestNotificationPermission();
+        if (!permission || !permission.granted) return '';
+        if (typeof MedAppNotifications.refreshPushToken === 'function') {
+          const result = await MedAppNotifications.refreshPushToken();
+          return (result && result.token) || '';
+        }
+      } catch (e) {
+        console.error('[test-notification] the token could not be obtained:', e);
+      }
+      return '';
     }
 
     // ============================================
@@ -5892,7 +6062,7 @@ function openLastActivity() {
       // ⭐⭐ تحديث الواجهة فوراً — بلا إعادة تحميل
       const nameEl = document.getElementById('userCardName');
       if (nameEl) nameEl.textContent = result.full_name;
-      showToast('تم تحديث الاسم ✅', 'success');
+      showToast('تم تحديث الاسم', 'success');
     }
 
     function renderUserCard(profile, user, options) {
@@ -5988,23 +6158,12 @@ function openLastActivity() {
         </div>
       `;
       
+      // ⭐ عنصر الدخول يبقى مكانه، ونُظهر زرّ الخروج في "منطقة الخطر"
       const authItem = document.getElementById('settingsAuthItem');
-      if (authItem && !(options && options.skipAuthItem)) {
-        authItem.outerHTML = `
-          <div class="settings-item" onclick="handleLogout()" style="cursor: pointer;">
-            <div class="settings-item-left">
-              <div class="settings-icon" style="background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.25); color: var(--medapp-red);">
-                <i data-lucide="log-out"></i>
-              </div>
-              <div class="settings-text">
-                <h4>تسجيل الخروج</h4>
-                <p>الخروج من حسابك الحالي</p>
-              </div>
-            </div>
-            <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
-          </div>
-        `;
-      }
+      const logoutItem = document.getElementById('logoutItem');
+      const hideAuth = !(options && options.skipAuthItem);
+      if (authItem) authItem.style.display = hideAuth ? 'none' : '';
+      if (logoutItem) logoutItem.style.display = hideAuth ? '' : 'none';
       
       const adminItem = document.getElementById('adminPanelItem');
 if (adminItem && (role === 'admin' || role === 'moderator')) {
@@ -6962,35 +7121,117 @@ async function openFileInViewer(fileId) {
       }
     }
 
+    /* ⭐⭐ البحث الحقيقي — تأخير 300ms + استعلام سحابي */
+    var searchTimer = null;
+    var searchToken = 0;
+
     function handleGlobalSearch(query) {
-      const q = query.toLowerCase().trim();
+      const q = String(query || '').toLowerCase().trim();
       const container = document.getElementById('searchResultsContainer');
       
       if (!q) {
-        container.innerHTML = `
-          <div class="search-hint">
-            <i data-lucide="sparkles"></i>
-            <span>اكتب للبحث في ${appState.allFilesCache.length} ملف</span>
-          </div>
-        `;
-        lucide.createIcons();
+        clearTimeout(searchTimer);
+        renderSearchIdle(container);
         return;
       }
-      
-      const results = appState.allFilesCache.filter(f => 
-        f.title.toLowerCase().includes(q) ||
-        (f.description && f.description.toLowerCase().includes(q)) ||
-        (f.subjects?.name && f.subjects.name.toLowerCase().includes(q))
-      );
-      
-      if (results.length === 0) {
+
+      // ⭐ نؤجّل الاستعلام حتى يتوقّف المستخدم عن الكتابة
+      clearTimeout(searchTimer);
+      container.innerHTML = `
+        <div class="search-loading">
+          <i data-lucide="loader-2"></i>
+          <span>جارٍ البحث…</span>
+        </div>
+      `;
+      lucide.createIcons();
+
+      searchTimer = setTimeout(function () {
+        runGlobalSearch(q, container);
+      }, 300);
+    }
+
+    function renderSearchIdle(container) {
+      container.innerHTML = `
+        <div class="search-hint">
+          <i data-lucide="sparkles"></i>
+          <span>اكتب للبحث في كل الملفات والمواد</span>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    /**
+     * ⭐⭐ البحث الحقيقي عبر Supabase (ilike) + المواد + الروابط.
+     */
+    async function runGlobalSearch(q, container) {
+      const token = ++searchToken;
+
+      // 1)-material: الملفات المحفوظة محلياً
+      const localResults = (appState.allFilesCache || []).filter(function (f) {
+        return (f.title || '').toLowerCase().includes(q) ||
+          (f.description || '').toLowerCase().includes(q) ||
+          ((f.subjects && f.subjects.name) || '').toLowerCase().includes(q);
+      });
+
+      // 2)material: الملفات من الخادم (ilike)
+      let cloudResults = [];
+      try {
+        if (navigator.onLine) {
+          const res = await supabaseClient
+            .from('files')
+            .select('*, subjects(name)')
+            .ilike('title', '%' + q + '%')
+            .limit(40);
+          if (!res.error && res.data) cloudResults = res.data;
+        }
+      } catch (e) {
+        console.error('[search] the cloud query failed:', e);
+      }
+
+      // ⭐ إلغاء النتائج القديمة إن وصل بحث أحدث
+      if (token !== searchToken) return;
+
+      // 3) المواد
+      let subjectResults = [];
+      try {
+        if (navigator.onLine) {
+          const res = await supabaseClient
+            .from('subjects')
+            .select('id, name')
+            .ilike('name', '%' + q + '%')
+            .limit(12);
+          if (!res.error && res.data) subjectResults = res.data;
+        }
+      } catch (e) {
+        console.error('[search] the subjects query failed:', e);
+      }
+
+      if (token !== searchToken) return;
+
+      // ⭐ دمج النتائج بدون تكرار
+      const seen = {};
+      const results = [];
+      localResults.concat(cloudResults).forEach(function (f) {
+        const key = f.id || f.title;
+        if (!key || seen[key]) return;
+        seen[key] = 1;
+        results.push(f);
+      });
+
+      renderSearchResults(q, results, subjectResults, container);
+    }
+
+    function renderSearchResults(query, results, subjectResults, container) {
+      const q = query.toLowerCase().trim();
+
+      if (!results.length && !(subjectResults && subjectResults.length)) {
         container.innerHTML = `
           <div class="empty-state visible" style="padding: 40px 20px;">
             <div class="empty-icon" style="width: 64px; height: 64px;">
               <i data-lucide="search-x" style="width: 28px; height: 28px;"></i>
             </div>
             <h3 style="font-size: 0.95rem;">لا توجد نتائج</h3>
-            <p style="font-size: 0.82rem;">لم نعثر على ملفات تطابق "${query}"</p>
+            <p style="font-size: 0.82rem;">لم نعثر على ملفات أو مواد تطابق "${query}"</p>
           </div>
         `;
         lucide.createIcons();
@@ -6999,7 +7240,28 @@ async function openFileInViewer(fileId) {
       
       container.innerHTML = `<div class="search-results-list" id="searchResultsList"></div>`;
       const list = document.getElementById('searchResultsList');
-      
+
+      // ⭐ المواد أولاً
+      (subjectResults || []).forEach(function (subject, i) {
+        const item = document.createElement('div');
+        item.className = 'search-result-item';
+        item.style.animationDelay = (i * 0.03) + 's';
+        item.onclick = function () {
+          closeSearchModal();
+          window.location.href = 'subject.html?subject=' + encodeURIComponent(subject.slug || subject.id);
+        };
+        item.innerHTML =
+          '<div class="search-result-icon" style="display:flex;align-items:center;justify-content:center;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);color:#34d399;">' +
+            '<i data-lucide="book-open" style="width:18px;height:18px;"></i>' +
+          '</div>' +
+          '<div class="search-result-content">' +
+            '<div class="search-result-title">' + highlightText(subject.name, query) + '</div>' +
+            '<div class="search-result-meta"><span>مادة</span></div>' +
+          '</div>' +
+          '<i data-lucide="chevron-left" style="width:16px;height:16px;color:var(--text-muted);"></i>';
+        list.appendChild(item);
+      });
+
       results.slice(0, 30).forEach((file, i) => {
         const catInfo = getCategoryInfo(file.category);
 
@@ -7420,7 +7682,7 @@ function showAbout() {
         if (progress) progress.style.display = 'block';
         if (fill) fill.style.width = Math.round((todayDone / todayTotal) * 100) + '%';
         footer.textContent = allTodayDone
-          ? (missedPending > 0 ? 'أنجزت مهام اليوم — بقيت مهام فائتة' : 'أنجزت كل مهام اليوم 🎉')
+          ? (missedPending > 0 ? 'أنجزت مهام اليوم — بقيت مهام فائتة' : 'أنجزت كل مهام اليوم')
           : (todayDone > 0 ? todayDone + ' من ' + todayTotal + ' مكتملة' : 'اضغط لعرض المهام');
       } else {
         footer.textContent = 'اضغط لمراجعة المهام الفائتة';
@@ -7752,7 +8014,7 @@ function showAbout() {
         streakCounterPop();
         var streakNow = streakState.data ? streakState.data.current : 0;
         if (typeof showToast === 'function' && streakNow > 0) {
-          showToast('🔥 سلسلة ' + streakNow + ' ' + (streakNow === 1 ? 'يوم' : (streakNow === 2 ? 'يومان' : 'أيام')), 'success');
+          showToast('سلسلة ' + streakNow + ' ' + (streakNow === 1 ? 'يوم' : (streakNow === 2 ? 'يومان' : 'أيام')), 'success');
         }
       }
 
@@ -7765,8 +8027,8 @@ function showAbout() {
         if (typeof showToast === 'function') {
           showToast(
             todayPlanState.activeTab === 'missed'
-              ? 'أنجزت كل المهام الفائتة 🎉'
-              : 'أنجزت كل مهام اليوم 🎉',
+              ? 'أنجزت كل المهام الفائتة'
+              : 'أنجزت كل مهام اليوم',
             'success'
           );
         }
@@ -7825,11 +8087,14 @@ function showAbout() {
 
       var layer = document.createElement('div');
       layer.className = 'streak-burst';
-      var glyphs = ['🔥', '✨', '⭐', '🔥'];
+      // ⭐ أيقونات Lucide بدل الإيموجي
+      var glyphs = ['flame', 'sparkles', 'star', 'flame'];
       for (var i = 0; i < 8; i++) {
         var piece = document.createElement('span');
         piece.className = 'streak-burst-piece';
-        piece.textContent = glyphs[i % glyphs.length];
+        var glyph = document.createElement('i');
+        glyph.setAttribute('data-lucide', glyphs[i % glyphs.length]);
+        piece.appendChild(glyph);
         piece.style.left = x + 'px';
         piece.style.top = y + 'px';
         piece.style.setProperty('--dx', Math.round(Math.random() * 130 - 65) + 'px');
@@ -7838,6 +8103,7 @@ function showAbout() {
         layer.appendChild(piece);
       }
       document.body.appendChild(layer);
+      if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
       setTimeout(function () { if (layer.parentNode) layer.remove(); }, 1600);
     }
 
@@ -8053,7 +8319,7 @@ function showAbout() {
       if (sub) {
         var message = '';
         if (streakDays <= 0) {
-          message = 'ابدأ سلسلتك اليوم — أنجز مهمة واحدة واشعل أول لهب! 🔥';
+          message = 'ابدأ سلسلتك اليوم — أنجز مهمة واحدة واشعل أول لهب!';
         } else if (streakDays === 1) {
           message = 'بداية موفقة! أنجز مهمة أخرى اليوم لتثبيت سلسلتك.';
         } else if (streakDays === 2) {
@@ -8061,9 +8327,9 @@ function showAbout() {
         } else if (streakDays < 7) {
           message = 'أنت على سلسلة من ' + streakDays + ' أيام! واصل — بقي ' + (7 - streakDays) + ' يوم لهدف الأسبوع.';
         } else if (streakDays < 30) {
-          message = 'مذهل! ' + streakDays + ' يوماً متتالياً من الالتزام — أنت بطل ثبات! 🏆';
+          message = 'مذهل! ' + streakDays + ' يوماً متتالياً من الالتزام — أنت بطل ثبات!';
         } else {
-          message = 'أسطورة! ' + streakDays + ' يوماً دون انقطاع — لا تتوقف! 👑';
+          message = 'أسطورة! ' + streakDays + ' يوماً دون انقطاع — لا تتوقف!';
         }
         sub.textContent = message;
       }
@@ -8266,7 +8532,7 @@ function showAbout() {
       var confirmed = false;
       if (typeof showCustomConfirm === 'function') {
         confirmed = await showCustomConfirm(
-          '🧊 تجميد السلسلة',
+          'تجميد السلسلة',
           message,
           null,
           {
@@ -8310,7 +8576,7 @@ function showAbout() {
         // ⭐ نُعيد الرسم فوراً
         paintStreak(streakLocalData());
         if (typeof showToast === 'function') {
-          showToast('🧊 استُخدم التجميد — سلسلتك محمية اليوم', 'success');
+          showToast('استُخدم التجميد — سلسلتك محمية اليوم', 'success');
         }
       } catch (e) {
         console.warn('[streak] the freeze could not be used:', e);
@@ -8324,12 +8590,21 @@ function showAbout() {
     function streakShareText() {
       var data = streakState.data;
       var days = data ? Number(data.current || 0) : 0;
-      return '🔥 حماسي يشتعل! أنا في سلسلة إنجاز لمدة ' + days +
-        ' أيام على المنصة الطبية 📚.';
+
+      // ⭐⭐ التنسيق الجديد — ومعالجة حالة "0 أيام"
+      var streakLine = days > 0
+        ? 'سلسلة إنجازي: ' + days + ' ' + (days === 1 ? 'يوم' : (days === 2 ? 'يومان' : 'أيام')) + '.'
+        : 'بدأت رحلتي اليوم — خطوتي الأولى!';
+
+      return '🔥 أنا أذاكر الآن على المنصة الطبية!\n' +
+        streakLine + '\n' +
+        'لتحميل التطبيق:\n' +
+        APP_DOWNLOAD_URL;
     }
 
     // ⭐⭐ رابط التحميل المباشر — نشاركه مع السلسلة
-    var APP_DOWNLOAD_URL = 'https://github.com/7sn-17/Pre12/releases/latest/download/Medical_Platform_v3.5.0.apk';
+    // ⭐ رابط التحميل — يتبع إصدار التطبيق الحالي
+    var APP_DOWNLOAD_URL = 'https://github.com/7sn-17/Pre12/releases/latest/download/Medical_Platform_v{{appVersion}}.apk';
 
     async function shareStreak() {
       var text = streakShareText();
