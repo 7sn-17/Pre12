@@ -68,19 +68,55 @@ body {
   transition: background var(--transition), color var(--transition);
 }
 
-/* الهيدر */
+/* ⭐⭐ v4.6.2 — Phase 31: الشريط العلوي بتخطيط flex نظيف
+   ------------------------------------------------------------
+   كان الشريط يستخدم padding-top ثابتاً فيتداخل زرّ الرجوع
+   ومؤشّر الصفحة وزرّ البحث (وتحت النتش). الآن:
+   • الشريط عمود أفقي مرن (flex) بلا تداخل.
+   • حشوة علوية = المنطقة الآمنة (النتش) + مسافات مرنة.
+   • مؤشّر الصفحة كبسولة داخل الشريط (لا يطفو ولا يتقاطع). */
 .header {
-  height: var(--header-h);
-  padding: 0 12px;
+  min-height: var(--header-h);
+  padding: 0 10px;
+  padding-top: env(safe-area-inset-top, 0px);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   background: var(--bg-header);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   z-index: 100;
+  position: relative;
+}
+
+/* ⭐ مؤشّر الصفحة داخل الشريط — كبسولة مرنة */
+.header-page-pill {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 42%;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(5, 150, 105, 0.1);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  display: none;
+}
+
+.header-page-pill.show { display: block; }
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
 }
 
 .icon-btn {
@@ -239,55 +275,180 @@ body {
   opacity: 0.5;
 }
 
-/* ⭐⭐ شاشة التحميل — شريط علوي **غير حاجب** (Phase 23)
-   كانت تغطّي الشاشة كاملة وتمنع التمرير حتى ينتهي التحميل.
-   الآن: شريط صغير في الأعلى، التمرير يعمل دائماً، ويُخفى فور رسم
-   الصفحة الأولى. */
-.loading-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: auto;
-  height: auto;
+/* ⭐⭐ v4.6.2 — Phase 31: شريط تقدّم رفيع + هيكل عظمي بدل
+   حبة «جاري تحضير الملف…» العائمة.
+   ------------------------------------------------------------ */
+.viewer-progress {
+  position: relative;
+  height: 3px;
   background: transparent;
+  flex-shrink: 0;
+  z-index: 99;
+  overflow: hidden;
+}
+
+.viewer-progress .progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-light));
+  border-radius: 0 2px 2px 0;
+  transition: width 0.25s ease;
+}
+
+/* ⭐ هيكل عظمي مركزي أنيق */
+.viewer-skeleton {
+  position: absolute;
+  inset: 0;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 14px;
+  background: var(--viewer-bg);
+  z-index: 60;
+  overflow: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.viewer-skeleton.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.skeleton-page {
+  width: min(92%, 560px);
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--bg-elevated) 25%, rgba(200, 200, 200, 0.12) 50%, var(--bg-elevated) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  box-shadow: var(--page-shadow);
+  flex: 0 0 auto;
+}
+
+.skeleton-page:nth-child(1) { height: 46vh; }
+.skeleton-page:nth-child(2) { height: 34vh; opacity: 0.7; }
+.skeleton-page:nth-child(3) { height: 26vh; opacity: 0.45; }
+
+/* ⭐⭐ v4.6.2: شريط أزرار عائم (تكبير/تصغير + وضع العرض) */
+.fab-bar {
+  position: fixed;
+  left: 14px;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 18px;
+  background: var(--bg-header);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 30px -14px rgba(0, 0, 0, 0.55);
+}
+
+.fab-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 10px 16px;
-  padding-top: calc(10px + env(safe-area-inset-top));
-  z-index: 200;
-  /* ⭐ لا يحجب أي نقرة أو تمرير */
-  pointer-events: none;
-  transition: opacity 0.35s, visibility 0.35s;
-}
-
-.loading-overlay .spinner {
-  width: 22px;
-  height: 22px;
-  border-width: 2px;
-}
-
-.loading-overlay .loading-text,
-.loading-overlay .loading-sub {
-  margin: 0;
+  cursor: pointer;
+  transition: all var(--transition);
   padding: 0;
-  font-size: 0.76rem;
-  font-weight: 800;
-  color: var(--text-secondary, #94a3b8);
 }
 
-.loading-overlay .loading-sub { display: none; }
+.fab-btn:hover { border-color: var(--accent); color: var(--accent); }
+.fab-btn:active { transform: scale(0.92); }
+.fab-btn.active {
+  background: linear-gradient(135deg, var(--accent), var(--accent-light));
+  color: #fff;
+  border-color: transparent;
+}
+.fab-btn svg { width: 19px; height: 19px; }
 
-/* ⭐ صندوق صغير حول النصّ */
-.loading-overlay .loading-text {
-  background: var(--bg-solid, #0d221a);
-  border: 1px solid var(--border-card, rgba(16, 185, 129, 0.18));
+/* ⭐ أزرار التنقّل بين الصفحات (تظهر في وضع صفحة واحدة فقط) */
+body:not(.single-page) .fab-nav { display: none; }
+.fab-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ⭐ وضع صفحة واحدة */
+body.single-page .viewer { scroll-snap-type: y mandatory; }
+body.single-page .pdf-page { scroll-snap-align: start; margin-bottom: 40vh; }
+body.single-page .pdf-page:not(.current) { display: none; }
+body.single-page .pdf-page.current { margin-bottom: 0; }
+
+/* ⭐⭐ v4.6.2: تظليل النتائج داخل صفحة PDF */
+.pdf-page .text-layer span.hit {
+  background: rgba(250, 204, 21, 0.42);
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.5);
+}
+
+.pdf-page .text-layer span.current {
+  background: rgba(249, 115, 22, 0.55);
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.8);
+  border-radius: 3px;
+}
+
+/* ⭐ أزرار التنقّل بين النتائج + عدّاد */
+.search-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.search-nav-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: all var(--transition);
+}
+
+.search-nav-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.search-nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.search-nav-btn svg { width: 15px; height: 15px; }
+
+.search-count {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  min-width: 46px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* ⭐⭐ v4.6.2: صندوق النتائج يعرض رقم الصفحة وعدد التطابقات */
+.search-result-item .page-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
   border-radius: 999px;
-  padding: 7px 14px;
-  box-shadow: 0 8px 24px -14px rgba(0, 0, 0, 0.6);
+  background: rgba(5, 150, 105, 0.12);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  font-size: 0.66rem;
+  font-weight: 800;
+  margin-left: 6px;
+}
+
+.search-result-item.active {
+  border-color: var(--accent);
+  background: rgba(5, 150, 105, 0.08);
 }
 
 .loading-overlay.hidden {
@@ -318,22 +479,6 @@ body {
   color: var(--text-muted);
   margin-top: -10px;
   min-height: 20px;
-}
-
-.progress-bar {
-  width: 200px;
-  height: 4px;
-  background: var(--border);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--accent-light));
-  border-radius: 2px;
-  width: 0%;
-  transition: width 0.3s ease;
 }
 
 /* خطأ */
@@ -592,6 +737,10 @@ main.viewer {
     </div>
   </div>
 
+  <div class="header-page-pill" id="headerPagePill">1 / 1</div>
+
+  <div class="header-actions">
+
   <button class="icon-btn" id="searchBtn" title="بحث">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="11" cy="11" r="8"/>
@@ -605,7 +754,10 @@ main.viewer {
       <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
     </svg>
   </button>
+  </div>
 </header>
+
+<div class="viewer-progress"><div class="progress-fill" id="progressFill"></div></div>
 
 <!-- منطقة العرض -->
 <main class="viewer" id="viewer">
@@ -618,16 +770,37 @@ main.viewer {
     <h3 id="errorTitle">تعذّر فتح الملف</h3>
     <p id="errorMessage">حدث خطأ أثناء التحميل.</p>
   </div>
+
+  <div class="viewer-skeleton" id="skeleton">
+    <div class="skeleton-page"></div>
+    <div class="skeleton-page"></div>
+    <div class="skeleton-page"></div>
+  </div>
 </main>
 
-<!-- شاشة التحميل -->
-<div class="loading-overlay" id="loadingOverlay">
-  <div class="spinner"></div>
-  <div class="loading-text">جاري تحضير الملف...</div>
-  <div class="loading-sub" id="loadingSub">الاتصال بالسيرفر</div>
-  <div class="progress-bar">
-    <div class="progress-fill" id="progressFill"></div>
-  </div>
+<!-- ⭐ v4.6.2: شريط أزرار عائم -->
+<div class="fab-bar" id="fabBar">
+  <button class="fab-btn" id="zoomInBtn" title="تكبير">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+    </svg>
+  </button>
+  <button class="fab-btn" id="zoomOutBtn" title="تصغير">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/>
+    </svg>
+  </button>
+  <button class="fab-btn fab-nav" id="pagePrevBtn" title="الصفحة السابقة">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+  </button>
+  <button class="fab-btn fab-nav" id="pageNextBtn" title="الصفحة التالية">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+  </button>
+  <button class="fab-btn" id="pageModeBtn" title="وضع صفحة واحدة / تمرير متواصل">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="6" y="3" width="12" height="18" rx="2"/><line x1="12" y1="7" x2="12" y2="11"/>
+    </svg>
+  </button>
 </div>
 
 <!-- مؤشر الصفحة -->
@@ -641,7 +814,16 @@ main.viewer {
         <circle cx="11" cy="11" r="8"/>
         <line x1="21" y1="21" x2="16.65" y2="16.65"/>
       </svg>
-      <input type="text" class="search-input" id="searchInput" placeholder="ابحث في الملف..." autocomplete="off">
+      <input type="text" class="search-input" id="searchInput" placeholder="ابحث في الملف..." autocomplete="off" enterkeyhint="search" spellcheck="false">
+      <div class="search-nav">
+        <button class="search-nav-btn" id="searchPrevBtn" title="السابق" disabled>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+        <span class="search-count" id="searchCount">0/0</span>
+        <button class="search-nav-btn" id="searchNextBtn" title="التالي" disabled>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+      </div>
     </div>
     <div class="search-results" id="searchResults">
       <div class="search-hint">اكتب كلمة للبحث في جميع الصفحات</div>
@@ -677,6 +859,19 @@ const state = {
   pageTextCache: new Map(),
   containerWidth: 0,
   renderOrder: [],
+
+  /* ⭐ v4.6.2 — Phase 31: العرض الافتراضي + فهرس البحث */
+  zoom: 1,
+  singlePage: false,
+  currentPage: 1,
+  pageRatio: 1.414,
+  textIndex: new Map(),        // page -> { text, items:[{idx,str,start,end}] }
+  indexedPages: new Set(),
+  indexing: false,
+  searchTerm: '',
+  searchMatches: [],
+  searchMatchIndex: -1,
+  renderWaiters: new Map(),    // page -> [resolve]
 };
 
 const $ = id => document.getElementById(id);
@@ -687,9 +882,17 @@ const els = {
   errorState:    $('errorState'),
   errorTitle:    $('errorTitle'),
   errorMessage:  $('errorMessage'),
-  loadingOverlay:$('loadingOverlay'),
-  loadingSub:    $('loadingSub'),
+  skeleton:      $('skeleton'),
   progressFill:  $('progressFill'),
+  headerPagePill:$('headerPagePill'),
+  zoomInBtn:     $('zoomInBtn'),
+  zoomOutBtn:    $('zoomOutBtn'),
+  pageModeBtn:   $('pageModeBtn'),
+  pagePrevBtn:   $('pagePrevBtn'),
+  pageNextBtn:   $('pageNextBtn'),
+  searchPrevBtn: $('searchPrevBtn'),
+  searchNextBtn: $('searchNextBtn'),
+  searchCount:   $('searchCount'),
   themeBtn:      $('themeBtn'),
   searchBtn:     $('searchBtn'),
   searchOverlay: $('searchOverlay'),
@@ -742,16 +945,21 @@ function toggleTheme() {
 }
 
 /* ═══ تقدم التحميل ═══ */
+/* ⭐ v4.6.2 — شريط رفيع + نصّ في الشريط العلوي (بلا حبة عائمة) */
 function setProgress(pct, text) {
-  els.progressFill.style.width = pct + '%';
-  if (text) els.loadingSub.textContent = text;
+  if (els.progressFill) els.progressFill.style.width = Math.max(0, Math.min(100, pct)) + '%';
+  if (text && els.fileSub) els.fileSub.textContent = text;
 }
 
 function hideLoading() {
-  els.loadingOverlay.classList.add('hidden');
-  setTimeout(() => {
-    if (els.loadingOverlay.parentNode) els.loadingOverlay.remove();
-  }, 500);
+  if (els.skeleton) {
+    els.skeleton.classList.add('hidden');
+    setTimeout(() => {
+      if (els.skeleton && els.skeleton.parentNode) els.skeleton.remove();
+    }, 350);
+  }
+  if (els.progressFill) els.progressFill.style.width = '100%';
+  setTimeout(() => { if (els.progressFill) els.progressFill.style.width = '0%'; }, 600);
 }
 
 /* ═══ تحميل الملف كامل ═══ */
@@ -869,14 +1077,14 @@ function calcContainerWidth() {
 
 /* ═══ إنشاء Placeholders ═══ */
 async function createPlaceholders() {
-  state.containerWidth = calcContainerWidth();
+  state.containerWidth = Math.round(calcContainerWidth() * state.zoom);
 
   // أبعاد الصفحة الأولى
   const firstPage = await state.pdfDoc.getPage(1);
   const vp = firstPage.getViewport({ scale: 1 });
-  const ratio = vp.height / vp.width;
+  state.pageRatio = vp.height / vp.width;
 
-  const pageHeight = Math.round(state.containerWidth * ratio);
+  const pageHeight = Math.round(state.containerWidth * state.pageRatio);
 
   const frag = document.createDocumentFragment();
   for (let i = 1; i <= state.totalPages; i++) {
@@ -890,31 +1098,168 @@ async function createPlaceholders() {
   els.viewer.appendChild(frag);
 }
 
+/* ⭐ v4.6.2 — تغيير التكبير: نعيد حساب المقاسات ونعيد رسم المرئي */
+async function setZoom(next) {
+  var zoom = Math.max(0.6, Math.min(2.6, Number(next) || 1));
+  if (Math.abs(zoom - state.zoom) < 0.01) return;
+  state.zoom = zoom;
+
+  var width = Math.round(calcContainerWidth() * zoom);
+  var height = Math.round(width * state.pageRatio);
+  state.containerWidth = width;
+
+  document.querySelectorAll('.pdf-page').forEach(function (el) {
+    el.style.width = width + 'px';
+    if (el.classList.contains('placeholder')) el.style.height = height + 'px';
+  });
+
+  // ⭐ نحرّر المرسوم ونعيد رسم ما هو ظاهر فقط.
+  state.renderedPages.forEach(function (num) {
+    var el = document.querySelector('.pdf-page[data-page-num="' + num + '"]');
+    if (el) {
+      el.innerHTML = '';
+      el.classList.add('placeholder');
+      el.classList.remove('rendered');
+      el.style.height = height + 'px';
+    }
+  });
+  state.renderedPages.clear();
+
+  if (els.fileSub) {
+    els.fileSub.textContent = 'التكبير ' + Math.round(zoom * 100) + '%';
+  }
+  renderVisiblePages();
+  showToast('التكبير ' + Math.round(zoom * 100) + '%', 'info');
+}
+
+/* ⭐ v4.6.2 — وضع صفحة واحدة ↔ تمرير متواصل */
+function togglePageMode() {
+  state.singlePage = !state.singlePage;
+  document.body.classList.toggle('single-page', state.singlePage);
+  if (els.pageModeBtn) els.pageModeBtn.classList.toggle('active', state.singlePage);
+
+  if (state.singlePage) {
+    setCurrentPage(state.currentPage, true);
+    showToast('وضع صفحة واحدة', 'info');
+  } else {
+    document.querySelectorAll('.pdf-page').forEach(function (el) { el.classList.remove('current'); });
+    showToast('تمرير متواصل', 'info');
+  }
+  renderVisiblePages();
+}
+
+/* ⭐ v4.6.2 — الانتقال إلى صفحة بعينها */
+function goToPage(num) {
+  var target = Math.max(1, Math.min(state.totalPages || 1, Number(num) || 1));
+  if (state.singlePage) {
+    setCurrentPage(target, true);
+  } else {
+    var el = document.querySelector('.pdf-page[data-page-num="' + target + '"]');
+    if (el) {
+      els.viewer.scrollTo({ top: Math.max(0, el.offsetTop - 8), behavior: 'smooth' });
+      renderPage(el);
+    }
+  }
+  setCurrentPage(target);
+}
+
+/* ⭐ v4.6.2 — الصفحة الحالية (للمؤشّر + وضع صفحة واحدة) */
+function setCurrentPage(num, force) {
+  if (!num || num === state.currentPage && !force) return;
+  state.currentPage = num;
+
+  if (els.headerPagePill) {
+    els.headerPagePill.textContent = num + ' / ' + state.totalPages;
+    els.headerPagePill.classList.add('show');
+  }
+  if (els.pageHud) els.pageHud.textContent = 'الصفحة ' + num + ' من ' + state.totalPages;
+
+  if (state.singlePage) {
+    document.querySelectorAll('.pdf-page').forEach(function (el) {
+      el.classList.remove('current');
+    });
+    var current = document.querySelector('.pdf-page[data-page-num="' + num + '"]');
+    if (current) {
+      current.classList.add('current');
+      els.viewer.scrollTop = 0;
+      renderPage(current);
+    }
+  }
+}
+
+/* ═══ طبقة النصّ (مواضع دقيقة) ═══
+   * ⭐ v4.6.2 — نبني طبقة النصّ بأنفسنا بدل pdfjsLib.renderTextLayer
+   *   (غير متوفّرة في نسخة CDN المضغوطة) — وبها نعرف الموضع الدقيق
+   *   لكل كلمة لنقفز إليها ونظلّلها. */
+function buildTextLayer(container, textContent, viewport, pageNum) {
+  var frag = document.createDocumentFragment();
+  var items = [];
+  var offset = 0;
+
+  (textContent.items || []).forEach(function (item, idx) {
+    if (typeof item.str !== 'string' || !item.str.length) return;
+
+    var tx;
+    try {
+      tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
+    } catch (e) {
+      tx = [1, 0, 0, 1, 0, 0];
+    }
+
+    var fontHeight = Math.hypot(tx[2], tx[3]) || 12;
+    var x = tx[4];
+    var y = tx[5] - fontHeight;   // أعلى السطر
+
+    var span = document.createElement('span');
+    span.textContent = item.str;
+    span.style.left = x + 'px';
+    span.style.top = y + 'px';
+    span.style.fontSize = fontHeight + 'px';
+    span.style.fontFamily = 'sans-serif';
+    span.dataset.idx = String(idx);
+    span.dataset.x = String(x);
+    span.dataset.y = String(y);
+    frag.appendChild(span);
+
+    items.push({ idx: idx, str: item.str, start: offset, end: offset + item.str.length });
+    offset += item.str.length + 1;   // مسافة بين العناصر (كما في join)
+  });
+
+  container.appendChild(frag);
+
+  // ⭐ الفهرس: نصّ الصفحة + حدود كل عنصر
+  var text = items.map(function (i) { return i.str; }).join(' ');
+  state.textIndex.set(pageNum, { text: text, items: items });
+  state.pageTextCache.set(pageNum, text);
+  state.indexedPages.add(pageNum);
+}
+
 /* ═══ رسم صفحة ═══ */
 async function renderPage(pageEl) {
-  const pageNum = parseInt(pageEl.dataset.pageNum, 10);
-  if (state.renderedPages.has(pageNum)) return;
+  var pageNum = parseInt(pageEl.dataset.pageNum, 10);
+  if (!pageNum) return;
+  if (state.renderedPages.has(pageNum)) { resolveRenderWaiters(pageNum); return; }
   if (state.renderingPages.has(pageNum)) return;
   state.renderingPages.add(pageNum);
 
   try {
-    const page = await state.pdfDoc.getPage(pageNum);
+    var page = await state.pdfDoc.getPage(pageNum);
 
     // أبعاد
-    const baseViewport = page.getViewport({ scale: 1 });
-    const containerWidth = state.containerWidth || calcContainerWidth() || 360;
-    const scale = containerWidth / baseViewport.width;
-    const viewport = page.getViewport({ scale });
+    var baseViewport = page.getViewport({ scale: 1 });
+    var containerWidth = state.containerWidth || calcContainerWidth() || 360;
+    var scale = (containerWidth / baseViewport.width);
+    var viewport = page.getViewport({ scale });
 
     // Canvas
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const canvas = document.createElement('canvas');
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var canvas = document.createElement('canvas');
     canvas.width = Math.max(1, Math.floor(viewport.width * dpr));
     canvas.height = Math.max(1, Math.floor(viewport.height * dpr));
     canvas.style.width = '100%';
     canvas.style.height = 'auto';
 
-    const ctx = canvas.getContext('2d', { alpha: false });
+    var ctx = canvas.getContext('2d', { alpha: false });
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -924,75 +1269,136 @@ async function renderPage(pageEl) {
       transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : null,
     }).promise;
 
-    // Text Layer للنسخ
-    let textLayer = null;
+    // Text Layer بمواضع دقيقة
+    var textLayer = document.createElement('div');
+    textLayer.className = 'text-layer';
+    textLayer.style.width = viewport.width + 'px';
+    textLayer.style.height = viewport.height + 'px';
+
     try {
-      const textContent = await page.getTextContent();
-      state.pageTextCache.set(pageNum, textContent.items.map(i => i.str).join(' '));
-
-      textLayer = document.createElement('div');
-      textLayer.className = 'text-layer';
-      textLayer.style.width = viewport.width + 'px';
-      textLayer.style.height = viewport.height + 'px';
-
-      const params = {
-        container: textLayer,
-        viewport: viewport,
-        textDivs: [],
-      };
-      // v3.11 يستخدم textContentSource أو textContent
-      if (pdfjsLib.renderTextLayer.length >= 0) {
-        try {
-          pdfjsLib.renderTextLayer({ ...params, textContentSource: textContent });
-        } catch (err) {
-          pdfjsLib.renderTextLayer({ ...params, textContent: textContent });
-        }
-      }
+      var textContent = await page.getTextContent();
+      buildTextLayer(textLayer, textContent, viewport, pageNum);
     } catch (e) {
       console.warn('Text layer failed for page ' + pageNum, e);
     }
 
     // استبدال
     pageEl.classList.remove('placeholder');
+    pageEl.classList.add('rendered');
+    pageEl.style.width = viewport.width + 'px';
     pageEl.style.height = 'auto';
     pageEl.innerHTML = '';
     pageEl.appendChild(canvas);
-    if (textLayer) pageEl.appendChild(textLayer);
+    pageEl.appendChild(textLayer);
 
     state.renderedPages.add(pageNum);
+    resolveRenderWaiters(pageNum);
 
   } catch (e) {
     console.error('فشل رسم الصفحة ' + pageNum, e);
-    // إذا فشلت، أبقِ placeholder مع نص الخطأ
     pageEl.classList.remove('placeholder');
     pageEl.style.display = 'flex';
     pageEl.style.alignItems = 'center';
     pageEl.style.justifyContent = 'center';
     pageEl.innerHTML = '<span style="color:var(--text-muted);font-size:0.85rem;">تعذّر عرض الصفحة ' + pageNum + '</span>';
+    resolveRenderWaiters(pageNum);
   } finally {
     state.renderingPages.delete(pageNum);
   }
+}
+
+/* ⭐ ننتظر حتى تُرسم صفحة (للقفز إلى نتيجة بحث) */
+function waitForPage(pageNum) {
+  if (state.renderedPages.has(pageNum)) return Promise.resolve(true);
+  return new Promise(function (resolve) {
+    var list = state.renderWaiters.get(pageNum) || [];
+    list.push(resolve);
+    state.renderWaiters.set(pageNum, list);
+  });
+}
+
+function resolveRenderWaiters(pageNum) {
+  var list = state.renderWaiters.get(pageNum);
+  if (!list || !list.length) return;
+  state.renderWaiters.delete(pageNum);
+  list.forEach(function (fn) { try { fn(true); } catch (e) {} });
+}
+
+/* ⭐ يضمن رسم صفحة معيّنة (فوراً) */
+function ensurePageRendered(pageNum) {
+  var el = document.querySelector('.pdf-page[data-page-num="' + pageNum + '"]');
+  if (!el) return Promise.resolve(false);
+  if (state.renderedPages.has(pageNum)) return Promise.resolve(true);
+  var waiting = waitForPage(pageNum);
+  renderPage(el);
+  return waiting;
 }
 
 /* ═══ IntersectionObserver ═══ */
 function setupObserver() {
   if (state.observer) state.observer.disconnect();
 
+  // ⭐ v4.6.2 — عرض افتراضي: الصفحة الظاهرة + صفحة فوقها وأخرى تحتها
   state.observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
         const el = entry.target;
         requestAnimationFrame(() => renderPage(el));
+        if (!state.singlePage) {
+          const num = parseInt(el.dataset.pageNum, 10);
+          if (num) setCurrentPage(num);
+        }
       }
     });
   }, {
     root: els.viewer,
-    rootMargin: '400px 0px',
+    rootMargin: '100% 0px',
     threshold: 0,
   });
 
   document.querySelectorAll('.pdf-page').forEach(el => {
     state.observer.observe(el);
+  });
+}
+
+/* ═══ الصفحات المرئية ═══ */
+/**
+ * ⭐ v4.6.2 — يرسم الصفحات الظاهرة فقط (والقريبة منها).
+ */
+function renderVisiblePages() {
+  if (!els.viewer) return;
+  var top = els.viewer.scrollTop;
+  var height = els.viewer.clientHeight || window.innerHeight;
+
+  document.querySelectorAll('.pdf-page').forEach(function (el) {
+    var pageTop = el.offsetTop;
+    var pageBottom = pageTop + el.offsetHeight;
+    if (pageBottom > top - height && pageTop < top + height * 2) {
+      renderPage(el);
+    }
+  });
+}
+
+/**
+ * ⭐ v4.6.2 — يحرّر ذاكرة الصفحات البعيدة (عرض افتراضي حقيقي).
+ */
+function releaseFarPages() {
+  var top = els.viewer.scrollTop;
+  var height = els.viewer.clientHeight || window.innerHeight;
+
+  document.querySelectorAll('.pdf-page.rendered').forEach(function (el) {
+    var pageTop = el.offsetTop;
+    var pageBottom = pageTop + el.offsetHeight;
+    var tooFar = pageBottom < top - height * 2.5 || pageTop > top + height * 3.5;
+    if (!tooFar) return;
+    if (state.singlePage && el.classList.contains('current')) return;
+
+    var num = parseInt(el.dataset.pageNum, 10);
+    el.innerHTML = '';
+    el.classList.remove('rendered');
+    el.classList.add('placeholder');
+    el.style.height = Math.round(state.containerWidth * state.pageRatio) + 'px';
+    state.renderedPages.delete(num);
   });
 }
 
@@ -1021,78 +1427,298 @@ function setupScrollHUD() {
 
     clearTimeout(hudTimer);
     hudTimer = setTimeout(() => els.pageHud.classList.remove('show'), 1200);
+
+    if (!state.singlePage) setCurrentPage(closestPage);
+
+    // ⭐ v4.6.2 — تحرير ذاكرة الصفحات البعيدة
+    if (!scrollReleaseTimer) {
+      scrollReleaseTimer = setTimeout(() => {
+        scrollReleaseTimer = null;
+        releaseFarPages();
+      }, 400);
+    }
   }, { passive: true });
 }
+let scrollReleaseTimer = null;
 
-/* ═══ البحث ═══ */
+/* ═══════════════════════════════════════════════════════
+   ⭐⭐ v4.6.2 — Phase 31: بحث عميق (فهرسة + قفز دقيق + تظليل)
+   ------------------------------------------------------------
+   1) نفهرس نصّ كل الصفحات في الخلفية (pdf.getTextContent).
+   2) البحث يبدأ من أول حرف.
+   3) النتيجة تنقلك إلى الصفحة وإلى الموضع Y الدقيق.
+   4) الكلمة المطابقة تُظلَّل بلون أصفر مؤقّتاً.
+   5) سهما «التالي/السابق» للتنقّل بين كل المطابقات.
+   ═══════════════════════════════════════════════════════ */
+
 /**
- * ⭐⭐ v4.6.1 — بحث داخل الملف: يعمل من أول حرف.
- *   كان يقبل حرفين على الأقل (فلا يستجيب للحرف الأول) ولا يستمع
- *   لمفتاح Enter إطلاقاً.
+ * ⭐ فهرسة نصّ كل الصفحات في الخلفية (بلا تجميد الواجهة).
  */
-async function performSearch(query) {
-  const q = String(query || '').trim();
+async function buildSearchIndex() {
+  if (state.indexing || !state.pdfDoc) return;
+  state.indexing = true;
+
+  for (let i = 1; i <= state.totalPages; i++) {
+    if (state.indexedPages.has(i)) continue;
+    try {
+      const page = await state.pdfDoc.getPage(i);
+      const tc = await page.getTextContent();
+      const items = [];
+      let offset = 0;
+      (tc.items || []).forEach((item, idx) => {
+        if (typeof item.str !== 'string' || !item.str.length) return;
+        items.push({ idx: idx, str: item.str, start: offset, end: offset + item.str.length });
+        offset += item.str.length + 1;
+      });
+      const text = items.map((it) => it.str).join(' ');
+      state.textIndex.set(i, { text: text, items: items });
+      state.pageTextCache.set(i, text);
+      state.indexedPages.add(i);
+    } catch (e) {
+      /* صفحة بلا نصّ */
+    }
+    // ⭐ إفساح المجال للواجهة بين الصفحات
+    await new Promise((r) => setTimeout(r, 0));
+  }
+
+  state.indexing = false;
+  updateSearchStatus();
+
+  // ⭐ نعيد البحث إن كان المستخدم قد كتب شيئاً أثناء الفهرسة
+  if (state.searchTerm) {
+    searchDocument(state.searchTerm);
+  }
+}
+
+/** ⭐ حالة الفهرسة في شريط البحث */
+function updateSearchStatus() {
+  if (!els.searchResults) return;
+  const term = (els.searchInput && els.searchInput.value || '').trim();
+  if (!term) {
+    const indexed = state.indexedPages.size;
+    const total = state.totalPages;
+    els.searchResults.innerHTML = '<div class="search-hint">' +
+      (state.indexing
+        ? 'جارٍ فهرسة الصفحات… ' + indexed + ' / ' + total
+        : 'اكتب كلمة للبحث في ' + total + ' صفحة') +
+      '</div>';
+    return;
+  }
+  if (state.indexing && !state.searchMatches.length) {
+    els.searchResults.innerHTML = '<div class="search-hint">جارٍ البحث… (' +
+      state.indexedPages.size + ' / ' + state.totalPages + ')</div>';
+  }
+}
+
+/**
+ * ⭐ البحث في الفهرس — من أول حرف.
+ */
+function searchDocument(term) {
+  const q = String(term || '').trim().toLowerCase();
+  state.searchTerm = q;
+
   if (!q) {
-    els.searchResults.innerHTML = '<div class="search-hint">اكتب كلمة للبحث في جميع الصفحات</div>';
+    state.searchMatches = [];
+    state.searchMatchIndex = -1;
+    renderSearchResults();
+    updateSearchStatus();
+    updateSearchNav();
     return;
   }
 
-  els.searchResults.innerHTML = '<div class="search-hint">جاري البحث...</div>';
+  const matches = [];
+  const pages = Array.from(state.textIndex.keys()).sort((a, b) => a - b);
 
-  const results = [];
-  const lowerQ = q.toLowerCase();
-  const regex = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-
-  for (let i = 1; i <= state.totalPages; i++) {
-    let text = state.pageTextCache.get(i);
-    if (!text) {
-      try {
-        const page = await state.pdfDoc.getPage(i);
-        const tc = await page.getTextContent();
-        text = tc.items.map(it => it.str).join(' ');
-        state.pageTextCache.set(i, text);
-      } catch (e) { continue; }
+  for (const page of pages) {
+    const entry = state.textIndex.get(page);
+    if (!entry || !entry.text) continue;
+    const hay = entry.text.toLowerCase();
+    let idx = hay.indexOf(q);
+    let guard = 0;
+    while (idx >= 0 && guard < 300) {
+      let item = null;
+      for (const it of entry.items) {
+        if (idx >= it.start && idx < it.end) { item = it; break; }
+        if (it.start > idx) break;
+      }
+      matches.push({ page: page, offset: idx, itemIdx: item ? item.idx : 0 });
+      idx = hay.indexOf(q, idx + q.length);
+      guard++;
     }
+  }
 
-    if (text.toLowerCase().includes(lowerQ)) {
-      const idx = text.toLowerCase().indexOf(lowerQ);
-      const start = Math.max(0, idx - 50);
-      const end = Math.min(text.length, idx + q.length + 50);
+  state.searchMatches = matches;
+  state.searchMatchIndex = matches.length ? 0 : -1;
+  renderSearchResults();
+  updateSearchNav();
+}
+
+/** ⭐ رسم قائمة النتائج (حسب الصفحة مع رقمها وعدد التطابقات) */
+function renderSearchResults() {
+  if (!els.searchResults) return;
+  const term = state.searchTerm;
+
+  if (!term) {
+    updateSearchStatus();
+    return;
+  }
+  if (!state.searchMatches.length) {
+    els.searchResults.innerHTML = '<div class="search-hint">' +
+      (state.indexing ? 'جارٍ البحث…' : 'لا توجد نتائج') + '</div>';
+    return;
+  }
+
+  const groups = [];
+  let current = null;
+  state.searchMatches.forEach((m, i) => {
+    if (!current || current.page !== m.page) {
+      current = { page: m.page, count: 0, first: i, snippet: '' };
+      groups.push(current);
+    }
+    current.count++;
+    if (!current.snippet) {
+      const entry = state.textIndex.get(m.page);
+      const text = (entry && entry.text) || '';
+      const start = Math.max(0, m.offset - 40);
+      const end = Math.min(text.length, m.offset + term.length + 40);
       let snippet = text.substring(start, end);
       if (start > 0) snippet = '…' + snippet;
       if (end < text.length) snippet = snippet + '…';
-      snippet = snippet.replace(regex, '<mark>$1</mark>');
-      results.push({ page: i, snippet });
+      current.snippet = snippet;
     }
-  }
+  });
 
-  if (results.length === 0) {
-    els.searchResults.innerHTML = '<div class="search-hint">لا توجد نتائج</div>';
-    return;
-  }
+  const escapeHtml = (s) => String(s).replace(/[&<>"]/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'
+  }[c]));
 
-  els.searchResults.innerHTML = results.map(r => `
-    <div class="search-result-item" data-page="${r.page}">
-      <div class="page-label">الصفحة ${r.page}</div>
-      <div class="snippet">${r.snippet}</div>
-    </div>
-  `).join('');
+  els.searchResults.innerHTML = groups.map((g) => {
+    const idx = g.first;
+    const active = idx === state.searchMatchIndex ? ' active' : '';
+    const snippet = escapeHtml(g.snippet).replace(
+      new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'ig'),
+      (m) => '<mark>' + m + '</mark>'
+    );
+    return '<div class="search-result-item' + active + '" data-page="' + g.page + '" data-index="' + idx + '">' +
+      '<div class="page-label">الصفحة ' + g.page +
+      '<span class="page-badge">' + g.count + ' نتيجة</span></div>' +
+      '<div class="snippet">' + snippet + '</div>' +
+      '</div>';
+  }).join('');
 
-  els.searchResults.querySelectorAll('.search-result-item').forEach(item => {
+  els.searchResults.querySelectorAll('.search-result-item').forEach((item) => {
     item.addEventListener('click', () => {
-      scrollToPage(parseInt(item.dataset.page, 10));
-      closeSearch();
+      const index = parseInt(item.dataset.index, 10);
+      if (!isNaN(index)) {
+        state.searchMatchIndex = index;
+        jumpToMatch(state.searchMatches[index]);
+        renderSearchResults();
+        updateSearchNav();
+      }
     });
   });
 }
 
-function scrollToPage(pageNum) {
-  const el = document.querySelector(`.pdf-page[data-page-num="${pageNum}"]`);
-  if (el) {
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    el.style.transition = 'box-shadow 0.4s';
-    el.style.boxShadow = '0 0 0 3px var(--accent), var(--page-shadow)';
-    setTimeout(() => { el.style.boxShadow = ''; }, 1800);
+/** ⭐ عدّاد النتائج + تفعيل الأسهم */
+function updateSearchNav() {
+  const total = state.searchMatches.length;
+  if (els.searchCount) {
+    els.searchCount.textContent = total ? (state.searchMatchIndex + 1) + '/' + total : '0/0';
+  }
+  if (els.searchPrevBtn) els.searchPrevBtn.disabled = total < 1;
+  if (els.searchNextBtn) els.searchNextBtn.disabled = total < 1;
+}
+
+/**
+ * ⭐ القفز إلى المطابقة: الصفحة + الموضع Y الدقيق + التظليل.
+ */
+async function jumpToMatch(match) {
+  if (!match) return;
+  const pageNum = match.page;
+
+  // 1) الصفحة
+  var el = document.querySelector('.pdf-page[data-page-num="' + pageNum + '"]');
+  if (!el) return;
+
+  if (state.singlePage) setCurrentPage(pageNum, true);
+  await ensurePageRendered(pageNum);
+
+  // 2) الموضع الدقيق
+  var span = el.querySelector('.text-layer span[data-idx="' + match.itemIdx + '"]');
+  var top = el.offsetTop;
+  if (span) {
+    top += parseFloat(span.dataset.y || '0');
+  }
+  els.viewer.scrollTo({ top: Math.max(0, top - 80), behavior: 'smooth' });
+
+  // 3) التظليل
+  highlightMatch(match);
+
+  if (els.pageHud) {
+    els.pageHud.textContent = 'الصفحة ' + pageNum + ' من ' + state.totalPages;
+    els.pageHud.classList.add('show');
+    clearTimeout(hudTimer);
+    hudTimer = setTimeout(() => els.pageHud.classList.remove('show'), 1400);
+  }
+}
+
+/** ⭐ تظليل كل مطابقات الصفحة + المطابقة الحالية بلون أقوى */
+function highlightMatch(match) {
+  document.querySelectorAll('.text-layer span.hit, .text-layer span.current')
+    .forEach((s) => s.classList.remove('hit', 'current'));
+
+  const el = document.querySelector('.pdf-page[data-page-num="' + match.page + '"]');
+  if (!el) return;
+  const term = state.searchTerm.toLowerCase();
+  if (!term) return;
+
+  el.querySelectorAll('.text-layer span').forEach((span) => {
+    if (String(span.textContent || '').toLowerCase().indexOf(term) >= 0) {
+      span.classList.add('hit');
+    }
+  });
+
+  const current = el.querySelector('.text-layer span[data-idx="' + match.itemIdx + '"]');
+  if (current) {
+    current.classList.add('current');
+    setTimeout(() => current.classList.remove('current'), 2600);
+  }
+}
+
+/** ⭐ التالي / السابق بين المطابقات */
+function stepMatch(delta) {
+  const total = state.searchMatches.length;
+  if (!total) return;
+  let index = state.searchMatchIndex + delta;
+  if (index < 0) index = total - 1;
+  if (index >= total) index = 0;
+  state.searchMatchIndex = index;
+  jumpToMatch(state.searchMatches[index]);
+  renderSearchResults();
+  updateSearchNav();
+}
+
+/** ⭐ تنفيذ البحث (يُستدعى من input/Enter) */
+function performSearch(query) {
+  const q = String(query || '').trim();
+  if (!q) {
+    searchDocument('');
+    return;
+  }
+  // ⭐ فهرسة فورية للصفحة الأولى ثم بحث
+  searchDocument(q);
+  updateSearchStatus();
+}
+
+/** ⭐ Enter: الانتقال إلى أول نتيجة */
+function runSearchNow() {
+  const value = els.searchInput.value;
+  performSearch(value);
+  if (state.searchMatches.length) {
+    state.searchMatchIndex = 0;
+    jumpToMatch(state.searchMatches[0]);
+    renderSearchResults();
+    updateSearchNav();
   }
 }
 
@@ -1105,29 +1731,22 @@ function openSearch() {
   } catch (e) {
     setTimeout(() => els.searchInput.focus(), 50);
   }
+  updateSearchStatus();
+  if (!state.indexing && state.indexedPages.size < state.totalPages) {
+    buildSearchIndex();
+  }
 }
 
 function closeSearch() {
   els.searchOverlay.classList.remove('visible');
   els.searchInput.value = '';
+  state.searchTerm = '';
+  state.searchMatches = [];
+  state.searchMatchIndex = -1;
   els.searchResults.innerHTML = '<div class="search-hint">اكتب كلمة للبحث في جميع الصفحات</div>';
-}
-
-/**
- * ⭐⭐ v4.6.1 — Enter: بحث فوري ثم القفز إلى أول نتيجة.
- */
-function runSearchNow() {
-  const value = els.searchInput.value;
-  performSearch(value).then(() => {
-    const first = els.searchResults.querySelector('.search-result-item');
-    if (first) {
-      const page = parseInt(first.dataset.page, 10);
-      if (!isNaN(page)) {
-        scrollToPage(page);
-        closeSearch();
-      }
-    }
-  });
+  updateSearchNav();
+  document.querySelectorAll('.text-layer span.hit, .text-layer span.current')
+    .forEach((s) => s.classList.remove('hit', 'current'));
 }
 
 /* ═══ خطأ ═══ */
@@ -1171,6 +1790,21 @@ async function init() {
   state.renderedPages = new Set();
   state.renderingPages = new Set();
   state.pageTextCache = new Map();
+  state.textIndex = new Map();
+  state.indexedPages = new Set();
+  state.indexing = false;
+  state.searchMatches = [];
+  state.searchMatchIndex = -1;
+  state.searchTerm = '';
+  state.zoom = 1;
+  state.singlePage = false;
+  state.currentPage = 1;
+  document.body.classList.remove('single-page');
+  if (els.pageModeBtn) els.pageModeBtn.classList.remove('active');
+  if (els.headerPagePill) {
+    els.headerPagePill.classList.remove('show');
+    els.headerPagePill.textContent = '1 / 1';
+  }
 
   try {
     const params = parseParams();
@@ -1216,8 +1850,8 @@ async function init() {
 
     setProgress(95, 'جاري عرض الصفحة الأولى...');
 
-    // 5. العرض: أخفِ الـ loader بعد رسم الصفحة الأولى فقط، وليس بعد
-    //    اكتمال تنزيل الملف. رابط PDF.js أعلاه يستخدم Range requests.
+    // 5. العرض: ⭐ v4.6.2 — الصفحة الأولى تُرسم فوراً (لا ننتظر الملف
+    //    كاملاً)، ثم نُخفي الهيكل العظمي ونبدأ الفهرسة في الخلفية.
     els.viewer.scrollTop = 0;
 
     const firstPageEl = document.querySelector('.pdf-page[data-page-num="1"]');
@@ -1229,9 +1863,17 @@ async function init() {
       }
     }
 
+    if (els.fileSub) {
+      els.fileSub.textContent = [fileInfo.subject_name, params.size].filter(Boolean).join(' • ') || 'PDF';
+    }
+    setCurrentPage(1, true);
+
     hideLoading();
     setupObserver();
     setupScrollHUD();
+
+    // ⭐ v4.6.2 — الفهرسة الكاملة في الخلفية (بحث فوري من أول حرف)
+    setTimeout(() => { buildSearchIndex(); }, 400);
 
     // ⭐⭐ v4.6.1 — TASK 4: عرض تدريجي — نرسم بقية الصفحات في الخلفية
     //   واحدة تلو الأخرى بعد أن تصبح الصفحة الأولى قابلة للقراءة،
@@ -1256,52 +1898,6 @@ async function init() {
   }
 }
 
-/**
- * ⭐⭐ v4.6.1 — TASK 4: العرض التدريجي.
- *   بعد رسم الصفحة الأولى نُكمل رسم بقية الصفحات في الخلفية،
- *   مع إفساح المجال للتمرير والقراءة (requestIdleCallback).
- */
-function scheduleProgressiveRender() {
-  const total = state.totalPages || 0;
-  if (total < 2) return;
-
-  let page = 2;
-  let cancelled = false;
-
-  function next() {
-    if (cancelled) return;
-    if (page > total) return;
-
-    const current = page++;
-    const el = document.querySelector(`.pdf-page[data-page-num="${current}"]`);
-    if (el) {
-      Promise.resolve(renderPage(el))
-        .catch(() => {})
-        .then(() => schedule());
-    } else {
-      schedule();
-    }
-  }
-
-  function schedule() {
-    if (cancelled || page > total) return;
-    if (typeof globalThis.requestIdleCallback === 'function') {
-      globalThis.requestIdleCallback(next, { timeout: 800 });
-    } else {
-      setTimeout(next, 120);
-    }
-  }
-
-  // ⭐ أول صفحتين فوراً (والباقي في الخلفية) ليجد القارئ محتوى جاهزاً.
-  [2, 3].forEach((n, i) => {
-    const el = document.querySelector(`.pdf-page[data-page-num="${n}"]`);
-    if (!el) return;
-    setTimeout(() => renderPage(el).catch(() => {}), i * 60);
-  });
-
-  schedule();
-}
-
 /* ═══ الأحداث ═══ */
 els.themeBtn.addEventListener('click', toggleTheme);
 els.searchBtn.addEventListener('click', openSearch);
@@ -1315,11 +1911,11 @@ els.searchInput.addEventListener('input', (e) => {
   clearTimeout(searchTimeout);
   const value = e.target.value;
   if (!String(value || '').trim()) {
-    els.searchResults.innerHTML = '<div class="search-hint">اكتب كلمة للبحث في جميع الصفحات</div>';
+    searchDocument('');
     return;
   }
-  // ⭐ v4.6.1 — تأخير قصير (200ms) بعد أول حرف.
-  searchTimeout = setTimeout(() => performSearch(value), 200);
+  // ⭐ v4.6.2 — تأخير قصير (120ms) — النتيجة فورية عملياً.
+  searchTimeout = setTimeout(() => performSearch(value), 120);
 });
 
 // ⭐⭐ v4.6.1 — Enter ينفّذ البحث فوراً وينتقل إلى أول نتيجة؛
@@ -1334,8 +1930,25 @@ els.searchInput.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     e.preventDefault();
     closeSearch();
+    return;
+  }
+  // ⭐ v4.6.2 — Enter التالي/السابق (Ctrl+Enter / Shift+Enter)
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    stepMatch(e.shiftKey ? -1 : 1);
   }
 });
+
+// ⭐ v4.6.2 — أسهما «التالي/السابق» للتنقّل بين المطابقات
+els.searchNextBtn.addEventListener('click', () => stepMatch(1));
+els.searchPrevBtn.addEventListener('click', () => stepMatch(-1));
+
+// ⭐ v4.6.2 — شريط الأزرار العائم
+els.zoomInBtn.addEventListener('click', () => setZoom(state.zoom + 0.2));
+els.zoomOutBtn.addEventListener('click', () => setZoom(state.zoom - 0.2));
+els.pageModeBtn.addEventListener('click', togglePageMode);
+els.pagePrevBtn.addEventListener('click', () => goToPage(state.currentPage - 1));
+els.pageNextBtn.addEventListener('click', () => goToPage(state.currentPage + 1));
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeSearch();
