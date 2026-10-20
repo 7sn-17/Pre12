@@ -1926,6 +1926,58 @@ and the text **pulse with a green glow** for two seconds
 is removed. `sessionStorage['medapp_splash_seen']` keeps it to **once
 per session** — it never comes back on an internal navigation.
 
+### 5.18 Phase 21 — v2.9.1 (the Google avatar, the edit name, the FCM fix)
+
+#### ⭐⭐ The FCM token was NULL because of a method name
+
+`@capacitor/push-notifications` **v8** exposes:
+
+```ts
+register(): Promise<void>          // ← the real method
+addListener('registration', (token: Token) => void)     // { value: string }
+addListener('registrationError', (error) => void)
+```
+
+The app was calling **`registerForPushNotifications()`**, which does
+**not exist** in v8 — so the registration never ran and
+`profiles.fcm_token` stayed NULL. `registerForPush()` now:
+
+1. attaches the `'registration'` (and `'registrationError'`) listeners
+   **before** calling `register()`;
+2. falls back to the old name if a different version is installed;
+3. **upserts** the token into `profiles` (so it works even if the
+   profile row does not exist yet);
+4. is exposed as `MedAppNotifications.refreshPushToken()` — the
+   **"تحديث رمز الإشعارات"** button in the settings calls it and
+   shows the token (or the error) in a toast.
+
+The Gradle side was already correct: `com.google.gms:google-services`
+is on the classpath and `apply plugin: 'com.google.gms.google-services'`
+sits at the bottom of `android/app/build.gradle` (the
+`processReleaseGoogleServices` task runs in every build).
+
+#### ⭐⭐ The Google avatar
+
+| Where | What |
+|---|---|
+| the database | `profiles.avatar_url` (text) — already present |
+| the trigger | `handle_new_user()` now copies `avatar_url` / `picture` from the user metadata |
+| the migration | it also backfills the existing rows from `auth.identities` |
+| `auth.js` | `syncProfileAvatar(user)` extracts the picture and upserts it |
+| the UI | the profile card shows a **circular** `<img>` (`referrerpolicy="no-referrer"` — Google needs it) and falls back to the letter avatar |
+
+#### ⭐⭐ Editing the name
+
+The pencil next to the name opens `showCustomPrompt()` (the new input
+modal in `ui.js`). On save, `updateProfileName()` updates **both**
+`supabase.auth.updateUser({ data: { full_name } })` **and**
+`profiles.full_name`, refreshes the local cache, and the card
+re-renders instantly through the `medapp:profile-updated` event — no
+reload.
+
+`ui.js` now has three modals: `showCustomAlert()`, `showCustomConfirm()`
+and `showCustomPrompt()`.
+
 ## 12. Cheatsheet
 
 ### Commands

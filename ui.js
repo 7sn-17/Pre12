@@ -185,6 +185,96 @@
     });
   }
 
+  /**
+   * ⭐⭐ نافذة إدخال (Prompt) — بديل prompt() الأصلي.
+   * @param {string} title
+   * @param {string} message
+   * @param {string} defaultValue
+   * @param {function} onSave  يُستدعى بالقيمة الجديدة
+   * @param {object} [options] { placeholder, confirmText, cancelText, type, maxLength }
+   * @returns {Promise<string|null>}
+   */
+  function showCustomPrompt(title, message, defaultValue, onSave, options) {
+    options = options || {};
+    var root = ensureRoot();
+    var type = options.type || 'info';
+
+    return new Promise(function (resolve) {
+      var settled = false;
+      current = {
+        resolve: function (value) { if (!settled) { settled = true; resolve(value); } },
+        onCancel: null
+      };
+
+      root.innerHTML =
+        '<div class="medapp-ui-overlay" data-tone="' + type + '">' +
+          '<div class="medapp-ui-card" role="dialog" aria-modal="true">' +
+            '<div class="medapp-ui-icon"><i data-lucide="' + (ICONS[type] || 'info') + '"></i></div>' +
+            '<div class="medapp-ui-title">' + escapeHtml(title || '') + '</div>' +
+            (message ? '<div class="medapp-ui-message">' + message + '</div>' : '') +
+            '<input class="medapp-ui-input" id="medappUiInput" type="text" ' +
+              'placeholder="' + escapeHtml(options.placeholder || '') + '" ' +
+              'maxlength="' + (options.maxLength || 60) + '" ' +
+              'value="' + escapeHtml(defaultValue || '') + '" ' +
+              'autocomplete="off" spellcheck="false">' +
+            '<div class="medapp-ui-actions">' +
+              '<button class="medapp-ui-btn ghost" data-medapp-ui-cancel>' +
+                '<span>' + escapeHtml(options.cancelText || 'إلغاء') + '</span>' +
+              '</button>' +
+              '<button class="medapp-ui-btn primary" data-medapp-ui-save>' +
+                '<i data-lucide="check" style="width:16px;height:16px;"></i>' +
+                '<span>' + escapeHtml(options.confirmText || 'حفظ') + '</span>' +
+              '</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+
+      root.classList.add('open');
+
+      var input = document.getElementById('medappUiInput');
+      var cancelBtn = root.querySelector('[data-medapp-ui-cancel]');
+      var saveBtn = root.querySelector('[data-medapp-ui-save]');
+      var overlay = root.querySelector('.medapp-ui-overlay');
+
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', function () { closeCurrent(null); });
+      }
+      if (saveBtn) {
+        saveBtn.addEventListener('click', function () {
+          var value = input ? input.value.trim() : '';
+          if (!value) {
+            if (input) { input.focus(); input.classList.add('shake'); }
+            return;
+          }
+          closeCurrent(value);
+          if (typeof onSave === 'function') {
+            setTimeout(function () { onSave(value); }, 120);
+          }
+        });
+      }
+      if (overlay) {
+        overlay.addEventListener('click', function (event) {
+          if (event.target === overlay) closeCurrent(null);
+        });
+      }
+      if (input) {
+        input.addEventListener('keydown', function (event) {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            if (saveBtn) saveBtn.click();
+          }
+        });
+      }
+
+      document.addEventListener('keydown', onKeyDown, true);
+      refreshIcons();
+      if (input) {
+        input.focus();
+        try { input.setSelectionRange(input.value.length, input.value.length); } catch (e) {}
+      }
+    });
+  }
+
   function refreshIcons() {
     try {
       if (global.lucide && typeof global.lucide.createIcons === 'function') {
@@ -204,8 +294,10 @@
 
   global.showCustomAlert = showCustomAlert;
   global.showCustomConfirm = showCustomConfirm;
+  global.showCustomPrompt = showCustomPrompt;
   global.MedAppUI = {
     alert: showCustomAlert,
-    confirm: showCustomConfirm
+    confirm: showCustomConfirm,
+    prompt: showCustomPrompt
   };
 })(window);

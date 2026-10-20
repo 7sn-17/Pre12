@@ -159,6 +159,138 @@ function clearCachedProfile() {
   try { localStorage.removeItem(MEDAPP_PROFILE_CACHE_KEY); } catch (err) {}
 }
 
+// ============================================
+// 1.7 صورة Google + تعديل الاسم
+// ------------------------------------------------------------
+// ⭐ الصورة come من بيانات المستخدم (user_metadata) وتُحفظ في
+//    profiles.avatar_url — فتظهر في بطاقة الملف الشخصي.
+// ⭐ تعديل الاسم يحدّث Supabase + النسخة المحلية معاً.
+// ============================================
+
+/** ⭐ يستخرج رابط الصورة من بيانات المستخدم */
+function extractAvatarUrl(user) {
+  try {
+    if (!user) return '';
+    var meta = user.user_metadata || {};
+    var url = meta.avatar_url || meta.picture || meta.image_url || '';
+    if (url && /^https?:\/\//i.test(url)) return url;
+  } catch (e) {}
+  return '';
+}
+
+/**
+ * ⭐⭐ يحفظ صورة Google في profiles.avatar_url.
+ * نستخدم upsert حتى يعمل حتى لو لم يكن هناك صفّ ملف شخصي بعد.
+ */
+async function syncProfileAvatar(user) {
+  var avatar = extractAvatarUrl(user);
+  if (!avatar) return { success: false, reason: 'no-avatar' };
+
+  try {
+    var userId = (user && user.id) || '';
+    if (!userId && typeof getAuthUser === 'function') {
+      var current = getAuthUser();
+      userId = (current && current.id) || '';
+    }
+    if (!userId) return { success: false, reason: 'no-user' };
+
+    var payload = { id: userId, avatar_url: avatar };
+    if (user && user.email) payload.email = user.email;
+    if (user && user.user_metadata && user.user_metadata.full_name) {
+      payload.full_name = user.user_metadata.full_name;
+    }
+
+    var result = await supabaseClient
+      .from('profiles')
+      .upsert(payload, { onConflict: 'id' })
+      .select('*')
+      .maybeSingle();
+
+    if (result && result.error) {
+      console.warn('[auth] the avatar could not be saved:', result.error.message);
+      return { success: false, error: result.error.message };
+    }
+
+    // ⭐ نحدّث النسخة المحلية فوراً (تعمل دون اتصال)
+    var cached = getCachedProfile(userId);
+    if (cached) {
+      cached.avatar_url = avatar;
+      if (payload.full_name) cached.full_name = payload.full_name;
+      cacheProfile(cached);
+    } else if (result && result.data) {
+      cacheProfile(result.data, user && user.email);
+    }
+
+    try {
+      window.dispatchEvent(new CustomEvent('medapp:profile-updated', {
+        detail: { avatar_url: avatar, full_name: payload.full_name || '' }
+      }));
+    } catch (e) {}
+
+    return { success: true, avatar_url: avatar };
+  } catch (err) {
+    console.warn('[auth] the avatar sync failed:', err);
+    return { success: false, error: (err && err.message) || 'unknown' };
+  }
+}
+
+/**
+ * ⭐⭐ تعديل الاسم الكامل.
+ * يحدّث: Supabase Auth (user_metadata) + جدول profiles + النسخة المحلية.
+ */
+async function updateProfileName(newName) {
+  var clean = String(newName || '').trim().replace(/\s+/g, ' ');
+  if (!clean) return { success: false, error: 'الاسم لا يمكن أن يكون فارغاً' };
+  if (clean.length > 60) return { success: false, error: 'الاسم طويل جداً (60 حرفاً كحد أقصى)' };
+
+  try {
+    // 1) بيانات المصادقة
+    var userResult = await supabaseClient.auth.updateUser({ data: { full_name: clean } });
+    if (userResult && userResult.error) throw userResult.error;
+
+    // 2) جدول الملف الشخصي
+    var userId = '';
+    try {
+      var current = (typeof getAuthUser === 'function') ? getAuthUser() : null;
+      userId = (current && current.id) || '';
+    } catch (e) {}
+    if (!userId) {
+      var sessionResult = await supabaseClient.auth.getSession();
+      userId = (sessionResult && sessionResult.data && sessionResult.data.session &&
+                sessionResult.data.session.user && sessionResult.data.session.user.id) || '';
+    }
+
+    if (userId) {
+      var profileResult = await supabaseClient
+        .from('profiles')
+        .update({ full_name: clean })
+        .eq('id', userId);
+      if (profileResult && profileResult.error) {
+        console.warn('[auth] the profile name could not be saved:', profileResult.error.message);
+      }
+    }
+
+    // 3) النسخة المحلية
+    if (userId) {
+      var cached = getCachedProfile(userId);
+      if (cached) {
+        cached.full_name = clean;
+        cacheProfile(cached);
+      }
+    }
+
+    try {
+      window.dispatchEvent(new CustomEvent('medapp:profile-updated', {
+        detail: { full_name: clean }
+      }));
+    } catch (e) {}
+
+    return { success: true, full_name: clean };
+  } catch (err) {
+    return { success: false, error: translateAuthError((err && err.message) || 'تعذّر حفظ الاسم') };
+  }
+}
+
 async function getProfile(userId) {
   // ⭐ Offline-first: لا نطلب الشبكة إطلاقاً إن كنا غير متصلين.
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
@@ -235,6 +367,13 @@ async function signIn(email, password) {
       } catch (syncErr) {
         console.warn('Post-login sync failed:', syncErr);
       }
+    }
+
+    // ⭐⭐ صورة Google (إن وُجدت) — تُحفظ في profiles.avatar_url
+    try {
+      await syncProfileAvatar(data.user);
+    } catch (avatarErr) {
+      console.warn('Avatar sync failed:', avatarErr);
     }
 
     // ⭐ خزّن الملف الشخصي محلياً حتى يعمل العرض دون اتصال من أول مرة.
@@ -415,6 +554,13 @@ async function signInWithGoogleNative() {
     nonce: rawNonce
   });
   if (error) throw error;
+
+  // ⭐⭐ صورة Google: نحفظها في profiles.avatar_url فوراً
+  try {
+    await syncProfileAvatar(data.user);
+  } catch (e) {
+    console.warn('[auth] the avatar could not be saved:', e);
+  }
 
   return { success: true, user: data.user, session: data.session };
 }

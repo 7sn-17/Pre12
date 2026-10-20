@@ -371,6 +371,34 @@
     display: flex;
     gap: 10px;
   }
+  .medapp-ui-input {
+    width: 100%;
+    margin-top: 18px;
+    padding: 13px 15px;
+    border-radius: 13px;
+    border: 1.5px solid var(--border-card, rgba(16, 185, 129, 0.18));
+    background: var(--bg-elevated, #102a22);
+    color: var(--text-primary, #f0fdf4);
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  .medapp-ui-input:focus {
+    border-color: var(--accent-emerald, #10b981);
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+  }
+  .medapp-ui-input.shake { animation: medappShake 0.4s ease; }
+  @keyframes medappShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+  }
+
   .medapp-ui-btn {
     flex: 1;
     display: inline-flex;
@@ -1314,7 +1342,7 @@ header {
 <script src="notifications.js"></script>
 
 
-<script src="app.js?v=2.9.0"></script>
+<script src="app.js?v=2.9.1"></script>
 <script>
 
 /* ═══════════════════════════════════════════════════════

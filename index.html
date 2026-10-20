@@ -385,6 +385,34 @@
     display: flex;
     gap: 10px;
   }
+  .medapp-ui-input {
+    width: 100%;
+    margin-top: 18px;
+    padding: 13px 15px;
+    border-radius: 13px;
+    border: 1.5px solid var(--border-card, rgba(16, 185, 129, 0.18));
+    background: var(--bg-elevated, #102a22);
+    color: var(--text-primary, #f0fdf4);
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  .medapp-ui-input:focus {
+    border-color: var(--accent-emerald, #10b981);
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+  }
+  .medapp-ui-input.shake { animation: medappShake 0.4s ease; }
+  @keyframes medappShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+  }
+
   .medapp-ui-btn {
     flex: 1;
     display: inline-flex;
@@ -5226,7 +5254,7 @@ i.fab {
     <div class="medapp-splash-sub">السنة التحضيرية</div>
   </div>
 
-  <script src="app.js?v=2.9.0"></script>
+  <script src="app.js?v=2.9.1"></script>
 <script>
 
     // ⭐⭐ شاشة البداية — تظهر مرّة واحدة في الجلسة فقط
@@ -5788,6 +5816,32 @@ i.fab {
             </div>
           </div>
           <div class="toggle-switch" id="notificationToggle" role="switch" aria-checked="false" aria-label="تفعيل الإشعارات" onclick="toggleNotifications(event)"></div>
+        </div>
+
+        <!-- ⭐⭐ تحديث رمز الإشعارات (FCM) -->
+        <div class="settings-item" id="notificationTokenItem" style="cursor: default;">
+          <div class="settings-item-left">
+            <div class="settings-icon" style="background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.25); color: var(--medapp-blue);">
+              <i data-lucide="refresh-cw"></i>
+            </div>
+            <div class="settings-text">
+              <h4>تحديث رمز الإشعارات</h4>
+              <p id="notificationTokenStatus">مزامنة الرمز مع خوادم الإشعارات</p>
+            </div>
+          </div>
+          <button class="settings-item-arrow" id="refreshTokenBtn" onclick="refreshNotificationToken()"
+                  style="
+                    flex-shrink: 0;
+                    padding: 8px 14px;
+                    border-radius: 10px;
+                    border: 1px solid var(--border-card-hover, rgba(16, 185, 129, 0.46));
+                    background: transparent;
+                    color: var(--accent-light, #34d399);
+                    font-family: inherit;
+                    font-size: 0.72rem;
+                    font-weight: 800;
+                    cursor: pointer;
+                  ">تحديث</button>
         </div>
 
         <!-- حالة الاتصال -->
@@ -6556,15 +6610,121 @@ function openLastActivity() {
 
       renderUserCard(profile, session.user);
 
+      // ⭐⭐ عند تغيّر الاسم أو الصورة نُعيد الرسم فوراً
+      if (!window.__medappProfileListener) {
+        window.__medappProfileListener = true;
+        window.addEventListener('medapp:profile-updated', async function () {
+          try {
+            const sess = await getSession();
+            if (!sess) return;
+            const fresh = await getProfile(sess.user.id);
+            if (fresh) {
+              appState.currentProfile = fresh;
+              renderUserCard(fresh, sess.user);
+              const nameEl = document.getElementById('userCardName');
+              const greeting = document.getElementById('welcomeGreeting');
+              if (nameEl) nameEl.textContent = fresh.full_name || nameEl.textContent;
+              if (greeting) {
+                const displayName = fresh.full_name || sess.user.email?.split('@')[0] || 'مستخدم';
+                greeting.textContent = `${getArabicGreeting()}، ${displayName.split(' ')[0]}`;
+              }
+              lucide.createIcons();
+            }
+          } catch (e) {}
+        });
+      }
+
       loadConnectionStatus();
 
       lucide.createIcons();
+    }
+
+    // ============================================
+    // ⭐⭐ تحديث رمز الإشعارات (FCM)
+    // ============================================
+    async function refreshNotificationToken() {
+      const status = document.getElementById('notificationTokenStatus');
+      const btn = document.getElementById('refreshTokenBtn');
+
+      if (typeof MedAppNotifications === 'undefined' ||
+          typeof MedAppNotifications.refreshPushToken !== 'function') {
+        if (status) status.textContent = 'غير متاح في الويب';
+        showToast('تحديث الرمز متاح في التطبيق فقط', 'info');
+        return;
+      }
+
+      if (btn) { btn.disabled = true; btn.textContent = 'جارٍ…'; }
+      if (status) status.textContent = 'جارٍ جلب الرمز من Google…';
+
+      try {
+        const result = await MedAppNotifications.refreshPushToken();
+        if (result && result.ok) {
+          const short = String(result.token).slice(0, 16) + '…';
+          if (status) status.textContent = 'الرمز: ' + short;
+          showToast('تم تحديث رمز الإشعارات ✅', 'success');
+        } else {
+          if (status) status.textContent = 'تعذّر جلب الرمز';
+          showToast((result && result.error) || 'تعذّر جلب الرمز', 'error');
+        }
+      } catch (e) {
+        if (status) status.textContent = 'تعذّر جلب الرمز';
+        showToast('تعذّر جلب الرمز', 'error');
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'تحديث'; }
+      }
+    }
+
+    // ============================================
+    // ⭐⭐ تعديل الاسم الكامل
+    // ============================================
+    async function openEditNameModal() {
+      if (typeof showCustomPrompt !== 'function') {
+        // ⭐ بديل بسيط لو لم تُحمَّل النوافذ المخصّصة
+        const value = window.prompt('الاسم الكامل', '');
+        if (value) await saveProfileName(value);
+        return;
+      }
+
+      const current = (typeof getAuthUser === 'function' && getAuthUser()) || null;
+      const cached = (typeof getCachedProfile === 'function') ? getCachedProfile(current && current.id) : null;
+      const currentName = (cached && cached.full_name) ||
+                          (current && current.user_metadata && current.user_metadata.full_name) || '';
+
+      showCustomPrompt(
+        'تعديل الاسم',
+        'اكتب اسمك الكامل كما تريد أن يظهر في التطبيق.',
+        currentName,
+        async function (newName) {
+          await saveProfileName(newName);
+        },
+        { placeholder: 'مثال: حسن المحمد', confirmText: 'حفظ', maxLength: 60 }
+      );
+    }
+
+    async function saveProfileName(newName) {
+      if (typeof updateProfileName !== 'function') {
+        showToast('تعذّر تعديل الاسم', 'error');
+        return;
+      }
+      const result = await updateProfileName(newName);
+      if (!result.success) {
+        showToast(result.error || 'تعذّر حفظ الاسم', 'error');
+        return;
+      }
+
+      // ⭐⭐ تحديث الواجهة فوراً — بلا إعادة تحميل
+      const nameEl = document.getElementById('userCardName');
+      if (nameEl) nameEl.textContent = result.full_name;
+      showToast('تم تحديث الاسم ✅', 'success');
     }
 
     function renderUserCard(profile, user, options) {
       const card = document.getElementById('userCard');
       const displayName = profile?.full_name || user?.email?.split('@')[0] || 'مستخدم';
       const email = user?.email || profile?.email || '';
+      // ⭐⭐ صورة Google (من profiles أو من بيانات المصادقة)
+      const avatarUrl = (profile?.avatar_url || '') ||
+                        ((user && user.user_metadata && (user.user_metadata.avatar_url || user.user_metadata.picture)) || '');
       const role = profile?.role || 'student';
       const roleLabel = role === 'admin' ? 'مشرف' : role === 'moderator' ? 'مراقب' : 'طالب';
       const roleColor = role === 'admin' ? '#fbbf24' : role === 'moderator' ? '#60a5fa' : '#34d399';
@@ -6580,6 +6740,20 @@ function openLastActivity() {
           align-items: center;
           gap: 14px;
         ">
+          ${avatarUrl ? `
+          <div style="
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            overflow: hidden;
+            flex-shrink: 0;
+            border: 2px solid var(--accent-emerald, #10b981);
+            background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+            box-shadow: 0 8px 20px var(--accent-glow);
+          ">
+            <img src="${avatarUrl}" alt="${displayName}" referrerpolicy="no-referrer"
+                 onerror="this.style.display='none';"
+                 style="width: 100%; height: 100%; object-fit: cover; display: block;">
+          </div>` : `
           <div style="
             width: 56px; height: 56px;
             border-radius: 18px;
@@ -6590,10 +6764,30 @@ function openLastActivity() {
             font-size: 1.4rem;
             flex-shrink: 0;
             box-shadow: 0 8px 20px var(--accent-glow);
-          ">${displayName.charAt(0)}</div>
+          ">${displayName.charAt(0)}</div>`}
           <div style="flex: 1; min-width: 0;">
-            <div style="font-weight: 800; font-size: 1rem; color: var(--text-primary); margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-              ${displayName}
+            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 3px;">
+              <span id="userCardName" style="font-weight: 800; font-size: 1rem; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                ${displayName}
+              </span>
+              <!-- ⭐⭐ قلم تعديل الاسم -->
+              <button type="button" id="editNameBtn"
+                      onclick="openEditNameModal()"
+                      title="تعديل الاسم"
+                      aria-label="تعديل الاسم"
+                      style="
+                        flex-shrink: 0;
+                        width: 26px; height: 26px;
+                        border-radius: 8px;
+                        display: inline-flex; align-items: center; justify-content: center;
+                        border: 1px solid var(--border-card-hover, rgba(16, 185, 129, 0.46));
+                        background: transparent;
+                        color: var(--accent-light, #34d399);
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                      ">
+                <i data-lucide="pencil" style="width: 13px; height: 13px;"></i>
+              </button>
             </div>
             <div style="font-size: 0.78rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 6px;">
               ${email}

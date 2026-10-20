@@ -301,41 +301,80 @@
   }
 
   /** ⭐ يسجّل الجهاز في FCM ويحفظ التوكن في Supabase */
+  /**
+   * ⭐⭐ يسجّل الجهاز في FCM ويحفظ التوكن في Supabase.
+   *
+   * ⭐⭐ الطريقة الصحيحة في @capacitor/push-notifications v8 هي
+   *    `register()` — وليست `registerForPushNotifications()` (وهي
+   *    غير موجودة) — ولهذا كان fcm_token يبقى NULL.
+   *
+   * ⭐⭐ المستمع على حدث 'registration' يُعرَّف **قبل** الاستدعاء.
+   */
   function registerForPush() {
     var PushNotifications = plugin('PushNotifications');
-    if (!PushNotifications || typeof PushNotifications.registerForPushNotifications !== 'function') {
+    if (!PushNotifications) {
+      console.warn('[notifications] the PushNotifications plugin is not available');
+      return Promise.resolve('');
+    }
+
+    // ⭐ بعض الإصدارات استخدمت اسماً آخر
+    var register = null;
+    if (typeof PushNotifications.register === 'function') {
+      register = PushNotifications.register.bind(PushNotifications);
+    } else if (typeof PushNotifications.registerForPushNotifications === 'function') {
+      register = PushNotifications.registerForPushNotifications.bind(PushNotifications);
+    }
+    if (!register) {
+      console.warn('[notifications] the plugin has no register() method');
       return Promise.resolve('');
     }
 
     return new Promise(function (resolve) {
       var settled = false;
+
       function done(token) {
         if (settled) return;
         settled = true;
-        if (token) saveFcmToken(token);
+        if (token) {
+          saveFcmToken(token);
+        }
         resolve(token || '');
       }
 
+      // ⭐⭐ 1) المستمع أولاً — ثم الاستدعاء
       try {
         if (typeof PushNotifications.addListener === 'function') {
           PushNotifications.addListener('registration', function (token) {
-            done((token && token.value) || token || '');
+            var value = (token && token.value) || token || '';
+            console.log('[notifications] the FCM token arrived:', String(value).slice(0, 18) + '…');
+            done(value);
+          });
+
+          PushNotifications.addListener('registrationError', function (error) {
+            console.warn('[notifications] the FCM registration failed:', error);
+            done('');
           });
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn('[notifications] could not attach the registration listener:', e);
+      }
 
+      // ⭐⭐ 2) ثم الاستدعاء
       try {
-        var result = PushNotifications.registerForPushNotifications();
+        var result = register();
         if (result && typeof result.then === 'function') {
-          result.then(function () { /* التوكن يصل عبر حدث registration */ })
-            .catch(function (e) { console.warn('[notifications] registration failed:', e); done(''); });
+          result.catch(function (e) {
+            console.warn('[notifications] the registration call failed:', e);
+            done('');
+          });
         }
       } catch (e) {
+        console.warn('[notifications] the registration threw:', e);
         done('');
       }
 
       // ⭐ حماية: لا ننتظر طويلاً لو لم يصل التوكن
-      setTimeout(function () { done(''); }, 8000);
+      setTimeout(function () { done(''); }, 10000);
     });
   }
 
@@ -367,12 +406,25 @@
       return client.from('profiles')
         .update({ fcm_token: token })
         .eq('id', id)
+        .select('id')
         .then(function (result) {
           if (result && result.error) {
             console.warn('[notifications] could not save the token:', result.error.message);
             return false;
           }
-          return true;
+          var rows = (result && result.data) || [];
+          if (rows.length) return true;
+
+          // ⭐ لا صفّ في profiles؟ نُنشئه (upsert)
+          return client.from('profiles')
+            .upsert({ id: id, fcm_token: token }, { onConflict: 'id' })
+            .then(function (up) {
+              if (up && up.error) {
+                console.warn('[notifications] the token upsert failed:', up.error.message);
+                return false;
+              }
+              return true;
+            });
         })
         .catch(function (e) {
           console.warn('[notifications] token save failed:', e);
@@ -588,6 +640,22 @@
     });
   }
 
+  /**
+   * ⭐⭐ يجدّد رمز الإشعارات يدوياً (زر في الإعدادات) — يُرجع
+   *    { ok, token, error }.
+   */
+  function refreshPushToken() {
+    var PushNotifications = plugin('PushNotifications');
+    if (!PushNotifications) {
+      return Promise.resolve({ ok: false, error: 'الإضافة غير متاحة في هذا التطبيق' });
+    }
+
+    return registerForPush().then(function (token) {
+      if (token) return { ok: true, token: token };
+      return { ok: false, error: 'لم يصل الرمز — تحقّق من الإذن ومن الاتصال بالإنترنت' };
+    });
+  }
+
   global.MedAppNotifications = {
     CATEGORIES: CATEGORIES,
     pick: pick,
@@ -598,6 +666,7 @@
     getPermissionStatus: getPermissionStatus,
     getStoredPermission: getStoredPermission,
     openAppSettings: openAppSettings,
+    refreshPushToken: refreshPushToken,
     saveFcmToken: saveFcmToken,
     readState: readState
   };
