@@ -1392,12 +1392,15 @@
    */
   var CACHE_KILLER_KEY = 'app_version';
   // ⭐ مفاتيح لا نمسحها أبداً: جلسة Supabase (+ مفاتيح تدفّق الدخول)،
-  //   وتفضيلات المستخدم (الثيم) وعلامة إتمام التعريف، ورمز FCM.
+  //   وتفضيلات المستخدم (الثيم) وعلامة إتمام التعريف، ورمز FCM،
+  //   وطابور المهام والملاحظات غير المزامنة (بيانات عمل لا كاش).
   var CACHE_KILLER_KEEP = new RegExp([
     'auth-token', 'auth_token', 'session',
     'pending_verification', 'medapp_pending_email',
     'medfav_onboarding_done', 'medfav_theme',
-    'medapp_fcm_token'
+    'medapp_fcm_token',
+    'medapp_task_progress_queue', 'medapp_task_progress_owner',
+    'medfav_pending'
   ].join('|'), 'i');
 
   /** ⭐ الإصدار الحالي: من App.getInfo() أو من meta[name=app-version]. */
