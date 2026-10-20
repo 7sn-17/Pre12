@@ -260,6 +260,12 @@ cd android && ./gradlew assembleRelease # نسخة موقّعة (يتطلب Andr
 > **المتطلبات:** Node.js **22+** (Capacitor 8 يرفض الإصدارات الأقدم) و
 > **JDK 21** — والبناء على GitHub Actions مضبوط عليهما تلقائياً.
 >
+> 📣 **لإعلان التحديث الجديد لكل المستخدمين** (خطوة في CI) أضف واحداً
+> من الأسرار التالية في GitHub → Settings → Secrets and variables → Actions:
+> `SUPABASE_SERVICE_ROLE_KEY` (من Supabase → Project Settings → API → مفتاح
+> service_role القديم) أو `CRON_SECRET` (نفس قيمة Vault اسمها `cron_secret`).
+> بدونه تُرجع الدالة 403 ولا يُرسل أي إشعار.
+
 > 🔑 **لتفعيل دخول Google الأصلي** ضع الـ **Web Client ID** في
 > `supabase-config.js` → `GOOGLE_WEB_CLIENT_ID` (نفس المعرّف المسجّل في
 > Supabase). داخل التطبيق لا نعود لتدفّق الويب إطلاقاً — فإما أن يعمل

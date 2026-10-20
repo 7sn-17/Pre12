@@ -350,6 +350,34 @@
     }
   }
 
+  /**
+   * ⭐⭐ يطبع رمز FCM عند بدء التطبيق — الخطوة الأولى في تشخيص
+   *    "الإشعار لا يصل". يظهر في سجلّ الكونسول.
+   */
+  function logFcmTokenOnStartup() {
+    try {
+      var user = (typeof global.getAuthUser === 'function') ? global.getAuthUser() : null;
+      if (!user || !user.id) {
+        console.warn('[native] the FCM token: not logged in yet.');
+        return;
+      }
+      if (typeof global.getProfile !== 'function') return;
+
+      global.getProfile(user.id).then(function (profile) {
+        var token = profile && profile.fcm_token;
+        console.warn(
+          '[native] the FCM token: ' +
+          (token ? token : 'Token not found') +
+          (token ? ' (' + token.slice(0, 28) + '…)' : ''),
+        );
+      }).catch(function (e) {
+        console.warn('[native] the FCM token could not be read:', e);
+      });
+    } catch (e) {
+      console.warn('[native] the FCM token check failed:', e);
+    }
+  }
+
   function navigateFromNotification(action) {
     var data = (action && (action.data || action.notification)) || {};
     var target = data.target || data.url || data.path || '';
@@ -497,6 +525,9 @@
     // المنطقة الآمنة (Notch / شريط الحالة)
     syncSafeArea();
     global.addEventListener('resize', syncSafeArea);
+
+    // ⭐⭐ تشخيص: اطبع رمز FCM عند بدء التطبيق (أول خطوة في تشخيص الإشعارات)
+    setTimeout(function () { logFcmTokenOnStartup(); }, 2500);
 
     // ⭐ محرّك الإشعارات الذكي — يجدول إشعاراً مناسباً لحالة المستخدم.
     try {

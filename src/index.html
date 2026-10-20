@@ -3945,8 +3945,9 @@ i.fab {
        نحدّد كل خصائصه صراحةً حتى لا يرث شيئاً غير مرئي. */
     .search-modal-input {
       width: 100%;
-      /* ⭐ الحشو الأيسر يترك مكاناً لأيقونة البحث داخل الحقل */
-      padding: 12px 20px 12px 44px;
+      /* ⭐⭐ حشو منطقي (RTL) — مكانٌ لأيقونة البحث داخل الحقل */
+      padding-inline-start: 45px;
+      padding-inline-end: 15px;
       border-radius: 12px;
       background-color: var(--bg-card, rgba(16, 34, 27, 0.68));
       border: 2px solid var(--accent-emerald, #10b981);
@@ -3992,12 +3993,14 @@ i.fab {
     }
 
     /* ⭐⭐ الأيقونة داخل الحقل — لا يغطّي النصّ (Phase 28) */
+    /* ⭐⭐ الأيقونة داخل الحقل — لا تغطّي النصّ أبداً (Phase 29) */
     .search-modal-input-wrapper .icon-search {
       position: absolute;
-      left: 14px; top: 50%;
+      left: 15px;
+      top: 50%;
       transform: translateY(-50%);
-      color: var(--accent-light, #34d399);
       pointer-events: none;
+      color: var(--accent-light, #34d399);
       z-index: 1;
     }
 
@@ -5084,6 +5087,39 @@ i.fab {
     </div>
   </div>
 
+  <!-- ⭐⭐⭐ تشخيص الإشعارات (مخفي — يظهر بالضغط المطوّل على زر الإشعار التجريبي) -->
+  <div class="settings-group" id="notificationDiagnostics" style="display: none;">
+    <div class="settings-group-title" style="color: var(--medapp-blue, #60a5fa);">
+      <i data-lucide="stethoscope"></i>
+      <span>تشخيص الإشعارات</span>
+    </div>
+    <div class="settings-item" style="display: block; cursor: default;">
+      <div class="settings-item-left" style="width: 100%; align-items: flex-start;">
+        <div class="settings-icon" style="background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.25); color: var(--medapp-blue, #60a5fa);">
+          <i data-lucide="key-round"></i>
+        </div>
+        <div class="settings-text" style="width: 100%;">
+          <h4>رمز الجهاز (FCM Token)</h4>
+          <p id="diagTokenText" style="word-break: break-all; direction: ltr; text-align: left; font-size: 0.68rem; font-family: monospace;">جارٍ القراءة…</p>
+          <p id="diagPermissionText" style="margin-top: 8px; font-size: 0.74rem;">حالة الإذن: —</p>
+          <button class="settings-item-arrow" id="diagCopyBtn" onclick="copyDiagnosticToken()"
+                  style="
+                    margin-top: 10px;
+                    padding: 8px 14px;
+                    border-radius: 10px;
+                    border: 1px solid var(--border-card-hover, rgba(16, 185, 129, 0.46));
+                    background: transparent;
+                    color: var(--accent-light, #34d399);
+                    font-family: inherit;
+                    font-size: 0.72rem;
+                    font-weight: 800;
+                    cursor: pointer;
+                  ">نسخ الرمز</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ⭐⭐ 4) التحديثات -->
   <div class="settings-group">
     <div class="settings-group-title">
@@ -5963,9 +5999,117 @@ function openLastActivity() {
     }
 
     // ============================================
+    // ⭐⭐⭐ تشخيص الإشعارات (ضغط مطوّل على زر الإشعار التجريبي)
+    // ============================================
+    var diagnosticPressTimer = null;
+    var suppressDiagnosticClick = false;
+
+    /** ⭐ الضغط المطوّل يكشف قسم التشخيص */
+    function setupNotificationDiagnostics() {
+      const btn = document.getElementById('testNotificationBtn');
+      if (!btn || btn.dataset.diagBound === '1') return;
+      btn.dataset.diagBound = '1';
+
+      function start(event) {
+        if (event) event.preventDefault();
+        clearTimeout(diagnosticPressTimer);
+        diagnosticPressTimer = setTimeout(function () {
+          diagnosticPressTimer = null;
+          suppressDiagnosticClick = true;
+          revealNotificationDiagnostics();
+        }, 700);
+      }
+      function cancel() {
+        if (diagnosticPressTimer) {
+          clearTimeout(diagnosticPressTimer);
+          diagnosticPressTimer = null;
+        }
+      }
+
+      btn.addEventListener('touchstart', start, { passive: false });
+      btn.addEventListener('touchend', cancel);
+      btn.addEventListener('touchmove', cancel);
+      btn.addEventListener('mousedown', start);
+      btn.addEventListener('mouseup', cancel);
+      btn.addEventListener('mouseleave', cancel);
+      btn.addEventListener('contextmenu', function (event) {
+        event.preventDefault();
+        revealNotificationDiagnostics();
+      });
+    }
+
+    /** ⭐ يقرأ الرمز وحالة الإذن ويعرضهما */
+    async function revealNotificationDiagnostics() {
+      const section = document.getElementById('notificationDiagnostics');
+      const tokenEl = document.getElementById('diagTokenText');
+      const permEl = document.getElementById('diagPermissionText');
+
+      if (section) section.style.display = '';
+      if (tokenEl) tokenEl.textContent = 'جارٍ القراءة…';
+      if (permEl) permEl.textContent = 'حالة الإذن: جارٍ التحقق…';
+
+      // 1) ⭐ رمز الجهاز
+      let token = '';
+      try {
+        const user = (typeof getAuthUser === 'function') ? getAuthUser() : null;
+        if (user && user.id && typeof getProfile === 'function') {
+          const profile = await getProfile(user.id);
+          token = (profile && profile.fcm_token) || '';
+        }
+      } catch (e) {
+        console.error('[diagnostics] the token could not be read:', e);
+      }
+      if (tokenEl) tokenEl.textContent = token || 'Token not found';
+
+      // 2) ⭐ حالة الإذن
+      let permission = 'غير معروف';
+      try {
+        if (typeof MedAppNotifications !== 'undefined' &&
+            typeof MedAppNotifications.getPermissionStatus === 'function') {
+          permission = await MedAppNotifications.getPermissionStatus();
+        }
+      } catch (e) {}
+      if (permEl) {
+        const labels = {
+          granted: 'مسموح',
+          denied: 'محظور',
+          prompt: 'لم يُطلب بعد',
+          unsupported: 'غير مدعوم على الويب',
+          unavailable: 'الإضافة غير متاحة'
+        };
+        permEl.textContent = 'حالة الإذن: ' + (labels[permission] || permission);
+      }
+
+      lucide.createIcons();
+    }
+
+    /** ⭐ نسخ الرمز */
+    function copyDiagnosticToken() {
+      const el = document.getElementById('diagTokenText');
+      const text = (el && el.textContent || '').trim();
+      if (!text || text === 'Token not found' || text === 'جارٍ القراءة…') {
+        showToast('لا يوجد رمز لنسخه', 'info');
+        return;
+      }
+      try {
+        navigator.clipboard.writeText(text)
+          .then(function () { showToast('تم نسخ الرمز', 'success'); })
+          .catch(function () { showToast('تعذّر نسخ الرمز', 'error'); });
+      } catch (e) {
+        showToast('تعذّر نسخ الرمز', 'error');
+      }
+    }
+
+    // ============================================
     // ⭐⭐⭐ إرسال إشعار تجريبي
     // ============================================
     async function sendTestNotification() {
+      // ⭐ بعد الضغط المطوّل (للكشف) لا نرسل إشعاراً
+      if (suppressDiagnosticClick) {
+        suppressDiagnosticClick = false;
+        return;
+      }
+
       const btn = document.getElementById('testNotificationBtn');
 
       if (btn) { btn.disabled = true; btn.textContent = 'جارٍ…'; }
@@ -6733,6 +6877,7 @@ function openRecentFile(fileId) {
       if (viewName === 'settings') {
         refreshNotificationToggle();
         refreshDailyReminderToggle();
+        setupNotificationDiagnostics();
       }
       if (viewName === 'home') {
         loadLastActivity();
@@ -7121,33 +7266,38 @@ async function openFileInViewer(fileId) {
       }
     }
 
-    /* ⭐⭐ البحث الحقيقي — تأخير 300ms + استعلام سحابي */
-    var searchTimer = null;
-    var searchToken = 0;
-
+    /**
+     * ⭐⭐ البحث الشامل — يستدعي search.js (تأخير 300ms + ilike).
+     */
     function handleGlobalSearch(query) {
-      const q = String(query || '').toLowerCase().trim();
       const container = document.getElementById('searchResultsContainer');
-      
-      if (!q) {
-        clearTimeout(searchTimer);
-        renderSearchIdle(container);
+      const engine = window.MedAppSearch;
+
+      if (!engine || typeof engine.debounced !== 'function') {
+        // ⭐ احتياطي: بحث محلي فقط
+        const q = String(query || '').toLowerCase().trim();
+        renderSearchResults(q, (appState.allFilesCache || []).filter(function (f) {
+          return (f.title || '').toLowerCase().indexOf(q) > -1;
+        }), [], container);
         return;
       }
 
-      // ⭐ نؤجّل الاستعلام حتى يتوقّف المستخدم عن الكتابة
-      clearTimeout(searchTimer);
-      container.innerHTML = `
-        <div class="search-loading">
-          <i data-lucide="loader-2"></i>
-          <span>جارٍ البحث…</span>
-        </div>
-      `;
-      lucide.createIcons();
-
-      searchTimer = setTimeout(function () {
-        runGlobalSearch(q, container);
-      }, 300);
+      engine.debounced(
+        query,
+        function (result) {
+          renderSearchResults(result.query, result.files, result.subjects, container);
+        },
+        function () {
+          container.innerHTML = `
+            <div class="search-loading">
+              <i data-lucide="loader-2"></i>
+              <span>جارٍ البحث…</span>
+            </div>
+          `;
+          lucide.createIcons();
+        },
+        { cache: appState.allFilesCache, debounce: 300 }
+      );
     }
 
     function renderSearchIdle(container) {
@@ -7160,69 +7310,8 @@ async function openFileInViewer(fileId) {
       lucide.createIcons();
     }
 
-    /**
-     * ⭐⭐ البحث الحقيقي عبر Supabase (ilike) + المواد + الروابط.
-     */
-    async function runGlobalSearch(q, container) {
-      const token = ++searchToken;
-
-      // 1)-material: الملفات المحفوظة محلياً
-      const localResults = (appState.allFilesCache || []).filter(function (f) {
-        return (f.title || '').toLowerCase().includes(q) ||
-          (f.description || '').toLowerCase().includes(q) ||
-          ((f.subjects && f.subjects.name) || '').toLowerCase().includes(q);
-      });
-
-      // 2)material: الملفات من الخادم (ilike)
-      let cloudResults = [];
-      try {
-        if (navigator.onLine) {
-          const res = await supabaseClient
-            .from('files')
-            .select('*, subjects(name)')
-            .ilike('title', '%' + q + '%')
-            .limit(40);
-          if (!res.error && res.data) cloudResults = res.data;
-        }
-      } catch (e) {
-        console.error('[search] the cloud query failed:', e);
-      }
-
-      // ⭐ إلغاء النتائج القديمة إن وصل بحث أحدث
-      if (token !== searchToken) return;
-
-      // 3) المواد
-      let subjectResults = [];
-      try {
-        if (navigator.onLine) {
-          const res = await supabaseClient
-            .from('subjects')
-            .select('id, name')
-            .ilike('name', '%' + q + '%')
-            .limit(12);
-          if (!res.error && res.data) subjectResults = res.data;
-        }
-      } catch (e) {
-        console.error('[search] the subjects query failed:', e);
-      }
-
-      if (token !== searchToken) return;
-
-      // ⭐ دمج النتائج بدون تكرار
-      const seen = {};
-      const results = [];
-      localResults.concat(cloudResults).forEach(function (f) {
-        const key = f.id || f.title;
-        if (!key || seen[key]) return;
-        seen[key] = 1;
-        results.push(f);
-      });
-
-      renderSearchResults(q, results, subjectResults, container);
-    }
-
     function renderSearchResults(query, results, subjectResults, container) {
-      const q = query.toLowerCase().trim();
+      const q = String(query || '').toLowerCase().trim();
 
       if (!results.length && !(subjectResults && subjectResults.length)) {
         container.innerHTML = `

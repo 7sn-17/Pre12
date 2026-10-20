@@ -37,15 +37,31 @@ Deno.serve(async (req) => {
   });
 
   try {
-    /* ── 1) الحماية ── */
+    /* ─────────────────────────────────────────────────────────────
+       1) الحماية — ثلاث طرق مقبولة:
+       ─────────────────────────────────────────────────────────────
+       a) Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>
+          ⭐ أضف هذا السرّ في GitHub:
+             Settings → Secrets and variables → Actions → New secret
+             → Name: SUPABASE_SERVICE_ROLE_KEY
+             → Value: (من Supabase → Project Settings → API)
+       b) x-cron-secret: <CRON_SECRET>
+          ⭐ أضف هذا السرّ في GitHub (الاسم: CRON_SECRET) وبنفس القيمة
+             المخزّنة في Supabase Vault باسم 'cron_secret'.
+       c) توكن أدمن/مشرف (للاستخدام اليدوي من داخل التطبيق).
+       ───────────────────────────────────────────────────────────── */
     const authHeader = req.headers.get('Authorization') || '';
     const bearer = authHeader.replace(/^Bearer\s+/i, '').trim();
-    const cronSecret = req.headers.get('x-cron-secret') || '';
+    const cronSecret = (req.headers.get('x-cron-secret') || '').trim();
 
     let authorized = false;
-    if (bearer && bearer === serviceKey) {
-      authorized = true;                       // مفتاح service_role
-    } else if (bearer) {
+    let reason = '';
+
+    if (bearer && serviceKey && bearer === serviceKey) {
+      authorized = true;                       // ⭐ مفتاح service_role
+      reason = 'service_role';
+    } else if (bearer && bearer !== serviceKey) {
+      // ⭐ توكن مستخدم: نقبل الأدمن والمشرف فقط
       const { data } = await admin.auth.getUser(bearer);
       if (data?.user) {
         const { data: profile } = await admin
@@ -55,17 +71,36 @@ Deno.serve(async (req) => {
           .maybeSingle();
         if (profile && (profile.role === 'admin' || profile.role === 'moderator')) {
           authorized = true;
+          reason = 'admin-role';
         }
       }
     }
+
     if (!authorized && cronSecret) {
       const { data: secret } = await admin.rpc('vault_read_secret_text', {
         secret_name: 'cron_secret',
       });
-      if (secret && secret === cronSecret) authorized = true;
+      if (secret && secret === cronSecret) {
+        authorized = true;
+        reason = 'cron-secret';
+      }
     }
 
-    if (!authorized) return json({ error: 'forbidden' }, 403);
+    if (!authorized) {
+      console.warn(
+        '[update-notification] 403 — the request carried no valid credential. ' +
+        'Add SUPABASE_SERVICE_ROLE_KEY (or CRON_SECRET) to the GitHub Actions secrets.',
+      );
+      return json({
+        error: 'forbidden',
+        reason: reason || 'no-credential',
+        message:
+          'مطلوب سرّ صالح: أضف SUPABASE_SERVICE_ROLE_KEY أو CRON_SECRET إلى ' +
+          'أسرار GitHub Actions (Settings → Secrets and variables → Actions).',
+      }, 403);
+    }
+
+    console.info('[update-notification] authorized via ' + reason);
 
     /* ── 2) المحتوى ── */
     let payload: any = {};

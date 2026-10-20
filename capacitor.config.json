@@ -42,6 +42,9 @@
       "icon": "ic_stat_icon",
       "color": "#10b981"
     },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    },
     "Keyboard": {
       "resize": "native"
     }

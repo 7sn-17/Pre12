@@ -2105,6 +2105,77 @@ also documents every previous version.
 - The custom animated splash screen was **deleted entirely** (markup,
   CSS, animation and the sessionStorage flag).
 
+### 5.22 Phase 29 — v3.6.0 (the search rebuilt + FCM v1 + diagnostics)
+
+#### 🔍 The search, rebuilt from scratch
+
+`search.js` is a standalone module (`window.MedAppSearch`):
+
+| Piece | What |
+|---|---|
+| `debounced()` | 300 ms debounce + a request-id guard so a slow query never overwrites a newer one |
+| `searchCloud()` | `files … .ilike('title','%q%')` **and** `subjects … .ilike('name','%q%')` |
+| `run()` | merges the local cache with the cloud results and removes the duplicates |
+
+The input uses **logical** padding so it works in RTL and LTR:
+
+```css
+.search-modal-input { padding-inline-start: 45px; padding-inline-end: 15px; }
+.search-modal-input-wrapper .icon-search {
+  position: absolute; left: 15px; top: 50%;
+  transform: translateY(-50%); pointer-events: none;
+}
+```
+
+#### 🔔 FCM v1 only — the legacy endpoint is dead
+
+`https://fcm.googleapis.com/fcm/send` now answers **404** — Google
+retired it — so the old fallback failed silently. `send-test-notification`
+now uses the **firebase-admin** SDK:
+
+```ts
+import { initializeApp, cert } from 'npm:firebase-admin/app';
+import { getMessaging } from 'npm:firebase-admin/messaging';
+
+const messaging = getMessaging(initializeApp({ credential: cert(serviceAccount) }));
+await messaging.send({ token, notification: { title, body }, data, android: { ... } });
+```
+
+The credentials come from the Edge Function secret
+`FIREBASE_SERVICE_ACCOUNT_JSON` **or** the Vault secret
+`fcm_service_account`, and the function returns **the exact Firebase
+error message**.
+
+`capacitor.config.json` now also carries:
+
+```json
+"PushNotifications": { "presentationOptions": ["badge", "sound", "alert"] }
+```
+
+so a push that arrives while the app is open still shows a banner.
+
+#### 🩺 The notification diagnostics
+
+- **Long-press** the "إرسال إشعار تجريبي" button (or right-click it) to
+  reveal a hidden panel with: the device's **FCM token** (or
+  "Token not found"), the **notification permission** status, and a
+  **copy** button.
+- `native.js` prints the token to the console **on every app start**
+  (`[native] the FCM token: …`).
+
+#### ⚠️ The GitHub secret the announcement needs
+
+The CI step that broadcasts "تحديث جديد متاح" to every device needs
+**one** of these repository secrets:
+
+| Secret | Value |
+|---|---|
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API → the legacy **service_role** JWT (not the new publishable/secret keys) |
+| `CRON_SECRET` | the same value stored in the Supabase Vault as `cron_secret` |
+
+Without one of them the function answers **403** (and the step says so
+explicitly instead of failing silently).
+
 ### 5.21 Phase 28 — v3.5.1 (the polish & the bug fixes)
 
 #### 🔔 The test notification

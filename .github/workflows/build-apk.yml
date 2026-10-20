@@ -308,26 +308,58 @@ jobs:
           prerelease: false
 
       - name: 📣 Announce the new release to all users
-        # ⭐ بعد النشر: نُعلم كل المستخدمين بوجود تحديث جديد.
-        #    يحتاج مفتاح service_role (أو سرّ cron) في أسرار GitHub.
+        # ══════════════════════════════════════════════════════════════
+        # ⭐⭐ REQUIRED SECRET — أضف واحداً منهما في GitHub:
+        #
+        #   Settings → Secrets and variables → Actions
+        #        → New repository secret
+        #
+        #   1) SUPABASE_SERVICE_ROLE_KEY
+        #      من Supabase → Project Settings → API →-services
+        #      صفّ "service_role" (المفتاح القديم JWT — وليس المفتاح
+        #      الجديد publishable/secret).
+        #
+        #   2) CRON_SECRET
+        #      نفس القيمة المخزّنة في Supabase Vault باسم 'cron_secret'.
+        #
+        # ⭐ بدون أحدهما تُرجع الدالة 403 ولا يُرسل أي إشعار.
+        # ══════════════════════════════════════════════════════════════
         continue-on-error: true
         env:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
+
           if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] && [ -z "$CRON_SECRET" ]; then
-            echo "::warning::SUPABASE_SERVICE_ROLE_KEY / CRON_SECRET are not set — skipping the announcement."
+            echo "::error::the announcement needs a credential."
+            echo "::error::Add SUPABASE_SERVICE_ROLE_KEY (or CRON_SECRET) to the GitHub Actions secrets:"
+            echo "::error::Settings → Secrets and variables → Actions → New repository secret."
             exit 0
           fi
-          curl -sS -X POST \
+
+          # ⭐ نرسل ترويسة واحدة فقط — فعّالة
+          if [ -n "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            AUTH_HEADER="Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY"
+          else
+            AUTH_HEADER="x-cron-secret: $CRON_SECRET"
+          fi
+
+          RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST \
             "https://pfjpeqhevegivjmyjvux.supabase.co/functions/v1/send-update-notification" \
             -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-            -H "x-cron-secret: $CRON_SECRET" \
-            -d "{\"version\":\"$VERSION\",\"title\":\"🚀 تحديث جديد متاح v$VERSION!\",\"body\":\"اضغط للتحديث.\"}" \
-            | head -c 400
+            -H "$AUTH_HEADER" \
+            -d "{\"version\":\"$VERSION\",\"title\":\"تحديث جديد متاح v$VERSION!\",\"body\":\"اضغط للتحديث.\"}" 2>&1 || true)
+
+          STATUS=$(echo "$RESPONSE" | tail -n 1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+          echo "HTTP $STATUS"
+          echo "$BODY" | head -c 400
           echo
+
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::the announcement failed (HTTP $STATUS) — check the secret in the GitHub Actions secrets."
+          fi
 
       - name: 🌐 Verify the published asset
         # ⭐ نتأكّد أن الملف المنشور على GitHub مطابق تماماً للملف المبني.
