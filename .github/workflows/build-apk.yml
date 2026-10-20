@@ -322,11 +322,12 @@ jobs:
         continue-on-error: true
         env:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RELEASE_NOTIFY_SECRET: ${{ secrets.RELEASE_NOTIFY_SECRET }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
 
-          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
-            echo "::warning::SUPABASE_SERVICE_ROLE_KEY is missing — skipping the push notification."
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] && [ -z "$RELEASE_NOTIFY_SECRET" ]; then
+            echo "::warning::no notification credential is configured — skipping the push notification."
             exit 0
           fi
 
@@ -334,6 +335,7 @@ jobs:
             "https://pfjpeqhevegivjmyjvux.supabase.co/functions/v1/send-update-notification" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "x-release-secret: $RELEASE_NOTIFY_SECRET" \
             -d "{\"version\":\"$VERSION\",\"title\":\"تحديث جديد متاح v$VERSION!\",\"body\":\"اضغط للتحديث.\"}" \
             || echo "000")
 

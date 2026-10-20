@@ -110,6 +110,23 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ⭐ v4.1.2: dedicated CI secret (Vault + GitHub) — used when the
+    //    project's legacy service_role key differs from the GitHub copy.
+    const releaseSecret = (req.headers.get('x-release-secret') || '').trim();
+    if (!authorized && releaseSecret) {
+      try {
+        const { data: secret } = await admin.rpc('vault_read_secret_text', {
+          secret_name: 'release_notify_secret',
+        });
+        if (secret && secret === releaseSecret) {
+          authorized = true;
+          reason = 'release-secret';
+        }
+      } catch (e) {
+        console.warn('[update-notification] could not read release_notify_secret');
+      }
+    }
+
     if (!authorized) {
       console.warn(
         '[update-notification] 403 — the request carried no valid credential. ' +
