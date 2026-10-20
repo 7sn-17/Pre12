@@ -96,3 +96,5 @@ android/app/google-services.json.enc
 # أداة Firebase MCP (ملف محلي)
 opencode.json
 firebase.json
+pre12-medical-firebase-adminsdk-*.json
+send-test.js

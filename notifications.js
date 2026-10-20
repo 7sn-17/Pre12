@@ -779,10 +779,19 @@
     if (!action) return false;
 
     if (action === 'update') {
-      if (typeof global.showUpdateModal === 'function' && data.version) {
-        global.showUpdateModal({ version: data.version, notes: data.notes || '' });
-      } else if (typeof global.MedAppUpdate !== 'undefined') {
-        global.MedAppUpdate.check({ silent: true });
+      // ⭐ TASK 3: نجلب أحدث إصدار من GitHub API دائماً (رابط APK ديناميكي)
+      if (global.MedAppUpdate && typeof global.MedAppUpdate.check === 'function') {
+        Promise.resolve(global.MedAppUpdate.check({ silent: true })).catch(function () {
+          if (typeof global.showUpdateModal === 'function' && data.version) {
+            global.showUpdateModal({
+              version: data.version,
+              notes: data.notes || '',
+              url: ''
+            });
+          }
+        });
+      } else if (typeof global.showUpdateModal === 'function' && data.version) {
+        global.showUpdateModal({ version: data.version, notes: data.notes || '', url: '' });
       }
       return true;
     }

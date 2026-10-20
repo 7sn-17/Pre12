@@ -1,6 +1,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="{{themeColor}}">
+<!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
+<meta name="app-version" content="{{appVersion}}">
 <title>{{title}}</title>
 
 <!-- الخطوط -->
@@ -978,6 +980,16 @@
     justify-content: center !important;
     gap: 4px !important;
     text-align: center;
+  }
+
+  /* ⭐ TASK 5 (v4.1.2): خانة فارغة في المنتصف بحجم عنصر — فتصبح
+     العناصر الخمسة (4 أيقونات + الزرّ "+") متساوية التوزيع، ويقترب
+     "دراستي" و"ملفاتي" من المنتصف بدل تباعدهما عنه. */
+  .floating-nav > .nav-fab-slot {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    height: 1px;
+    pointer-events: none;
   }
 
   /* ⭐⭐⭐ زر "+" العائم — متمركز أفقياً، ومنخفض قليلاً ليلامس الشريط

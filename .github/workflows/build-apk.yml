@@ -283,6 +283,14 @@ jobs:
           sha256sum "$NEW_NAME" | tee "$NEW_NAME.sha256"
           echo "APK_SHA256=$(cut -d' ' -f1 "$NEW_NAME.sha256")" >> "$GITHUB_ENV"
 
+      - name: 📝 Prepare the release notes (latest version only)
+        # ⭐ TASK 4: ننشر قسم الإصدار الحالي فقط من CHANGELOG.md
+        #    (بدل التاريخ الكامل) حتى تعرض نافذة التحديث 3–4 نقاط.
+        run: |
+          awk '/^## /{c++} c==1' CHANGELOG.md > release-notes.md
+          echo "── release-notes.md ──"
+          cat release-notes.md
+
       - name: 📤 Upload the APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -300,12 +308,44 @@ jobs:
             android/app/build/outputs/apk/release/Medical_Platform_v${{ steps.version.outputs.version }}.apk
             android/app/build/outputs/apk/release/Medical_Platform_v${{ steps.version.outputs.version }}.apk.sha256
           name: المنصة الطبية — v${{ steps.version.outputs.version }}
-          # ⭐ جسم الإصدار يأتي من CHANGELOG.md (توثيق عربي أنيق)
-          body_path: ./CHANGELOG.md
+          # ⭐ جسم الإصدار: قسم الإصدار الحالي فقط (TASK 4)
+          body_path: ./release-notes.md
           fail_on_unmatched_files: true
           draft: false
           make_latest: true
           prerelease: false
+
+      - name: 🔔 Send the update notification to all users
+        # ⭐ TASK 6 — بعد نشر الإصدار بنجاح، نستدعي دالة
+        #    send-update-notification بمفتاح service_role لإرسال
+        #    إشعار Push لكل الأجهزة التي حفظت رمز FCM.
+        continue-on-error: true
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::warning::SUPABASE_SERVICE_ROLE_KEY is missing — skipping the push notification."
+            exit 0
+          fi
+
+          STATUS=$(curl -sS -o /tmp/announce.json -w "%{http_code}" -X POST \
+            "https://pfjpeqhevegivjmyjvux.supabase.co/functions/v1/send-update-notification" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -d "{\"version\":\"$VERSION\",\"title\":\"تحديث جديد متاح v$VERSION!\",\"body\":\"اضغط للتحديث.\"}" \
+            || echo "000")
+
+          echo "HTTP $STATUS"
+          head -c 600 /tmp/announce.json 2>/dev/null || true
+          echo
+
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::the update notification failed (HTTP $STATUS) — verify SUPABASE_SERVICE_ROLE_KEY matches the project's service key."
+          else
+            echo "✅ the update notification was sent to all registered devices."
+          fi
 
       - name: 🌐 Verify the published asset
         # ⭐ نتأكّد أن الملف المنشور على GitHub مطابق تماماً للملف المبني.

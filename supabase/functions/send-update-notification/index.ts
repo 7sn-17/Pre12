@@ -32,6 +32,30 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  // ⭐ TASK 6 (v4.1.2): Supabase now issues the legacy JWT service_role key
+  //    AND the new `sb_secret_…` secret key. The GitHub secret may hold
+  //    either one, so accept whichever matches the runtime environment.
+  const acceptedServiceKeys = [
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
+    Deno.env.get('SUPABASE_SECRET_KEY'),
+    Deno.env.get('SUPABASE_SERVICE_KEY'),
+  ].filter((value): value is string => !!value);
+
+  // ⭐ v4.1.2: the runtime may expose the new secret keys as a JSON map
+  //    (`SUPABASE_SECRET_KEYS={"default":"sb_secret_…"}`). Accept those too.
+  try {
+    const rawKeys = Deno.env.get('SUPABASE_SECRET_KEYS');
+    if (rawKeys) {
+      const parsed = JSON.parse(rawKeys);
+      if (parsed && typeof parsed === 'object') {
+        for (const value of Object.values(parsed)) {
+          if (typeof value === 'string' && value) acceptedServiceKeys.push(value);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[update-notification] could not parse SUPABASE_SECRET_KEYS');
+  }
   const admin = createClient(supabaseUrl, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
@@ -57,10 +81,10 @@ Deno.serve(async (req) => {
     let authorized = false;
     let reason = '';
 
-    if (bearer && serviceKey && bearer === serviceKey) {
-      authorized = true;                       // ⭐ مفتاح service_role
+    if (bearer && acceptedServiceKeys.indexOf(bearer) > -1) {
+      authorized = true;                       // ⭐ مفتاح service_role / secret
       reason = 'service_role';
-    } else if (bearer && bearer !== serviceKey) {
+    } else if (bearer && acceptedServiceKeys.indexOf(bearer) === -1) {
       // ⭐ توكن مستخدم: نقبل الأدمن والمشرف فقط
       const { data } = await admin.auth.getUser(bearer);
       if (data?.user) {

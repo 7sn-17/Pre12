@@ -23,7 +23,10 @@
     isNative: isNative,
     backButtonBound: false,
     fcmToken: '',
+    pendingFcmToken: '',
+    tokenAlerted: false,
     pushListenerBound: false,
+    authTokenListenerBound: false,
     lastFcmAlert: '',
     lastNotificationTap: null,
     permissionRequested: false,
@@ -215,17 +218,101 @@
   }
 
   function currentUserId() {
-    var client = supabaseClientRef();
-    if (!client || !client.auth || typeof client.auth.getUser !== 'function') return '';
+    // ⭐ TASK 1 (v4.1.2): أولاً المستخدم المتزامن الذي يحفظه auth.js.
+    //    كان الرمز يصل قبل استعادة الجلسة فيعود getUser() فارغاً
+    //    ويُحفظ الرمز في الذاكرة فقط — ومن هنا بقاء fcm_token = NULL.
     try {
-      var result = client.auth.getUser();
-      if (result && typeof result.then === 'function') {
-        return result.then(function (r) {
-          return (r && r.data && r.data.user && r.data.user.id) || '';
-        }).catch(function () { return ''; });
+      if (typeof global.getAuthUser === 'function') {
+        var cached = global.getAuthUser();
+        if (cached && cached.id) return Promise.resolve(cached.id);
       }
     } catch (e) {}
-    return '';
+
+    var client = supabaseClientRef();
+    if (!client || !client.auth) return Promise.resolve('');
+
+    try {
+      // ⭐ الجلسة المحلية أولاً (لا تحتاج شبكة)
+      if (typeof client.auth.getSession === 'function') {
+        return Promise.resolve(client.auth.getSession())
+          .then(function (res) {
+            var user = res && res.data && res.data.session && res.data.session.user;
+            if (user && user.id) return user.id;
+            if (typeof client.auth.getUser !== 'function') return '';
+            return Promise.resolve(client.auth.getUser())
+              .then(function (r) {
+                return (r && r.data && r.data.user && r.data.user.id) || '';
+              })
+              .catch(function () { return ''; });
+          })
+          .catch(function () { return ''; });
+      }
+
+      if (typeof client.auth.getUser === 'function') {
+        return Promise.resolve(client.auth.getUser())
+          .then(function (r) {
+            return (r && r.data && r.data.user && r.data.user.id) || '';
+          })
+          .catch(function () { return ''; });
+      }
+    } catch (e) {}
+    return Promise.resolve('');
+  }
+
+  /**
+   * ⭐ TASK 1 — حفظ الرمز مع إعادة محاولة تلقائية.
+   * الرمز قد يصل قبل اكتمال تسجيل الدخول (خصوصاً عند الإقلاع)،
+   * فنحتفظ به ونعيد المحاولة كل ثانيتين حتى تُستعاد الجلسة.
+   */
+  function queueFcmTokenSave(token, attempt) {
+    token = String(token || '');
+    if (!token) return Promise.resolve(false);
+
+    nativeState.pendingFcmToken = token;
+    attempt = Number(attempt) || 0;
+
+    return saveFcmToken(token).then(function (saved) {
+      // ⭐ وصل رمز أحدث؟ نتوقّف عن محاولة القديم.
+      if (nativeState.fcmToken && nativeState.fcmToken !== token) return false;
+      if (saved) {
+        nativeState.pendingFcmToken = '';
+        return true;
+      }
+      if (attempt >= 8) {
+        console.warn('[native] the FCM token is still unsaved after retries.');
+        return false;
+      }
+      return new Promise(function (resolve) {
+        setTimeout(function () {
+          resolve(queueFcmTokenSave(token, attempt + 1));
+        }, 2000);
+      });
+    });
+  }
+
+  /**
+   * ⭐ TASK 1 — عندما تُستعاد الجلسة (SIGNED_IN / TOKEN_REFRESHED)
+   *    نحفظ الرمز المعلّق فوراً بدل انتظار المحاولة التالية.
+   */
+  function bindAuthTokenSave() {
+    if (nativeState.authTokenListenerBound) return;
+    var client = supabaseClientRef();
+    if (!client || !client.auth || typeof client.auth.onAuthStateChange !== 'function') return;
+    nativeState.authTokenListenerBound = true;
+
+    try {
+      client.auth.onAuthStateChange(function (event, session) {
+        var token = nativeState.pendingFcmToken || nativeState.fcmToken;
+        if (!token) return;
+        if (session && session.user && session.user.id) {
+          console.info('[native] auth is ready (' + event + ') — saving the FCM token.');
+          queueFcmTokenSave(token, 0);
+        }
+      });
+    } catch (e) {
+      nativeState.authTokenListenerBound = false;
+      console.warn('[native] the auth listener for FCM could not be attached:', e);
+    }
   }
 
   /**
@@ -248,9 +335,9 @@
       )
         .then(function (result) {
           if (result && result.error) {
-            // ⭐ TASK 4: فشل الحفظ في profiles مرئي أيضاً
-            showFcmDebugAlert('FCM Save Error: ' + result.error.message);
-            console.warn('[native] could not save the FCM token:', result.error.message);
+            // ⭐ TASK 1: كامل تفاصيل الخطأ (RLS مثلاً) على الشاشة
+            showFcmDebugAlert('FCM Save Error: ' + JSON.stringify(result.error));
+            console.warn('[native] could not save the FCM token:', result.error);
             return false;
           }
           if (((result && result.data) || []).length) return true;
@@ -261,14 +348,18 @@
           )
             .then(function (up) {
               if (up && up.error) {
-                showFcmDebugAlert('FCM Save Error: ' + up.error.message);
-                console.warn('[native] the token upsert failed:', up.error.message);
+                showFcmDebugAlert('FCM Save Error: ' + JSON.stringify(up.error));
+                console.warn('[native] the token upsert failed:', up.error);
                 return false;
               }
               return true;
             });
         })
         .catch(function (e) {
+          showFcmDebugAlert(
+            'FCM Save Error: ' +
+            JSON.stringify(String(e && e.message ? e.message : e))
+          );
           console.warn('[native] FCM token save failed:', e);
           return false;
         });
@@ -298,12 +389,17 @@
       // ⚠️ الترتيب مهم: المستمع أوّلاً … ثم register()
       PushNotifications.addListener('registration', function (token) {
         var value = (token && token.value) || token || '';
-        // ⭐ TASK 4: الرمز ظاهر على الشاشة فور وصوله
-        showFcmDebugAlert('Token Received: ' + value);
         if (!value) return;
+        // ⭐ TASK 1: التنبيه مرّة واحدة فقط في الجلسة
+        if (!nativeState.tokenAlerted) {
+          nativeState.tokenAlerted = true;
+          showFcmDebugAlert('Token Received: ' + value);
+        }
         nativeState.fcmToken = String(value);
         console.info('[native] the FCM token arrived:', nativeState.fcmToken.slice(0, 24) + '…');
-        saveFcmToken(nativeState.fcmToken);
+        // ⭐ نحفظ الآن، ونعيد المحاولة إن لم تكن الجلسة جاهزة بعد
+        bindAuthTokenSave();
+        queueFcmTokenSave(nativeState.fcmToken);
       });
 
       PushNotifications.addListener('registrationError', function (error) {
@@ -336,7 +432,7 @@
         if (!value) return nativeState.fcmToken || '';
         nativeState.fcmToken = String(value);
         console.info('[native] the FCM token was read:', nativeState.fcmToken.slice(0, 24) + '…');
-        return Promise.resolve(saveFcmToken(nativeState.fcmToken)).then(function () {
+        return Promise.resolve(queueFcmTokenSave(nativeState.fcmToken)).then(function () {
           return nativeState.fcmToken;
         });
       })
@@ -351,8 +447,14 @@
     if (!isNative) return Promise.resolve('');
     var PushNotifications = plugin('PushNotifications');
 
-    // 3) المستمع قبل register
+    // 3) المستمع قبل register + حفظ الرمز عند استعادة الجلسة
     bindPushRegistrationListener();
+    bindAuthTokenSave();
+
+    // ⭐ TASK 1: إن كان لدينا رمز معلّق من محاولة سابقة، احفظه أولاً
+    if (nativeState.pendingFcmToken) {
+      queueFcmTokenSave(nativeState.pendingFcmToken, 0);
+    }
 
     if (!PushNotifications || typeof PushNotifications.register !== 'function') {
       console.warn('[native] the PushNotifications plugin is not available');
@@ -407,7 +509,8 @@
           var value = (token && token.value) || token || '';
           if (!value) return;
           nativeState.fcmToken = String(value);
-          saveFcmToken(nativeState.fcmToken);
+          bindAuthTokenSave();
+          queueFcmTokenSave(nativeState.fcmToken);
         });
 
         Messaging.addListener('messageReceived', function (action) {
@@ -436,7 +539,8 @@
           var value = (result && result.value) || result || '';
           if (!value) return;
           nativeState.fcmToken = String(value);
-          saveFcmToken(nativeState.fcmToken);
+          bindAuthTokenSave();
+          queueFcmTokenSave(nativeState.fcmToken);
         }).catch(function (e) {
           console.warn('[native] could not read the FCM token:', e);
         });

@@ -17,8 +17,8 @@
   'use strict';
 
   var RELEASES_API = 'https://api.github.com/repos/7sn-17/Pre12/releases/latest';
-  var APK_NAME_PREFIX = 'Medical_Platform_v';
-  var APK_NAME_SUFFIX = '.apk';
+  var MAX_HIGHLIGHTS = 4;
+  var lastShownVersion = '';
 
   function plugin(name) {
     return (global.Capacitor && global.Capacitor.Plugins && global.Capacitor.Plugins[name]) || null;
@@ -66,15 +66,29 @@
       }
     }
 
-    var response = await fetch(RELEASES_API, {
-      headers: { Accept: 'application/vnd.github+json' }
+    // ⭐ TASK 3: بديل موثوق إن لم يُرجع App.getInfo الإصدار (أو تأخّر)
+    if (!currentVersion) {
+      try {
+        var meta = document.querySelector('meta[name="app-version"]');
+        currentVersion = (meta && meta.getAttribute('content')) || '';
+      } catch (e) {}
+    }
+
+    // ⭐ TASK 3: لا كاش — GitHub API يجب أن يُقرأ طازجاً في كل مرّة
+    var response = await fetch(RELEASES_API + '?t=' + Date.now(), {
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/vnd.github+json',
+        'Cache-Control': 'no-cache',
+        Pragma: 'no-cache'
+      }
     });
     if (!response.ok) throw new Error('GitHub API: ' + response.status);
 
     var release = await response.json();
     var remoteVersion = String(release.tag_name || release.name || '').replace(/^v/i, '');
 
-    // ⭐ رابط التنزيل المباشر للـ APK
+    // ⭐ TASK 3: رابط التنزيل المباشر للـ APK — من الـ API دائماً
     var apkUrl = '';
     var assets = release.assets || [];
     for (var i = 0; i < assets.length; i++) {
@@ -84,15 +98,14 @@
         break;
       }
     }
-    if (!apkUrl) {
-      apkUrl = 'https://github.com/7sn-17/Pre12/releases/latest/download/' +
-        APK_NAME_PREFIX + remoteVersion + APK_NAME_SUFFIX;
-    }
+    // ⭐ لا أصول بعد؟ صفحة الإصدار الرسمية أفضل من رابط مُخمَّن قديم.
+    if (!apkUrl) apkUrl = release.html_url || '';
 
     var result = {
       currentVersion: currentVersion,
+      // ⭐ ملاحظات أحدث إصدار فقط (لا تاريخ CHANGELOG كامل)
       version: remoteVersion,
-      notes: release.body || '',
+      notes: latestReleaseNotes(release.body || ''),
       url: apkUrl,
       htmlUrl: release.html_url || '',
       publishedAt: release.published_at || '',
@@ -103,7 +116,10 @@
       result.updateAvailable = true;
     }
 
-    if (options.silent !== true && result.updateAvailable && typeof global.showUpdateModal === 'function') {
+    // ⭐ TASK 3: نافذة واحدة فقط لكل إصدار في الجلسة
+    if (options.silent !== true && result.updateAvailable && lastShownVersion !== result.version &&
+        typeof global.showUpdateModal === 'function') {
+      lastShownVersion = result.version;
       global.showUpdateModal(result);
     }
 
@@ -113,6 +129,31 @@
   /* ─────────────────────────────────────────────
      3) تنظيف النصّ (بلا Markdown)
      ───────────────────────────────────────────── */
+  /**
+   * ⭐ TASK 4 — نقطع جسم الإصدار عند أول قسم `##` فقط.
+   * GitHub Release body مبني من CHANGELOG.md كاملاً، لذا نأخذ
+   * قسم الإصدار الأخير وحده ولا نعرض تاريخ الإصدارات القديمة.
+   */
+  function latestReleaseNotes(notes) {
+    var text = String(notes || '');
+    var lines = text.split('\n');
+    var out = [];
+    var started = false;
+
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      if (/^##\s+/.test(line)) {
+        if (started) break;   // ⭐ بداية الإصدار السابق → توقّف
+        started = true;       // ⭐ أول قسم = الإصدار الحالي
+        continue;
+      }
+      if (!started) continue;
+      out.push(line);
+    }
+
+    return started ? out.join('\n') : text;
+  }
+
   /**
    * ⭐⭐⭐ يحوّل Markdown إلى نصّ عربي نظيف:
    *   **عريض** · *مائل* · `code` · [نص](رابط) · # عنوان · > اقتباس
@@ -154,9 +195,22 @@
 
       var isBullet = line.indexOf('- ') === 0 || line.indexOf('* ') === 0;
       if (isBullet) {
-        var cleaned = cleanMarkdown(line.replace(/^[-*]\s+/, ''));
+        // ⭐ نجمع أسطر التكملة مع النقطة نفسها حتى لا تُقطع الجملة.
+        var parts = [line.replace(/^[-*]\s+/, '')];
+        var j = i + 1;
+        while (j < lines.length) {
+          var next = lines[j].trim();
+          if (!next || next.indexOf('- ') === 0 || next.indexOf('* ') === 0 ||
+              next.charAt(0) === '#' || next.indexOf('---') === 0) break;
+          parts.push(next);
+          j++;
+        }
+        i = j - 1;
+
+        var cleaned = cleanMarkdown(parts.join(' '));
+        if (cleaned.length > 240) cleaned = cleaned.slice(0, 237).trim() + '…';
         if (cleaned) bullets.push(cleaned);
-        if (bullets.length >= 3) break;
+        if (bullets.length >= MAX_HIGHLIGHTS) break;
       }
     }
 
@@ -169,7 +223,7 @@
         })
         .map(cleanMarkdown)
         .filter(function (t) { return t.length > 2; })
-        .slice(0, 3);
+        .slice(0, MAX_HIGHLIGHTS);
       bullets = fallback;
     }
 
@@ -185,7 +239,8 @@
     var existing = document.getElementById('medappUpdateOverlay');
     if (existing) existing.remove();
 
-    var highlights = extractChangelogHighlights(update.notes);
+    // ⭐ نعرض قسم الإصدار الأخير فقط، وبحدّ 4 نقاط
+    var highlights = extractChangelogHighlights(latestReleaseNotes(update.notes));
 
     var overlay = document.createElement('div');
     overlay.className = 'medapp-update-overlay';
@@ -287,6 +342,7 @@
     checkForAppUpdate: checkForAppUpdate,
     compareVersions: compareVersions,
     cleanMarkdown: cleanMarkdown,
+    latestReleaseNotes: latestReleaseNotes,
     extractChangelogHighlights: extractChangelogHighlights,
     showModal: showUpdateModal,
     openDownload: openDownload,
