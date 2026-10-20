@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="4.2.0">
+<meta name="app-version" content="4.3.0">
 <title>السنة التحضيرية - المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -6317,7 +6317,7 @@ i.fab {
         <div class="settings-icon"><i data-lucide="info"></i></div>
         <div class="settings-text">
           <h4>حول التطبيق</h4>
-          <p id="aboutVersionText">الإصدار 4.2.0 • السنة التحضيرية</p>
+          <p id="aboutVersionText">الإصدار 4.3.0 • السنة التحضيرية</p>
         </div>
       </div>
       <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
@@ -6352,6 +6352,35 @@ i.fab {
                     font-weight: 800;
                     cursor: pointer;
                   ">نسخ الرمز</button>
+
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px;">
+            <button class="settings-item-arrow" id="diagLocalTestBtn" type="button"
+                    onclick="testLocalNotification10s()"
+                    style="
+                      padding: 8px 14px;
+                      border-radius: 10px;
+                      border: 1px solid rgba(59, 130, 246, 0.46);
+                      background: rgba(59, 130, 246, 0.10);
+                      color: var(--medapp-blue, #60a5fa);
+                      font-family: inherit;
+                      font-size: 0.72rem;
+                      font-weight: 800;
+                      cursor: pointer;
+                    ">اختبار التذكير المحلي (10 ثوانٍ)</button>
+            <button class="settings-item-arrow" id="diagSmartEngineBtn" type="button"
+                    onclick="testSmartEngineNow()"
+                    style="
+                      padding: 8px 14px;
+                      border-radius: 10px;
+                      border: 1px solid rgba(245, 158, 11, 0.46);
+                      background: rgba(245, 158, 11, 0.10);
+                      color: var(--medapp-amber, #f59e0b);
+                      font-family: inherit;
+                      font-size: 0.72rem;
+                      font-weight: 800;
+                      cursor: pointer;
+                    ">اختبار المحرّك الذكي</button>
+          </div>
         </div>
       </div>
     </div>
@@ -6591,7 +6620,7 @@ i.fab {
 <script src="notifications.js"></script>
 
 
-  <script src="app.js?v=4.2.0"></script>
+  <script src="app.js?v=4.3.0"></script>
 <script>
 
     lucide.createIcons();
@@ -7364,8 +7393,9 @@ function openLastActivity() {
           await sendTestNotification();
         } catch (err) {
           console.error('[test-notification]', err);
-          if (typeof showCustomAlert === 'function') {
-            showCustomAlert('خطأ في الإشعار', String((err && err.message) || err), 'error');
+          // ⭐ v4.3.0 — Toast فقط، بلا alert() ولا نافذة خطأ مزعجة.
+          if (typeof showToast === 'function') {
+            showToast('تعذّر إرسال الإشعار: ' + String((err && err.message) || err), 'error');
           }
         }
       });
@@ -7463,6 +7493,98 @@ function openLastActivity() {
     }
 
     // ============================================
+    // ⭐ v4.3.0 — اختبار المحرّكات (تذكير محلي + محرّك ذكي)
+    // ============================================
+
+    /** ⭐ يجدول إشعاراً محلياً بعد 10 ثوانٍ للتأكد من أن 8 مساءً سيعمل. */
+    async function testLocalNotification10s() {
+      const btn = document.getElementById('diagLocalTestBtn');
+      if (btn) { btn.disabled = true; btn.textContent = 'جارٍ الجدولة…'; }
+
+      try {
+        if (typeof MedAppNotifications === 'undefined' ||
+            typeof MedAppNotifications.scheduleTest !== 'function') {
+          showToast('الإشعارات المحلية متاحة في تطبيق Android فقط', 'info');
+          return;
+        }
+        const result = await MedAppNotifications.scheduleTest(10);
+        if (result && result.ok) {
+          showToast('تم جدولة إشعار بعد 10 ثوانٍ — يمكنك ترك التطبيق في الخلفية', 'success');
+          console.info('[diagnostics] local notification scheduled:', result);
+        } else {
+          showToast('تعذّر جدولة الإشعار: ' + ((result && result.error) || 'خطأ غير معروف'), 'error');
+        }
+      } catch (e) {
+        console.error('[diagnostics] local notification test failed:', e);
+        showToast('تعذّر جدولة الإشعار: ' + ((e && e.message) || 'خطأ غير معروف'), 'error');
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'اختبار التذكير المحلي (10 ثوانٍ)'; }
+      }
+    }
+
+    /** ⭐ يشغّل smart-notifications-engine يدوياً عبر JWT الأدمن (لا cron_secret في العميل). */
+    async function testSmartEngineNow() {
+      const btn = document.getElementById('diagSmartEngineBtn');
+      if (btn) { btn.disabled = true; btn.textContent = 'جارٍ التشغيل…'; }
+
+      try {
+        const signedIn = await requireSignedInForNotifications(
+          'سجّل الدخول بحساب أدمن لتشغيل المحرّك الذكي.'
+        );
+        if (!signedIn) return;
+
+        if (typeof supabaseClient === 'undefined' || !supabaseClient ||
+            !supabaseClient.functions) {
+          showToast('عميل Supabase غير جاهز — أعد فتح التطبيق', 'error');
+          return;
+        }
+
+        showToast('جارٍ تشغيل المحرّك الذكي…', 'info');
+        const { data, error } = await supabaseClient.functions.invoke(
+          'smart-notifications-engine',
+          { body: { source: 'manual-test', at: new Date().toISOString() } }
+        );
+
+        if (error) {
+          console.error('[diagnostics] smart engine error:', error);
+          let message = error.message || '';
+          try {
+            if (error.context && typeof error.context.clone === 'function') {
+              const body = await error.context.clone().json();
+              message = (body && (body.message || body.error)) || message;
+            }
+          } catch (e) {}
+          showToast(
+            message.indexOf('forbidden') > -1
+              ? 'هذا الاختبار متاح لحساب أدمن أو مشرف فقط'
+              : 'تعذّر تشغيل المحرّك: ' + (message || 'خطأ غير معروف'),
+            'error'
+          );
+          return;
+        }
+
+        console.info('[diagnostics] smart engine result:', data);
+        const sent = Number((data && data.sent) || 0);
+        const failed = Number((data && data.failed) || 0);
+        const skipped = Number((data && data.skipped) || 0);
+
+        if (sent > 0) {
+          showToast('المحرّك يعمل ✓ — أُرسل ' + sent + ' إشعاراً' +
+            (failed ? '، وفشل ' + failed : ''), 'success');
+        } else {
+          showToast('المحرّك يعمل ✓ لكن لم يُرسل شيء — ' +
+            (skipped ? 'تم تخطّي ' + skipped + ' مستخدماً. ' : '') +
+            'تأكّد من حفظ رمز الجهاز أولاً.', 'info');
+        }
+      } catch (e) {
+        console.error('[diagnostics] smart engine test failed:', e);
+        showToast('تعذّر تشغيل المحرّك: ' + ((e && e.message) || 'خطأ غير معروف'), 'error');
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'اختبار المحرّك الذكي'; }
+      }
+    }
+
+    // ============================================
     // ⭐⭐⭐ إرسال إشعار تجريبي
     // ============================================
     /**
@@ -7518,9 +7640,29 @@ function openLastActivity() {
 
       const btn = document.getElementById('testNotificationBtn');
 
-      if (btn) { btn.disabled = true; btn.textContent = 'جارٍ…'; }
-      // ⭐ تغذية راجعة فورية — يتأكّد المستخدم أن الزرّ يعمل
+      if (btn) {
+        btn.disabled = true;
+        btn.setAttribute('aria-busy', 'true');
+        btn.textContent = 'جارٍ الإرسال…';
+      }
+      // ⭐ v4.3.0 — loading state + Toast only (no alert(), no debug modal).
       if (typeof showToast === 'function') showToast('جارٍ إرسال الإشعار التجريبي…', 'info');
+
+      async function readServerMessage(error, data) {
+        let message = '';
+        if (data && (data.message || data.error)) message = data.message || data.error;
+        if (!message && error) {
+          message = error.message || error.error_code || '';
+          try {
+            const ctx = error.context;
+            if (ctx && typeof ctx.clone === 'function') {
+              const body = await ctx.clone().json();
+              if (body) message = body.message || body.error || message;
+            }
+          } catch (e) {}
+        }
+        return String(message || '');
+      }
 
       try {
         // ⭐⭐ نتأكّد من وجود رمز الإشعارات لهذا الجهاز أولاً —
@@ -7531,37 +7673,40 @@ function openLastActivity() {
 
         if (error) {
           console.error('[test-notification]', error);
-          // ⭐ نعرض سبب الخلل الحقيقي (مثل FCM غير مُهيّأ)
-          const reason = String((error && (error.message || error.error_code)) || '');
-          showToast(
-            reason.indexOf('fcm-not-configured') > -1
-              ? 'الإشعارات غير مُهيّأة على الخادم — أضف سرّ FIREBASE_SERVICE_ACCOUNT_JSON'
-              : 'تعذر إرسال الإشعار التجريبي. يرجى التواصل مع المطور لحل هذه المشكلة.',
-            'error'
-          );
+          const reason = await readServerMessage(error, data);
+          let friendly = reason;
+          if (reason.indexOf('no-device-token') > -1) {
+            friendly = 'لا يوجد رمز إشعارات لهذا الجهاز — فعّل الإشعارات ثم أعد المحاولة.';
+          } else if (reason.indexOf('fcm-not-configured') > -1) {
+            friendly = 'الإشعارات غير مُهيّأة على الخادم — تحقّق من سرّ حساب خدمة FCM.';
+          } else if (reason.indexOf('invalid session') > -1 || reason.indexOf('401') > -1) {
+            friendly = 'انتهت الجلسة — سجّل الدخول ثم أعد المحاولة.';
+          } else if (reason.indexOf('UNREGISTERED') > -1 || reason.indexOf('registration token') > -1) {
+            friendly = 'رمز الجهاز غير صالح — أعد تفعيل الإشعارات ليُولَّد رمز جديد.';
+          } else if (!friendly) {
+            friendly = 'تعذّر إرسال الإشعار التجريبي.';
+          }
+          showToast(friendly, 'error');
+          revealNotificationDiagnostics();
           return;
         }
 
         if (data && data.error === 'no-device-token') {
           showToast('لا يوجد رمز إشعارات لهذا الجهاز — فعّل الإشعارات ثم أعد المحاولة', 'error');
+          revealNotificationDiagnostics();
           return;
         }
 
-        showToast('تم إرسال الإشعار التجريبي', 'success');
+        showToast('تم إرسال الإشعار التجريبي ✓', 'success');
       } catch (e) {
         console.error('[test-notification]', e);
-        // ⭐ نعرض سبب الخطأ على الشاشة (لا نخفيه)
-        showToast('تعذر إرسال الإشعار التجريبي. يرجى التواصل مع المطور لحل هذه المشكلة.', 'error');
-        if (typeof showCustomAlert === 'function') {
-          showCustomAlert(
-            'تعذّر إرسال الإشعار',
-            'السبب: ' + ((e && e.message) || 'خطأ غير معروف') +
-            '<br><br>تأكّد من سجلّات الإشعارات ومن Firestore / FCM.',
-            'error'
-          );
-        }
+        showToast('تعذّر إرسال الإشعار: ' + ((e && e.message) || 'خطأ غير معروف'), 'error');
       } finally {
-        if (btn) { btn.disabled = false; btn.textContent = 'إرسال'; }
+        if (btn) {
+          btn.disabled = false;
+          btn.removeAttribute('aria-busy');
+          btn.textContent = 'إرسال';
+        }
       }
     }
 

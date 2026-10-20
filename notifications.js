@@ -335,6 +335,7 @@
       PushNotifications.addListener('registration', function (token) {
         var value = (token && token.value) || token || '';
         if (!value) return;
+        rememberFcmToken(value);
         console.info('[notifications] the FCM token arrived:', String(value).slice(0, 18) + '…');
         saveFcmToken(value);
         flushPushWaiters(value);
@@ -431,11 +432,24 @@
     });
   }
 
-  /** ⭐ يحفظ توكن الإشعارات في جدول profiles */
+  var FCM_TOKEN_KEY = 'medapp_fcm_token';
+
+  function rememberFcmToken(token) {
+    if (!token) return;
+    try { localStorage.setItem(FCM_TOKEN_KEY, String(token)); } catch (e) {}
+  }
+
+  /** ⭐ يحفظ توكن الإشعارات في جدول profiles — update فقط (RLS آمن) */
   function saveFcmToken(token) {
     if (!token) return Promise.resolve(false);
-    var client = global.supabaseClient;
-    if (!client || !client.from) return Promise.resolve(false);
+    rememberFcmToken(token);
+    // ⭐ v4.3.0 — the client is exposed on window by supabase-config.js.
+    var client = global.supabaseClient ||
+      (typeof supabaseClient !== 'undefined' ? supabaseClient : null);
+    if (!client || !client.from) {
+      console.warn('[notifications] the Supabase client is not ready yet.');
+      return Promise.resolve(false);
+    }
 
     function userId() {
       try {
@@ -466,18 +480,19 @@
             return false;
           }
           var rows = (result && result.data) || [];
-          if (rows.length) return true;
+          if (rows.length) {
+            console.info(
+              '[notifications] the FCM token saved:',
+              String(token).slice(0, 18) + '…'
+            );
+            return true;
+          }
 
-          // ⭐ لا صفّ في profiles؟ نُنشئه (upsert)
-          return client.from('profiles')
-            .upsert({ id: id, fcm_token: token }, { onConflict: 'id' })
-            .then(function (up) {
-              if (up && up.error) {
-                console.warn('[notifications] the token upsert failed:', up.error.message);
-                return false;
-              }
-              return true;
-            });
+          // ⭐ v4.3.0 — لا upsert من العميل: إنشاء الصفّ مسؤولية
+          //   trigger handle_new_user. الـ upsert كان يصطدم بسياسة INSERT
+          //   غير الموجودة فيسجّل "new row violates row-level security policy".
+          console.warn('[notifications] no profile row matched — will retry after auth.');
+          return false;
         })
         .catch(function (e) {
           console.warn('[notifications] token save failed:', e);
@@ -609,6 +624,61 @@
       console.warn('[notifications] could not schedule:', err);
       return null;
     });
+  }
+
+  /**
+   * ⭐ TASK 4 (v4.3.0) — إشعار محلي اختباري بعد `seconds` ثانية.
+   *    يُستخدم من قسم التشخيص للتأكد من أن @capacitor/local-notifications
+   *    يعمل فعلياً على الجهاز (بدون انتظار الساعة 8 مساءً).
+   * @returns {Promise<{ok:boolean,id?:number,at?:string,error?:string}>}
+   */
+  function scheduleTest(seconds) {
+    var LocalNotifications = plugin('LocalNotifications');
+    if (!LocalNotifications || typeof LocalNotifications.schedule !== 'function') {
+      return Promise.resolve({
+        ok: false,
+        error: 'الإشعارات المحلية غير متاحة في هذا البناء'
+      });
+    }
+
+    var wait = Math.max(1, Number(seconds) || 10);
+    ensureChannel();
+
+    return Promise.resolve(
+      typeof LocalNotifications.requestPermissions === 'function'
+        ? LocalNotifications.requestPermissions()
+        : null
+    )
+      .then(function (perm) {
+        var status = perm && (perm.display || perm.receive || perm.status);
+        if (status && status !== 'granted') {
+          return { ok: false, error: 'إذن الإشعارات غير ممنوح (' + status + ')' };
+        }
+
+        var id = Math.floor(Date.now() / 1000) % 2147483647;
+        var at = new Date(Date.now() + wait * 1000);
+
+        return Promise.resolve(LocalNotifications.schedule({
+          notifications: [{
+            id: id,
+            title: '⏰ اختبار التذكير المحلي',
+            body: 'إذا وصلتك هذه الرسالة فالتذكير المحلي يعمل — بعد ' + wait + ' ثوانٍ.',
+            smallIcon: 'ic_stat_icon',
+            channelId: 'medapp_reminders',
+            schedule: { at: at },
+            extra: { action: 'tasks', test: 'local' }
+          }]
+        }))
+          .then(function () {
+            return { ok: true, id: id, at: at.toISOString() };
+          })
+          .catch(function (err) {
+            return { ok: false, error: String((err && (err.message || err)) || err) };
+          });
+      })
+      .catch(function (err) {
+        return { ok: false, error: String((err && (err.message || err)) || err) };
+      });
   }
 
   /**
@@ -858,6 +928,7 @@
     CATEGORIES: CATEGORIES,
     pick: pick,
     schedule: schedule,
+    scheduleTest: scheduleTest,
     init: init,
     collectState: collectState,
     requestNotificationPermission: requestNotificationPermission,

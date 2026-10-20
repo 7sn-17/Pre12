@@ -24,30 +24,25 @@
     backButtonBound: false,
     fcmToken: '',
     pendingFcmToken: '',
-    tokenAlerted: false,
     pushListenerBound: false,
     authTokenListenerBound: false,
-    lastFcmAlert: '',
     lastNotificationTap: null,
     permissionRequested: false,
     notificationPermission: null
   };
 
-  /**
-   * ⭐⭐⭐ TASK 4 — تشخيص FCM مرئي على الشاشة.
-   * alert() حتى يرى المستخدم الخطأ الحقيقي من Firebase بدل الاكتفاء
-   * بسجلّ logcat. نمنع تكرار نفس الرسالة مرّتين متتاليتين فقط
-   * (بعض الأحداث تُطلق أكثر من مرّة لنفس السبب).
-   */
-  function showFcmDebugAlert(message) {
-    var text = String(message == null ? '' : message);
-    if (!text || nativeState.lastFcmAlert === text) return;
-    nativeState.lastFcmAlert = text;
-    try {
-      if (typeof global.alert === 'function') global.alert(text);
-    } catch (e) {
-      console.warn('[native] the FCM alert could not be shown:', e);
-    }
+  // ⭐ v4.3.0 — آخر رمز FCM معروف. نحتفظ به محلياً حتى تستعيد الجلسة
+  //   بعد إعادة التشغيل أو تسجيل الدخول، فنجدّد الحفظ بدون انتظار Firebase.
+  var FCM_TOKEN_KEY = 'medapp_fcm_token';
+  var MAX_SAVE_ATTEMPTS = 8;
+
+  function cachedFcmToken() {
+    try { return localStorage.getItem(FCM_TOKEN_KEY) || ''; } catch (e) { return ''; }
+  }
+
+  function rememberFcmToken(token) {
+    if (!token) return;
+    try { localStorage.setItem(FCM_TOKEN_KEY, String(token)); } catch (e) {}
   }
 
   function plugin(name) {
@@ -214,7 +209,14 @@
   // 5) إشعارات Firebase (FCM)
   // ─────────────────────────────────────────────
   function supabaseClientRef() {
-    return global.supabaseClient || null;
+    // ⭐ window.supabaseClient is set by supabase-config.js (v4.3.0).
+    //   The bare fallback also covers the global lexical `const` binding
+    //   in case the window assignment is ever removed.
+    if (global.supabaseClient) return global.supabaseClient;
+    try {
+      if (typeof supabaseClient !== 'undefined' && supabaseClient) return supabaseClient;
+    } catch (e) {}
+    return null;
   }
 
   function currentUserId() {
@@ -260,39 +262,92 @@
   }
 
   /**
-   * ⭐ TASK 1 — حفظ الرمز مع إعادة محاولة تلقائية.
-   * الرمز قد يصل قبل اكتمال تسجيل الدخول (خصوصاً عند الإقلاع)،
-   * فنحتفظ به ونعيد المحاولة كل ثانيتين حتى تُستعاد الجلسة.
+   * ⭐ v4.3.0 — حفظ الرمز مع إعادة محاولة تلقائية.
+   * الرمز قد يصل قبل اكتمال الدخول (خصوصاً عند الإقلاع)، فنحتفظ به
+   * في الذاكرة وفي localStorage ونعيد المحاولة كل ثانيتين حتى تُستعاد
+   * الجلسة. لا نستخدم upsert: إنشاء الصفّ مسؤولية trigger القاعدة.
    */
-  function queueFcmTokenSave(token, attempt) {
+  function queueFcmTokenSave(token) {
     token = String(token || '');
     if (!token) return Promise.resolve(false);
 
     nativeState.pendingFcmToken = token;
-    attempt = Number(attempt) || 0;
+    rememberFcmToken(token);
 
-    return saveFcmToken(token).then(function (saved) {
-      // ⭐ وصل رمز أحدث؟ نتوقّف عن محاولة القديم.
-      if (nativeState.fcmToken && nativeState.fcmToken !== token) return false;
-      if (saved) {
-        nativeState.pendingFcmToken = '';
-        return true;
-      }
-      if (attempt >= 8) {
-        console.warn('[native] the FCM token is still unsaved after retries.');
-        return false;
-      }
-      return new Promise(function (resolve) {
-        setTimeout(function () {
-          resolve(queueFcmTokenSave(token, attempt + 1));
-        }, 2000);
-      });
+    return saveTokenToDB(token, 0).then(function (saved) {
+      if (saved) nativeState.pendingFcmToken = '';
+      return saved;
+    });
+  }
+
+  function retryTokenSave(token, attempt) {
+    if (attempt >= MAX_SAVE_ATTEMPTS) {
+      console.warn(
+        '[native] the FCM token is still unsaved after ' + MAX_SAVE_ATTEMPTS + ' retries.'
+      );
+      return false;
+    }
+    return new Promise(function (resolve) {
+      setTimeout(function () {
+        resolve(saveTokenToDB(token, attempt + 1));
+      }, 2000);
     });
   }
 
   /**
-   * ⭐ TASK 1 — عندما تُستعاد الجلسة (SIGNED_IN / TOKEN_REFRESHED)
-   *    نحفظ الرمز المعلّق فوراً بدل انتظار المحاولة التالية.
+   * ⭐ TASK 3 — saveTokenToDB: يتحقّق من المستخدم (ذاكرة → جلسة → getUser)،
+   *   يحدّث profiles.fcm_token فقط، ويعيد المحاولة إن لم تكن الجلسة جاهزة.
+   */
+  function saveTokenToDB(token, attempt) {
+    token = String(token || '');
+    attempt = Number(attempt) || 0;
+    if (!token) return Promise.resolve(false);
+
+    var client = supabaseClientRef();
+    if (!client || !client.from) {
+      console.warn('[native] the Supabase client is not ready — retrying the FCM save.');
+      return Promise.resolve(retryTokenSave(token, attempt));
+    }
+
+    return Promise.resolve(currentUserId()).then(function (userId) {
+      if (!userId) {
+        // ⭐ نفس منطق المطلوب: المستخدم غير جاهز → ننتظر ثم نعيد.
+        console.warn('[native] User not ready, retrying the FCM save in 2s...');
+        return retryTokenSave(token, attempt);
+      }
+
+      return Promise.resolve(
+        client.from('profiles').update({ fcm_token: token }).eq('id', userId).select('id')
+      )
+        .then(function (result) {
+          if (result && result.error) {
+            console.warn('[native] Failed to save token:', result.error);
+            return retryTokenSave(token, attempt);
+          }
+          if (((result && result.data) || []).length) {
+            console.info('[native] Token saved successfully!');
+            rememberFcmToken(token);
+            return true;
+          }
+          // ⭐ الصفّ غير موجود بعد (trigger لم ينتهِ / جلسة قديمة) → إعادة محاولة.
+          console.warn('[native] no profile row matched the signed-in user yet.');
+          return retryTokenSave(token, attempt);
+        })
+        .catch(function (e) {
+          console.warn('[native] FCM token save failed:', e);
+          return retryTokenSave(token, attempt);
+        });
+    });
+  }
+
+  /** ⭐ اسم متوافق للواجهة العامة */
+  function saveFcmToken(token) {
+    return saveTokenToDB(token, 0);
+  }
+
+  /**
+   * ⭐ TASK 3 — عندما تُستعاد الجلسة (SIGNED_IN / TOKEN_REFRESHED)
+   *    نحفظ الرمز المعلّق/المخزّن محلياً فوراً.
    */
   function bindAuthTokenSave() {
     if (nativeState.authTokenListenerBound) return;
@@ -302,68 +357,17 @@
 
     try {
       client.auth.onAuthStateChange(function (event, session) {
-        var token = nativeState.pendingFcmToken || nativeState.fcmToken;
+        var token = nativeState.pendingFcmToken || nativeState.fcmToken || cachedFcmToken();
         if (!token) return;
         if (session && session.user && session.user.id) {
           console.info('[native] auth is ready (' + event + ') — saving the FCM token.');
-          queueFcmTokenSave(token, 0);
+          queueFcmTokenSave(token);
         }
       });
     } catch (e) {
       nativeState.authTokenListenerBound = false;
       console.warn('[native] the auth listener for FCM could not be attached:', e);
     }
-  }
-
-  /**
-   * ⭐ حفظ توكن FCM في جدول profiles حتى تصل الإشعارات لكل جهاز.
-   * (update على صفّ المستخدم ثم upsert احتياطي إن لم يوجد الصفّ)
-   */
-  function saveFcmToken(token) {
-    if (!token) return Promise.resolve(false);
-    var client = supabaseClientRef();
-    if (!client || !client.from) return Promise.resolve(false);
-
-    return Promise.resolve(currentUserId()).then(function (userId) {
-      if (!userId) {
-        console.warn('[native] the FCM token was not saved: no signed-in user yet.');
-        return false;
-      }
-      // ⭐⭐ التحديث المطلوب حرفياً: profiles.fcm_token للمستخدم الحالي
-      return Promise.resolve(
-        client.from('profiles').update({ fcm_token: token }).eq('id', userId).select('id')
-      )
-        .then(function (result) {
-          if (result && result.error) {
-            // ⭐ TASK 1: كامل تفاصيل الخطأ (RLS مثلاً) على الشاشة
-            showFcmDebugAlert('FCM Save Error: ' + JSON.stringify(result.error));
-            console.warn('[native] could not save the FCM token:', result.error);
-            return false;
-          }
-          if (((result && result.data) || []).length) return true;
-
-          // ⭐ لا صفّ في profiles؟ نُنشئه.
-          return Promise.resolve(
-            client.from('profiles').upsert({ id: userId, fcm_token: token }, { onConflict: 'id' })
-          )
-            .then(function (up) {
-              if (up && up.error) {
-                showFcmDebugAlert('FCM Save Error: ' + JSON.stringify(up.error));
-                console.warn('[native] the token upsert failed:', up.error);
-                return false;
-              }
-              return true;
-            });
-        })
-        .catch(function (e) {
-          showFcmDebugAlert(
-            'FCM Save Error: ' +
-            JSON.stringify(String(e && e.message ? e.message : e))
-          );
-          console.warn('[native] FCM token save failed:', e);
-          return false;
-        });
-    });
   }
 
   /**
@@ -390,25 +394,19 @@
       PushNotifications.addListener('registration', function (token) {
         var value = (token && token.value) || token || '';
         if (!value) return;
-        // ⭐ TASK 1: التنبيه مرّة واحدة فقط في الجلسة
-        if (!nativeState.tokenAlerted) {
-          nativeState.tokenAlerted = true;
-          showFcmDebugAlert('Token Received: ' + value);
-        }
         nativeState.fcmToken = String(value);
-        console.info('[native] the FCM token arrived:', nativeState.fcmToken.slice(0, 24) + '…');
+        rememberFcmToken(nativeState.fcmToken);
+        // ⭐ console only — the user must never see a debug alert.
+        console.info('[native] Token Received:', nativeState.fcmToken.slice(0, 24) + '…');
         // ⭐ نحفظ الآن، ونعيد المحاولة إن لم تكن الجلسة جاهزة بعد
         bindAuthTokenSave();
         queueFcmTokenSave(nativeState.fcmToken);
       });
 
       PushNotifications.addListener('registrationError', function (error) {
-        // ⭐ TASK 4: الخطأ الحقيقي من Firebase مرئي — لا logcat فقط
-        showFcmDebugAlert('FCM Error: ' + JSON.stringify(error));
         console.warn('[native] the FCM registration failed:', error);
       });
     } catch (e) {
-      showFcmDebugAlert('FCM Error: ' + JSON.stringify(String(e && e.message ? e.message : e)));
       console.warn('[native] the registration listener could not be attached:', e);
     }
   }
@@ -431,6 +429,7 @@
         var value = (result && result.value) || result || '';
         if (!value) return nativeState.fcmToken || '';
         nativeState.fcmToken = String(value);
+        rememberFcmToken(nativeState.fcmToken);
         console.info('[native] the FCM token was read:', nativeState.fcmToken.slice(0, 24) + '…');
         return Promise.resolve(queueFcmTokenSave(nativeState.fcmToken)).then(function () {
           return nativeState.fcmToken;
@@ -451,9 +450,10 @@
     bindPushRegistrationListener();
     bindAuthTokenSave();
 
-    // ⭐ TASK 1: إن كان لدينا رمز معلّق من محاولة سابقة، احفظه أولاً
-    if (nativeState.pendingFcmToken) {
-      queueFcmTokenSave(nativeState.pendingFcmToken, 0);
+    // ⭐ TASK 3: إن كان لدينا رمز معلّق أو مخزّن محلياً، احفظه فوراً
+    //   حتى لو لم يُطلق Firebase حدث registration في هذه الجلسة.
+    if (nativeState.pendingFcmToken || nativeState.fcmToken) {
+      queueFcmTokenSave(nativeState.pendingFcmToken || nativeState.fcmToken);
     }
 
     if (!PushNotifications || typeof PushNotifications.register !== 'function') {
@@ -465,8 +465,6 @@
     return Promise.resolve(PushNotifications.requestPermissions())
       .then(function (perm) {
         if (!perm || perm.receive !== 'granted') {
-          // ⭐ TASK 4: فشل الإذن مرئي أيضاً
-          showFcmDebugAlert('FCM Permission: ' + JSON.stringify(perm || {}));
           console.warn('[native] the notification permission was not granted:',
             (perm && (perm.receive || perm.status)) || 'unknown');
           return '';
@@ -483,13 +481,11 @@
             });
           })
           .catch(function (e) {
-            showFcmDebugAlert('FCM Register Error: ' + JSON.stringify(String(e && e.message ? e.message : e)));
             console.warn('[native] the FCM registration call failed:', e);
             return '';
           });
       })
       .catch(function (e) {
-        showFcmDebugAlert('FCM Permission Error: ' + JSON.stringify(String(e && e.message ? e.message : e)));
         console.warn('[native] ensuring the FCM token failed:', e);
         return '';
       });
@@ -509,6 +505,7 @@
           var value = (token && token.value) || token || '';
           if (!value) return;
           nativeState.fcmToken = String(value);
+          rememberFcmToken(nativeState.fcmToken);
           bindAuthTokenSave();
           queueFcmTokenSave(nativeState.fcmToken);
         });
@@ -539,6 +536,7 @@
           var value = (result && result.value) || result || '';
           if (!value) return;
           nativeState.fcmToken = String(value);
+          rememberFcmToken(nativeState.fcmToken);
           bindAuthTokenSave();
           queueFcmTokenSave(nativeState.fcmToken);
         }).catch(function (e) {
@@ -764,6 +762,10 @@
   // ─────────────────────────────────────────────
   function initNative() {
     nativeState.ready = true;
+
+    // ⭐ v4.3.0 — استعادة آخر رمز محفوظ محلياً حتى لو لم يُطلق Firebase
+    //   حدث registration في هذه الجلسة (تسجيل دخول لحساب قديم).
+    nativeState.fcmToken = nativeState.fcmToken || cachedFcmToken();
 
     bindBackButton();
     bindNetwork();

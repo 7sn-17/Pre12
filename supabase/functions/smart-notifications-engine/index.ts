@@ -153,16 +153,42 @@ Deno.serve(async (req) => {
   });
 
   try {
-    /* ── 1) الحماية: سرّ الـ cron ── */
+    /* ── 1) الحماية: سرّ الـ cron أو أدمن/مشرف (للاختبار اليدوي) ── */
     const expected = Deno.env.get('CRON_SECRET') ||
       (await readVaultSecret(admin, 'cron_secret'));
     if (!expected) {
       return json({ error: 'CRON_SECRET is not configured' }, 500);
     }
+
     const provided = req.headers.get('x-cron-secret') || '';
-    if (provided !== expected) {
+    let authorized = provided === expected;
+    let authReason = authorized ? 'cron-secret' : '';
+
+    // ⭐ v4.3.0 — يسمح لزر الاختبار في التطبيق بتشغيل المحرّك يدوياً
+    //   باستخدام JWT الأدمن/المشرف (بدون كشف cron_secret للعميل).
+    if (!authorized) {
+      const authHeader = req.headers.get('Authorization') || '';
+      const bearer = authHeader.replace(/^Bearer\s+/i, '').trim();
+      if (bearer) {
+        const { data: userData } = await admin.auth.getUser(bearer);
+        if (userData?.user) {
+          const { data: profile } = await admin
+            .from('profiles')
+            .select('role')
+            .eq('id', userData.user.id)
+            .maybeSingle();
+          if (profile && (profile.role === 'admin' || profile.role === 'moderator')) {
+            authorized = true;
+            authReason = 'admin-role';
+          }
+        }
+      }
+    }
+
+    if (!authorized) {
       return json({ error: 'forbidden' }, 403);
     }
+    console.info('[smart-engine] authorized via ' + authReason);
 
     const sender = await createSender();
     if (!sender) {

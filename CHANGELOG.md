@@ -2,7 +2,24 @@
 
 **التطبيق الرسمي لطلاب الطب في سوريا**
 
-⬇️ [تحميل v4.2.0](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+⬇️ [تحميل v4.3.0](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+
+## ✨ v4.3.0 — إصلاح الإشعارات من الجذر + اختبار المحرّكات
+
+- **حفظ رمز FCM فعلياً**: أصبح `supabaseClient` متاحاً على `window` (كان
+  `const` فقط، لذلك فشل الحفظ بصمت وبقي `profiles.fcm_token` فارغاً)، مع
+  تحديث مباشر للصفّ، وإعادة محاولة كل ثانيتين حتى تجهز الجلسة، وحفظ الرمز
+  محلياً لاستعادته بعد إعادة التشغيل. أُزيل `upsert` من العميل لأنه كان
+  يصطدم بسياسة INSERT غير الموجودة.
+- **إصلاح CORS و504**: دالتا `send-test-notification` و
+  `send-update-notification` تردّان على `OPTIONS` فوراً بـ200 مع ترويسات
+  CORS كاملة (بما فيها `x-release-secret`)، ولم يعد الزرّ ينتظر دقيقتين.
+  كما تم تفعيل FCM v1 عبر سرّ حساب الخدمة في Supabase Vault.
+- **واجهة نظيفة**: أُزيلت كل تنبيهات `alert()` التشخيصية، وزر الإشعار
+  التجريبي يعرض حالة تحميل ثم Toast بالنجاح أو السبب الحقيقي للفشل.
+- **اختبار المحرّكات**: زر لتذكير محلي بعد 10 ثوانٍ، وزر لتشغيل المحرّك
+  الذكي يدوياً بصلاحية الأدمن، مع بقاء التذكير اليومي (8 مساءً) وتشغيل
+  cron التلقائي. الإصدار 4.3.0 (‏versionCode 23).
 
 ## ✨ v4.2.0 — تحديثات ثابتة عبر Supabase Storage
 

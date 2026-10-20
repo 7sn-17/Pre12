@@ -32,7 +32,7 @@ const DIST = path.join(ROOT, 'dist');
 
 // Bumped whenever app.js changes. The query string is what makes returning
 // visitors pick up the new router even though static JS is served immutable.
-const APP_VERSION = '4.2.0';
+const APP_VERSION = '4.3.0';
 const APP_JS = `app.js?v=${APP_VERSION}`;
 
 // ⭐ v4.2.0 — Supabase Storage: ملف APK ثابت الاسم يُستبدل عند كل إصدار.
@@ -341,7 +341,8 @@ const EXCLUDE_TOP = new Set([
 
 // Internal working notes (prompt*.txt) and any stray test file must never
 // be published either.
-const EXCLUDE_FILE = /^(prompt.*\.txt|.*\.(test|spec)\.js)$/i;
+const EXCLUDE_FILE =
+  /^(prompt.*\.txt|.*\.(test|spec)\.js|.*firebase-adminsdk.*\.json|service-account.*\.json)$/i;
 
 function copyAssets() {
   const entries = fs.readdirSync(ROOT, { withFileTypes: true });

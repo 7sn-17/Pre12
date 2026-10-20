@@ -201,9 +201,14 @@ async function syncProfileAvatar(user) {
       payload.full_name = user.user_metadata.full_name;
     }
 
+    // ⭐ v4.3.0 — update only. Profile rows are created by the
+    //   handle_new_user trigger (SECURITY DEFINER); a client-side upsert
+    //   needs an INSERT policy and logged "new row violates row-level
+    //   security policy for table profiles" on every login.
     var result = await supabaseClient
       .from('profiles')
-      .upsert(payload, { onConflict: 'id' })
+      .update(payload)
+      .eq('id', userId)
       .select('*')
       .maybeSingle();
 
