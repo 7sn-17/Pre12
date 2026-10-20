@@ -1593,8 +1593,14 @@ opacity: 0;
       }
     }
 
-    function resetSorting() {
-      if (!confirm('هل تريد مسح بيانات فرزي؟')) return;
+    async function resetSorting() {
+      const confirmed = await showCustomConfirm(
+        'مسح بيانات الفرز',
+        'هل تريد مسح بيانات الفرز؟',
+        null,
+        { confirmText: 'مسح', cancelText: 'إلغاء', type: 'warning', danger: true }
+      );
+      if (!confirmed) return;
       document.getElementById('inputS1').value = '';
       document.getElementById('inputS2').value = '';
       document.getElementById('inputBac').value = '';
@@ -1780,8 +1786,14 @@ opacity: 0;
       showToast('تمت إضافة الفصل');
     }
 
-    function deleteArchive(id) {
-      if (!confirm('هل تريد حذف هذا الفصل من السجل؟')) return;
+    async function deleteArchive(id) {
+      const confirmed = await showCustomConfirm(
+        'حذف الفصل',
+        'هل تريد حذف هذا الفصل من السجل؟',
+        null,
+        { confirmText: 'حذف', cancelText: 'إلغاء', type: 'warning', danger: true }
+      );
+      if (!confirmed) return;
       archiveData = archiveData.filter(s => s.id !== id);
       saveArchive();
       renderArchive();

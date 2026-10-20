@@ -27,7 +27,7 @@
   var APP_PAGES = {
     'index.html': 1, 'subject.html': 1, 'viewer.html': 1, 'notes.html': 1,
     'goals.html': 1, 'my-lectures.html': 1, 'all-files.html': 1,
-    'tools.html': 1, 'gpa.html': 1, 'admin.html': 1, 'plans.html': 1,
+    'gpa.html': 1, 'admin.html': 1, 'plans.html': 1,
     'progress.html': 1
   };
 
@@ -766,6 +766,23 @@
 
   // ⭐ راقب تبديل الثيم لإضافة انتقال ناعم في كل الصفحات.
   watchThemeChanges();
+
+  // --------------------------------------------------------------------------
+  // ⭐⭐ تأكيد البريد المعلّق — لا يضيع أبداً
+  // --------------------------------------------------------------------------
+  // المشكلة: يفتح المستخدم تطبيق البريد → يتجمّد التطبيق → عند العودة
+  // يعيد أندرويد بناء الـ WebView فتُفتح الصفحة الرئيسية (index.html)
+  // وتضيع صفحة الرمز. الحل: نحفظ البريد في localStorage ونُعيده إلى
+  // صفحة الرمز عند كل إقلاع حتى التأكيد ينجح.
+  (function restorePendingVerification() {
+    try {
+      var email = (localStorage.getItem('pending_verification') || '').trim();
+      if (!email) return;
+      var here = (location.pathname || '').split('/').pop() || 'index.html';
+      if (here === 'confirm.html') return;      // ⭐ نحن في صفحة الرمز أصلاً
+      location.replace('confirm.html?email=' + encodeURIComponent(email));
+    } catch (e) {}
+  })();
 
   // Public API (also handy for JS-driven redirects)
   window.MedApp = {

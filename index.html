@@ -14,6 +14,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="theme-init.js"></script>
+<!-- ⭐ النوافذ المنبثقة المخصّصة — بديل alert()/confirm() -->
+<script src="ui.js"></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="المنصة الطبية">
@@ -306,6 +308,115 @@
   .app-container {
     padding-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
   }
+
+  /* ============================================================
+     ⭐⭐ النوافذ المنبثقة المخصّصة (Custom Alerts / Modals)
+     ------------------------------------------------------------
+     تحلّ محل alert() و confirm() الأصليين في أندرويد.
+     ════════════════════════════════════════════════════════════ */
+  .medapp-ui-root {
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    pointer-events: none;
+  }
+  .medapp-ui-root.open { pointer-events: auto; }
+
+  .medapp-ui-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 22px;
+    background: rgba(3, 10, 8, 0.68);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    opacity: 0;
+    transition: opacity 0.22s ease;
+  }
+  [data-theme="light"] .medapp-ui-overlay { background: rgba(15, 23, 42, 0.42); }
+  .medapp-ui-root.open .medapp-ui-overlay { opacity: 1; }
+
+  .medapp-ui-card {
+    width: 100%;
+    max-width: 400px;
+    padding: 26px 22px 20px;
+    border-radius: 24px;
+    text-align: center;
+    background: var(--bg-solid, #0d221a);
+    border: 1px solid var(--border-card, rgba(16, 185, 129, 0.18));
+    box-shadow: 0 30px 80px -24px rgba(0, 0, 0, 0.65);
+    transform: translateY(16px) scale(0.94);
+    opacity: 0;
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease;
+  }
+  .medapp-ui-root.open .medapp-ui-card { transform: translateY(0) scale(1); opacity: 1; }
+
+  .medapp-ui-icon {
+    width: 62px;
+    height: 62px;
+    margin: 0 auto 14px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--medapp-ui-tone, var(--medapp-blue, #60a5fa)) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--medapp-ui-tone, var(--medapp-blue, #60a5fa)) 38%, transparent);
+    color: var(--medapp-ui-tone, var(--medapp-blue, #60a5fa));
+  }
+  .medapp-ui-icon i { width: 28px; height: 28px; }
+
+  .medapp-ui-title {
+    font-size: 1.06rem;
+    font-weight: 900;
+    color: var(--text-primary, #f0fdf4);
+    line-height: 1.5;
+  }
+  .medapp-ui-message {
+    margin-top: 8px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    line-height: 1.8;
+    color: var(--text-secondary, #94a3b8);
+  }
+  .medapp-ui-actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+  }
+  .medapp-ui-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-radius: 13px;
+    border: 1px solid var(--border-card, rgba(16, 185, 129, 0.18));
+    background: var(--bg-elevated, #102a22);
+    color: var(--text-primary, #f0fdf4);
+    font-family: inherit;
+    font-size: 0.84rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  }
+  .medapp-ui-btn:hover { transform: translateY(-2px); }
+  .medapp-ui-btn:active { transform: translateY(0) scale(0.98); }
+  .medapp-ui-btn.primary {
+    border: none;
+    background: linear-gradient(135deg, var(--accent-emerald, #10b981), var(--accent-dark, #059669));
+    color: #fff;
+    box-shadow: 0 10px 26px -14px rgba(16, 185, 129, 0.8);
+  }
+  .medapp-ui-btn.danger {
+    border: none;
+    background: linear-gradient(135deg, #ef4444, #b91c1c);
+    color: #fff;
+    box-shadow: 0 10px 26px -14px rgba(239, 68, 68, 0.8);
+  }
+  .medapp-ui-btn.ghost { background: transparent; color: var(--text-secondary, #94a3b8); }
 
   /* ============================================================
      نافذة "سجّل الدخول" (وضع الزائر) — مشتركة بين كل الصفحات
@@ -5023,11 +5134,131 @@ i.fab {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+  /* ============================================================
+     ⭐⭐ شاشة البداية المتحرّكة (Phase 20)
+     ------------------------------------------------------------
+     تغطّي التطبيق بالكامل لحظةً، تنبض بالسمّاعة ��الاسم،
+     ثم تختفي بعد ثانيتين. تُعرض مرّة واحدة فقط في الجلسة
+     (sessionStorage) — لا تتكرّر مع التنقّل الداخلي.
+     ============================================================ */
+  .medapp-splash {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    background:
+      radial-gradient(circle at 50% 36%, rgba(16, 185, 129, 0.16), transparent 58%),
+      linear-gradient(160deg, #0a2019 0%, #06110d 58%, #040d0a 100%);
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.55s ease, visibility 0.55s ease;
+  }
+  .medapp-splash[hidden] { display: none; }
+  .medapp-splash.is-hiding {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .medapp-splash-logo {
+    width: 128px;
+    height: 128px;
+    border-radius: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(5, 150, 105, 0.08));
+    border: 1px solid rgba(16, 185, 129, 0.32);
+    box-shadow: 0 0 44px -8px rgba(16, 185, 129, 0.45);
+    animation: splashPulse 2s ease-in-out infinite;
+  }
+  .medapp-splash-logo svg {
+    width: 76px;
+    height: 76px;
+    color: #34d399;
+    filter: drop-shadow(0 0 14px rgba(52, 211, 153, 0.65));
+  }
+  .medapp-splash-title {
+    font-size: 1.45rem;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    color: #f0fdf4;
+    text-shadow: 0 0 26px rgba(16, 185, 129, 0.55);
+    animation: splashPulse 2s ease-in-out infinite;
+  }
+  .medapp-splash-sub {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: rgba(148, 163, 184, 0.85);
+    animation: splashPulse 2s ease-in-out infinite;
+    animation-delay: 0.25s;
+  }
+  @keyframes splashPulse {
+    0%, 100% { transform: scale(1);    opacity: 0.88; }
+    50%      { transform: scale(1.07); opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .medapp-splash-logo,
+    .medapp-splash-title,
+    .medapp-splash-sub { animation: none; }
+  }
   </style>
 </head>
 <body>
 
+  <!-- ⭐⭐ شاشة البداية المتحرّكة — تُعرض مرّة واحدة في الجلسة -->
+  <div class="medapp-splash" id="medappSplash" hidden aria-hidden="true">
+    <div class="medapp-splash-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M5.2 3.4 L5.2 9.6"></path>
+        <path d="M10.8 3.4 L10.8 9.6"></path>
+        <path d="M5.2 9.6 C5.2 13.4 10.8 13.4 10.8 9.6"></path>
+        <path d="M8 13.2 L8 15.6 C8 18.6 10.4 20.2 13.4 20.2 L15.4 20.2"></path>
+        <circle cx="18.6" cy="17.2" r="3.4"></circle>
+      </svg>
+    </div>
+    <div class="medapp-splash-title">المنصة الطبية</div>
+    <div class="medapp-splash-sub">السنة التحضيرية</div>
+  </div>
 
+  <script src="app.js?v=2.9.0"></script>
+<script>
+
+    // ⭐⭐ شاشة البداية — تظهر مرّة واحدة في الجلسة فقط
+    (function initSplash() {
+      var splash = document.getElementById('medappSplash');
+      if (!splash) return;
+
+      var seen = false;
+      try { seen = sessionStorage.getItem('medapp_splash_seen') === '1'; } catch (e) {}
+
+      if (seen) {
+        // ⭐ سبق أن رأيناها — نُزيلها فوراً
+        if (splash.parentNode) splash.parentNode.removeChild(splash);
+        return;
+      }
+
+      try { sessionStorage.setItem('medapp_splash_seen', '1'); } catch (e) {}
+
+      // ⭐ نظهرها الآن
+      splash.removeAttribute('hidden');
+      splash.setAttribute('aria-hidden', 'false');
+
+      // ⭐ بعد ثانيتين: تلاشٍ ناعم ثم إزالة
+      setTimeout(function () {
+        splash.classList.add('is-hiding');
+        setTimeout(function () {
+          if (splash.parentNode) splash.parentNode.removeChild(splash);
+        }, 650);
+      }, 2000);
+    })();
+  
+</script>
 
   <!-- الهيدر -->
   <header id="header">
@@ -5346,22 +5577,6 @@ i.fab {
         <i data-lucide="chevron-left"></i>
       </div>
     </a>
-
-<!-- صندوق أدواتي - جديد -->
-<a href="tools.html" class="study-card" style="animation-delay: 0.12s">
-  <div class="study-card-icon" style="background: rgba(139, 92, 246, 0.15); border-color: rgba(139, 92, 246, 0.35); color: var(--medapp-violet);">
-    <i data-lucide="toolbox"></i>
-  </div>
-  <div class="study-card-content">
-    <div class="study-card-title">
-      <span>صندوق أدواتي</span>
-  </div>
-    <div class="study-card-desc">تطبيقات مختارة بعناية لمساعدتك في الدراسة</div>
-  </div>
-  <div class="study-card-arrow">
-    <i data-lucide="chevron-left"></i>
-  </div>
-</a>
 
 <!-- محاضراتي -->
 <a href="my-lectures.html" class="study-card" style="animation-delay: 0.2s">
@@ -5849,8 +6064,7 @@ i.fab {
 <script src="notifications.js"></script>
 
 
-  <script src="app.js?v=2.8.0"></script>
-<script>
+  <script>
 
     lucide.createIcons();
 
@@ -6453,8 +6667,15 @@ if (adminItem && (role === 'admin' || role === 'moderator')) {
     }
 
     async function handleLogout() {
-      if (!confirm('هل تريد تسجيل الخروج؟')) return;
-      
+      // ⭐ نافذة التأكيد المخصّصة (بديل confirm() الأصلي)
+      const confirmed = await showCustomConfirm(
+        'تسجيل الخروج',
+        'هل تريد تسجيل الخروج من حسابك؟ ستبقى بياناتك على الجهاز محفوظة.',
+        null,
+        { confirmText: 'تسجيل الخروج', cancelText: 'إلغاء', type: 'warning', danger: true }
+      );
+      if (!confirmed) return;
+
       const result = await signOut();
       if (result.success) {
         showToast('تم تسجيل الخروج');
@@ -7185,14 +7406,26 @@ async function loadFavoritedFiles() {
     }
 
     async function removeDownloaded(fileId) {
-      if (!confirm('هل تريد حذف هذا الملف من التنزيلات؟')) return;
+      const confirmed = await showCustomConfirm(
+        'حذف الملف',
+        'هل تريد حذف هذا الملف من التنزيلات؟',
+        null,
+        { confirmText: 'حذف', cancelText: 'إلغاء', type: 'warning', danger: true }
+      );
+      if (!confirmed) return;
       await deleteDownloadedFile(fileId);
       await loadDownloadedFiles();
       showToast('تم حذف الملف', 'info');
     }
 
     async function removeFavoriteFromList(fileId) {
-      if (!confirm('هل تريد إزالة هذا الملف من المحفوظات؟')) return;
+      const confirmed = await showCustomConfirm(
+        'إزالة من المحفوظات',
+        'هل تريد إزالة هذا الملف من المحفوظات؟',
+        null,
+        { confirmText: 'إزالة', cancelText: 'إلغاء', type: 'warning', danger: true }
+      );
+      if (!confirmed) return;
       if (typeof removeCloudFavorite === 'function') {
         await removeCloudFavorite(fileId);
       } else {
@@ -7238,7 +7471,13 @@ async function openFileInViewer(fileId) {
 }
 
     async function clearAllDownloaded() {
-      if (!confirm('هل تريد مسح جميع الملفات المحمّلة؟ لن يعمل التطبيق بدون إنترنت.')) return;
+      const confirmed = await showCustomConfirm(
+        'مسح الملفات المحمّلة',
+        'هل تريد مسح جميع الملفات المحمّلة؟ لن يعمل التطبيق بدون إنترنت.',
+        null,
+        { confirmText: 'مسح الكل', cancelText: 'إلغاء', type: 'warning', danger: true }
+      );
+      if (!confirmed) return;
       await clearAllDownloadedFiles();
       showToast('تم مسح جميع الملفات المحمّلة');
       if (document.getElementById('favoritesView').classList.contains('active')) {

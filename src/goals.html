@@ -1179,14 +1179,21 @@ function getDeadlineInfo(dateString) {
     // ============================================
     // حذف الهدف
     // ============================================
-    function deleteGoal(goalId) {
-      if (!confirm('هل تريد حذف هذا الهدف؟')) return;
-      
+    async function deleteGoal(goalId) {
+      // ⭐ نافذة التأكيد المخصّصة (بديل confirm() الأصلي)
+      const confirmed = await showCustomConfirm(
+        'حذف الهدف',
+        'هل تريد حذف هذا الهدف؟',
+        null,
+        { confirmText: 'حذف', cancelText: 'إلغاء', type: 'warning', danger: true }
+      );
+      if (!confirmed) return;
+
       goalsState.goals = goalsState.goals.filter(g => g.id !== goalId);
       saveGoalsToStorage();
       renderGoals();
       updateProgress();
-      
+
       showToast('تم حذف الهدف', 'info');
     }
 

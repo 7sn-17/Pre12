@@ -1875,6 +1875,57 @@ the DOM and it had no real fallback. Now:
 - the CI step *Verify the web assets* lists the folder and fails if a
   file is absent.
 
+### 5.17 Phase 20 — v2.9.0 (the tools are gone, the code survives, the polish)
+
+#### The "Tools" feature was removed completely
+
+`src/tools.html`, the built `tools.html` and the `icons/` folder are
+deleted, and every reference is gone: `build.js` (the page list **and**
+the icons check), `app.js` (`APP_PAGES`), `sw.js` (the precache) and the
+"صندوق أدواتي" card in `index.html`.
+
+#### ⭐⭐ The verification code can no longer be lost
+
+The problem: the user opens the mail app → Android freezes the app →
+on return the WebView is rebuilt and **index.html** is shown, so the
+code page (and the code) is gone.
+
+| Where | What |
+|---|---|
+| `auth.js → signUp()` | `localStorage['pending_verification'] = email` |
+| `app.js → restorePendingVerification()` | on every launch, if the flag exists → `location.replace('confirm.html?email=…')` |
+| `auth.js → verifyOtpCode()` | the flag is removed **only** after a successful verification |
+| `confirm.html` | a "تخطّي الآن" button that clears the flag and leaves |
+
+The guard never fires while the user is already on `confirm.html`, and
+it uses `location.replace` so the Back button can never loop.
+
+#### The custom alerts
+
+`ui.js` (loaded by `partials/head.html` on every page) replaces the
+native `alert()` / `confirm()`:
+
+```js
+showCustomAlert(title, message, type)        // info | success | error | warning | question
+showCustomConfirm(title, message, onConfirm, options)
+```
+
+`options` accepts `confirmText`, `cancelText`, `type` and `danger`.
+The modal is theme-aware (it uses the CSS variables), animated, closes
+with Esc / the backdrop, and moves the focus to the main button. All
+seven native `confirm()` calls (logout, delete a download, remove a
+favourite, clear the downloads, delete a goal, reset the GPA sorting,
+delete a chapter) now use it.
+
+#### The animated splash
+
+`index.html` opens with a full-screen overlay (`z-index: 99999`, a dark
+green gradient) holding the stethoscope SVG and the app name. The logo
+and the text **pulse with a green glow** for two seconds
+(`filter: drop-shadow` + `box-shadow`), then the overlay fades out and
+is removed. `sessionStorage['medapp_splash_seen']` keeps it to **once
+per session** — it never comes back on an internal navigation.
+
 ## 12. Cheatsheet
 
 ### Commands

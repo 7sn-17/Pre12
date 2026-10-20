@@ -545,9 +545,22 @@ sw: true
 
         <div class="otp-message" id="otpMessage"></div>
 
+        <!-- ⭐ تنبيه الرسائل المزعجة -->
+        <div class="info-text" style="margin-top: 10px; font-size: 0.74rem; line-height: 1.7;">
+          <i data-lucide="info" style="width: 14px; height: 14px; vertical-align: -2px;"></i>
+          إذا لم تجد الرسالة في صندوق الوارد، يرجى البحث في مجلد الرسائل المزعجة (Spam).
+        </div>
+
         <button class="resend-btn" id="resendCodeBtn" onclick="resendOtpCode()" disabled>
           <i data-lucide="refresh-cw" style="width: 15px; height: 15px;"></i>
           <span id="resendCodeLabel">إعادة الإرسال بعد 60 ثانية</span>
+        </button>
+
+        <!-- ⭐ تخطّي (يخرج من صفحة الرمز نهائياً) -->
+        <button class="resend-btn" id="skipOtpBtn" onclick="skipOtpVerification()"
+                style="margin-top: 8px; color: var(--text-secondary, #94a3b8); border-color: var(--border-card);">
+          <i data-lucide="skip-forward" style="width: 15px; height: 15px;"></i>
+          <span>تخطّي الآن</span>
         </button>
 
         <a href="login.html#register" class="secondary-btn" style="margin-top: 10px;">
@@ -827,6 +840,9 @@ sw: true
 
         setOtpMessage('تم تأكيد حسابك بنجاح ✅', 'success');
         try { localStorage.removeItem(PENDING_EMAIL_KEY); } catch (e) {}
+        // ⭐⭐ نمسح علامة "بانتظار التأكيد" — لن يُعاد التوجيه بعد الآن
+        try { localStorage.removeItem('pending_verification'); } catch (e) {}
+        try { sessionStorage.removeItem('pending_verification'); } catch (e) {}
 
         // ⭐ نجاح → الرئيسية
         setTimeout(function () {
@@ -890,6 +906,15 @@ sw: true
       }
 
       startResendTimer(RESEND_SECONDS);
+    }
+
+    /** ⭐ تخطّي التحقق — نمسح العلامة ونخرج */
+    function skipOtpVerification() {
+      try { localStorage.removeItem('pending_verification'); } catch (e) {}
+      try { sessionStorage.removeItem('pending_verification'); } catch (e) {}
+      try { localStorage.removeItem('medapp_pending_email'); } catch (e) {}
+      try { sessionStorage.removeItem('medapp_pending_email'); } catch (e) {}
+      window.location.href = 'index.html';
     }
 
     /** ⭐ فتح شاشة إدخال الرمز */

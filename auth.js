@@ -743,9 +743,15 @@ async function signUp(email, password, fullName) {
     
     // ⭐⭐ نحفظ البريد الذي ينتظر التأكيد — صفحة confirm.html
     //    تقرأه لتعرض خانات الرمز (6 أرقام) تلقائياً.
+    //
+    // ⭐⭐ "pending_verification" هو العلامة التي تدوم بين جلسات
+    //    التطبيق: إذا ذهب المستخدم إلى تطبيق البريد، ضُغطت ذاكرة
+    //    الهاتف، فعادت الصفحة الرئيسية عند العودة — فنُعيده إلى
+    //    صفحة الرمز تلقائياً (انظر app.js).
     if (!data.session) {
       try { localStorage.setItem('medapp_pending_email', cleanEmail); } catch (e) {}
       try { sessionStorage.setItem('medapp_pending_email', cleanEmail); } catch (e) {}
+      try { localStorage.setItem('pending_verification', cleanEmail); } catch (e) {}
     }
 
     return { 
@@ -859,7 +865,10 @@ async function verifyOtpCode(email, code, type = 'signup') {
     });
 
     if (error) throw error;
+    // ⭐ نمسح العلامات — الحساب تأكّد فلا داعي للعودة لصفحة الرمز
     try { localStorage.removeItem('medapp_pending_email'); } catch (e) {}
+    try { localStorage.removeItem('pending_verification'); } catch (e) {}
+    try { sessionStorage.removeItem('pending_verification'); } catch (e) {}
     return { success: true, user: data.user, session: data.session };
   } catch (err) {
     return { success: false, error: translateAuthError(err && err.message) };
