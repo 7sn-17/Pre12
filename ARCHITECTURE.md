@@ -2105,6 +2105,28 @@ also documents every previous version.
 - The custom animated splash screen was **deleted entirely** (markup,
   CSS, animation and the sessionStorage flag).
 
+### 5.27 Phase 43b — v3.8.0 (the markup that broke the layout)
+
+Two real markup bugs were found while auditing the pages:
+
+| Bug | Effect | Fix |
+|---|---|---|
+| the delete-account button had been injected **inside the first nav button** | the navigation markup was malformed — the home button swallowed the button's markup and the bar rendered broken | the button is back in the Danger Zone, below the logout |
+| `login.html` was missing **two `</div>`** (the auth-card and the auth-container were never closed) | the login page's structure was broken and its layout collapsed | the two closing tags are restored |
+
+Both were invisible in a diff and only showed up in a **structural
+audit**, which is now part of the build:
+
+```js
+// build.js — verifyMarkupBalance()
+const openDiv = (markup.match(/<div\b/g) || []).length;
+const closeDiv = (markup.match(/<\/div>/g) || []).length;
+if (openDiv !== closeDiv) errors.push(`unbalanced <div> …`);
+```
+
+The build now **exits 1** when a page is unbalanced, so a stray tag can
+never reach a release again. All 21 pages are perfectly balanced.
+
 ### 5.26 Phase 43 — v3.8.0 (the layout, the token, and the stale JS)
 
 #### ⭐⭐⭐ The real cause of "the UI is still broken after the update"
