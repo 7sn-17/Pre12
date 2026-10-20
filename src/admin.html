@@ -2628,8 +2628,8 @@ function renderFiles() {
 
     // زر المعاينة (يفتح حسب النوع)
     const previewAction = isExternal
-      ? `window.open('${file.external_url || file.file_url}', '_blank')`
-      : `window.open('${file.file_url}', '_blank')`;
+      ? `openExternal('${file.external_url || file.file_url}')`
+      : `openExternal('${file.file_url}')`;
 
     const item = document.createElement('div');
     item.className = 'list-item';

@@ -265,19 +265,29 @@ jobs:
           done
           echo "✅ the APK structure is complete"
 
+      - name: 🏷️ Rename the APK for production
+        # ⭐ الاسم النهائي للنشر: Medical_Platform_v<version>.apk
+        run: |
+          cd android/app/build/outputs/apk/release
+          NEW_NAME="Medical_Platform_v${{ steps.version.outputs.version }}.apk"
+          mv app-release.apk "$NEW_NAME"
+          ls -l "$NEW_NAME"
+          echo "::notice::the APK is published as $NEW_NAME"
+
       - name: 🔐 Publish the SHA-256 checksum
         # ⭐ lets the user verify their download (a truncated download
         #    is the usual cause of "there is a problem parsing the package").
         run: |
           cd android/app/build/outputs/apk/release
-          sha256sum app-release.apk | tee app-release.apk.sha256
-          echo "APK_SHA256=$(cut -d' ' -f1 app-release.apk.sha256)" >> "$GITHUB_ENV"
+          NEW_NAME="Medical_Platform_v${{ steps.version.outputs.version }}.apk"
+          sha256sum "$NEW_NAME" | tee "$NEW_NAME.sha256"
+          echo "APK_SHA256=$(cut -d' ' -f1 "$NEW_NAME.sha256")" >> "$GITHUB_ENV"
 
       - name: 📤 Upload the APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
-          path: android/app/build/outputs/apk/release/app-release.apk
+          path: android/app/build/outputs/apk/release/Medical_Platform_v${{ steps.version.outputs.version }}.apk
           if-no-files-found: error
 
       - name: 🚀 Publish the GitHub Release
@@ -287,8 +297,8 @@ jobs:
           #    (وإن كان موجوداً، يُحدَّث الـ Release ويُستبدل الملف).
           tag_name: v${{ steps.version.outputs.version }}
           files: |
-            android/app/build/outputs/apk/release/app-release.apk
-            android/app/build/outputs/apk/release/app-release.apk.sha256
+            android/app/build/outputs/apk/release/Medical_Platform_v${{ steps.version.outputs.version }}.apk
+            android/app/build/outputs/apk/release/Medical_Platform_v${{ steps.version.outputs.version }}.apk.sha256
           name: المنصة الطبية — v${{ steps.version.outputs.version }}
           body: |
             ## 📱 المنصة الطبية — نسخة Android v${{ steps.version.outputs.version }}
@@ -297,8 +307,8 @@ jobs:
 
             | الملف | الوصف |
             |---|---|
-            | `app-release.apk` | نسخة الإنتاج الموقّعة — قابلة للتثبيت والتحديث |
-            | `app-release.apk.sha256` | بصمة SHA-256 للتحقّق من أن الملف نُزّل كاملاً |
+            | `Medical_Platform_v${{ steps.version.outputs.version }}.apk` | نسخة الإنتاج الموقّعة — قابلة للتثبيت والتحديث |
+            | `Medical_Platform_v${{ steps.version.outputs.version }}.apk.sha256` | بصمة SHA-256 للتحقّق من أن الملف نُزّل كاملاً |
 
             **الشعار (SHA-256):**
             ```
@@ -306,8 +316,8 @@ jobs:
             ```
 
             **التثبيت على الهاتف:**
-            1. نزّل `app-release.apk` إلى جهازك.
-            2. تحقّق من البصمة (اختياري): `sha256sum app-release.apk`.
+            1. نزّل `Medical_Platform_v${{ steps.version.outputs.version }}.apk` إلى جهازك.
+            2. تحقّق من البصمة (اختياري): `sha256sum Medical_Platform_v${{ steps.version.outputs.version }}.apk`.
             3. افتحه من مدير الملفات.
             4. اسمح للتثبيت من هذا المصدر، ثم أكّد التثبيت.
 
@@ -327,8 +337,8 @@ jobs:
         run: |
           sleep 15
           mkdir -p /tmp/verify && cd /tmp/verify
-          gh release download "v${{ steps.version.outputs.version }}" --repo "${{ github.repository }}" --pattern "app-release.apk" --dir . --clobber
-          ACTUAL=$(sha256sum app-release.apk | cut -d' ' -f1)
+          gh release download "v${{ steps.version.outputs.version }}" --repo "${{ github.repository }}" --pattern "Medical_Platform_v*.apk" --dir . --clobber
+          ACTUAL=$(sha256sum Medical_Platform_v*.apk | cut -d' ' -f1)
           echo "published : $ACTUAL"
           echo "expected  : ${{ env.APK_SHA256 }}"
           if [ "$ACTUAL" = "${{ env.APK_SHA256 }}" ]; then

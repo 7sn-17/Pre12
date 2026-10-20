@@ -1978,6 +1978,71 @@ reload.
 `ui.js` now has three modals: `showCustomAlert()`, `showCustomConfirm()`
 and `showCustomPrompt()`.
 
+### 5.19 Phase 23 — v3.0.0 (the final native transformation)
+
+This release removes the last web dependencies and renames the
+published artifact.
+
+#### The search input (it was invisible)
+
+`.search-modal-input` (and `.search-input`) now declare **every** visual
+property explicitly — `background-color: var(--bg-card)`, `border:
+2px solid var(--accent-emerald)`, `border-radius: 12px`, `padding: 12px
+20px`, `color: var(--text-primary)`, `caret-color`, plus
+`-webkit-text-fill-color` (the WebView needs it, otherwise the text can
+render transparent). The placeholder is now *"ابحث هنا..."*.
+
+#### The native share
+
+| What | How |
+|---|---|
+| the streak | `Share.share({ title, text, url })` with the message *"🔥 حماسي يشتعل! أنا في سلسلة إنجاز لمدة {days} أيام على المنصة الطبية 📚."* and the direct APK link `https://github.com/7sn-17/Pre12/releases/latest/download/Medical_Platform_v3.0.0.apk` |
+| the images (محاضراتي) | `fetch` → `blob` → `Filesystem.writeFile({ directory: 'CACHE' })` → `Share.share({ url: fileUri })` — a new **مشاركة** button in the gallery toolbar |
+
+`@capacitor/share`, `@capacitor/filesystem` and `@capacitor/browser`
+are now part of the app (13 plugins in total).
+
+#### The progressive PDF viewer
+
+The blocking full-screen spinner is **gone**: the loader is now a slim,
+**non-blocking** bar at the top (`pointer-events: none`) — the document
+scrolls while the rest of the pages stream in. PDF.js already used
+`disableAutoFetch: true` + `rangeChunkSize: 65536`, so page 1 renders
+immediately and the `IntersectionObserver` pulls the next pages as you
+scroll.
+
+#### The streak freeze modal
+
+The confusing toast was replaced by a real modal: the streak sheet
+closes first (280 ms), then `showFreezeModal` explains *"استخدم
+التجميد لحماية سلسلتك إذا لم تستطع إنجاز مهام اليوم. لديك X تجميدات
+متبقية."* with **استخدام التجميد** / **إلغاء**. Confirming calls
+`consumeStreakFreeze(today)` and repaints the streak instantly.
+
+#### The no-web sweep
+
+All 16 `window.open(...)` calls (admin, all-files, index, my-lectures,
+subject, files.js) now go through `openExternal(url)` in `ui.js`, which
+uses **`Browser.open({ url })`** on the device and `window.open` on the
+web. Internal navigation is untouched (the SPA router).
+
+Google sign-in uses only `signInWithIdToken` inside the app, and every
+email confirmation uses the native deep link
+`com.pre12.medical://login-callback` ✓.
+
+#### ⭐ The production APK name
+
+The workflow renames the artifact before publishing it:
+
+```
+Medical_Platform_v<version>.apk        (e.g. Medical_Platform_v3.0.0.apk)
+Medical_Platform_v<version>.apk.sha256
+```
+
+The name is version-aware, the release body, the artifact and the
+"verify the published asset" step all use it, and the in-app share
+message links straight to it.
+
 ## 12. Cheatsheet
 
 ### Commands

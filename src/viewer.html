@@ -239,18 +239,55 @@ body {
   opacity: 0.5;
 }
 
-/* شاشة التحميل */
+/* ⭐⭐ شاشة التحميل — شريط علوي **غير حاجب** (Phase 23)
+   كانت تغطّي الشاشة كاملة وتمنع التمرير حتى ينتهي التحميل.
+   الآن: شريط صغير في الأعلى، التمرير يعمل دائماً، ويُخفى فور رسم
+   الصفحة الأولى. */
 .loading-overlay {
   position: fixed;
-  inset: 0;
-  background: var(--bg-main);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: auto;
+  height: auto;
+  background: transparent;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 18px;
+  gap: 10px;
+  padding: 10px 16px;
+  padding-top: calc(10px + env(safe-area-inset-top));
   z-index: 200;
+  /* ⭐ لا يحجب أي نقرة أو تمرير */
+  pointer-events: none;
   transition: opacity 0.35s, visibility 0.35s;
+}
+
+.loading-overlay .spinner {
+  width: 22px;
+  height: 22px;
+  border-width: 2px;
+}
+
+.loading-overlay .loading-text,
+.loading-overlay .loading-sub {
+  margin: 0;
+  padding: 0;
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--text-secondary, #94a3b8);
+}
+
+.loading-overlay .loading-sub { display: none; }
+
+/* ⭐ صندوق صغير حول النصّ */
+.loading-overlay .loading-text {
+  background: var(--bg-solid, #0d221a);
+  border: 1px solid var(--border-card, rgba(16, 185, 129, 0.18));
+  border-radius: 999px;
+  padding: 7px 14px;
+  box-shadow: 0 8px 24px -14px rgba(0, 0, 0, 0.6);
 }
 
 .loading-overlay.hidden {

@@ -3855,20 +3855,54 @@ i.fab {
 
     .search-modal-input-wrapper { flex: 1; position: relative; }
 
+    /* ⭐⭐ حقل البحث — كان غير مرئي (Phase 23)
+       نحدّد كل خصائصه صراحةً حتى لا يرث شيئاً غير مرئي. */
     .search-modal-input {
       width: 100%;
-      padding: 15px 50px 15px 50px;
-      border-radius: 16px;
-      background: var(--bg-card);
-      border: 1px solid var(--accent-emerald);
-      color: var(--text-primary);
+      padding: 12px 20px;
+      border-radius: 12px;
+      background-color: var(--bg-card, rgba(16, 34, 27, 0.68));
+      border: 2px solid var(--accent-emerald, #10b981);
+      color: var(--text-primary, #f0fdf4);
+      caret-color: var(--accent-emerald, #10b981);
       font-size: 0.95rem;
+      font-weight: 600;
+      line-height: 1.6;
       outline: none;
       font-family: inherit;
-      box-shadow: 0 0 0 4px var(--accent-glow);
+      -webkit-user-select: text;
+      user-select: text;
+      -webkit-text-fill-color: var(--text-primary, #f0fdf4);
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
     }
 
-    .search-modal-input::placeholder { color: var(--text-muted); }
+    .search-modal-input::placeholder {
+      color: var(--text-muted, #64748b);
+      -webkit-text-fill-color: var(--text-muted, #64748b);
+      opacity: 1;
+    }
+
+    .search-modal-input:focus {
+      border-color: var(--accent-light, #34d399);
+      background-color: var(--bg-card-hover, rgba(22, 48, 38, 0.92));
+      box-shadow: 0 0 0 4px var(--accent-glow, rgba(16, 185, 129, 0.25));
+    }
+
+    /* ⭐ حقل البحث العادي (شاشة المواد) — نفس المعالجة */
+    .search-input {
+      background-color: var(--bg-card, rgba(16, 34, 27, 0.68));
+      border: 2px solid var(--accent-emerald, #10b981);
+      border-radius: 12px;
+      padding: 12px 20px;
+      color: var(--text-primary, #f0fdf4);
+      caret-color: var(--accent-emerald, #10b981);
+      -webkit-text-fill-color: var(--text-primary, #f0fdf4);
+    }
+    .search-input::placeholder {
+      color: var(--text-muted, #64748b);
+      -webkit-text-fill-color: var(--text-muted, #64748b);
+      opacity: 1;
+    }
 
     .search-modal-input-wrapper .icon-search {
       position: absolute;
@@ -5172,7 +5206,7 @@ i.fab {
             type="text" 
             id="globalSearchInput"
             class="search-modal-input" 
-            placeholder="ابحث عن أي ملف..."
+            placeholder="ابحث هنا..."
             oninput="handleGlobalSearch(this.value)"
             autocomplete="off"
           >
@@ -5614,7 +5648,7 @@ function openLastActivity() {
       showToast('لا يوجد رابط لهذا الملف', 'error');
       return;
     }
-    window.open(url, '_blank', 'noopener,noreferrer');
+    openExternal(url);
     return;
   }
 
@@ -5637,7 +5671,7 @@ function openLastActivity() {
 
   // ⭐ أنواع أخرى → تبويب جديد
   if (activity.file_url) {
-    window.open(activity.file_url, '_blank', 'noopener,noreferrer');
+    openExternal(activity.file_url);
   }
 }
 
@@ -6346,7 +6380,7 @@ function openRecentFile(fileId) {
       showToast('لا يوجد رابط', 'error');
       return;
     }
-    window.open(url, '_blank', 'noopener,noreferrer');
+    openExternal(url);
     return;
   }
 
@@ -6359,7 +6393,7 @@ function openRecentFile(fileId) {
 
   // ⭐ أنواع أخرى → تبويب جديد
   if (file.file_url) {
-    window.open(file.file_url, '_blank', 'noopener,noreferrer');
+    openExternal(file.file_url);
   }
 }
 
@@ -6374,7 +6408,7 @@ function openRecentFile(fileId) {
       if ((typeof isExternalLinkFile === 'function' ? isExternalLinkFile(file) : file.source === 'link')) {
         const url = (typeof getShareableUrl === 'function') ? getShareableUrl(file) : (file.external_url || file.file_url);
         if (url) {
-          window.open(url, '_blank', 'noopener,noreferrer');
+          openExternal(url);
           return;
         }
         showToast('لا يمكن تحميل رابط خارجي — جرّب فتحه', 'info');
@@ -6788,7 +6822,7 @@ async function openFileInViewer(fileId) {
   if (file.source === 'link') {
     const url = file.external_url || file.file_url;
     if (url) {
-      window.open(url, '_blank', 'noopener,noreferrer');
+      openExternal(url);
       return;
     }
   }
@@ -6802,7 +6836,7 @@ async function openFileInViewer(fileId) {
 
   // ⭐ أنواع أخرى → تبويب جديد
   if (file.file_url) {
-    window.open(file.file_url, '_blank', 'noopener,noreferrer');
+    openExternal(file.file_url);
   }
 }
 
@@ -8199,14 +8233,85 @@ function showAbout() {
     /* ═══════════════════════════════════════════════════
        ⭐ التجميد (مفهوم بصري) + المشاركة
        ═══════════════════════════════════════════════════ */
-    function showStreakFreezeHint() {
+    /**
+     * ⭐⭐ نافذة التجميد (Phase 23).
+     *
+     * تُفتح **بعد** إغلاق ورقة السلسلة، وتشرح ما هو التجميد،
+     * وتعرض زرّي "استخدام التجميد" و "إلغاء".
+     */
+    async function showStreakFreezeHint() {
+      // ⭐ نغلق ورقة السلسلة أولاً ثم نفتح النافذة (حتى لا تتداخل)
+      closeStreakSheet();
+      await new Promise(function (resolve) { setTimeout(resolve, 280); });
+
       var data = streakState.data;
       var remaining = data ? Number(data.freezeRemaining || 0) : 0;
       var limit = data ? Number(data.freezeLimit || 2) : 2;
-      var message = remaining > 0
-        ? '🧊 لديك ' + remaining + ' تجميد من ' + limit + ' هذا الشهر — يُستهلك تلقائياً إذا فاتتك يوم في السلسلة.'
-        : '🧊 استهلكت تجميدات هذا الشهر — ستعود في الشهر القادم.';
-      if (typeof showToast === 'function') showToast(message, 'info');
+      var today = streakTodayKey();
+
+      var message;
+      if (remaining > 0) {
+        message = 'استخدم التجميد لحماية سلسلتك إذا لم تستطع إنجاز مهام اليوم.<br>' +
+                  'لديك <strong>' + remaining + '</strong> تجميد' +
+                  (limit > 1 ? ' متبقٍ من ' + limit + ' لهذا الشهر' : ' متبقٍ') + '.';
+      } else {
+        message = 'استهلكت تجميدات هذا الشهر — ستعود في الشهر القادم.<br>' +
+                  'لا يمكن استخدام التجميد الآن.';
+      }
+
+      var confirmed = false;
+      if (typeof showCustomConfirm === 'function') {
+        confirmed = await showCustomConfirm(
+          '🧊 تجميد السلسلة',
+          message,
+          null,
+          {
+            confirmText: remaining > 0 ? 'استخدام التجميد' : 'حسناً',
+            cancelText: 'إلغاء',
+            type: 'question',
+            danger: false
+          }
+        );
+      } else {
+        confirmed = window.confirm('استخدم التجميد لحماية سلسلتك؟');
+      }
+
+      if (!confirmed || remaining <= 0) return;
+
+      // ⭐ نستخدم التجميد لليوم
+      try {
+        if (typeof consumeStreakFreeze === 'function') {
+          var ok = await consumeStreakFreeze(today);
+          if (!ok) {
+            if (typeof showToast === 'function') {
+              showToast('تعذّر استخدام التجميد — تحقّق من رصيدك', 'error');
+            }
+            return;
+          }
+        } else {
+          // ⭐ احتياطي محلي
+          var key = 'medapp_streak_freezes_v1';
+          var days = [];
+          try {
+            var raw = localStorage.getItem(key);
+            var parsed = raw ? JSON.parse(raw) : [];
+            if (Array.isArray(parsed)) days = parsed;
+          } catch (e) {}
+          if (days.indexOf(today) === -1) {
+            days.push(today);
+            try { localStorage.setItem(key, JSON.stringify(days)); } catch (e) {}
+          }
+        }
+
+        // ⭐ نُعيد الرسم فوراً
+        paintStreak(streakLocalData());
+        if (typeof showToast === 'function') {
+          showToast('🧊 استُخدم التجميد — سلسلتك محمية اليوم', 'success');
+        }
+      } catch (e) {
+        console.warn('[streak] the freeze could not be used:', e);
+        if (typeof showToast === 'function') showToast('تعذّر استخدام التجميد', 'error');
+      }
     }
 
     /* ═══════════════════════════════════════════════════
@@ -8215,27 +8320,47 @@ function showAbout() {
     function streakShareText() {
       var data = streakState.data;
       var days = data ? Number(data.current || 0) : 0;
-      return '🔥 حماسي يشتعل! أنا الآن في سلسلة إنجاز لمدة ' + days +
-        ' أيام على المنصة الطبية 📚. انضم إليّ وذاكر معي! 👇';
+      return '🔥 حماسي يشتعل! أنا في سلسلة إنجاز لمدة ' + days +
+        ' أيام على المنصة الطبية 📚.';
     }
 
-    function shareStreak() {
-      var text = streakShareText();
+    // ⭐⭐ رابط التحميل المباشر — نشاركه مع السلسلة
+    var APP_DOWNLOAD_URL = 'https://github.com/7sn-17/Pre12/releases/latest/download/Medical_Platform_v3.0.0.apk';
 
-      // ⭐ المشاركة الأصلية إن كان الجهاز يدعمها
-      if (navigator.share) {
+    async function shareStreak() {
+      var text = streakShareText();
+      var Share = (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Share) || null;
+
+      // ⭐⭐ المشاركة الأصلية (@capacitor/share) — نشارك الرسالة + رابط الـ APK
+      if (Share && typeof Share.share === 'function') {
         try {
-          navigator.share({
+          await Share.share({
             title: 'سلسلة إنجازي — المنصة الطبية',
             text: text,
-            url: window.location.origin
-          }).catch(function (err) {
-            // إلغاء المستخدم لا يُعتبر خطأً
-            if (err && err.name === 'AbortError') return;
-            copyStreakText(text);
+            url: APP_DOWNLOAD_URL,
+            dialogTitle: 'شارك سلسلة إنجازك'
           });
           return;
-        } catch (e) {
+        } catch (err) {
+          // ⭐ إلغاء المستخدم لا يُعتبر خطأً
+          if (err && (err.message === 'Share canceled' || err.code === 'CANCELLED')) return;
+          console.warn('[share] the native share failed:', err);
+          copyStreakText(text);
+          return;
+        }
+      }
+
+      // ⭐ المتصفّح: Web Share API ثم النسخ
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: 'سلسلة إنجازي — المنصة الطبية',
+            text: text,
+            url: APP_DOWNLOAD_URL
+          });
+          return;
+        } catch (err) {
+          if (err && err.name === 'AbortError') return;
           copyStreakText(text);
           return;
         }

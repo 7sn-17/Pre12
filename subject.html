@@ -1843,7 +1843,7 @@ header {
 <script src="notifications.js"></script>
 
 
-<script src="app.js?v=2.9.1"></script>
+<script src="app.js?v=3.0.0"></script>
 <script>
 
 /* ═══════════════════════════════════════════════════════
@@ -2516,7 +2516,7 @@ function openFile(fileId) {
       showToast('لا يوجد رابط لهذا الملف', 'error');
       return;
     }
-    window.open(url, '_blank', 'noopener,noreferrer');
+    openExternal(url);
     return;
   }
 
@@ -2536,7 +2536,7 @@ function openFile(fileId) {
     return;
   }
 
-  window.open(file.file_url, '_blank', 'noopener,noreferrer');
+  openExternal(file.file_url);
 }
 
 /* ═══════════════════════════════════════════════════════

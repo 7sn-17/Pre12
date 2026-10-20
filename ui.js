@@ -275,6 +275,44 @@
     });
   }
 
+  /**
+   * ⭐⭐⭐ يفتح رابطاً خارجياً — أصلياً في التطبيق (Browser.open)
+   *          وموبّاً على الويب (window.open).
+   *
+   * ⭐ هذه هي دالة "المسح بدون ويب": كل رابط خارجي في التطبيق
+   *   يُفتح في Custom Tab (Browser) بدل تبويب المتصفّح المدمج.
+   */
+  function openExternal(url) {
+    if (!url) return;
+    var target = String(url);
+    if (!/^(https?:|mailto:|tel:|geo:|sms:)/i.test(target)) {
+      // ⭐ رابط داخلي — نترك المتصفّح يتولّاه
+      try { global.location.href = target; } catch (e) {}
+      return;
+    }
+
+    var Browser = (global.Capacitor && global.Capacitor.Plugins && global.Capacitor.Plugins.Browser) || null;
+    if (Browser && typeof Browser.open === 'function') {
+      try {
+        var result = Browser.open({ url: target });
+        if (result && typeof result.catch === 'function') {
+          result.catch(function () { openExternalInWeb(target); });
+        }
+        return;
+      } catch (e) {}
+    }
+
+    openExternalInWeb(target);
+  }
+
+  function openExternalInWeb(url) {
+    try {
+      global.open(url, '_blank', 'noopener,noreferrer');
+    } catch (e) {
+      try { global.location.href = url; } catch (e2) {}
+    }
+  }
+
   function refreshIcons() {
     try {
       if (global.lucide && typeof global.lucide.createIcons === 'function') {
@@ -295,9 +333,11 @@
   global.showCustomAlert = showCustomAlert;
   global.showCustomConfirm = showCustomConfirm;
   global.showCustomPrompt = showCustomPrompt;
+  global.openExternal = openExternal;
   global.MedAppUI = {
     alert: showCustomAlert,
     confirm: showCustomConfirm,
-    prompt: showCustomPrompt
+    prompt: showCustomPrompt,
+    openExternal: openExternal
   };
 })(window);

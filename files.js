@@ -1138,7 +1138,7 @@ async function openFileSmart(file, subjectName = '') {
   if (file.source === 'link') {
     const url = file.external_url || file.file_url;
     if (!url) return false;
-    window.open(url, '_blank', 'noopener,noreferrer');
+    openExternal(url);
     return true;
   }
 
@@ -1161,7 +1161,7 @@ async function openFileSmart(file, subjectName = '') {
 
   // أنواع أخرى → تبويب جديد
   if (file.file_url) {
-    window.open(file.file_url, '_blank', 'noopener,noreferrer');
+    openExternal(file.file_url);
     return true;
   }
 

@@ -1327,6 +1327,7 @@ body {
     <button type="button" class="gallery-btn" onclick="closeGallery()" aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
     <div class="gallery-title" id="galleryTitle"></div>
     <div class="gallery-actions">
+      <button type="button" class="gallery-btn" id="galleryShareBtn" onclick="shareGalleryImage()" title="مشاركة" aria-label="مشاركة الصورة"><i class="fa-solid fa-share-nodes"></i></button>
       <button type="button" class="gallery-btn" id="galleryCropBtn" onclick="openCropTool()" title="قص" aria-label="قص الصورة"><i class="fa-solid fa-crop-simple"></i></button>
       <button type="button" class="gallery-btn" id="galleryRenameBtn" onclick="openRenameImage()" title="إعادة التسمية" aria-label="إعادة التسمية"><i class="fa-solid fa-pen"></i></button>
     </div>
@@ -2991,6 +2992,84 @@ function openGallery(imageId) {
 
   const hint = document.getElementById('galleryHint');
   if (hint) hint.style.opacity = '1';
+}
+
+/**
+ * ⭐⭐ مشاركة الصورة الحالية من المعرض (Android أصلي).
+ * 1) نُنزّل الصورة كـ blob
+ * 2) نحفظها في ذاكرة التخزين المؤقتة عبر Filesystem.writeFile
+ * 3) نشارك مسار الملف عبر Share.share({ url: fileUri })
+ */
+async function shareGalleryImage() {
+  var image = galleryState.images[galleryState.index];
+  if (!image || !image.url) {
+    lectureShowToast('لا توجد صورة لمشاركتها', true);
+    return;
+  }
+
+  var Share = (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Share) || null;
+  var Filesystem = (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) || null;
+
+  if (!Share || typeof Share.share !== 'function') {
+    // ⭐ على الويب: نفتح الصورة في تبويب
+    openExternal(image.url);
+    return;
+  }
+
+  var btn = document.getElementById('galleryShareBtn');
+  if (btn) btn.disabled = true;
+
+  try {
+    var fileName = 'lecture-' + (image.id || Date.now()) + '.jpg';
+    var fileUri = '';
+
+    if (Filesystem && typeof Filesystem.writeFile === 'function') {
+      try {
+        var response = await fetch(image.url);
+        var blob = await response.blob();
+        var base64 = await lectureBlobToBase64(blob);
+        var written = await Filesystem.writeFile({
+          path: fileName,
+          data: base64,
+          directory: 'CACHE'
+        });
+        fileUri = written && written.uri ? written.uri : '';
+      } catch (e) {
+        console.warn('[share] the file could not be cached:', e);
+      }
+    }
+
+    await Share.share({
+      title: image.title || 'صورة محاضرة',
+      text: image.title || 'صورة محاضرة من المنصة الطبية',
+      url: fileUri || image.url,
+      dialogTitle: 'مشاركة الصورة'
+    });
+  } catch (err) {
+    if (err && (err.message === 'Share canceled' || err.code === 'CANCELLED')) return;
+    console.warn('[share] the image share failed:', err);
+    lectureShowToast('تعذّرت المشاركة', true);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+/** ⭐ blob → base64 (بدون FileReader) */
+function lectureBlobToBase64(blob) {
+  return new Promise(function (resolve, reject) {
+    try {
+      var reader = new FileReader();
+      reader.onload = function () {
+        var result = String(reader.result || '');
+        var comma = result.indexOf(',');
+        resolve(comma > -1 ? result.slice(comma + 1) : result);
+      };
+      reader.onerror = function () { reject(reader.error); };
+      reader.readAsDataURL(blob);
+    } catch (e) {
+      reject(e);
+    }
+  });
 }
 
 function closeGallery() {
