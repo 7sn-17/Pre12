@@ -21,7 +21,7 @@ export interface FcmMessage {
 }
 
 export interface FcmSender {
-  mode: 'v1' | 'legacy';
+  mode: 'v1';
   send(token: string, message: FcmMessage): Promise<boolean>;
 }
 
@@ -203,31 +203,12 @@ async function sendV1(token: string, message: FcmMessage, sa: ServiceAccount): P
   return true;
 }
 
-async function sendLegacy(token: string, message: FcmMessage, apiKey: string): Promise<boolean> {
-  const response = await fetch('https://fcm.googleapis.com/fcm/send', {
-    method: 'POST',
-    headers: {
-      Authorization: `key=${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      to: token,
-      notification: { title: message.title, body: message.body },
-      data: message.data || {},
-      priority: 'high',
-    }),
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`FCM legacy: ${response.status} ${text.slice(0, 300)}`);
-  }
-  const json = await response.json();
-  if (json && json.failure) {
-    throw new Error(`FCM legacy: ${JSON.stringify(json).slice(0, 300)}`);
-  }
-  return true;
-}
+/**
+ * ⭐⚠️ مسار FCM القديم (fcm.googleapis.com/fcm/send) **مات** — lately
+ *   تُرجع 404. therefore the official HTTP v1 API with a service
+ *   account is the only way to send. The old path was removed so the
+ *   app does not fail silently.
+ */
 
 /** ⭐ يبني مُرسِلاً مناسباً حسب ما هو متاح */
 export async function createSender(): Promise<FcmSender | null> {
@@ -246,22 +227,17 @@ export async function createSender(): Promise<FcmSender | null> {
     };
   }
 
-  const apiKey = Deno.env.get('FCM_API_KEY') || (await readVaultSecret('fcm_api_key'));
-  if (apiKey) {
-    return {
-      mode: 'legacy',
-      async send(token: string, message: FcmMessage) {
-        try {
-          return await sendLegacy(token, message, apiKey);
-        } catch (e) {
-          console.warn('[fcm] legacy failed:', (e as Error).message);
-          return false;
-        }
-      },
-    };
-  }
-
+  // ⭐ لا بديل بدون حساب خدمة: نقطة FCM القديمة أُلغيت (404).
+  console.error(
+    '[fcm] no service account found — add FIREBASE_SERVICE_ACCOUNT_JSON ' +
+    '(Edge Function secret) or the "fcm_service_account" Vault secret.',
+  );
   return null;
+}
+
+/** ⭐ هل FCM مهيّأ؟ (للفحص قبل الإرسال) */
+export async function isFcmConfigured(): Promise<boolean> {
+  return !!(await getServiceAccount());
 }
 
 /** ⭐ يرسل لِعدد من التوكنات بالتوازي */

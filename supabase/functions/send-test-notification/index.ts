@@ -11,7 +11,10 @@
 // ============================================================
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { createSender } from '../_shared/fcm.ts';
+import { createSender, isFcmConfigured } from '../_shared/fcm.ts';
+
+// ⭐ خطوات إعداد FCM (تُعاد في رسالة الخطأ)
+const HOWTO = "' + "أضف سرّ FIREBASE_SERVICE_ACCOUNT_JSON إلى إعدادات دوالّ Edge: Firebase console ← Project settings ← Service accounts ← Generate new private key ← انسخ JSON.";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -71,13 +74,22 @@ Deno.serve(async (req) => {
     }
 
     /* ── 3) الإرسال ── */
-    const sender = await createSender();
-    if (!sender) {
-      console.error('[test-notification] FCM is not configured (no service account and no API key).');
+    if (!(await isFcmConfigured())) {
+      console.error('[test-notification] FCM is not configured (no service account).');
       return json({
         error: 'fcm-not-configured',
-        message:
-          'FCM غير مُهيّأ — أضف سرّ FIREBASE_SERVICE_ACCOUNT_JSON إلى إعدادات دوالّ Edge.',
+        message: 'FCM غير مُهيّأ — ' + HOWTO,
+        howToFix: HOWTO,
+      }, 500);
+    }
+
+    const sender = await createSender();
+    if (!sender) {
+      console.error('[test-notification] FCM is not configured (no service account).');
+      return json({
+        error: 'fcm-not-configured',
+        message: 'FCM غير مُهيّأ — ' + HOWTO,
+        howToFix: HOWTO,
       }, 500);
     }
 

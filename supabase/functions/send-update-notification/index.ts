@@ -98,10 +98,12 @@ Deno.serve(async (req) => {
     /* ── 4) الإرسال ── */
     const sender = await createSender();
     if (!sender) {
+      console.error('[update-notification] FCM is not configured (no service account).');
       return json({
         error: 'fcm-not-configured',
         message:
-          'FCM غير مُهيّأ — أضف سرّ FIREBASE_SERVICE_ACCOUNT_JSON إلى إعدادات دوالّ Edge.',
+          'FCM غير مُهيّأ — أضف سرّ FIREBASE_SERVICE_ACCOUNT_JSON إلى إعدادات دوالّ Edge: ' +
+          'Firebase console ← Project settings ← Service accounts ← Generate new private key ← انسخ JSON.',
       }, 500);
     }
 
