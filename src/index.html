@@ -5180,7 +5180,6 @@ i.fab {
       <span>منطقة الخطر</span>
     </div>
 
-    <!-- ⭐⭐⭐ حذف الحساب نهائياً -->
     <!-- ⭐ تسجيل الخروج (يظهر للمستخدم المسجّل فقط) -->
     <div class="settings-item danger-item" id="logoutItem" style="display: none;" onclick="handleLogout()">
       <div class="settings-item-left">
@@ -5194,6 +5193,20 @@ i.fab {
       </div>
       <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px; color: var(--medapp-red, #f87171);"></i>
     </div>
+
+    <!-- ⭐⭐⭐ حذف الحساب نهائياً — تحت زر تسجيل الخروج -->
+    <button type="button" class="settings-item danger-item" id="deleteAccountItem" style="display: none; width: 100%; text-align: right; cursor: pointer;">
+      <div class="settings-item-left">
+        <div class="settings-icon" style="background: rgba(239, 68, 68, 0.14); border-color: rgba(239, 68, 68, 0.32); color: var(--medapp-red, #f87171);">
+          <i data-lucide="user-x"></i>
+        </div>
+        <div class="settings-text">
+          <h4 style="color: var(--medapp-red, #f87171);">حذف الحساب نهائياً</h4>
+          <p>سيُحذف حسابك وكل بياناتك — لا يمكن التراجع</p>
+        </div>
+      </div>
+      <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px; color: var(--medapp-red, #f87171);"></i>
+    </button>
   </div>
 
       </div>
@@ -5207,19 +5220,6 @@ i.fab {
     <nav class="floating-nav">
       <button class="nav-btn active" data-view="home" onclick="switchTab('home')">
         <i data-lucide="home"></i>
-
-    <button type="button" class="settings-item danger-item" id="deleteAccountItem" style="display: none; width: 100%; text-align: right; cursor: pointer;">
-      <div class="settings-item-left">
-        <div class="settings-icon" style="background: rgba(239, 68, 68, 0.14); border-color: rgba(239, 68, 68, 0.32); color: var(--medapp-red, #f87171);">
-          <i data-lucide="user-x"></i>
-        </div>
-        <div class="settings-text">
-          <h4 style="color: var(--medapp-red, #f87171);">حذف الحساب نهائياً</h4>
-          <p>سيُحذف حسابك وكل بياناتك — لا يمكن التراجع</p>
-        </div>
-      </div>
-      <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px; color: var(--medapp-red, #f87171);"></i>
-    </button>
 
         <span>الرئيسية</span>
       </button>
