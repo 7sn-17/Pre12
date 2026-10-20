@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#f8fafb">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="4.6.2">
+<meta name="app-version" content="4.6.3">
 <title>معاينة الملف — المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -2029,7 +2029,7 @@ main.viewer {
 <script src="notifications.js"></script>
 
 
-<script src="app.js?v=4.6.2"></script>
+<script src="app.js?v=4.6.3"></script>
 <script>
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -3063,10 +3063,11 @@ async function init() {
     // ⭐ v4.6.2 — الفهرسة الكاملة في الخلفية (بحث فوري من أول حرف)
     setTimeout(() => { buildSearchIndex(); }, 400);
 
-    // ⭐⭐ v4.6.1 — TASK 4: عرض تدريجي — نرسم بقية الصفحات في الخلفية
-    //   واحدة تلو الأخرى بعد أن تصبح الصفحة الأولى قابلة للقراءة،
-    //   فالقارئ لا ينتظر نهاية الملف.
-    scheduleProgressiveRender();
+    // ⭐⭐ v4.6.3 — HOTFIX: كان `scheduleProgressiveRender()` هنا، وهي دالة
+    //   حُذفت مع العرض الافتراضي (v4.6.2) — فكان التطبيق ي crashes بـ
+    //   "scheduleProgressiveRender is not defined". البديل الصحيح القائم
+    //   هو renderVisiblePages() (يرسم الصفحات الظاهرة + المجاورة).
+    renderVisiblePages();
 
     // تتبع المشاهدة
     try { incrementFileViews(state.fileId); } catch (e) {}
@@ -3102,28 +3103,16 @@ els.searchInput.addEventListener('input', (e) => {
     searchDocument('');
     return;
   }
-  // ⭐ v4.6.2 — تأخير قصير (120ms) — النتيجة فورية عملياً.
-  searchTimeout = setTimeout(() => performSearch(value), 120);
+  // ⭐ v4.6.3 — HOTFIX: البحث ينفّذ مباشرةً أثناء الكتابة (150ms).
+  searchTimeout = setTimeout(() => performSearch(value), 150);
 });
 
-// ⭐⭐ v4.6.1 — Enter ينفّذ البحث فوراً وينتقل إلى أول نتيجة؛
-//   Escape يغلق النافذة.
+// ⭐ v4.6.3 — HOTFIX: أزلنا تشغيل البحث بـEnter (كان يتطلّب ضغط
+//   Enter). البحث صار تلقائياً من أول حرف. بقي Escape يغلق النافذة.
 els.searchInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    clearTimeout(searchTimeout);
-    runSearchNow();
-    return;
-  }
   if (e.key === 'Escape') {
     e.preventDefault();
     closeSearch();
-    return;
-  }
-  // ⭐ v4.6.2 — Enter التالي/السابق (Ctrl+Enter / Shift+Enter)
-  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-    e.preventDefault();
-    stepMatch(e.shiftKey ? -1 : 1);
   }
 });
 

@@ -7738,12 +7738,9 @@ async function openFileInViewer(fileId) {
         handleGlobalSearch(event.target.value);
       });
 
+      // ⭐ v4.6.3 — HOTFIX: أزلنا تشغيل البحث بـEnter؛ البحث صار
+      //   تلقائياً من أول حرف (150ms) ولا يحتاج ضغط Enter.
       input.addEventListener('keydown', function (event) {
-        if (event.key === 'Enter') {
-          event.preventDefault();
-          handleGlobalSearchSubmit(input.value);
-          return;
-        }
         if (event.key === 'Escape') {
           event.preventDefault();
           closeSearchModal();
@@ -7909,7 +7906,8 @@ async function openFileInViewer(fileId) {
         },
         {
           cache: appState.allFilesCache,
-          debounce: 250,
+          // ⭐ v4.6.3 — HOTFIX: 150ms — البحث الحيّ أثناء الكتابة.
+          debounce: 150,
           // ⭐ v4.6.1 — النتائج المحلية تظهر فوراً (بلا تأخير).
           onLocal: function (localFiles) {
             if (!localFiles || !localFiles.length) return;

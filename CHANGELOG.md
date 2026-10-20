@@ -2,7 +2,16 @@
 
 **التطبيق الرسمي لطلاب الطب في سوريا**
 
-⬇️ [تحميل v4.6.2](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+⬇️ [تحميل v4.6.3](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+
+## ✨ v4.6.3 — إصلاح قارئ PDF والبحث الحيّ
+
+- **إصلاح حرج**: كان قارئ PDF يفتح بخطأ «scheduleProgressiveRender is not
+  defined» فيتوقف العرض — استُبدل الاستدعاء الميت بدالة
+  renderVisiblePages() القائمة فعلاً.
+- **بحث حيّ**: البحث في التطبيق وفي قارئ PDF صار ينفّذ مباشرةً أثناء
+  الكتابة (150ms) من أول حرف، ولم يعد يحتاج ضغط Enter.
+- **الإصدار**: 4.6.3 (‏versionCode 33).
 
 ## ✨ v4.6.2 — إعادة تصميم قارئ PDF (عرض افتراضي وبحث عميق)
 

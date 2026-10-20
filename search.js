@@ -14,7 +14,7 @@
 (function (global) {
   'use strict';
 
-  var DEBOUNCE_MS = 300;
+  var DEBOUNCE_MS = 150;
   var MAX_FILES = 40;
   var MAX_SUBJECTS = 12;
 
@@ -138,12 +138,17 @@
     if (typeof onLoading === 'function') onLoading();
 
     var id = ++requestId;
+    // ⭐ v4.6.3 — HOTFIX: البحث الحيّ — لا ننتظر أكثر من 150ms مهما
+    //   كان التأخير الذي يطلبه المستدعي (150ms = فوري عملياً).
+    var wait = options && options.debounce
+      ? Math.min(Number(options.debounce) || DEBOUNCE_MS, DEBOUNCE_MS)
+      : DEBOUNCE_MS;
     timer = setTimeout(async function () {
       var result = await run(q, options);
       // ⭐ نتجاهل النتائج القديمة إن وصل بحث أحدث
       if (id !== requestId) return;
       if (typeof onResult === 'function') onResult(result);
-    }, options && options.debounce ? options.debounce : DEBOUNCE_MS);
+    }, wait);
   }
 
   global.MedAppSearch = {
