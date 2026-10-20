@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="4.1.2">
+<meta name="app-version" content="4.2.0">
 <title>السنة التحضيرية - المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -6317,7 +6317,7 @@ i.fab {
         <div class="settings-icon"><i data-lucide="info"></i></div>
         <div class="settings-text">
           <h4>حول التطبيق</h4>
-          <p id="aboutVersionText">الإصدار 4.1.2 • السنة التحضيرية</p>
+          <p id="aboutVersionText">الإصدار 4.2.0 • السنة التحضيرية</p>
         </div>
       </div>
       <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
@@ -6591,7 +6591,7 @@ i.fab {
 <script src="notifications.js"></script>
 
 
-  <script src="app.js?v=4.1.2"></script>
+  <script src="app.js?v=4.2.0"></script>
 <script>
 
     lucide.createIcons();
@@ -10121,8 +10121,8 @@ function showAbout() {
     }
 
     // ⭐⭐ رابط التحميل المباشر — نشاركه مع السلسلة
-    // ⭐ رابط التحميل — يتبع إصدار التطبيق الحالي
-    var APP_DOWNLOAD_URL = 'https://github.com/7sn-17/Pre12/releases/latest/download/Medical_Platform_v4.1.2.apk';
+    // ⭐ v4.2.0 — رابط تنزيل ثابت من Supabase Storage (يُستبدل ملفه كل إصدار)
+    var APP_DOWNLOAD_URL = 'https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk';
 
     async function shareStreak() {
       var text = streakShareText();

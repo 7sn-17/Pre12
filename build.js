@@ -32,8 +32,12 @@ const DIST = path.join(ROOT, 'dist');
 
 // Bumped whenever app.js changes. The query string is what makes returning
 // visitors pick up the new router even though static JS is served immutable.
-const APP_VERSION = '4.1.2';
+const APP_VERSION = '4.2.0';
 const APP_JS = `app.js?v=${APP_VERSION}`;
+
+// ⭐ v4.2.0 — Supabase Storage: ملف APK ثابت الاسم يُستبدل عند كل إصدار.
+const RELEASE_DOWNLOAD_URL =
+  'https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk';
 
 // ------------------------------------------------------------------
 // Registries (single source of truth for shared markup)
@@ -412,6 +416,72 @@ function validatePage(name, html, isApp) {
 }
 
 // ------------------------------------------------------------------
+// version.json — تحديث تلقائي عبر Supabase Storage
+// ------------------------------------------------------------------
+
+/**
+ * ⭐ يقرأ قسم الإصدار الأخير من CHANGELOG.md ويحوّله إلى 3–4 نقاط
+ *    نصّية نظيفة تُرسل داخل version.json (وتُعرض في نافذة التحديث).
+ */
+function latestChangelogBullets() {
+  let md = '';
+  try {
+    md = read(path.join(ROOT, 'CHANGELOG.md'));
+  } catch (e) {
+    return '';
+  }
+
+  const lines = md.split('\n');
+  const section = [];
+  let started = false;
+
+  for (const line of lines) {
+    if (/^##\s+/.test(line)) {
+      if (started) break;
+      started = true;
+      continue;
+    }
+    if (started) section.push(line);
+  }
+
+  const chunks = section.join('\n').split(/^\s*[-*]\s+/m).slice(1);
+  const bullets = chunks
+    .slice(0, 4)
+    .map((chunk) =>
+      chunk
+        .split('\n')
+        .filter((line) => !/^#{1,6}\s/.test(line) && line.trim() !== '---')
+        .join(' ')
+        .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+        .replace(/\*\*([^*]+)\*\*/g, '$1')
+        .replace(/`([^`]+)`/g, '$1')
+        .replace(/^>\s?/gm, '')
+        .replace(/\*([^*\n]+)\*/g, '$1')
+        .replace(/\*/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+    )
+    .filter(Boolean);
+
+  return bullets.join('\n');
+}
+
+/**
+ * ⭐ يكتب version.json في الجذر (ثم ينسخه copyAssets إلى dist/).
+ *    latest_version يُؤخذ من APP_VERSION، ورابط التنزيل ثابت.
+ */
+function writeVersionJson() {
+  const data = {
+    latest_version: APP_VERSION,
+    download_url: RELEASE_DOWNLOAD_URL,
+    changelog: latestChangelogBullets() || 'تحسينات في نظام التحديث\nاستقرار الإشعارات'
+  };
+  const json = JSON.stringify(data, null, 2) + '\n';
+  fs.writeFileSync(path.join(ROOT, 'version.json'), json, 'utf8');
+  return data;
+}
+
+// ------------------------------------------------------------------
 // Main
 // ------------------------------------------------------------------
 
@@ -440,6 +510,7 @@ function main() {
     if (errs.length) problems.push(`${page}: ${errs.join(', ')}`);
   });
 
+  const versionInfo = writeVersionJson();
   const assets = copyAssets();
 
   // Determinism / sanity: every source page must have been written.
@@ -447,6 +518,17 @@ function main() {
     if (!fs.existsSync(path.join(DIST, p))) problems.push(`${p}: not written to dist/`);
     if (!fs.existsSync(path.join(ROOT, p))) problems.push(`${p}: not written to root`);
   });
+
+  // ⭐ version.json must exist in both the root and dist/ (fixed updater URL).
+  if (!fs.existsSync(path.join(ROOT, 'version.json'))) {
+    problems.push('version.json: not written to root');
+  }
+  if (!fs.existsSync(path.join(DIST, 'version.json'))) {
+    problems.push('version.json: not copied to dist/');
+  }
+  console.log(
+    `✅ version.json → ${versionInfo.latest_version} (${versionInfo.changelog.split('\n').length} bullets)`
+  );
 
   console.log(`✅ Built ${pages.length} HTML pages (root + dist) + copied ${assets} asset entries (${Date.now() - t0}ms)`);
   if (problems.length) {

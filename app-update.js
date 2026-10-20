@@ -4,7 +4,8 @@
 // ⭐ Phase 29/30 — The update is simplified on purpose:
 //
 //   1) checkForAppUpdate()  → the current version (App.getInfo())
-//      compared with the latest GitHub release.
+//      compared with version.json on Supabase Storage (fixed URL),
+//      with the GitHub Releases API as a fallback.
 //   2) showUpdateModal()    → a premium green card with the version
 //      and the (clean) release notes.
 //   3) "تحديث الآن"         → ⭐ Browser.open({ url }) — the APK is
@@ -17,6 +18,10 @@
   'use strict';
 
   var RELEASES_API = 'https://api.github.com/repos/7sn-17/Pre12/releases/latest';
+  // ⭐ v4.2.0 — Supabase Storage: رابط ثابت يُستبدل ملفه عند كل إصدار.
+  var STORAGE_BASE = 'https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases';
+  var VERSION_JSON_URL = STORAGE_BASE + '/version.json';
+  var LATEST_APK_URL = STORAGE_BASE + '/Medical_Platform_Latest.apk';
   var MAX_HIGHLIGHTS = 4;
   var lastShownVersion = '';
 
@@ -52,6 +57,58 @@
   /* ─────────────────────────────────────────────
      2) التحقّق من التحديث
      ───────────────────────────────────────────── */
+
+  /** ⭐ fetch طازج — لا كاش من WebView ولا من CDN */
+  async function fetchJsonFresh(url, headers) {
+    var separator = url.indexOf('?') > -1 ? '&' : '?';
+    var response = await fetch(url + separator + 't=' + Date.now(), {
+      cache: 'no-store',
+      headers: Object.assign({
+        'Cache-Control': 'no-cache',
+        Pragma: 'no-cache'
+      }, headers || {})
+    });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    return response.json();
+  }
+
+  /** ⭐ يبني نتيجة التحديث من version.json (المصدر الأساسي الآن) */
+  function resultFromVersionJson(data, currentVersion) {
+    var remoteVersion = String(data.latest_version || data.version || '').replace(/^v/i, '');
+    var result = {
+      currentVersion: currentVersion,
+      version: remoteVersion,
+      notes: latestReleaseNotes(data.changelog || data.notes || ''),
+      url: data.download_url || LATEST_APK_URL,
+      htmlUrl: data.html_url || '',
+      publishedAt: data.published_at || '',
+      source: 'version.json',
+      updateAvailable: false
+    };
+    if (remoteVersion && currentVersion && compareVersions(remoteVersion, currentVersion) > 0) {
+      result.updateAvailable = true;
+    }
+    return result;
+  }
+
+  async function readRemoteVersionJson() {
+    // 1) نسخة Supabase (رابط ثابت) — هي المصدر الرسمي
+    try {
+      var remote = await fetchJsonFresh(VERSION_JSON_URL);
+      if (remote && (remote.latest_version || remote.version)) return remote;
+    } catch (e) {
+      console.warn('[update] the remote version.json is unavailable:', e && e.message);
+    }
+    // 2) نسخة محلية (fallback عند انقطاع الشبكة / الويب)
+    try {
+      var local = await fetchJsonFresh('version.json');
+      if (local && (local.latest_version || local.version)) return local;
+    } catch (e) {
+      console.warn('[update] the local version.json is unavailable:', e && e.message);
+    }
+    return null;
+  }
+
   async function checkForAppUpdate(options) {
     options = options || {};
 
@@ -66,7 +123,7 @@
       }
     }
 
-    // ⭐ TASK 3: بديل موثوق إن لم يُرجع App.getInfo الإصدار (أو تأخّر)
+    // ⭐ بديل موثوق إن لم يُرجع App.getInfo الإصدار (أو تأخّر)
     if (!currentVersion) {
       try {
         var meta = document.querySelector('meta[name="app-version"]');
@@ -74,33 +131,34 @@
       } catch (e) {}
     }
 
-    // ⭐ TASK 3: لا كاش — GitHub API يجب أن يُقرأ طازجاً في كل مرّة
-    var response = await fetch(RELEASES_API + '?t=' + Date.now(), {
-      cache: 'no-store',
-      headers: {
-        Accept: 'application/vnd.github+json',
-        'Cache-Control': 'no-cache',
-        Pragma: 'no-cache'
+    // ⭐ TASK 3 (v4.2.0): version.json من Supabase Storage أولاً.
+    var versionJson = await readRemoteVersionJson();
+    if (versionJson) {
+      var fromJson = resultFromVersionJson(versionJson, currentVersion);
+      if (options.silent !== true && fromJson.updateAvailable &&
+          lastShownVersion !== fromJson.version &&
+          typeof global.showUpdateModal === 'function') {
+        lastShownVersion = fromJson.version;
+        global.showUpdateModal(fromJson);
       }
-    });
-    if (!response.ok) throw new Error('GitHub API: ' + response.status);
+      return fromJson;
+    }
 
-    var release = await response.json();
+    // ⭐ fallback: GitHub Releases API (يبقى كخطة احتياطية)
+    var release = await fetchJsonFresh(RELEASES_API, { Accept: 'application/vnd.github+json' });
     var remoteVersion = String(release.tag_name || release.name || '').replace(/^v/i, '');
 
-    // ⭐ TASK 3: رابط التنزيل المباشر للـ APK — من الـ API دائماً
     var apkUrl = '';
     var assets = release.assets || [];
     for (var i = 0; i < assets.length; i++) {
       var name = String(assets[i].name || '');
-      // ⭐ TASK 3: يجب أن ينتهي الاسم بـ .apk (لا ملف .apk.sha256)
+      // ⭐ يجب أن ينتهي الاسم بـ .apk (لا ملف .apk.sha256)
       if (/\.apk$/i.test(name)) {
         apkUrl = assets[i].browser_download_url || '';
         break;
       }
     }
-    // ⭐ لا أصول بعد؟ صفحة الإصدار الرسمية أفضل من رابط مُخمَّن قديم.
-    if (!apkUrl) apkUrl = release.html_url || '';
+    if (!apkUrl) apkUrl = release.html_url || LATEST_APK_URL;
 
     var result = {
       currentVersion: currentVersion,
@@ -110,6 +168,7 @@
       url: apkUrl,
       htmlUrl: release.html_url || '',
       publishedAt: release.published_at || '',
+      source: 'github',
       updateAvailable: false
     };
 
@@ -117,7 +176,7 @@
       result.updateAvailable = true;
     }
 
-    // ⭐ TASK 3: نافذة واحدة فقط لكل إصدار في الجلسة
+    // ⭐ نافذة واحدة فقط لكل إصدار في الجلسة
     if (options.silent !== true && result.updateAvailable && lastShownVersion !== result.version &&
         typeof global.showUpdateModal === 'function') {
       lastShownVersion = result.version;
@@ -171,8 +230,7 @@
       .replace(/^>\s?/gm, '')                       // > اقتباس
       .replace(/^\s*[-*+]\s+/gm, '')                // - عنصر
       .replace(/\*([^*\n]+)\*/g, '$1')             // *مائل*
-      .replace(/_{1,2}([^_\n]+)_{1,2}/g, '$1')
-      .replace(/\\s{2,}/g, ' ')
+      .replace(/\s{2,}/g, ' ')
       .replace(/\n{3,}/g, '\n\n')
       .trim();
   }
@@ -339,6 +397,8 @@
   global.showUpdateModal = showUpdateModal;
   global.MedAppUpdate = {
     RELEASES_API: RELEASES_API,
+    VERSION_JSON_URL: VERSION_JSON_URL,
+    LATEST_APK_URL: LATEST_APK_URL,
     check: checkForAppUpdate,
     checkForAppUpdate: checkForAppUpdate,
     compareVersions: compareVersions,

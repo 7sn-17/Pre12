@@ -2,7 +2,21 @@
 
 **التطبيق الرسمي لطلاب الطب في سوريا**
 
-⬇️ [تحميل v4.1.2](https://github.com/7sn-17/Pre12/releases/latest/download/Medical_Platform_v4.1.2.apk)
+⬇️ [تحميل v4.2.0](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+
+## ✨ v4.2.0 — تحديثات ثابتة عبر Supabase Storage
+
+- **رابط تنزيل ثابت**: انتقل التطبيق من روابط GitHub المتغيّرة إلى
+  `Medical_Platform_Latest.apk` على Supabase Storage، فيبقى الرابط نفسه
+  ويعمل مع كل إصدار.
+- **رفع تلقائي من GitHub Actions**: بعد بناء الـ APK الموقّع يُرفع إلى
+  bucket `releases` العام مع استبدال النسخة القديمة (`x-upsert`)، ثم
+  يُتحقَّق من الرابط العام قبل نشر الإصدار.
+- **version.json**: يُولَّد تلقائياً من `CHANGELOG.md` ويُرفع مع الـ APK،
+  ويقرأه التطبيق بـ `cache: 'no-store'` ليعرف آخر إصدار ورابطه وملاحظاته
+  (3–4 نقاط فقط)، مع GitHub API كخطة احتياطية.
+- **استقرار الإشعارات**: تحسينات في نظام التحديث واستقرار الإشعارات،
+  والإصدار 4.2.0 (‏versionCode 22).
 
 ## ✨ v4.1.2 — حفظ رمز FCM + تحديث حقيقي + توزيع أنيق للشريط
 
