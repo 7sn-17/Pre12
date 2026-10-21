@@ -1288,3 +1288,73 @@ Storage, `version.json` = 5.0.7. APK **15,076,531 bytes**, SHA-256
   — **no event ⇒ no notification** (event-driven ✓).
 - Compile check **`39656520280` → success** (it caught a real error: the missing
   Glance `updateAll` import), release build **`39657595021` → success**.
+
+---
+
+### Phase W16 Completion Log (2026-10-21) — **v5.0.8** (the final QA pass)
+
+**Release:** `v5.0.8` (versionCode 47) — GitHub **Latest**, live on Supabase
+Storage, `version.json` = 5.0.8.
+
+#### 1) The admin could not delete a user — the root cause
+| | |
+|---|---|
+| Root cause 1 | `delete-user-account` took the id from the caller's JWT ⇒ **self-deletion only**; an admin could never delete another account. |
+| Root cause 2 | The admin panel deleted from the browser with the *user's* JWT — and the `profiles` table has **no DELETE policy at all** ⇒ RLS rejected the request ⇒ the silent failure. `auth.users` was never touched either, so the account could still log in. |
+| The fix | The function now accepts `user_id`, verifies the caller's role (`admin`/`moderator`) in `profiles`, and deletes the **target** with the service role: `auth.users` · `profiles` · `notes` · `goals` · `task_progress` · `favorites` · `streak_freezes` · `notification_log` · `lecture_albums` · `album_requests` (both `user_id` and `album_owner_id`) · `schedule_images` (+likes/saves) · the uploaded `files` · their Storage folders (`files`, `schedule-images`). It returns a full report. |
+| The panel | `src/admin.html` calls the function and shows the server's **real** message. The self-deletion path is unchanged and still works. |
+| The audit | `send-admin-notification` checks the admin role ✓ · `send-test-notification` only pushes to the caller's own device ✓ · `send-update-notification` accepts the service role / cron secret / an admin ✓ · the storage policies are sound ✓. |
+
+#### 2) The notes widget showed the title only — the root cause
+- The content line was gated behind a `twoLines` flag that was **false for every
+  common size** (the 2×2 and the 4×2 are ≈110 dp; the rule was
+  `height >= 130.dp`), and the row budget was a hard-coded table (2 or 3 rows)
+  that did not know the rows were two lines tall ⇒ Glance clipped the content
+  out of the card.
+- **Now**: `StickyBudget` computes a real height budget, the content line is
+  drawn **whenever there is text**, and the type scales in small cards. The
+  square 2×2 card became **one** paper (notes first, then goals) because two
+  papers cannot each fit a title+content row (52 dp each).
+- `widgets.js` maps the note explicitly: title → `title`, else the first 15
+  characters of the content, else «ملاحظة»; body → `content`, else the title
+  (so nothing is repeated); the content is cut to 64 characters with a real
+  ellipsis.
+- **Tests**: `NotesWidgetPayloadTest.kt` (the bridge keeps both lines, every
+  common size fits ≥ 1 row) — green in CI · `tools/test-widget-notes-payload.ts`
+  (16 checks).
+
+#### 3) The name reverted after re-login
+- The failed `profiles` update was **swallowed** (a console warning) while the
+  function reported success ⇒ nothing was saved. Now the error is reported, the
+  auth metadata is secondary, and the local cache is always written.
+- `index.html` applies the new name **everywhere** at once: the card is
+  re-rendered, the greeting, every `[data-profile-name]`, and the author name
+  inside the local notes.
+
+#### 4) Typing Arabic did nothing until Enter — the root cause
+- The Arabic IME **composes**: while it composes, the DOM value lags behind the
+  IME buffer, so the search read a stale value (English works because it does
+  not compose).
+- **Now** `bindSearchInput` reads the IME buffer itself
+  (`base + composed`) and never depends on the lagging DOM value; the
+  composition end is handled explicitly.
+- **Arabic normalization** (`normalizeArabic`) makes «احمد» match «أحمد»,
+  «الاوراق» match «الأوراق», «مستشفي» match «مستشفى» — in the global search,
+  the file lists, the notes and the PDF viewer. The PDF viewer uses
+  `foldArabic` (position-preserving) so the highlights stay correct.
+- The three pages that bound the search with a bare `oninput` now use the
+  engine; `highlightText` is HTML-safe.
+- **Tests**: `tools/test-arabic-search.ts` (14 checks).
+
+#### 5) The album requests
+Only the album owner may accept or reject — the UI offered the buttons to the
+requester too, whose update the RLS rejected in silence. An accepted image now
+belongs to the album owner.
+
+#### 6) The release
+- Version **5.0.8** (versionCode 47) · `sw.js` cache `v5.0.8-clean`.
+- `delete-user-account` deployed (v5, ACTIVE, `verify_jwt: true`); all five
+  edge functions answer (401/403 without credentials ✓).
+- CI: the compile check **39670174907** (with the new unit tests) ✅ and the
+  release build ✅ · local suites: 38 + 16 + 14 = **68 assertions green** ·
+  43 inline scripts syntax-checked ✅.
