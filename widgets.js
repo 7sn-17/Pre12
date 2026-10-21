@@ -524,9 +524,12 @@
     try {
       var api = plugin();
       if (api && typeof api.addListener === 'function') {
-        api.addListener('widgetTaskToggled', function () {
+        var registration = api.addListener('widgetTaskToggled', function () {
           setTimeout(function () { refresh('widget-toggle'); }, 250);
         });
+        if (registration && typeof registration.catch === 'function') {
+          registration.catch(function () {});
+        }
       }
     } catch (e) {}
   }
