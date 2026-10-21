@@ -118,7 +118,7 @@ private fun HeroColumn(streak: StreakSummary, compact: Boolean, modifier: Glance
             text = streak.current.toString(),
             style = wText(
                 WidgetSkin.White,
-                if (compact) 36.sp else 42.sp,
+                40.sp,
                 FontWeight.Bold,
                 TextAlign.Center
             ),

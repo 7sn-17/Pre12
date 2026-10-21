@@ -2,10 +2,13 @@ package com.pre12.medical.widgets
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.ImageProvider
 import androidx.glance.LocalSize
 import androidx.glance.action.Action
 import androidx.glance.action.clickable
@@ -17,6 +20,7 @@ import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
+import androidx.glance.layout.defaultWeight
 import androidx.glance.layout.Row
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
@@ -30,20 +34,16 @@ import androidx.glance.unit.ColorProvider
 import com.pre12.medical.R
 
 /**
- * ⭐⭐ Phase W6 — «مهام اليوم» (approved design).
+ * ⭐⭐ Phase W7 — «مهام اليوم» at the approved 2×3 size.
  *
- * Visual contract
- * ───────────────
- *   • slate 135° gradient (#1E293B → #0F172A), 28 dp radius, 1 dp glass hairline;
- *   • header: Tajawal title + emerald count pill (`3/7`);
- *   • rows: empty ring → tap → filled emerald tick (animated vector) + strike →
- *     0.9 s later the row leaves and the next pending task slides up;
- *   • only **pending** work is listed, so the card never becomes a graveyard.
+ * Reference dimensions (`widget_reference_final.html`):
+ *   • `linear-gradient(145deg, #1e293b, #0f172a)`, 28 dp radius, 16 dp padding;
+ *   • title 20 sp / 800, task text 16 sp / 500.
  *
- * Size contract
- * ─────────────
- * 4×2 → 3 rows, 4×4 → 6 rows. Rows are budgeted from [LocalSize] instead of
- * hard-coded, so a taller resize buys one more task and nothing is ever clipped.
+ * The card is now **portrait**: at 140–160 dp wide a title + counter badge on one
+ * line would clip, so the 20 sp title gets its own row and the `done/total` pill
+ * sits on a compact meta line underneath. Rows are still budgeted from
+ * [LocalSize], so a resize never draws outside the RemoteViews bounds.
  *
  * Interaction is split so a mis-tap can never change data: the status ring
  * toggles; the text and the header deep-link to `pre12://tasks`.
@@ -63,15 +63,17 @@ class TodayTasksWidgetReceiver : GlanceAppWidgetReceiver() {
 
 @Composable
 private fun TodayTasksCard(state: TodayTasks) {
-    val height = LocalSize.current.height
-    val compact = height < 170.dp
+    val size = LocalSize.current
+    val tight = size.height < 200.dp
 
-    val pad = if (compact) 11.dp else 15.dp
-    val headerHeight = if (compact) 23.dp else 28.dp
-    val headerGap = if (compact) 5.dp else 8.dp
-    val rowHeight = if (compact) 24.dp else 30.dp
-    val rowGap = if (compact) 2.dp else 4.dp
-    val circle = if (compact) 18.dp else 21.dp
+    val pad = if (tight) 12.dp else 16.dp
+    val titleLine = 27.dp
+    val metaLine = 15.dp
+    val headerGap = if (tight) 6.dp else 8.dp
+    val rowHeight = if (tight) 28.dp else 30.dp
+    val rowGap = 6.dp
+    val circle = if (tight) 20.dp else 22.dp
+    val rowText = 16.sp
 
     val openApp = openAppAction("tasks")
 
@@ -83,8 +85,8 @@ private fun TodayTasksCard(state: TodayTasks) {
             (item.doneAt > 0 && now - item.doneAt < ToggleTaskAction.VANISH_DELAY_MS)
     }
 
-    val chrome = pad * 2 + headerHeight + headerGap
-    val maxRows = (((height - chrome) + rowGap) / (rowHeight + rowGap))
+    val chrome = pad * 2 + titleLine + 2.dp + metaLine + headerGap
+    val maxRows = (((size.height - chrome) + rowGap) / (rowHeight + rowGap))
         .toInt()
         .coerceIn(1, 6)
     val rows = visible.take(maxRows)
@@ -92,17 +94,17 @@ private fun TodayTasksCard(state: TodayTasks) {
     Box(
         modifier = GlanceModifier
             .fillMaxSize()
-            .background(androidx.glance.ImageProvider(R.drawable.widget_bg_tasks))
+            .background(ImageProvider(R.drawable.widget_bg_tasks))
             .padding(pad)
     ) {
         Column(modifier = GlanceModifier.fillMaxSize()) {
-            Header(state, openApp, headerHeight, compact)
+            Header(state, openApp, tight)
 
             Gap(headerGap)
 
             when {
                 state.isEmpty -> EmptyDay(openApp)
-                rows.isEmpty() -> CelebrationRow(state, openApp, compact)
+                rows.isEmpty() -> CelebrationRow(state, openApp, tight)
                 else -> TaskList(
                     rows = rows,
                     date = state.date,
@@ -110,7 +112,7 @@ private fun TodayTasksCard(state: TodayTasks) {
                     rowHeight = rowHeight,
                     rowGap = rowGap,
                     circle = circle,
-                    compact = compact
+                    textSize = rowText
                 )
             }
         }
@@ -118,32 +120,50 @@ private fun TodayTasksCard(state: TodayTasks) {
 }
 
 @Composable
-private fun Header(
-    state: TodayTasks,
-    openApp: Action,
-    height: androidx.compose.ui.unit.Dp,
-    compact: Boolean
-) {
-    Row(
+private fun Header(state: TodayTasks, openApp: Action, tight: Boolean) {
+    Column(
         modifier = GlanceModifier
             .fillMaxWidth()
-            .height(height)
-            .clickable(openApp),
-        verticalAlignment = Alignment.CenterVertically
+            .clickable(openApp)
     ) {
         Text(
             text = "مهام اليوم",
-            modifier = GlanceModifier.defaultWeight(),
-            style = wText(WidgetSkin.White, if (compact) 14.sp else 15.sp, FontWeight.Bold),
+            style = wText(WidgetSkin.White, 20.sp, FontWeight.Bold),
             maxLines = 1
         )
 
-        if (!state.isEmpty) {
-            Badge(
-                text = "${state.completedCount}/${state.totalCount}",
-                background = WidgetSkin.EmeraldSoft,
-                foreground = WidgetSkin.EmeraldBright,
-                fontSize = if (compact) 9.5.sp else 10.sp
+        Gap(2.dp)
+
+        Row(
+            modifier = GlanceModifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (!state.isEmpty) {
+                Badge(
+                    text = "${state.completedCount}/${state.totalCount}",
+                    background = WidgetSkin.EmeraldSoft,
+                    foreground = WidgetSkin.EmeraldBright,
+                    horizontal = 6.dp,
+                    vertical = 1.dp,
+                    corner = 6.dp,
+                    fontSize = 10.sp
+                )
+                HGap(6.dp)
+            }
+            Text(
+                text = if (state.allDone) {
+                    "أنجزت كل مهام اليوم"
+                } else if (state.isEmpty) {
+                    "لا مهام لهذا اليوم"
+                } else {
+                    "مكتملة اليوم"
+                },
+                style = wText(
+                    if (state.allDone) WidgetSkin.EmeraldBright else WidgetSkin.Slate400,
+                    if (tight) 9.5.sp else 10.sp,
+                    FontWeight.Medium
+                ),
+                maxLines = 1
             )
         }
     }
@@ -154,13 +174,13 @@ private fun TaskList(
     rows: List<TaskItem>,
     date: String,
     openApp: Action,
-    rowHeight: androidx.compose.ui.unit.Dp,
-    rowGap: androidx.compose.ui.unit.Dp,
-    circle: androidx.compose.ui.unit.Dp,
-    compact: Boolean
+    rowHeight: Dp,
+    rowGap: Dp,
+    circle: Dp,
+    textSize: TextUnit
 ) {
     rows.forEachIndexed { index, item ->
-        TaskRow(item, date, openApp, rowHeight, circle, compact)
+        TaskRow(item, date, openApp, rowHeight, circle, textSize)
         if (index != rows.lastIndex) Gap(rowGap)
     }
 }
@@ -170,9 +190,9 @@ private fun TaskRow(
     item: TaskItem,
     date: String,
     openApp: Action,
-    rowHeight: androidx.compose.ui.unit.Dp,
-    circle: androidx.compose.ui.unit.Dp,
-    compact: Boolean
+    rowHeight: Dp,
+    circle: Dp,
+    textSize: TextUnit
 ) {
     val toggle = ToggleTaskAction.action(
         taskId = item.id,
@@ -188,10 +208,10 @@ private fun TaskRow(
         modifier = GlanceModifier.fillMaxWidth().height(rowHeight),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Wide hit box around a small ring: easy to hit, visually quiet.
+        // Tall hit box around a small ring: easy to hit, visually quiet.
         Box(
             modifier = GlanceModifier
-                .width(rowHeight + 6.dp)
+                .width(rowHeight + 4.dp)
                 .height(rowHeight)
                 .clickable(toggle),
             contentAlignment = Alignment.Center
@@ -212,7 +232,7 @@ private fun TaskRow(
                 text = item.title,
                 style = wText(
                     color = if (item.isCompleted) WidgetSkin.Slate400 else WidgetSkin.Slate300,
-                    size = if (compact) 11.5.sp else 12.5.sp,
+                    size = textSize,
                     weight = if (item.isCompleted) FontWeight.Normal else FontWeight.Medium,
                     decoration = if (item.isCompleted) TextDecoration.LineThrough else null
                 ),
@@ -224,7 +244,7 @@ private fun TaskRow(
 
 /** Every task is done: the list is empty by design, so celebrate instead. */
 @Composable
-private fun CelebrationRow(state: TodayTasks, openApp: Action, compact: Boolean) {
+private fun CelebrationRow(state: TodayTasks, openApp: Action, tight: Boolean) {
     Row(
         modifier = GlanceModifier
             .fillMaxWidth()
@@ -234,17 +254,17 @@ private fun CelebrationRow(state: TodayTasks, openApp: Action, compact: Boolean)
             .clickable(openApp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        StatusCircle(completed = true, justCompleted = false, size = if (compact) 20.dp else 24.dp)
+        StatusCircle(completed = true, justCompleted = false, size = if (tight) 22.dp else 26.dp)
         HGap(8.dp)
         Column(modifier = GlanceModifier.defaultWeight()) {
             Text(
                 text = "أنجزت كل مهام اليوم 🎉",
-                style = wText(WidgetSkin.White, if (compact) 11.5.sp else 12.5.sp, FontWeight.Bold),
-                maxLines = 1
+                style = wText(WidgetSkin.White, 14.sp, FontWeight.Bold),
+                maxLines = 2
             )
             Text(
-                text = "${state.completedCount} مهمة مكتملة — سلسلتك بأمان",
-                style = wText(WidgetSkin.Slate400, if (compact) 8.5.sp else 9.5.sp),
+                text = "${state.completedCount} مهمة مكتملة",
+                style = wText(WidgetSkin.Slate400, 11.sp),
                 maxLines = 1
             )
         }
@@ -260,23 +280,23 @@ private fun EmptyDay(openApp: Action) {
     ) {
         Text(
             text = "لا توجد مهام لليوم",
-            style = wText(WidgetSkin.White, 12.sp, FontWeight.Bold),
+            style = wText(WidgetSkin.White, 16.sp, FontWeight.Bold),
             maxLines = 1
         )
-        Gap(2.dp)
+        Gap(3.dp)
         Text(
             text = "خطّتك لهذا اليوم فارغة — استمتع بيومك 🌿",
-            style = wText(WidgetSkin.Slate400, 9.5.sp),
-            maxLines = 1
+            style = wText(WidgetSkin.Slate400, 12.sp),
+            maxLines = 2
         )
-        Gap(6.dp)
+        Gap(8.dp)
         Badge(
             text = "افتح الخطة",
             background = WidgetSkin.EmeraldSoft,
             foreground = WidgetSkin.EmeraldBright,
-            horizontal = 8.dp,
+            horizontal = 9.dp,
             vertical = 3.dp,
-            fontSize = 9.5.sp
+            fontSize = 11.sp
         )
     }
 }

@@ -76,6 +76,9 @@ internal object WidgetSkin {
 
     val PaperInk = Color(0xFF1E293B)
     val PaperMuted = Color(0xFF64748B)
+
+    /** Translucent scrim behind captions that sit on a photo. */
+    val Overlay = Color(0x99000000)
 }
 
 /**

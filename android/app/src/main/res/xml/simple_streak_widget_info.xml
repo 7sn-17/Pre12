@@ -1,23 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Phase W6 — «سلسلة الأيام» (simple streak), 2×2.
+  Phase W7 — «سلسلة الأيام» is a 1×1 badge and nothing else.
 
-  The approved design is a square trophy card: flame + 58 pt number + seven
-  dots. 110 dp is the platform's 2-cell minimum; below that the widget drops
-  the dots and the flame instead of clipping (see SimpleStreakWidget.kt).
+  `resizeMode="none"` locks it to one cell: the design is a flame + a 32 sp
+  number, and every larger size would only add empty space. Long-press → resize
+  is intentionally unavailable.
 -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_simple_streak_description"
     android:initialLayout="@layout/glance_default_loading_layout"
-    android:minWidth="110dp"
-    android:minHeight="110dp"
-    android:minResizeWidth="110dp"
-    android:minResizeHeight="110dp"
-    android:maxResizeWidth="300dp"
-    android:maxResizeHeight="300dp"
-    android:targetCellWidth="2"
-    android:targetCellHeight="2"
+    android:minWidth="40dp"
+    android:minHeight="40dp"
+    android:targetCellWidth="1"
+    android:targetCellHeight="1"
     android:previewLayout="@layout/widget_simple_streak_preview"
-    android:resizeMode="horizontal|vertical"
+    android:resizeMode="none"
     android:updatePeriodMillis="1800000"
     android:widgetCategory="home_screen" />

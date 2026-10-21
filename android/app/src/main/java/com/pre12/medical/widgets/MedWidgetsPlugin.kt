@@ -22,6 +22,9 @@ import com.getcapacitor.annotation.CapacitorPlugin
  *    payloads at once, then one redraw per widget.
  *  • **updateWidgetTasks / updateWidgetStreak / updateWidgetNotes** — granular
  *    variants (the phase asked for `updateWidgetTasks(tasksJson)` explicitly).
+ *  • **openWidgetPicker** — asks the launcher for its widget picker so the user
+ *    can choose among all seven widgets (see [PICKER_ACTIONS] for the honest
+ *    story: Android exposes no public picker intent, so this is best-effort).
  *  • **requestPinWidget** — opens the system "add to home screen" dialog for a
  *    chosen widget (Android 8+; the launcher may still refuse, which we report).
  *  • **getPendingToggles / clearPendingToggles** — drain the checkbox changes the
@@ -103,12 +106,9 @@ class MedWidgetsPlugin : Plugin() {
             if (WidgetBridge.write(ctx, WidgetBridge.KEY_LECTURES, it)) written++
         }
 
-        // ⭐ Offline-first: the WorkManager job needs a JWT to upload a checkbox
-        //    change while the WebView is gone. The session is refreshed by JS on
-        //    every publish, so it is never staler than the last app visit.
-        call.getObject("session")?.let { WidgetBridge.saveSession(ctx, it.toString()) }
-
-        WidgetBridge.writeMeta(ctx, call.getString("source") ?: "app")
+        // ⭐ Phase W7 — repaint BEFORE any secondary bookkeeping. The writes
+        //    above use `commit()`, so the launcher can already read fresh state;
+        //    session/meta writes must never sit between the data and the frame.
         requestUpdate(
             ctx,
             TodayTasksWidgetReceiver::class.java,
@@ -119,6 +119,13 @@ class MedWidgetsPlugin : Plugin() {
             NotesOnlyWidgetReceiver::class.java,
             LecturesWidgetReceiver::class.java
         )
+
+        // ⭐ Offline-first: the WorkManager job needs a JWT to upload a checkbox
+        //    change while the WebView is gone. The session is refreshed by JS on
+        //    every publish, so it is never staler than the last app visit.
+        call.getObject("session")?.let { WidgetBridge.saveSession(ctx, it.toString()) }
+
+        WidgetBridge.writeMeta(ctx, call.getString("source") ?: "app")
         call.resolve(JSObject().put("written", written))
     }
 
@@ -213,6 +220,49 @@ class MedWidgetsPlugin : Plugin() {
         }
     }
 
+    /**
+     * ⭐⭐ Phase W7 — "إضافة ودجت للشاشة" now asks for the **picker**, not one tile.
+     *
+     * Android has no public "open the widget picker" API: launchers own that
+     * surface and the only documented call is `requestPinAppWidget` for one
+     * provider. Every OEM launcher that *does* expose a picker uses a different
+     * action though, so we try them in order. A `startActivity` that cannot be
+     * served throws synchronously (`ActivityNotFoundException` / `SecurityException`)
+     * and we move to the next candidate — no package-visibility `<queries>` needed.
+     *
+     * If none works (Pixel Launcher is the notable one), `opened` is false and
+     * the page shows its own five-widget chooser, each row calling the documented
+     * `requestPinWidget`. The user always gets to choose; nothing is pinned blind.
+     */
+    @PluginMethod
+    fun openWidgetPicker(call: PluginCall) {
+        val host = activity
+        if (host == null) {
+            call.reject("No foreground activity")
+            return
+        }
+
+        host.runOnUiThread {
+            for (action in PICKER_ACTIONS) {
+                try {
+                    host.startActivity(Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    call.resolve(JSObject().put("opened", true).put("action", action))
+                    return@runOnUiThread
+                } catch (_: Throwable) {
+                    // Not exported / not installed: try the next launcher dialect.
+                }
+            }
+
+            val supported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+                AppWidgetManager.getInstance(host).isRequestPinAppWidgetSupported
+            call.resolve(
+                JSObject()
+                    .put("opened", false)
+                    .put("supported", supported)
+            )
+        }
+    }
+
     @PluginMethod
     fun isPinWidgetSupported(call: PluginCall) {
         val supported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
@@ -273,5 +323,22 @@ class MedWidgetsPlugin : Plugin() {
         "notes_only", "notesOnly" -> NotesOnlyWidgetReceiver::class.java
         "lectures", "lecture" -> LecturesWidgetReceiver::class.java
         else -> null
+    }
+
+    private companion object {
+        /**
+         * Known launcher entry points, most explicit first. `APPWIDGET_PICK` is the
+         * hidden platform action (system-permission gated on most ROMs) — it costs
+         * one failed attempt and pays off on the ROMs that export it.
+         */
+        val PICKER_ACTIONS = listOf(
+            "android.appwidget.action.APPWIDGET_PICK",
+            "com.android.launcher3.action.PICK_WIDGET",
+            "com.sec.android.app.launcher.action.PICK_WIDGET",
+            "com.miui.home.intent.action.PICK_WIDGET",
+            "com.huawei.android.launcher.action.PICK_WIDGET",
+            "com.oppo.launcher.action.PICK_WIDGET",
+            "com.vivo.launcher.action.PICK_WIDGET"
+        )
     }
 }

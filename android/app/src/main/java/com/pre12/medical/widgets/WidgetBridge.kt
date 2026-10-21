@@ -148,6 +148,8 @@ data class NextLecture(
     val subject: String = "",
     val instructor: String = "",
     val whenText: String = "",
+    /** Web asset path of the subject cover (`plans/phys.jpg`), empty if unknown. */
+    val cover: String = "",
     val updatedAt: String = ""
 ) {
     val isEmpty: Boolean
@@ -432,6 +434,7 @@ object WidgetBridge {
                 subject = root.optString("subject", "").trim(),
                 instructor = root.optString("instructor", "").trim(),
                 whenText = root.optString("when", "").trim(),
+                cover = root.optString("cover", "").trim(),
                 updatedAt = root.optString("updatedAt", "")
             )
         } catch (_: Exception) {

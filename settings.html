@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="5.0.0-beta.2">
+<meta name="app-version" content="5.0.0-beta.3">
 <title>الودجات الذكية - المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -1299,6 +1299,60 @@
       line-height: 1.7;
       color: var(--text-secondary);
     }
+
+    /* يظهر فقط إذا لم يوفّر المُشغّل نافذة اختيار النظام. */
+    .widget-chooser {
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(52, 211, 153, 0.16);
+      text-align: start;
+    }
+
+    .widget-chooser[hidden] { display: none; }
+
+    .widget-chooser-title {
+      margin: 0 0 10px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: #a7f3d0;
+    }
+
+    .widget-choice {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 12px;
+      margin-bottom: 8px;
+      border-radius: 16px;
+      border: 1px solid rgba(52, 211, 153, 0.18);
+      background: rgba(6, 78, 59, 0.35);
+      color: var(--text-primary);
+      font-family: inherit;
+      text-align: start;
+      cursor: pointer;
+    }
+
+    .widget-choice:last-child { margin-bottom: 0; }
+    .widget-choice:active { transform: scale(0.985); }
+
+    .widget-choice-icon {
+      width: 36px;
+      height: 36px;
+      flex: 0 0 auto;
+      border-radius: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #d1fae5;
+      background: rgba(16, 185, 129, 0.18);
+    }
+
+    .widget-choice-icon i { width: 18px; height: 18px; }
+
+    .widget-choice-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .widget-choice-name { font-size: 0.84rem; font-weight: 800; }
+    .widget-choice-sub { font-size: 0.68rem; font-weight: 600; color: var(--text-secondary); }
 </style>
 </head>
 <body>
@@ -1315,6 +1369,45 @@
     </button>
 
     <p class="settings-status" id="settingsStatus" aria-live="polite"></p>
+
+    <section class="widget-chooser" id="widgetChooser" hidden>
+      <p class="widget-chooser-title">اختر الودجت الذي تريده</p>
+      <button type="button" class="widget-choice" data-kind="tasks">
+        <span class="widget-choice-icon"><i data-lucide="list-checks"></i></span>
+        <span class="widget-choice-copy">
+          <span class="widget-choice-name">مهام اليوم</span>
+          <span class="widget-choice-sub">2×3 — قائمة مهامك مع مربّعات الإنجاز</span>
+        </span>
+      </button>
+      <button type="button" class="widget-choice" data-kind="streak">
+        <span class="widget-choice-icon"><i data-lucide="flame"></i></span>
+        <span class="widget-choice-copy">
+          <span class="widget-choice-name">سلسلة الأيام</span>
+          <span class="widget-choice-sub">1×1 — عدد أيامك المتتالية</span>
+        </span>
+      </button>
+      <button type="button" class="widget-choice" data-kind="lectures">
+        <span class="widget-choice-icon"><i data-lucide="image"></i></span>
+        <span class="widget-choice-copy">
+          <span class="widget-choice-name">المحاضرة القادمة</span>
+          <span class="widget-choice-sub">1×1 — غلاف المادة، والضغط يفتح الألبوم</span>
+        </span>
+      </button>
+      <button type="button" class="widget-choice" data-kind="notes">
+        <span class="widget-choice-icon"><i data-lucide="sticky-note"></i></span>
+        <span class="widget-choice-copy">
+          <span class="widget-choice-name">ملاحظات وأهداف</span>
+          <span class="widget-choice-sub">2×2 — ورق أزرق وبنفسجي مع نسب التقدّم</span>
+        </span>
+      </button>
+      <button type="button" class="widget-choice" data-kind="streak_detail">
+        <span class="widget-choice-icon"><i data-lucide="calendar-days"></i></span>
+        <span class="widget-choice-copy">
+          <span class="widget-choice-name">سلسلة مفصّلة</span>
+          <span class="widget-choice-sub">4×2 — أرقام كبيرة وأسبوع كامل</span>
+        </span>
+      </button>
+    </section>
   </main>
 
   <script>
@@ -1325,26 +1418,67 @@
       if (el) el.textContent = text || '';
     }
 
-    async function addWidget() {
+    function api() {
       var cap = window.Capacitor;
-      var api = cap && cap.Plugins ? cap.Plugins.MedWidgets : null;
-      if (!api) {
+      return cap && cap.Plugins ? cap.Plugins.MedWidgets : null;
+    }
+
+    /**
+     * Phase W7 — the button asks the launcher for its *picker* (all widgets).
+     * Android only guarantees "pin this one", so when no launcher entry point
+     * answers, the five-widget chooser below appears instead of pinning blindly.
+     */
+    async function addWidget() {
+      var bridge = api();
+      if (!bridge) {
         setStatus('إضافة الودجات متاحة داخل تطبيق أندرويد فقط.');
         return;
       }
+
+      setStatus('جارٍ فتح نافذة الودجات…');
       try {
-        var result = await api.requestPinWidget({ kind: 'tasks' });
+        var result = await bridge.openWidgetPicker();
+        if (result && result.opened) {
+          setStatus('اختر الودجت الذي تريده من نافذة النظام.');
+          document.getElementById('widgetChooser').hidden = true;
+          return;
+        }
+        document.getElementById('widgetChooser').hidden = false;
+        setStatus('مُشغّل جهازك لا يعرض قائمة عامة — اختر الودجت من القائمة التالية.');
+      } catch (e) {
+        document.getElementById('widgetChooser').hidden = false;
+        setStatus('تعذّر فتح نافذة النظام — اختر الودجت من القائمة التالية.');
+      }
+    }
+
+    async function pinWidget(kind, name) {
+      var bridge = api();
+      if (!bridge) return;
+      try {
+        var result = await bridge.requestPinWidget({ kind: kind });
         if (result && result.requested === false) {
           setStatus('لا يدعم المُشغّل نافذة الإضافة — اضغط مطوّلاً على الشاشة الرئيسية ثم «الودجات».');
         } else {
-          setStatus('تم فتح نافذة الإضافة — اختر «مهام اليوم» أو أي ودجت آخر.');
+          setStatus('تم فتح نافذة إضافة «' + name + '» — اضغط «إضافة».');
         }
       } catch (e) {
-        setStatus('تعذّر فتح نافذة الإضافة — حاول من الشاشة الرئيسية.');
+        setStatus('تعذّرت إضافة الودجت — حاول من الشاشة الرئيسية.');
       }
     }
 
     document.getElementById('addWidgetBtn').addEventListener('click', addWidget);
+
+    Array.prototype.forEach.call(
+      document.querySelectorAll('.widget-choice'),
+      function (button) {
+        button.addEventListener('click', function () {
+          pinWidget(
+            button.getAttribute('data-kind'),
+            button.querySelector('.widget-choice-name').textContent
+          );
+        });
+      }
+    );
   </script>
 </body>
 </html>

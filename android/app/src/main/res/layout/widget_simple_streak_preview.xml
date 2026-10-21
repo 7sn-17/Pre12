@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Phase W6 — picker preview for «سلسلة الأيام». Mirrors SimpleStreakWidget.kt. -->
+<!-- Phase W7 — picker preview for the 1×1 «سلسلة الأيام» badge. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -7,84 +7,21 @@
     android:background="@drawable/widget_bg_streak_simple"
     android:gravity="center"
     android:orientation="vertical"
-    android:padding="12dp">
+    android:padding="4dp">
 
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-        <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:fontFamily="@font/tajawal_regular"
-        android:text="@string/widget_preview_flame"
-        android:textColor="#FFF97316"
-        android:textSize="22sp" />
-        <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:fontFamily="@font/tajawal_bold"
-        android:text="@string/widget_preview_streak_number"
-        android:textColor="#FFFFFFFF"
-        android:textSize="58sp" android:layout_marginStart="4dp" />
-    </LinearLayout>
+    <ImageView
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:contentDescription="@null"
+        android:src="@drawable/widget_ic_flame"
+        android:tint="#FFF97316" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:fontFamily="@font/tajawal_regular"
-        android:text="@string/widget_preview_streak_label"
-        android:textColor="#FF94A3B8"
-        android:textSize="10.5sp" />
-
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-        <ImageView
-            android:layout_width="7dp"
-            android:layout_height="7dp"
-            android:layout_marginStart="3dp"
-            android:layout_marginEnd="3dp"
-            android:background="@drawable/widget_dot_slate" />
-        <ImageView
-            android:layout_width="7dp"
-            android:layout_height="7dp"
-            android:layout_marginStart="3dp"
-            android:layout_marginEnd="3dp"
-            android:background="@drawable/widget_dot_slate" />
-        <ImageView
-            android:layout_width="7dp"
-            android:layout_height="7dp"
-            android:layout_marginStart="3dp"
-            android:layout_marginEnd="3dp"
-            android:background="@drawable/widget_dot_emerald" />
-        <ImageView
-            android:layout_width="7dp"
-            android:layout_height="7dp"
-            android:layout_marginStart="3dp"
-            android:layout_marginEnd="3dp"
-            android:background="@drawable/widget_dot_emerald" />
-        <ImageView
-            android:layout_width="7dp"
-            android:layout_height="7dp"
-            android:layout_marginStart="3dp"
-            android:layout_marginEnd="3dp"
-            android:background="@drawable/widget_dot_emerald" />
-        <ImageView
-            android:layout_width="9dp"
-            android:layout_height="9dp"
-            android:layout_marginStart="3dp"
-            android:layout_marginEnd="3dp"
-            android:background="@drawable/widget_dot_white" />
-        <ImageView
-            android:layout_width="7dp"
-            android:layout_height="7dp"
-            android:layout_marginStart="3dp"
-            android:layout_marginEnd="3dp"
-            android:background="@drawable/widget_dot_slate" />
-    </LinearLayout>
+        android:fontFamily="@font/tajawal_extrabold"
+        android:maxLines="1"
+        android:text="@string/widget_preview_streak_number"
+        android:textColor="#FFFFFFFF"
+        android:textSize="32sp" />
 </LinearLayout>

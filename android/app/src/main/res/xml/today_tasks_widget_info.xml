@@ -1,38 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  ⭐⭐ Phase W1 — «مهام اليوم» widget provider metadata.
+  ⭐⭐ Phase W7 — «مهام اليوم» is a 2×3 card (140×160 dp minimum).
 
-  Sizing model
-  ────────────
-  minWidth/minHeight are the legacy cell maths (70dp × cells − 30dp), so
-  250×110dp ≈ a 4×2 cell card. targetCellWidth/Height (API 31+) let the
-  launcher place it exactly on the grid instead of guessing.
-
-  Corners
-  ───────
-  The 24 dp radius is applied in `TodayTasksWidget.kt` through
-  `GlanceModifier.cornerRadius(24.dp)` + `appWidgetBackground()` — that is the
-  only place a widget background can be clipped correctly. `previewImage` /
-  `previewLayout` below are already drawn rounded so the picker matches.
-
-  Updates
-  ───────
-  30 minutes is the platform minimum. It is only a safety net: the app pushes
-  a refresh through `capacitor-widget-bridge` whenever tasks change, and the
-  receiver also runs on boot and on resize.
+  targetCellWidth/Height (API 31+) place it exactly on the launcher grid; the
+  legacy minWidth/minHeight keep older launchers in the same ballpark. The card
+  is still resizable: `TodayTasksWidget` budgets its rows from `LocalSize`, and
+  the text is 16 sp so it survives 1.3× font scale.
 -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_today_tasks_description"
     android:initialLayout="@layout/glance_default_loading_layout"
-    android:minWidth="250dp"
-    android:minHeight="130dp"
-    android:minResizeWidth="180dp"
-    android:minResizeHeight="130dp"
+    android:minWidth="140dp"
+    android:minHeight="160dp"
+    android:minResizeWidth="140dp"
+    android:minResizeHeight="160dp"
     android:maxResizeWidth="420dp"
-    android:maxResizeHeight="280dp"
-    android:targetCellWidth="4"
-    android:targetCellHeight="2"
-    android:previewImage="@drawable/widget_preview_image"
+    android:maxResizeHeight="340dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="3"
     android:previewLayout="@layout/widget_today_tasks_preview"
     android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="1800000"

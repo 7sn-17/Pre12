@@ -16,11 +16,11 @@ import kotlinx.coroutines.delay
  * Runs inside the widget's own broadcast receiver, with **no WebView** in the
  * picture. The sequence is deliberately optimistic and survives process death:
  *
- *   1. flip the bit inside `tasks.today` + stamp `doneAt` → redraw is instant;
+ *   1. flip the bit inside `tasks.today` + stamp `doneAt` (`commit()`);
  *   2. append the change to `pending.tasks` (with its title) → durable queue;
- *   3. schedule a WorkManager upload → Supabase syncs with the app closed;
- *   4. broadcast to a *running* app → instant sync + UI update via the plugin;
- *   5. `update(...)` → tick (animated vector) + strike-through;
+ *   3. `update(...)` **immediately** → tick (animated vector) + strike-through;
+ *   4. broadcast to a *running* app → the WebView/JS syncs in the background;
+ *   5. schedule a WorkManager upload → Supabase syncs with the app closed;
  *   6. `delay(900)` + `update(...)` → the completed row leaves the list and the
  *      next pending task takes its place.
  *
@@ -45,16 +45,25 @@ class ToggleTaskAction : ActionCallback {
         val title = parameters[TitleKey] ?: ""
         val subject = parameters[SubjectKey] ?: ""
 
-        // 1) Optimistic local state (Glance redraws straight from prefs).
+        // ── 1) LOCAL FIRST (Phase W7) ────────────────────────────────────────
+        // prefs are written with `commit()`, so the next line reads the new
+        // value from disk. Nothing below may run before the redraw: WorkManager
+        // enqueueing and the WebView broadcast are side effects, not the UI.
         WidgetBridge.applyTaskToggle(context, taskId, done)
 
-        // 2) Durable queue — the single source for both sync paths.
+        // 2) Durable queue. Also a synchronous prefs commit, and the toggle must
+        //    survive process death even if the very next frame kills us.
         WidgetBridge.queuePendingToggle(context, taskId, date, done, title, subject)
 
-        // 3) Offline-first background upload (network-constrained, backoff).
-        WidgetSync.schedule(context)
+        // 3) FIRST FRAME NOW — tick + strike-through, straight from prefs.
+        try {
+            TodayTasksWidget().update(context, glanceId)
+        } catch (_: Throwable) {
+            return
+        }
 
-        // 4) Wake a running app. `setPackage` keeps the broadcast private.
+        // 4) Wake a running app (JS drains the queue + syncs Supabase). This is
+        //    fired *after* the redraw: a slow WebView can never delay the tick.
         context.sendBroadcast(
             Intent(ACTION_TASK_TOGGLED)
                 .setPackage(context.packageName)
@@ -64,12 +73,8 @@ class ToggleTaskAction : ActionCallback {
                 .putExtra(EXTRA_TITLE, title)
         )
 
-        // 5) First frame: filled tick (animated vector) + strike-through.
-        try {
-            TodayTasksWidget().update(context, glanceId)
-        } catch (_: Throwable) {
-            return
-        }
+        // 5) Offline upload — network-constrained WorkManager, no UI dependency.
+        WidgetSync.schedule(context)
 
         // 6) Second frame: the completed row disappears, the list reflows.
         if (!done) return

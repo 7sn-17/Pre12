@@ -213,8 +213,9 @@ private fun CombinedNotes(
 
 private fun maxRowsForSingle(height: androidx.compose.ui.unit.Dp): Int = when {
     height >= 220.dp -> 4
-    height >= 160.dp -> 3
-    else -> 2
+    height >= 170.dp -> 3
+    height >= 140.dp -> 2
+    else -> 1
 }
 
 @Composable
@@ -232,7 +233,7 @@ private fun StickyHalf(
     modifier: GlanceModifier
 ) {
     val open = openAppAction(openPath)
-    val plusDiameter = if (compact) 17.dp else 19.dp
+    val plusDiameter = if (compact) 20.dp else 22.dp
 
     Box(
         modifier = modifier
@@ -241,8 +242,8 @@ private fun StickyHalf(
             .padding(
                 start = 9.dp,
                 end = 9.dp,
-                top = if (compact) 18.dp else 21.dp,
-                bottom = 8.dp
+                top = if (compact) 18.dp else 22.dp,
+                bottom = if (compact) 4.dp else 8.dp
             )
             .clickable(open)
     ) {
@@ -254,7 +255,7 @@ private fun StickyHalf(
                 Text(
                     text = title,
                     modifier = GlanceModifier.defaultWeight(),
-                    style = wText(ink, if (compact) 10.sp else 11.sp, FontWeight.Bold),
+                    style = wText(ink, 18.sp, FontWeight.Bold),
                     maxLines = 1
                 )
                 RoundIconButton(
@@ -266,20 +267,20 @@ private fun StickyHalf(
                 )
             }
 
-            Gap(if (compact) 3.dp else 4.dp)
+            Gap(if (compact) 2.dp else 4.dp)
 
             if (items.isEmpty()) {
                 if (showHint) {
                     Text(
                         text = if (showPercent) "أضف هدفك الأول من +" else "دوّن فكرتك الأولى من +",
-                        style = wText(WidgetSkin.PaperMuted, 8.5.sp),
+                        style = wText(WidgetSkin.PaperMuted, 11.sp),
                         maxLines = 2
                     )
                 }
             } else {
                 items.forEachIndexed { index, item ->
                     StickyRow(item, ink, accent, showPercent, compact)
-                    if (index != items.lastIndex) Gap(3.dp)
+                    if (index != items.lastIndex) Gap(if (compact) 2.dp else 3.dp)
                 }
             }
         }
@@ -300,7 +301,7 @@ private fun StickyRow(
     ) {
         Text(
             text = "✦",
-            style = wText(accent, 7.5.sp, FontWeight.Bold, TextAlign.Center),
+            style = wText(accent, 9.sp, FontWeight.Bold, TextAlign.Center),
             maxLines = 1
         )
         HGap(3.dp)
@@ -309,7 +310,7 @@ private fun StickyRow(
             modifier = GlanceModifier.defaultWeight(),
             style = wText(
                 color = if (item.isDone) WidgetSkin.PaperMuted else WidgetSkin.PaperInk,
-                size = if (compact) 9.sp else 9.5.sp,
+                size = 14.sp,
                 weight = FontWeight.Medium,
                 decoration = if (item.isDone) TextDecoration.LineThrough else null
             ),
@@ -322,10 +323,10 @@ private fun StickyRow(
                     text = "$value%",
                     background = accent.copy(alpha = 0.14f),
                     foreground = ink,
-                    horizontal = 4.dp,
+                    horizontal = 5.dp,
                     vertical = 1.dp,
-                    corner = 5.dp,
-                    fontSize = 7.5.sp
+                    corner = 6.dp,
+                    fontSize = 9.5.sp
                 )
             }
         }

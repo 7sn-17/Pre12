@@ -384,6 +384,30 @@
    * has one. The widget only needs a title, a subject, an instructor and a
    * human date — everything else would be noise on a 2×2 card.
    */
+  /**
+   * Phase W7 — the 1×1 album tile shows a real cover, offline.
+   *
+   * RemoteViews cannot download an image, so the cover is one of the five
+   * subject artworks the web build already ships in `plans/` (also used by
+   * `plans.html`). `LecturesWidget.kt` reads it from the APK assets; an unknown
+   * subject simply gets the branded gradient instead.
+   */
+  var PLAN_COVERS = [
+    { test: /كيمياء|chem/i, cover: 'plans/chem.jpg' },
+    { test: /بيولوج|bio/i, cover: 'plans/bio.jpg' },
+    { test: /فيزياء|phys/i, cover: 'plans/phys.jpg' },
+    { test: /إنجليز|انجليز|english/i, cover: 'plans/eng.jpg' },
+    { test: /تاريخ|history|zero/i, cover: 'plans/zero.jpg' }
+  ];
+
+  function coverForSubject(subject) {
+    var value = String(subject || '');
+    for (var i = 0; i < PLAN_COVERS.length; i++) {
+      if (PLAN_COVERS[i].test.test(value)) return PLAN_COVERS[i].cover;
+    }
+    return '';
+  }
+
   function buildLecturesPayload(plan) {
     var today = todayKey();
     var dates = Object.keys(plan || {})
@@ -403,14 +427,14 @@
     }
 
     if (!pickDate) {
-      return { title: '', updatedAt: new Date().toISOString() };
+      return { title: '', cover: '', updatedAt: new Date().toISOString() };
     }
 
     var list = (plan[pickDate] || []).filter(function (task) {
       return task && (task.task || task.subject);
     });
     if (!list.length) {
-      return { title: '', updatedAt: new Date().toISOString() };
+      return { title: '', cover: '', updatedAt: new Date().toISOString() };
     }
 
     var lecture = list[0];
@@ -431,6 +455,7 @@
       subject: String(lecture.subject || ''),
       instructor: String(lecture.instructor || ''),
       when: when,
+      cover: coverForSubject(lecture.subject),
       date: pickDate,
       updatedAt: new Date().toISOString()
     };
@@ -579,6 +604,12 @@
     try { console.log('[widgets]', message); } catch (e) {}
   }
 
+  /**
+   * Phase W7 — the button opens the launcher's **picker** (all widgets), not a
+   * hard-coded card. Android has no public picker intent, so `openWidgetPicker`
+   * tries every known launcher dialect and falls back to the documented pin
+   * dialog for the requested kind when none answers.
+   */
   async function addHomeWidget(kind) {
     var api = plugin();
     if (!api) {
@@ -587,6 +618,11 @@
     }
 
     try {
+      if (typeof api.openWidgetPicker === 'function') {
+        var picked = await api.openWidgetPicker();
+        if (picked && picked.opened) return;
+      }
+
       var response = await api.requestPinWidget({ kind: kind || 'tasks' });
       if (response && response.requested === false) {
         toast('لا يدعم المُشغّل هذه النافذة — اضغط مطوّلاً على الشاشة الرئيسية ثم «الودجات»', 'info');

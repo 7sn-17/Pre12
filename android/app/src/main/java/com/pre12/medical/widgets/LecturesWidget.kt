@@ -1,51 +1,54 @@
 package com.pre12.medical.widgets
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.LruCache
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.glance.ContentScale
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.ImageProvider
-import androidx.glance.LocalSize
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
-import androidx.glance.layout.Row
 import androidx.glance.layout.fillMaxSize
-import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
-import androidx.glance.text.TextAlign
+import androidx.glance.unit.ColorProvider
 import com.pre12.medical.R
 
 /**
- * ⭐⭐ Phase W6 — «المحاضرة القادمة» (new 2×2 widget).
+ * ⭐⭐ Phase W7 — «المحاضرة القادمة / الألبوم» is now a **1×1 album tile**.
  *
- * Full-bleed marine/teal art with a cyan bloom and a bottom scrim: the title sits
- * on the dark end so contrast never depends on the wallpaper. The scrim is drawn
- * inside [R.drawable.widget_bg_lecture], which is also what keeps the 24 dp
- * rounded edge intact.
+ * Reference (`widget_reference_final.html`):
+ *   `.widget-lecture-1x1 { background-size: cover; border-radius: 24px; }`
  *
- * ⚠️ The "image" is a bundled art layer, not a per-lecture photo: a RemoteViews
- * widget has no network image pipeline, and a stale cached photo of the wrong
- * lecture would be worse than an honest, on-brand backdrop. The subject line
- * carries the identity instead.
+ * The cover is the bundled subject image the web app already ships
+ * (`plans/phys.jpg`, `plans/chem.jpg`, …), loaded straight from the WebView
+ * assets as a down-sampled [Bitmap] — no network, no cached photo of the wrong
+ * lecture, and it survives offline. If the payload has no cover (empty plan, or
+ * an unknown subject) the branded gradient art takes over and a tiny caption
+ * says what the tile is.
  *
- * Data comes from `widgets.js → lectures.next` (today's plan, else the next day
- * that has one). Any tap opens `pre12://lectures`.
+ * `widgets.js → lectures.next.cover` carries the asset path. A tap opens the
+ * album screen (`pre12://lectures` → `my-lectures.html`).
  */
 class LecturesWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val lecture = WidgetBridge.readLecture(context)
-        provideContent { LectureCard(lecture) }
+        val cover = loadCover(context, lecture.cover)
+        provideContent { LectureCard(lecture, cover) }
     }
 }
 
@@ -53,66 +56,75 @@ class LecturesWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = LecturesWidget()
 }
 
+/** Asset path guard: no traversal, only the image formats the web build ships. */
+private val COVER_PATTERN = Regex("^[A-Za-z0-9/_.-]+\\.(jpg|jpeg|png|webp)$")
+
+/** A 1×1 tile is ~210 px @xxhdpi; 270–540 px is plenty and keeps the IPC small. */
+private const val COVER_MAX_WIDTH = 420
+
+/** Decoded covers are reused across updates instead of re-reading the APK. */
+private val coverCache = LruCache<String, Bitmap>(4)
+
+private fun loadCover(context: Context, path: String?): Bitmap? {
+    if (path.isNullOrBlank() || !COVER_PATTERN.matches(path)) return null
+    coverCache.get(path)?.let { return it }
+
+    return try {
+        val asset = "public/" + path.trim().removePrefix("/").removePrefix("public/")
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        context.assets.open(asset).use { BitmapFactory.decodeStream(it, null, bounds) }
+        if (bounds.outWidth <= 0) return null
+
+        var sample = 1
+        while (bounds.outWidth / sample > COVER_MAX_WIDTH) sample *= 2
+
+        val options = BitmapFactory.Options().apply {
+            inSampleSize = sample
+            inPreferredConfig = Bitmap.Config.ARGB_8888
+        }
+        val bitmap = context.assets.open(asset).use {
+            BitmapFactory.decodeStream(it, null, options)
+        }
+        if (bitmap != null) coverCache.put(path, bitmap)
+        bitmap
+    } catch (_: Throwable) {
+        // A missing asset is a design state, not an error: gradient art covers it.
+        null
+    }
+}
+
 @Composable
-private fun LectureCard(lecture: NextLecture) {
-    val height = LocalSize.current.height
-    val compact = height < 130.dp
+private fun LectureCard(lecture: NextLecture, cover: Bitmap?) {
+    val hasCover = cover != null
 
     Box(
         modifier = GlanceModifier
             .fillMaxSize()
-            .background(ImageProvider(R.drawable.widget_bg_lecture))
-            .padding(if (compact) 12.dp else 14.dp)
+            .background(
+                if (hasCover) ImageProvider(cover!!) else ImageProvider(R.drawable.widget_bg_lecture),
+                contentScale = ContentScale.Crop
+            )
+            .cornerRadius(24.dp)
             .clickable(openAppAction("lectures"))
     ) {
-        Column(modifier = GlanceModifier.fillMaxSize()) {
-            Row(modifier = GlanceModifier.fillMaxWidth()) {
-                Badge(
-                    text = "المحاضرة القادمة",
-                    background = androidx.compose.ui.graphics.Color(0x33000000),
-                    foreground = WidgetSkin.White,
-                    horizontal = 7.dp,
-                    vertical = 2.dp,
-                    corner = 6.dp,
-                    fontSize = 8.sp
-                )
-            }
-
-            androidx.glance.layout.Spacer(GlanceModifier.defaultWeight())
-
-            if (lecture.isEmpty) {
-                Text(
-                    text = "لا محاضرات قادمة",
-                    style = wText(WidgetSkin.White, if (compact) 12.sp else 13.5.sp, FontWeight.Bold),
-                    maxLines = 1
-                )
-                Gap(2.dp)
-                Text(
-                    text = "افتح الجدول لإضافة محاضرتك",
-                    style = wText(WidgetSkin.Slate300, 8.5.sp),
-                    maxLines = 1
-                )
-            } else {
-                Text(
-                    text = lecture.title,
-                    style = wText(WidgetSkin.White, if (compact) 12.sp else 13.5.sp, FontWeight.Bold),
-                    maxLines = 2
-                )
-                Gap(3.dp)
-                Text(
-                    text = meta(lecture),
-                    style = wText(WidgetSkin.Slate300, 8.5.sp, FontWeight.Medium),
-                    maxLines = 1
-                )
+        if (!hasCover) {
+            Column(
+                modifier = GlanceModifier.fillMaxSize().padding(7.dp),
+                verticalAlignment = Alignment.Bottom
+            ) {
+                Box(
+                    modifier = GlanceModifier
+                        .background(ColorProvider(WidgetSkin.Overlay))
+                        .cornerRadius(7.dp)
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = if (lecture.isEmpty) "لا محاضرات" else lecture.subject.ifBlank { "المحاضرات" },
+                        style = wText(WidgetSkin.White, 9.sp, FontWeight.Bold),
+                        maxLines = 1
+                    )
+                }
             }
         }
     }
-}
-
-private fun meta(lecture: NextLecture): String {
-    val parts = ArrayList<String>(3)
-    if (lecture.whenText.isNotBlank()) parts += lecture.whenText
-    if (lecture.subject.isNotBlank()) parts += lecture.subject
-    if (lecture.instructor.isNotBlank()) parts += lecture.instructor
-    return parts.joinToString(" · ")
 }
