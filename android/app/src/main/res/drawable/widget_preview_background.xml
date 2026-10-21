@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ⭐ Phase W1 — picker preview card: 24dp radius, hairline emerald border. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#FFFFFFFF" />
+    <corners android:radius="24dp" />
+    <stroke
+        android:width="1dp"
+        android:color="#1F10B981" />
+</shape>

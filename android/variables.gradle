@@ -2,6 +2,9 @@ ext {
     minSdkVersion = 24
     compileSdkVersion = 36
     targetSdkVersion = 36
+    // ⭐⭐ Phase W1 — Jetpack Glance (home-screen widgets).
+    //    1.2.0 is the latest stable; minSdk 23, compileSdk 34+.
+    glanceVersion = '1.2.0'
     // ⭐ Firebase Cloud Messaging — يقرأه @capacitor/push-notifications
     //    و@capacitor-firebase/messaging من rootProject.ext.
     //    (Capacitor 8 متوافق مع 25.x — لا نستخدم BoM لتجنّب تعارض الإصدارات)

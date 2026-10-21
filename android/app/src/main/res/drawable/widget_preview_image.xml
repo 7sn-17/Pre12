@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ⭐⭐ Phase W1 — vector approximation of «مهام اليوم» used as `previewImage`
+  on Android 8–11 (on API 31+ the richer `previewLayout` is shown instead).
+
+  Drawn at the real widget's proportions: 250×110 dp, 24 dp corners, emerald
+  progress fill at ~37 %, one completed row and two open rows in RTL order.
+  No text is baked in, so the preview stays sharp at any density.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="250dp"
+    android:height="110dp"
+    android:viewportWidth="250"
+    android:viewportHeight="110">
+
+    <!-- Card -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M24,1 H226 A23,23 0 0 1 249,24 V86 A23,23 0 0 1 226,109 H24 A23,23 0 0 1 1,86 V24 A23,23 0 0 1 24,1 Z"
+        android:strokeColor="#1F10B981"
+        android:strokeWidth="1" />
+
+    <!-- Title bar (right side, RTL) -->
+    <path
+        android:fillColor="#FF0F172A"
+        android:pathData="M150,16 H232 A4,4 0 0 1 232,24 H150 A4,4 0 0 1 150,16 Z" />
+
+    <!-- Subtitle bar -->
+    <path
+        android:fillColor="#FF94A3B8"
+        android:pathData="M182,32 H232 A3,3 0 0 1 232,38 H182 A3,3 0 0 1 182,32 Z" />
+
+    <!-- Progress track -->
+    <path
+        android:fillColor="#FFE2E8F0"
+        android:pathData="M16,46 H234 A2,2 0 0 1 234,50 H16 A2,2 0 0 1 16,46 Z" />
+
+    <!-- Progress fill (3 / 8) -->
+    <path
+        android:fillColor="#FF10B981"
+        android:pathData="M16,46 H100 A2,2 0 0 1 100,50 H16 A2,2 0 0 1 16,46 Z" />
+
+    <!-- Row 1 · completed -->
+    <path
+        android:fillColor="#FF10B981"
+        android:pathData="M218,68 A6,6 0 1 0 230,68 A6,6 0 1 0 218,68 Z" />
+    <path
+        android:fillColor="#FFCBD5E1"
+        android:pathData="M16,64 H196 A3,3 0 0 1 196,70 H16 A3,3 0 0 1 16,64 Z" />
+
+    <!-- Row 2 · open -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M218,84 A6,6 0 1 0 230,84 A6,6 0 1 0 218,84 Z"
+        android:strokeColor="#FF94A3B8"
+        android:strokeWidth="1.5" />
+    <path
+        android:fillColor="#FFE2E8F0"
+        android:pathData="M16,80 H176 A3,3 0 0 1 176,86 H16 A3,3 0 0 1 16,80 Z" />
+
+    <!-- Row 3 · open -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M218,100 A6,6 0 1 0 230,100 A6,6 0 1 0 218,100 Z"
+        android:strokeColor="#FF94A3B8"
+        android:strokeWidth="1.5" />
+    <path
+        android:fillColor="#FFE2E8F0"
+        android:pathData="M16,96 H156 A3,3 0 0 1 156,102 H16 A3,3 0 0 1 16,96 Z" />
+</vector>

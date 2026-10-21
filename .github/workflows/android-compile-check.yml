@@ -1,0 +1,98 @@
+name: Android Compile Check
+
+# ⭐⭐ Phase W1 — Compile-only gate for native (Kotlin/Glance) work.
+#
+# Why this exists: the release workflow only runs on `main`/`v*` tags, so a
+# feature branch that touches `android/` has no compiler. This workflow builds
+# a **debug** APK on the widgets branch and fails on any Kotlin, manifest,
+# resource or Glance error. It publishes nothing: no release, no Storage
+# upload, no notification — so it is safe to run on every commit.
+#
+# Debug signing is the automatic debug keystore; the release keystore is never
+# needed here.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/home-screen-widgets
+    paths:
+      - 'android/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'build.js'
+      - 'src/**'
+      - '.github/workflows/android-compile-check.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'android/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: compile-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compile:
+    name: assembleDebug
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🧰 Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: ☕ Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: 🐘 Set up Gradle cache
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: 📦 Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: 🏗️ Build the web app
+        run: npm run build
+
+      - name: 🔗 Sync Capacitor
+        run: npx cap sync android
+
+      - name: 🏛️ Make gradlew executable
+        run: chmod +x android/gradlew
+
+      - name: 🔨 Compile + package (debug)
+        working-directory: android
+        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
+
+      - name: ✅ Verify the APK and the widget entry
+        run: |
+          set -e
+          APK="android/app/build/outputs/apk/debug/app-debug.apk"
+          test -f "$APK" || { echo "::error::No debug APK produced"; exit 1; }
+          echo "APK: $(stat -c %s "$APK") bytes"
+          # The receiver and its provider metadata must survive manifest merging.
+          AAPT2="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" 2>/dev/null | sort -V | tail -1)/aapt2"
+          if [ -x "$AAPT2" ] && "$AAPT2" dump xmltree "$APK" --file AndroidManifest.xml > /tmp/manifest.txt 2>/dev/null; then
+            if grep -q "TodayTasksWidgetReceiver" /tmp/manifest.txt; then
+              echo "✅ TodayTasksWidgetReceiver is registered in the merged manifest"
+            else
+              echo "::error::TodayTasksWidgetReceiver missing from the merged manifest"
+              exit 1
+            fi
+          else
+            echo "::warning::aapt2 unavailable — skipped the manifest assertion"
+          fi
+          echo "✅ Kotlin + Glance compiled successfully"

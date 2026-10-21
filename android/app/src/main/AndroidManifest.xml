@@ -35,6 +35,22 @@
 
         </activity>
 
+        <!-- ⭐⭐ Phase W1 — «مهام اليوم» home-screen widget (Jetpack Glance).
+             The receiver is not exported: only the system (AppWidgetService)
+             sends APPWIDGET_UPDATE. `today_tasks_widget_info.xml` carries the
+             size grid, preview and refresh policy. -->
+        <receiver
+            android:name=".widgets.TodayTasksWidgetReceiver"
+            android:exported="false"
+            android:label="@string/widget_today_tasks_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/today_tasks_widget_info" />
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ⭐⭐ Phase W1 — Widget palette · LIGHT (brand emerald fallback).
+
+  These 27 tokens mirror the Material 3 colour roles that Glance exposes
+  through `GlanceTheme.colors`. On Android 12+ the `values-v31` / `values-night-v31`
+  variants take over and re-tint the widget from the user's wallpaper
+  (Material You). On older devices these emerald values keep the brand.
+
+  Keep the token names in sync with `WidgetPalette.kt`.
+-->
+<resources>
+    <color name="widget_color_primary">#FF059669</color>
+    <color name="widget_color_on_primary">#FFFFFFFF</color>
+    <color name="widget_color_primary_container">#FFD1FAE5</color>
+    <color name="widget_color_on_primary_container">#FF064E3B</color>
+
+    <color name="widget_color_secondary">#FF0D9488</color>
+    <color name="widget_color_on_secondary">#FFFFFFFF</color>
+    <color name="widget_color_secondary_container">#FFCCFBF1</color>
+    <color name="widget_color_on_secondary_container">#FF134E4A</color>
+
+    <color name="widget_color_tertiary">#FF0284C7</color>
+    <color name="widget_color_on_tertiary">#FFFFFFFF</color>
+    <color name="widget_color_tertiary_container">#FFE0F2FE</color>
+    <color name="widget_color_on_tertiary_container">#FF0C4A6E</color>
+
+    <color name="widget_color_error">#FFDC2626</color>
+    <color name="widget_color_error_container">#FFFEE2E2</color>
+    <color name="widget_color_on_error">#FFFFFFFF</color>
+    <color name="widget_color_on_error_container">#FF7F1D1D</color>
+
+    <color name="widget_color_background">#FFF8FAFB</color>
+    <color name="widget_color_on_background">#FF0F172A</color>
+    <color name="widget_color_surface">#FFFFFFFF</color>
+    <color name="widget_color_on_surface">#FF0F172A</color>
+    <color name="widget_color_surface_variant">#FFF1F5F9</color>
+    <color name="widget_color_on_surface_variant">#FF475569</color>
+    <color name="widget_color_outline">#FF94A3B8</color>
+
+    <color name="widget_color_inverse_on_surface">#FFF8FAFB</color>
+    <color name="widget_color_inverse_surface">#FF0F172A</color>
+    <color name="widget_color_inverse_primary">#FF6EE7B7</color>
+
+    <color name="widget_color_widget_background">#FFECFDF5</color>
+</resources>

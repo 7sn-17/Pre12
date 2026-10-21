@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ⭐⭐ Phase W1 — Widget palette · LIGHT + Material You (Android 12+).
+
+  On API 31+ these system_* tonal colours re-tint every widget from the
+  user's wallpaper, exactly like first-party Google widgets. The `values/`
+  file remains the fallback for older devices and for wallpapers without
+  dynamic colours.
+-->
+<resources>
+    <color name="widget_color_primary">@android:color/system_accent1_600</color>
+    <color name="widget_color_on_primary">@android:color/system_accent1_0</color>
+    <color name="widget_color_primary_container">@android:color/system_accent1_100</color>
+    <color name="widget_color_on_primary_container">@android:color/system_accent1_900</color>
+
+    <color name="widget_color_secondary">@android:color/system_accent2_600</color>
+    <color name="widget_color_on_secondary">@android:color/system_accent2_0</color>
+    <color name="widget_color_secondary_container">@android:color/system_accent2_100</color>
+    <color name="widget_color_on_secondary_container">@android:color/system_accent2_900</color>
+
+    <color name="widget_color_tertiary">@android:color/system_accent3_600</color>
+    <color name="widget_color_on_tertiary">@android:color/system_accent3_0</color>
+    <color name="widget_color_tertiary_container">@android:color/system_accent3_100</color>
+    <color name="widget_color_on_tertiary_container">@android:color/system_accent3_900</color>
+
+    <color name="widget_color_error">#FFB3261E</color>
+    <color name="widget_color_error_container">#FFF9DEDC</color>
+    <color name="widget_color_on_error">#FFFFFFFF</color>
+    <color name="widget_color_on_error_container">#FF410E0B</color>
+
+    <color name="widget_color_background">@android:color/system_neutral1_10</color>
+    <color name="widget_color_on_background">@android:color/system_neutral1_900</color>
+    <color name="widget_color_surface">@android:color/system_neutral1_10</color>
+    <color name="widget_color_on_surface">@android:color/system_neutral1_900</color>
+    <color name="widget_color_surface_variant">@android:color/system_neutral2_100</color>
+    <color name="widget_color_on_surface_variant">@android:color/system_neutral2_700</color>
+    <color name="widget_color_outline">@android:color/system_neutral2_500</color>
+
+    <color name="widget_color_inverse_on_surface">@android:color/system_neutral1_50</color>
+    <color name="widget_color_inverse_surface">@android:color/system_neutral1_800</color>
+    <color name="widget_color_inverse_primary">@android:color/system_accent1_200</color>
+
+    <color name="widget_color_widget_background">@android:color/system_accent2_50</color>
+</resources>

@@ -4,4 +4,13 @@
     <string name="title_activity_main">المنصة الطبية</string>
     <string name="package_name">com.pre12.medical</string>
     <string name="custom_url_scheme">com.pre12.medical</string>
+
+    <!-- ⭐⭐ Phase W1 — Home-screen widgets -->
+    <string name="widget_today_tasks_label">مهام اليوم</string>
+    <string name="widget_today_tasks_description">مهامك الدراسية لليوم ونسبة الإنجاز — مباشرة من الشاشة الرئيسية</string>
+    <string name="widget_today_tasks_preview_subtitle">3 من 8 مكتملة</string>
+    <string name="widget_today_tasks_preview_count">3 / 8</string>
+    <string name="widget_today_tasks_preview_task_done">مراجعة التشريح — محاضرة 4</string>
+    <string name="widget_today_tasks_preview_task_open">تمارين الفسيولوجيا</string>
+    <string name="widget_today_tasks_preview_task_open2">قراءة ملخص الكيمياء</string>
 </resources>

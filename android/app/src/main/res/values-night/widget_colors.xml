@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ⭐⭐ Phase W1 — Widget palette · DARK (brand emerald fallback).
+
+  Tuned against the app's own dark theme (--bg-main #06110d,
+  --accent #10b981) so a widget and the app look like one product.
+-->
+<resources>
+    <color name="widget_color_primary">#FF10B981</color>
+    <color name="widget_color_on_primary">#FF022C22</color>
+    <color name="widget_color_primary_container">#FF064E3B</color>
+    <color name="widget_color_on_primary_container">#FFA7F3D0</color>
+
+    <color name="widget_color_secondary">#FF2DD4BF</color>
+    <color name="widget_color_on_secondary">#FF042F2E</color>
+    <color name="widget_color_secondary_container">#FF134E4A</color>
+    <color name="widget_color_on_secondary_container">#FF99F6E4</color>
+
+    <color name="widget_color_tertiary">#FF38BDF8</color>
+    <color name="widget_color_on_tertiary">#FF082F49</color>
+    <color name="widget_color_tertiary_container">#FF0C4A6E</color>
+    <color name="widget_color_on_tertiary_container">#FFBAE6FD</color>
+
+    <color name="widget_color_error">#FFF87171</color>
+    <color name="widget_color_error_container">#FF7F1D1D</color>
+    <color name="widget_color_on_error">#FF450A0A</color>
+    <color name="widget_color_on_error_container">#FFFECACA</color>
+
+    <color name="widget_color_background">#FF06110D</color>
+    <color name="widget_color_on_background">#FFF0FDF4</color>
+    <color name="widget_color_surface">#FF0A1A14</color>
+    <color name="widget_color_on_surface">#FFF0FDF4</color>
+    <color name="widget_color_surface_variant">#FF123026</color>
+    <color name="widget_color_on_surface_variant">#FF94A3B8</color>
+    <color name="widget_color_outline">#FF3F5F52</color>
+
+    <color name="widget_color_inverse_on_surface">#FF0A1A14</color>
+    <color name="widget_color_inverse_surface">#FFF0FDF4</color>
+    <color name="widget_color_inverse_primary">#FF047857</color>
+
+    <color name="widget_color_widget_background">#FF06110D</color>
+</resources>
