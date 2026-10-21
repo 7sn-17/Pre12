@@ -3,7 +3,7 @@
 // Version 4.1.0 — SPA shell + network-first HTML + cache-first JSON
 // ============================================
 
-const CACHE_VERSION = 'v5.0.7';
+const CACHE_VERSION = 'v5.0.7-clean';
 const STATIC_CACHE  = `medfav-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `medfav-runtime-${CACHE_VERSION}`;
 const PDF_CACHE     = `medfav-pdf-${CACHE_VERSION}`;
@@ -89,19 +89,34 @@ self.addEventListener('install', (event) => {
 });
 
 // ============================================
-// 2. Activate — امسح كل نسخة قديمة
+// 2. Activate — ⭐⭐ Phase W15: امسح **كل** الكاش (لا نسخة بعينها)
+// ------------------------------------------------------------
+// previous versions only deleted the caches whose name started with
+// "medfav-" — anything else the browser or an old build left behind
+// (a renamed cache, a cache from a previous experiment, the Workbox
+// runtime cache) survived the update and kept serving the OLD UI.
+//
+// Now every single cache is removed, whatever its name, and the new ones
+// are re-created empty by the install step.
 // ============================================
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((names) => {
+      const all = Array.isArray(names) ? names : [];
       return Promise.all(
-        names.filter(n => n.startsWith('medfav-') &&
-          n !== STATIC_CACHE && n !== RUNTIME_CACHE &&
-          n !== PDF_CACHE && n !== IMGS_CACHE)
-          .map(n => {
-            return caches.delete(n);
-          })
-      );
+        all.map((name) => {
+          try {
+            return caches.delete(name).then((deleted) => {
+              console.info('🧹 SW: removed cache', name, deleted ? '' : '(was not there)');
+              return deleted;
+            });
+          } catch (e) {
+            return false;
+          }
+        })
+      ).then((results) => {
+        console.info('🧹 SW: activate — deleted', results.filter(Boolean).length, 'of', all.length, 'caches');
+      });
     }).then(() => {
       return self.clients.claim();
     })

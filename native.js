@@ -1491,7 +1491,11 @@
     'medfav_onboarding_done', 'medfav_theme',
     'medapp_fcm_token',
     'medapp_task_progress_queue', 'medapp_task_progress_owner',
-    'medfav_pending'
+    'medfav_pending',
+    // ⭐ W15 — بيانات العمل لا تُم��ح: الملاحظات والأهداف وخطط المستخدم
+    //   تُزامَن مع Supabase، لكن مسحها بلا اتصال يعني فقدانها.
+    'medfav_goals', 'medfav_my_notes', 'medfav_shared_notes',
+    'medapp_notification_prefs'
   ].join('|'), 'i');
 
   /** ⭐ الإصدار الحالي: من App.getInfo() أو من meta[name=app-version]. */
@@ -1536,31 +1540,65 @@
   }
 
   /**
-   * ⭐ ينفّذ «Cache Killer» عند تغيّر الإصدار.
-   * @returns {Promise<boolean>} true إذا تمّت التنظيف (وسيُعاد التحميل).
+   * ⭐⭐⭐ Phase W15 — «قاتل الكاش» مُحكَم.
+   *
+   * عند كل ترقية إصدار:
+   *   1) إلغاء **كل** Service Workers؛
+   *   2) حذف **كل** الكاش (Cache Storage) مهما كان اسمه؛
+   *   3) مسح كاش الـWebView (على مستوى Android — MainActivity)؛
+   *   4) مسح localStorage القديم (مع استثناء الجلسة وبيانات العمل)؛
+   *   5) إعادة تحميل قسرية.
+   *
+   * ⭐ الضمانات:
+   *   • **مرّة واحدة لكل إصدار**: نكتب الإصدار الجديد *قبل* إعادة التحميل، فلا
+   *     تتكرّر العملية ولا ندخل في حلقة تحميل لا نهائية.
+   *   • **لا حلقة أبداً**: إن انقطع التنظيف (أُغلق التطبيق)، تعلّم ذلك بعلامة
+   *     زمنية، فيُستكمل التنظيف **دون** إعادة تحميل ثانية.
+   *   • **مقارنة مُطبَّعة**: نتجاهل الفروق التي لا معنى لها (مسافات/باد).
    */
+  var CACHE_KILLER_WIPING_KEY = 'app_version_wiping';
+
+  function normalizeVersion(value) {
+    return String(value == null ? '' : value)
+      .trim()
+      .replace(/^v/i, '')
+      .split('+')[0];
+  }
+
   function runCacheKiller() {
     if (!isNative) return Promise.resolve(false);
     if (nativeState.cacheKillerRunning) return Promise.resolve(false);
 
     return getCurrentAppVersion().then(function (current) {
+      current = normalizeVersion(current);
       if (!current) return false;
 
       var stored = null;
-      try { stored = localStorage.getItem(CACHE_KILLER_KEY); } catch (e) {}
+      try { stored = normalizeVersion(localStorage.getItem(CACHE_KILLER_KEY)); } catch (e) {}
 
       if (stored === current) return false;
 
       var firstRun = !stored;
-      try { localStorage.setItem(CACHE_KILLER_KEY, current); } catch (e) {}
+
+      // ⭐ هل كان تنظيف سابق قد انقطع؟ (علامة زمنية)
+      var wipingAt = 0;
+      try { wipingAt = Number(localStorage.getItem(CACHE_KILLER_WIPING_KEY)) || 0; } catch (e) {}
+      var interrupted = wipingAt > 0 && (Date.now() - wipingAt) < 5 * 60 * 1000;
 
       if (firstRun) {
+        // أول تشغيل: لا كاش قديم، فقط نثبّت الإصدار.
+        try { localStorage.setItem(CACHE_KILLER_KEY, current); } catch (e) {}
         console.info('[native] the cache killer: first run — nothing to clean.');
         return false;
       }
 
       nativeState.cacheKillerRunning = true;
-      console.warn('[native] the cache killer: ' + stored + ' → ' + current + ' — cleaning the old cache.');
+      console.warn('[native] the cache killer: ' + (stored || '?') + ' → ' + current +
+        ' — cleaning every cache.');
+
+      // ⭐ علّم أن التنظيف بدأ (قبل أي عمل طويل) — حتى لو قُتل التطبيق
+      //   نستأنف العملية في التشغيل التالي **دون** إعادة تحميل ثانية.
+      try { localStorage.setItem(CACHE_KILLER_WIPING_KEY, String(Date.now())); } catch (e) {}
 
       // 1) إلغاء كل Service Workers.
       var unregister = Promise.resolve();
@@ -1574,24 +1612,50 @@
         }
       } catch (e) {}
 
-      // 2) مسح كل الكاش.
+      // 2) حذف كل الكاش (أي اسم).
       var clearCaches = Promise.resolve();
       try {
         if (global.caches && typeof global.caches.keys === 'function') {
           clearCaches = global.caches.keys().then(function (names) {
-            return Promise.all((names || []).map(function (name) {
+            var all = Array.isArray(names) ? names : [];
+            return Promise.all(all.map(function (name) {
               try { return global.caches.delete(name); } catch (e) { return null; }
-            }));
+            })).then(function () {
+              console.info('[native] the cache killer: deleted ' + all.length + ' caches.');
+            });
           }).catch(function () {});
         }
       } catch (e) {}
 
+      // 3) كاش الـWebView: MainActivity (أندرويد) ينفّذه عند تغيّر الإصدار،
+      //    وهنا نطلب من الصفحة نفسها أن تتجاوز الكاش عند الجلب.
+      var bypassHttpCache = Promise.resolve();
+      try {
+        if (global.fetch && global.caches) {
+          bypassHttpCache = Promise.resolve(
+            global.fetch('version.json?cachekiller=' + Date.now(), { cache: 'reload' })
+          ).then(function (response) {
+            try { return response.text(); } catch (e) { return ''; }
+          }).catch(function () { return ''; });
+        }
+      } catch (e) {}
+
       return unregister.then(function () { return clearCaches; })
+        .then(function () { return bypassHttpCache; })
         .then(function () {
-          // 3) مسح بيانات التطبيق (مع استثناء رموز الدخول).
+          // 4) مسح بيانات التطبيق (مع استثناء رموز الدخول وبيانات العمل).
           clearStaleLocalStorage();
-          // 4) تثبيت الإصدار الجديد + إعادة تحميل قسرية.
+          // 5) تثبيت الإصدار الجديد **قبل** إعادة التحميل ⇒ لا حلقة.
           try { localStorage.setItem(CACHE_KILLER_KEY, current); } catch (e) {}
+          try { localStorage.removeItem(CACHE_KILLER_WIPING_KEY); } catch (e) {}
+
+          if (interrupted) {
+            // ⭐ كان هناك تنظيف منقطع: أكملناه **دون** إعادة تحميل ثانية.
+            console.info('[native] the cache killer: finished an interrupted cleanup — no reload.');
+            nativeState.cacheKillerRunning = false;
+            return true;
+          }
+
           try { global.location.reload(true); } catch (e) {
             try { global.location.reload(); } catch (e2) {}
           }
