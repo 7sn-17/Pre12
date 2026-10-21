@@ -642,8 +642,12 @@ the in-widget checkboxes. Cost: the Android module must adopt the **Kotlin
 Gradle plugin** (Glance is Kotlin-first). Java callers remain fine
 (`MainActivity` stays Java).
 
-**Pinned versions:** bridge `8.1.0`, Glance `1.1.x` (align with the AGP/compileSdk
-in `android/variables.gradle`; bump deliberately, not implicitly).
+**Pinned versions (verified in W1):** bridge `8.1.0`, **Glance `1.2.0`**
+(`glance-appwidget` + `glance-material3`), **Kotlin `2.2.21`** + the matching
+`org.jetbrains.kotlin.plugin.compose` (the Compose compiler is a Kotlin plugin
+since 2.0 — the two versions must never diverge), AGP `8.13.0`, Gradle `8.14.3`,
+JDK 21 (`jvmTarget = 21`, matching Capacitor's Java 21). Bump these deliberately,
+never implicitly.
 
 ### 10.6 Architecture & data flow
 
@@ -728,7 +732,7 @@ docs/widgets/
 | Phase | Deliverable | Done when |
 |---|---|---|
 | **W0 (done)** | Tag, branch, this doc, bridge plugin, `src/widgets/` | `git tag v4.6.7-stable` pushed; plugin synced |
-| **W1** | Kotlin + Glance toolchain, `WidgetStore`, `WidgetKeys`, shared theme/paddings, one static Tasks widget with fake payload | Widget appears in the launcher picker and renders a fake list in light/dark/dynamic color |
+| **W1 (done)** | Kotlin 2.2.21 + Compose compiler + **Glance 1.2.0**, `WidgetBridge.kt`, `WidgetPalette.kt`, static «مهام اليوم» (`TodayTasksWidget` + receiver + provider XML + picker previews) | `assembleDebug` green in CI (run `39559126314`); receiver present in the merged manifest |
 | **W2** | Tasks widget fully interactive (`ToggleTaskAction`, optimistic state, progress, empty state) + `src/widgets/bridge.js` + `state.js` | Checking a task in the launcher updates the app on next open; no jank |
 | **W3** | Streak Simple + Streak Detailed with 7-day map and all four cell states | Both match the spec pixel-wise at 1.0 and 1.3 font scale |
 | **W4** | Notes & Goals widget + deep links from all four widgets | Taps land on the right screen/row |
@@ -780,3 +784,34 @@ branch). Bump only when merging to `main` for release (W5/W6).
 
 **Immediate next action:** Phase W1 — add the Kotlin/Glance toolchain and a
 static Tasks widget rendering a fake payload, then wire real data in W2.
+
+---
+
+### Phase W1 Completion Log (2026-10-21)
+
+**Goal:** Kotlin + Jetpack Glance compiling, and the first real widget.
+
+| Area | What landed |
+|---|---|
+| Toolchain | Kotlin `2.2.21` + `org.jetbrains.kotlin.plugin.compose`, Glance `1.2.0`, `jvmTarget = 21`, `glanceVersion` in `variables.gradle` |
+| Data bridge | `widgets/WidgetBridge.kt` — reads `medapp_widget_state` prefs, parses `tasks.today` into `TodayTasks`/`TaskItem`, pure + defensive parser (bad JSON → empty day) |
+| Theme | `widgets/WidgetPalette.kt` — 27 Material 3 roles built from `widget_color_*` resources; **4 qualifier sets** give Material You dynamic colour on API 31+ and emerald branding on older devices, light + dark |
+| UI | `widgets/TodayTasksWidget.kt` — 24 dp card, header + counter chip, 4 dp progress bar, up to 4 task rows with static 18 dp status circles, strikethrough on done, empty state («لا توجد مهام لليوم»), overflow hint |
+| Registration | `TodayTasksWidgetReceiver` in `AndroidManifest.xml`; `res/xml/today_tasks_widget_info.xml` (4×2, min 250×110 dp, resizable, 30 min safety refresh); picker `previewLayout` + vector `previewImage` |
+| CI | `.github/workflows/android-compile-check.yml` — **compile-only** gate (`assembleDebug`) on the widgets branch; publishes nothing, asserts the receiver survives manifest merging |
+
+**Verification (no local Android SDK in Termux):** CI run **`39559126314` → success**,
+debug APK 18,084,642 bytes, `✅ TodayTasksWidgetReceiver is registered in the
+merged manifest`.
+
+**Two build failures found and fixed during W1** (both caught by the new gate):
+1. `--` inside an XML comment (`values-night/widget_colors.xml`) — illegal in XML;
+2. an empty `Box {}` in the ring drawing was missing its required content lambda.
+
+**Deliberately deferred to W2:** click actions (`ToggleTaskAction`), `pending.tasks`
+queue, `src/widgets/bridge.js`/`state.js`, and the app→prefs publisher (the widget
+therefore shows its designed empty state on a fresh install until W2 wires data).
+
+**Note:** W1 stays on version 4.6.7 and is **not** published. The widget becomes
+visible to users only at the W6 release, because installing a debug APK over the
+release-signed app is impossible (signature mismatch).
