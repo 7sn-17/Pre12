@@ -1112,3 +1112,72 @@ Production untouched: `releases/latest` is still **v4.6.7** and the Supabase
 **Not verifiable without a device in hand:** that the *rendered* notification
 looks right on the vendor's launcher, and that a cold-started tap opens the
 right sheet on that specific ROM.
+
+---
+
+### Phase W12 Completion Log (2026-10-21) — the official **v5.0.5**
+
+**Goal:** the last hotfixes before the official release — the Smart Lab buttons,
+the log diet, the final widget UI, and a real production merge.
+
+#### The two silent bugs (both were root causes, not symptoms)
+
+1. **"The widget ignores my tap until I reboot the phone."**
+   Glance 1.x keeps the composition alive in a session and `update()` only asks
+   that session to *recompose*. Our payload was read **before** `provideContent`,
+   so the closure captured it forever and every redraw replayed the first
+   payload. **Fix: every widget reads its payload inside the composition**
+   (`LocalContext.current`), so each recomposition sees the current prefs.
+2. **"Tapping a task in the app does not update the widget."**
+   The SPA shell removes every listener of the view it replaces, and
+   `widgets.js` is an *external* script that is never executed again — the whole
+   widget bridge died after the first navigation. **Fix: `widgets.js` re-binds
+   itself through a `MutationObserver`** (not a DOM listener, so the shell cannot
+   remove it) and the binding is idempotent.
+
+`ToggleTaskAction` now runs the exact sequence: **read prefs → mark the task →
+save (`commit`) → `GlanceAppWidget.update()` → only then** the broadcast and the
+WorkManager upload.
+
+#### The Smart Lab (settings → diagnostics)
+- **«عاين الرسالة»** builds a **local** notification with mock data (same titles
+  and bodies as the engine) — no server round-trip.
+- **«أرسل إليّ الآن»** first calls `ensureNotificationToken()` (so the device
+  token exists in `profiles`), then asks the Edge Function to push the chosen
+  scenario **to that device only**. The engine accepts an authenticated user for
+  the test mode and never touches another device.
+- The misleading "المحرك الذكي متاح داخل التطبيق فقط" message is gone, and the
+  request really executes.
+
+#### The log diet (41 GB → measured, not guessed)
+`query_logs` showed the truth: **edge_logs 24,134 events vs postgres_logs 310**.
+The app was sending a **HEAD request per subject on every page load**
+(2,726 per subject per day ⇒ >16,000 records/day). Fixes: a 30-minute TTL with
+stale-while-revalidate for the subject file-count, no `PATCH` when the FCM token
+has not changed, `cache: 'no-store'` for page fetches, and a fresh SW version.
+The server-side migration (`log_statement`, `log_min_duration_statement`,
+`log_min_messages`) is shipped too — it needs a superuser session, which the
+managed `postgres` role is not, so it is applied best-effort with a clear notice.
+
+#### Final widget UI
+- **Tasks**: wide 3×2 (250×120 dp), title **centred** with a hairline under it,
+  and **every** task that fits (cap 12, not 6) with the rows stretching to fill
+  the card.
+- **Notes & goals**: a hairline under the title; line 1 = title, line 2 = content.
+- **Detailed streak**: full Arabic day names under 32 dp rings.
+- **Add-widget button**: three fallbacks — pin → system picker → in-app modal.
+
+#### Notification pacing (5.0.5)
+- Daily cap **6**, weekly cap **30** — a **ceiling, not a quota**: with no real
+  event the engine sends **zero** (verified live: `sent:0, skipped:1`).
+- The fixed 8 AM / 8 PM reminders and the admin/update pushes do **not** count
+  towards the cap (the engine filters the log to the smart categories).
+- **No user slider was added.**
+
+#### Release
+`5.0.5` / versionCode 44 — compile check **`39635863410` → success**, release
+build **`39636751284` → success**. Merged to `main` (fast-forward, 30 commits),
+tagged `v5.0.5`, pushed with the tag. The GitHub release is **Latest** (not a
+prerelease) and the APK is live on Supabase Storage: **15,064,941 bytes**,
+SHA-256 `42ab4a960a6a36a29e4a478c8e39af332f9ab2f26c79c863d2b9964ad8c17293`.
+The in-app update system now offers 5.0.5 (`version.json` = 5.0.5).
