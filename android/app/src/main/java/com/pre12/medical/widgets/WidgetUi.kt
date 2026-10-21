@@ -214,11 +214,18 @@ internal fun StatLine(
 // ---------------------------------------------------------------------------
 
 /**
- * Friendly empty state with a working CTA. The CTA is a real Glance action, not
- * decoration: it launches [MainActivity] through a PendingIntent.
+ * Friendly empty state with a working CTA.
+ *
+ * Deliberately **horizontal**: a 4×2 widget has ~90–110 dp of content height, and
+ * a centered icon-over-text stack needs ~135 dp — it would be clipped by the
+ * RemoteViews bounds. The row layout fits in ~34 dp at any widget size, and the
+ * enclosing Box centers it in whatever height is left.
+ *
+ * The CTA is a real Glance action, not decoration: it launches [MainActivity]
+ * through a PendingIntent.
  */
 @Composable
-internal fun WidgetEmptyState(
+internal fun ColumnScope.WidgetEmptyState(
     title: String,
     message: String,
     cta: String,
@@ -228,51 +235,56 @@ internal fun WidgetEmptyState(
     val openApp = openAppAction()
 
     Box(
-        modifier = GlanceModifier.fillMaxSize(),
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .defaultWeight(),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(
+            modifier = GlanceModifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             if (iconRes != null) {
                 IconBadge(
                     iconRes = iconRes,
-                    size = 20.dp,
-                    badgeSize = 40.dp,
+                    size = 16.dp,
+                    badgeSize = 30.dp,
                     background = colors.primaryContainer,
                     tint = colors.primary
                 )
-                Spacer(GlanceModifier.height(10.dp))
+                Spacer(GlanceModifier.width(8.dp))
             }
 
-            Text(
-                text = title,
-                style = TextStyle(
-                    color = colors.onSurface,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                ),
-                maxLines = 1
-            )
+            Column(modifier = GlanceModifier.defaultWeight()) {
+                Text(
+                    text = title,
+                    style = TextStyle(
+                        color = colors.onSurface,
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Start
+                    ),
+                    maxLines = 1
+                )
+                Spacer(GlanceModifier.height(1.dp))
+                Text(
+                    text = message,
+                    style = TextStyle(
+                        color = colors.onSurfaceVariant,
+                        fontSize = 9.5.sp,
+                        textAlign = TextAlign.Start
+                    ),
+                    maxLines = 1
+                )
+            }
 
-            Spacer(GlanceModifier.height(3.dp))
-
-            Text(
-                text = message,
-                style = TextStyle(
-                    color = colors.onSurfaceVariant,
-                    fontSize = 11.sp,
-                    textAlign = TextAlign.Center
-                ),
-                maxLines = 2
-            )
-
-            Spacer(GlanceModifier.height(10.dp))
+            Spacer(GlanceModifier.width(8.dp))
 
             Box(
                 modifier = GlanceModifier
                     .background(colors.primary)
-                    .cornerRadius(14.dp)
-                    .padding(horizontal = 14.dp, vertical = 7.dp)
+                    .cornerRadius(12.dp)
+                    .padding(horizontal = 10.dp, vertical = 5.dp)
                     .clickable(openApp),
                 contentAlignment = Alignment.Center
             ) {
@@ -280,7 +292,7 @@ internal fun WidgetEmptyState(
                     text = cta,
                     style = TextStyle(
                         color = colors.onPrimary,
-                        fontSize = 11.sp,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
                     ),
