@@ -106,6 +106,7 @@ private fun GoalsNote(items: List<PinnedItem>, height: androidx.compose.ui.unit.
         addPath = "add-goal",
         openPath = "goals",
         showPercent = true,
+        showHint = true,
         compact = height < 150.dp,
         modifier = GlanceModifier.fillMaxSize()
     )
