@@ -2,8 +2,8 @@
 <!--
   ⭐⭐ Phase W1 — Widget palette · DARK (brand emerald fallback).
 
-  Tuned against the app's own dark theme (--bg-main #06110d,
-  --accent #10b981) so a widget and the app look like one product.
+  Tuned against the app's own dark theme (bg-main #06110d,
+  accent #10b981) so a widget and the app look like one product.
 -->
 <resources>
     <color name="widget_color_primary">#FF10B981</color>
