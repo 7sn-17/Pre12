@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="5.0.5">
+<meta name="app-version" content="5.0.6">
 <title>السنة التحضيرية - المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -6660,7 +6660,7 @@ i.fab {
         <div class="settings-icon"><i data-lucide="info"></i></div>
         <div class="settings-text">
           <h4>حول التطبيق</h4>
-          <p id="aboutVersionText">الإصدار 5.0.5 • السنة التحضيرية</p>
+          <p id="aboutVersionText">الإصدار 5.0.6 • السنة التحضيرية</p>
         </div>
       </div>
       <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
@@ -7048,7 +7048,7 @@ i.fab {
 <script src="widgets.js"></script>
 
 
-  <script src="app.js?v=5.0.5"></script>
+  <script src="app.js?v=5.0.6"></script>
 <script>
 
     lucide.createIcons();
@@ -8393,9 +8393,12 @@ function openLastActivity() {
         ].join('\n'));
         showToast('أُرسل الإشعار — تحقّق من شريط الإشعارات', 'success');
       } catch (e) {
+        // ⭐⭐ W14 — نُظهر **الخطأ الحقيقي** (403/401/…) بدل رسالة عامة.
         console.error('[diagnostics] the send failed:', e);
-        showScenarioOutput('تعذّر الإرسال: ' + ((e && e.message) || 'خطأ غير معروف'));
-        showToast('تعذّر الإرسال — تحقّق من الاتصال', 'error');
+        var detail = (e && (e.message || e.error_description)) || 'خطأ غير معروف';
+        if (e && e.response && e.response.error) detail = e.response.error;
+        showScenarioOutput('تعذّر الإرسال: ' + detail);
+        showToast('تعذّر الإرسال: ' + detail, 'error');
       } finally {
         if (btn) btn.disabled = false;
       }

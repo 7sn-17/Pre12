@@ -79,6 +79,10 @@ class ToggleTaskAction : ActionCallback {
         // survive process death even if the very next frame kills us.
         WidgetBridge.queuePendingToggle(context, taskId, date, done, title, subject)
 
+        // ⭐⭐⭐ W14 — نبضة فورية: تجعل الـcomposition المعايشة تُبطل وتُعاد
+        //   قراءتها، فيظهر ✓ والشطب في **الملّي ثانية** (بلا شبكة).
+        WidgetRefreshSignal.bump()
+
         // ── 4) REDRAW NOW ──────────────────────────────────────────────────
         // The composition re-reads the payload on every recomposition (see
         // TodayTasksWidget.kt), so this frame already shows the new state.

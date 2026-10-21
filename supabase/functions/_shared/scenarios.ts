@@ -1049,17 +1049,6 @@ export const SCENARIOS: Scenario[] = [
  * ⭐ معرّفات السيناريوهات الذكية — كل ما عداها لا يُحتسب في السقف
  *   (تذكيرات الثامنة صباحاً/المساء، إشعارات التحديث والإدارة).
  */
-let smartIds: Set<string> | null = null;
-
-export function isSmartCategory(id: string): boolean {
-  if (!smartIds) smartIds = new Set(SCENARIOS.map((s) => s.id));
-  return smartIds.has(String(id || ''));
-}
-
-export function smartCategoryIds(): string[] {
-  return SCENARIOS.map((s) => s.id);
-}
-
 export function isQuietHour(ctx: UserContext): boolean {
   const hour = ctx.localHour;
 

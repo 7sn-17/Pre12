@@ -1385,12 +1385,20 @@
     if (!client || typeof client.functions !== 'function') {
       return Promise.reject(new Error('المحرّك الذكي متاح داخل التطبيق فقط'));
     }
-    var body = { mode: 'test' };
+    // ⭐⭐ Phase W14 — forceTest: يتجاهل شروط السيناريو والسقوف ويرسل فوراً.
+    var body = { mode: 'test', forceTest: true };
     if (scenarioId) body.scenario = String(scenarioId);
     return client.functions.invoke('smart-notifications-engine', { body: body })
       .then(function (result) {
         var data = result && result.data ? result.data : result;
-        if (!data || !data.ok) throw new Error((data && data.error) || 'تعذّر الإرسال');
+        if (!data || !data.ok) {
+          // ⭐ نُظهر الخطأ الحقيقي (403/400/….) بدل رسالة عامة.
+          var message = (data && (data.error || data.message)) || 'تعذّر الإرسال';
+          var err = new Error(String(message));
+          err.code = (data && data.code) || '';
+          err.response = data || null;
+          throw err;
+        }
         return data;
       });
   }

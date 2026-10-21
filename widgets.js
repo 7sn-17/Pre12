@@ -515,6 +515,24 @@
   }
 
   /**
+   * ⭐⭐ Phase W14 — نشر الملاحظات وحدها فوراً (بلا تحميل الخطة).
+   *
+   * إضافة أو حذف ملاحظة داخل التطبيق يجب أن يظهر في الودجت في نفس اللحظة:
+   * نكتب الحمولة في prefs ثم نطلب من الودجت أن يُعاد رسمه — بلا شبكة.
+   */
+  async function pushNotesNow() {
+    var api = plugin();
+    if (!api || typeof api.updateWidgetNotes !== 'function') return false;
+    try {
+      await api.updateWidgetNotes({ json: JSON.stringify(buildNotesPayload()) });
+      return true;
+    } catch (e) {
+      console.warn('[widgets] the notes push failed:', e);
+      return false;
+    }
+  }
+
+  /**
    * ⭐⭐ Phase W8 — the fast path: repaint *only* the tasks card, right now.
    *
    * `publishWidgets` is the full pipeline (plan fetch + streak + notes + a
@@ -531,6 +549,13 @@
       if (!tasks.items || !tasks.items.length) return false;
       lastTasksJson = JSON.stringify(tasks);
       await api.updateWidgetTasks({ json: lastTasksJson });
+      // ⭐ W14 — السلسلة تتغيّر مع كل مهمة منجزة، فنبثّها في اللحظة نفسها
+      //   (بلا شبكة: العدّاد محليّ بالكامل).
+      try {
+        if (typeof api.updateWidgetStreak === 'function') {
+          await api.updateWidgetStreak({ json: JSON.stringify(buildStreakPayload()) });
+        }
+      } catch (e) {}
       return true;
     } catch (e) {
       console.warn('[widgets] fast task push failed:', e && e.message ? e.message : e);
@@ -826,6 +851,12 @@
     }
 
     // ⭐ W9 — the update notifications land on the update dialog.
+    // ⭐ W14 — سيناريوهات «المحتوى» تصل بـ pre12://content ⇒ صفحة الملفات.
+    if (target === 'content' || target === 'contentNew' || target === 'contentForYou') {
+      if (here !== 'all-files.html') navigateTo('all-files.html');
+      return true;
+    }
+
     if (target === 'updates' || target === 'update') {
       if (here === 'index.html') {
         setTimeout(function () {
@@ -1023,6 +1054,7 @@
   global.MedAppWidgets = {
     refresh: refresh,
     pushTasksNow: pushTasksNow,
+    pushNotesNow: pushNotesNow,
     addHomeWidget: addHomeWidget,
     buildTasksPayload: buildTasksPayload,
     buildStreakPayload: buildStreakPayload,

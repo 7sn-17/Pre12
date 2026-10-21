@@ -2,7 +2,7 @@
 
 **التطبيق الرسمي لطلاب الطب في سوريا**
 
-⬇️ **[تحميل الإصدار الرسمي v5.0.5](https://github.com/7sn-17/Pre12/releases/download/v5.0.5/Medical_Platform_v5.0.5.apk)**
+⬇️ **[تحميل الإصدار الرسمي v5.0.6](https://github.com/7sn-17/Pre12/releases/download/v5.0.6/Medical_Platform_v5.0.6.apk)**
 
 ⬇️ [تحميل الإصدار المستقر v4.6.7](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
 

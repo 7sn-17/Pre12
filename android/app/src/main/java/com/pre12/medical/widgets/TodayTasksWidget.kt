@@ -10,6 +10,7 @@ import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
+import androidx.glance.LocalState
 import androidx.glance.LocalSize
 import androidx.glance.action.Action
 import androidx.glance.action.clickable
@@ -21,7 +22,6 @@ import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
-import androidx.glance.layout.ColumnScope
 import androidx.glance.layout.Row
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
@@ -43,8 +43,8 @@ import com.pre12.medical.R
  *
  * Phase W9 changes:
  *   • the title is **centred** and a hairline separates the header from the list;
- *   • the rows **stretch** to fill the card (`defaultWeight()`), so a short list
- *     never leaves a dead gap at the bottom;
+ *   • every task of the day is rendered (no truncation, no weights): a completed
+ *     task stays in the list with its ✓ and its strike-through;
  *   • the payload is read **inside the composition** — Glance keeps the
  *     composition alive, so a value captured before `provideContent` would be
  *     redrawn forever (that was the "the checkbox does nothing" bug).
@@ -65,6 +65,17 @@ class TodayTasksWidget : GlanceAppWidget() {
         // tap visible in the same second.
         provideContent {
             val ctx = LocalContext.current
+            // ⭐⭐⭐ Phase W14 — بلا هذه القراءة يتخطّى Compose هذا الـlambda
+            //   (لا تغيّر معاملاته ولا يقرأ حالةً) فيبقى الرسم على أول
+            //   حمولة للأبد — وهو سبب «الودجت لا يتغيّر حتى إعادة التشغيل».
+            //   قراءة حالة Glance تجعل الـcomposition يعتمد عليها، فيُعاد
+            //   تشغيله مع كل update() وتُقرأ البيانات الحديثة.
+            @Suppress("UNUSED_VARIABLE")
+            val glanceState = LocalState.current
+            // ⭐⭐⭐ W14 — قراءة نبضة التحديث: تجعل هذا الـcomposition يعتمد على
+            //   حالة حقيقية، فلا يتخطّاه Compose، فتُقرأ البيانات الحديثة وتُرسم.
+            @Suppress("UNUSED_VARIABLE")
+            val refreshVersion = WidgetRefreshSignal.version.value
             TodayTasksCard(WidgetBridge.readTodayTasks(ctx))
         }
     }
@@ -94,19 +105,21 @@ private fun TodayTasksCard(state: TodayTasks) {
 
     val openApp = openAppAction("tasks")
 
-    // A task checked in the last 0.9 s keeps its row: that frame is the tick and
-    // the strike-through. Older completed rows are gone, so what remains is work.
-    val now = System.currentTimeMillis()
-    val visible = state.items.filter { item ->
-        !item.isCompleted ||
-            (item.doneAt > 0 && now - item.doneAt < ToggleTaskAction.VANISH_DELAY_MS)
-    }
+    // ⭐⭐ Phase W14 — **نُظهر كل المهام**: لا اقتطاع ولا صفوف مخفيّة.
+    //   المهمة المنجزة **تبقى** في القائمة بعلامة ✓ وشطب — هي الدليل
+    //   على أن الضغطة نجحت، وإخفاؤها كان يوهم بأن الودجت لا يعمل.
+    val rows = state.items
 
     val headerHeight = if (wide) headerLine else headerLine + metaLine
     val chrome = pad * 2 + headerHeight + hairlineGap + 1.dp + hairlineGap
     val available = (size.height - chrome).coerceAtLeast(0.dp)
-    val capacity = (((available + rowGap) / (minRow + rowGap)).toInt()).coerceIn(1, 12)
-    val rows = visible.take(capacity)
+
+    // ⭐ ارتفاع الصفّ يتقلّص قليلاً إذا كثرت المهام (بلا weights وبلا اقتطاع).
+    val rowHeight = if (rows.isEmpty()) {
+        0.dp
+    } else {
+        (available / rows.size).coerceAtMost(26.dp).coerceAtLeast(minRow)
+    }
 
     Box(
         modifier = GlanceModifier
@@ -129,12 +142,12 @@ private fun TodayTasksCard(state: TodayTasks) {
 
             when {
                 state.isEmpty -> EmptyDay(openApp)
-                rows.isEmpty() -> CelebrationRow(state, openApp, tight)
                 else -> TaskList(
                     rows = rows,
                     date = state.date,
                     openApp = openApp,
                     rowGap = rowGap,
+                    rowHeight = rowHeight,
                     circle = circle,
                     textSize = rowText
                 )
@@ -258,12 +271,17 @@ private fun NarrowHeader(state: TodayTasks, openApp: Action, tight: Boolean) {
  * left under the header: a card with two tasks and a card with four both look
  * full instead of leaving a dead gap at the bottom.
  */
+/**
+ * ⭐⭐ Phase W14 — عمود بسيط: كل مهمة صفٌّ بارتفاع ثابت.
+ * (لا weights ولا Spacers: هي التي كانت تُخفي المهام وتُنتج «مهمة واحدة فقط».)
+ */
 @Composable
-private fun ColumnScope.TaskList(
+private fun TaskList(
     rows: List<TaskItem>,
     date: String,
     openApp: Action,
     rowGap: Dp,
+    rowHeight: Dp,
     circle: Dp,
     textSize: TextUnit
 ) {
@@ -274,7 +292,7 @@ private fun ColumnScope.TaskList(
             openApp = openApp,
             circle = circle,
             textSize = textSize,
-            modifier = GlanceModifier.fillMaxWidth().defaultWeight()
+            modifier = GlanceModifier.fillMaxWidth().height(rowHeight)
         )
         if (index != rows.lastIndex) Gap(rowGap)
     }
@@ -329,35 +347,6 @@ private fun TaskRow(
                     weight = if (item.isCompleted) FontWeight.Normal else FontWeight.Medium,
                     decoration = if (item.isCompleted) TextDecoration.LineThrough else null
                 ),
-                maxLines = 1
-            )
-        }
-    }
-}
-
-/** Every task is done: the list is empty by design, so celebrate instead. */
-@Composable
-private fun CelebrationRow(state: TodayTasks, openApp: Action, tight: Boolean) {
-    Row(
-        modifier = GlanceModifier
-            .fillMaxWidth()
-            .background(ColorProvider(WidgetSkin.EmeraldSoft))
-            .cornerRadius(12.dp)
-            .padding(horizontal = 10.dp, vertical = 8.dp)
-            .clickable(openApp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        StatusCircle(completed = true, justCompleted = false, size = if (tight) 22.dp else 26.dp)
-        HGap(8.dp)
-        Column(modifier = GlanceModifier.defaultWeight()) {
-            Text(
-                text = "أنجزت كل مهام اليوم 🎉",
-                style = wText(WidgetSkin.White, 14.sp, FontWeight.Bold),
-                maxLines = 2
-            )
-            Text(
-                text = "${state.completedCount} مهمة مكتملة",
-                style = wText(WidgetSkin.Slate400, 11.sp),
                 maxLines = 1
             )
         }

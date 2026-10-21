@@ -3,6 +3,7 @@ package com.pre12.medical.widgets
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
@@ -102,6 +103,33 @@ internal object WidgetSkin {
  */
 internal object WidgetFonts {
     val Tajawal = FontFamily("Tajawal")
+}
+
+/**
+ * ⭐⭐⭐ Phase W14 — «نبضة التحديث» (the refresh signal).
+ *
+ * ### لماذا؟
+ * Glance 1.x يُبقي الـcomposition حيّاً في جلسةٍ lasting ~45s، و`update()` يطلب
+ * منها **إعادة رسم** فقط. لكن Compose **يتخطّى** أي lambda لم تتغيّر معاملاته
+ * ولم تقرأ أي حالة — فيبقى الرسم على **أول حمولة للأبد**. وهذا بالضبط سبب
+ * «الودجت لا يتغيّر حتى إعادة تشغيل الهاتف» و«المزامنة تحتاج إعادة تشغيل».
+ *
+ * ### الحل
+ * حالة Compose حقيقية (`mutableStateOf`) يقرأها كل widget **داخل** الـcomposition.
+ * أي تغيير في البيانات (علم مهمة، ملاحظة جديدة، سِلسلة جديدة) يستدعي
+ * `bump()` → تُبطَل الـcomposition → تُعاد قراءتها من SharedPreferences → تُرسَل
+ * الـRemoteViews الجديدة إلى المشغّل في **الملّي ثانية**.
+ *
+ * الحالة في نفس العملية (App) التي تعمل فيها الـcomposition ✓.
+ */
+internal object WidgetRefreshSignal {
+    /** عداد يتزايد مع كل تغيير (لا نستخدم الوقت لتفادي التكرار). */
+    val version = mutableStateOf(0L)
+
+    /** ابْعث نبضة: تُبطل كل الـcompositions التي تقرأ هذه الحالة. */
+    fun bump() {
+        version.value = version.value + 1
+    }
 }
 
 /** The single text factory of the widget layer. */

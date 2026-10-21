@@ -298,6 +298,11 @@ class MedWidgetsPlugin : Plugin() {
      * `exported="false"`.
      */
     private fun requestUpdate(ctx: Context, vararg receivers: Class<out AppWidgetProvider>) {
+        // ⭐⭐⭐ Phase W14 — نبضة التحديث: تُبطل الـcompositions الحيّة حتى
+        //   تُعاد قراءة SharedPreferences وتُرسَل الـRemoteViews الجديدة فوراً
+        //   (بلا انتظار إعادة تشغيل أو دورة حياة جديدة).
+        WidgetRefreshSignal.bump()
+
         val manager = AppWidgetManager.getInstance(ctx)
         receivers.forEach { receiver ->
             try {

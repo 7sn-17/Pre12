@@ -7189,9 +7189,12 @@ function openLastActivity() {
         ].join('\n'));
         showToast('أُرسل الإشعار — تحقّق من شريط الإشعارات', 'success');
       } catch (e) {
+        // ⭐⭐ W14 — نُظهر **الخطأ الحقيقي** (403/401/…) بدل رسالة عامة.
         console.error('[diagnostics] the send failed:', e);
-        showScenarioOutput('تعذّر الإرسال: ' + ((e && e.message) || 'خطأ غير معروف'));
-        showToast('تعذّر الإرسال — تحقّق من الاتصال', 'error');
+        var detail = (e && (e.message || e.error_description)) || 'خطأ غير معروف';
+        if (e && e.response && e.response.error) detail = e.response.error;
+        showScenarioOutput('تعذّر الإرسال: ' + detail);
+        showToast('تعذّر الإرسال: ' + detail, 'error');
       } finally {
         if (btn) btn.disabled = false;
       }

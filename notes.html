@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="5.0.5">
+<meta name="app-version" content="5.0.6">
 <title>الملاحظات - المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -2617,7 +2617,7 @@ header {
 <script src="widgets.js"></script>
 
 
-  <script src="app.js?v=5.0.5"></script>
+  <script src="app.js?v=5.0.6"></script>
 <script>
 
     lucide.createIcons();
@@ -3143,6 +3143,7 @@ header {
         else if (noteId.startsWith('local_')) {
           state.myNotes = state.myNotes.filter(n => n.id !== noteId);
           saveToStorage(KEYS.MY_NOTES, state.myNotes);
+          refreshWidgetNotes();
           updateMineCount();
         }
         // ملاحظة خاصة في السحابة: احذفها محلياً الآن، وأرسل الحذف
@@ -3150,6 +3151,7 @@ header {
         else if (cloudNote && !cloudNote.is_shared) {
           state.myNotes = state.myNotes.filter(n => n.id !== noteId);
           saveToStorage(KEYS.MY_NOTES, state.myNotes);
+          refreshWidgetNotes();
           updateMineCount();
 
           let deleted = false;
@@ -3303,6 +3305,17 @@ header {
     // ============================================
     // Save Note — نسخة قوية
     // ============================================
+    // ⭐⭐ Phase W14 — أي تغيير في الملاحظات (إضافة/حذف) يُنشر في الودجت فوراً.
+    function refreshWidgetNotes() {
+      try {
+        if (window.MedAppWidgets && typeof MedAppWidgets.pushNotesNow === 'function') {
+          MedAppWidgets.pushNotesNow();
+        }
+      } catch (e) {
+        console.warn('[notes] the widget refresh failed:', e);
+      }
+    }
+
     async function saveNote() {
       // 🔒 منع الحفظ المزدوج
       if (state.isSaving) return;
@@ -3393,6 +3406,7 @@ header {
           } else {
             state.myNotes = [cloudNote].concat(state.myNotes.filter(n => n.id !== cloudNote.id));
             saveToStorage(KEYS.MY_NOTES, state.myNotes);
+          refreshWidgetNotes();
             updateMineCount();
             showToast('تم حفظ ملاحظتك');
             closeAddModal();

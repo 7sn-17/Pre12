@@ -10,6 +10,7 @@ import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
+import androidx.glance.LocalState
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
@@ -47,6 +48,17 @@ class SimpleStreakWidget : GlanceAppWidget() {
         // only the first one) shows the current streak.
         provideContent {
             val ctx = LocalContext.current
+            // ⭐⭐⭐ Phase W14 — بلا هذه القراءة يتخطّى Compose هذا الـlambda
+            //   (لا تغيّر معاملاته ولا يقرأ حالةً) فيبقى الرسم على أول
+            //   حمولة للأبد — وهو سبب «الودجت لا يتغيّر حتى إعادة التشغيل».
+            //   قراءة حالة Glance تجعل الـcomposition يعتمد عليها، فيُعاد
+            //   تشغيله مع كل update() وتُقرأ البيانات الحديثة.
+            @Suppress("UNUSED_VARIABLE")
+            val glanceState = LocalState.current
+            // ⭐⭐⭐ W14 — قراءة نبضة التحديث: تجعل هذا الـcomposition يعتمد على
+            //   حالة حقيقية، فلا يتخطّاه Compose، فتُقرأ البيانات الحديثة وتُرسم.
+            @Suppress("UNUSED_VARIABLE")
+            val refreshVersion = WidgetRefreshSignal.version.value
             SimpleStreakCard(WidgetBridge.readStreak(ctx))
         }
     }

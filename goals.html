@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="5.0.5">
+<meta name="app-version" content="5.0.6">
 <title>أهدافي - المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -2213,7 +2213,7 @@
 <script src="widgets.js"></script>
 
 
-  <script src="app.js?v=5.0.5"></script>
+  <script src="app.js?v=5.0.6"></script>
 <script>
 
     lucide.createIcons();
@@ -2279,10 +2279,15 @@
       } catch (err) {
         console.error('saveGoals error:', err);
       }
-      // ⭐⭐ Phase W2 — حدّث ودجت «ملاحظاتي وأهدافي» بعد كل تغيير.
+      // ⭐⭐ Phase W14 — حدّث ودجت «ملاحظاتي وأهدافي» **فوراً** (بلا شبكة):
+      //   pushNotesNow يكتب حمولة الملاحظات والأهداف في prefs ويطلب الرسم.
       try {
-        if (window.MedAppWidgets && typeof window.MedAppWidgets.refresh === 'function') {
-          window.MedAppWidgets.refresh('goals');
+        if (window.MedAppWidgets) {
+          if (typeof window.MedAppWidgets.pushNotesNow === 'function') {
+            window.MedAppWidgets.pushNotesNow();
+          } else if (typeof window.MedAppWidgets.refresh === 'function') {
+            window.MedAppWidgets.refresh('goals');
+          }
         }
       } catch (e) {}
     }

@@ -1081,10 +1081,15 @@ headerTitle: أهدافي
       } catch (err) {
         console.error('saveGoals error:', err);
       }
-      // ⭐⭐ Phase W2 — حدّث ودجت «ملاحظاتي وأهدافي» بعد كل تغيير.
+      // ⭐⭐ Phase W14 — حدّث ودجت «ملاحظاتي وأهدافي» **فوراً** (بلا شبكة):
+      //   pushNotesNow يكتب حمولة الملاحظات والأهداف في prefs ويطلب الرسم.
       try {
-        if (window.MedAppWidgets && typeof window.MedAppWidgets.refresh === 'function') {
-          window.MedAppWidgets.refresh('goals');
+        if (window.MedAppWidgets) {
+          if (typeof window.MedAppWidgets.pushNotesNow === 'function') {
+            window.MedAppWidgets.pushNotesNow();
+          } else if (typeof window.MedAppWidgets.refresh === 'function') {
+            window.MedAppWidgets.refresh('goals');
+          }
         }
       } catch (e) {}
     }

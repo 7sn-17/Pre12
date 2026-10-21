@@ -9,6 +9,7 @@ import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
+import androidx.glance.LocalState
 import androidx.glance.LocalSize
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
@@ -63,6 +64,17 @@ abstract class VariantNotesWidget(private val variant: NotesVariant) : GlanceApp
         // ⭐ W9 — read inside the composition (see TodayTasksWidget.kt).
         provideContent {
             val ctx = LocalContext.current
+            // ⭐⭐⭐ Phase W14 — بلا هذه القراءة يتخطّى Compose هذا الـlambda
+            //   (لا تغيّر معاملاته ولا يقرأ حالةً) فيبقى الرسم على أول
+            //   حمولة للأبد — وهو سبب «الودجت لا يتغيّر حتى إعادة التشغيل».
+            //   قراءة حالة Glance تجعل الـcomposition يعتمد عليها، فيُعاد
+            //   تشغيله مع كل update() وتُقرأ البيانات الحديثة.
+            @Suppress("UNUSED_VARIABLE")
+            val glanceState = LocalState.current
+            // ⭐⭐⭐ W14 — قراءة نبضة التحديث: تجعل هذا الـcomposition يعتمد على
+            //   حالة حقيقية، فلا يتخطّاه Compose، فتُقرأ البيانات الحديثة وتُرسم.
+            @Suppress("UNUSED_VARIABLE")
+            val refreshVersion = WidgetRefreshSignal.version.value
             NotesCard(WidgetBridge.readNotes(ctx), variant)
         }
     }
@@ -146,9 +158,10 @@ private fun CombinedNotes(
 ) {
     val sideBySide = width >= 230.dp
     val compact = height < 150.dp
-    // Stacked halves are short: one line each. Side-by-side halves are as tall
-    // as the card, so they get the full two lines.
-    val twoLines = sideBySide
+    // ⭐⭐ W14 — السطر الثاني (المحتوى) يظهر **دائماً**: العنوان ١٥sp + المحتوى
+    //   ١٣sp يسعيان في نصف البطاقة (≈٦٧dp) easily، وإخفاء المحتوى كان سبب
+    //   «الودجت يعرض العنوان فقط».
+    val twoLines = true
     val rows = when {
         !sideBySide -> when {
             height >= 170.dp -> 2

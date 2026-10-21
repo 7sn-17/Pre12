@@ -1819,6 +1819,7 @@ headerTitle: الملاحظات
         else if (noteId.startsWith('local_')) {
           state.myNotes = state.myNotes.filter(n => n.id !== noteId);
           saveToStorage(KEYS.MY_NOTES, state.myNotes);
+          refreshWidgetNotes();
           updateMineCount();
         }
         // ملاحظة خاصة في السحابة: احذفها محلياً الآن، وأرسل الحذف
@@ -1826,6 +1827,7 @@ headerTitle: الملاحظات
         else if (cloudNote && !cloudNote.is_shared) {
           state.myNotes = state.myNotes.filter(n => n.id !== noteId);
           saveToStorage(KEYS.MY_NOTES, state.myNotes);
+          refreshWidgetNotes();
           updateMineCount();
 
           let deleted = false;
@@ -1979,6 +1981,17 @@ headerTitle: الملاحظات
     // ============================================
     // Save Note — نسخة قوية
     // ============================================
+    // ⭐⭐ Phase W14 — أي تغيير في الملاحظات (إضافة/حذف) يُنشر في الودجت فوراً.
+    function refreshWidgetNotes() {
+      try {
+        if (window.MedAppWidgets && typeof MedAppWidgets.pushNotesNow === 'function') {
+          MedAppWidgets.pushNotesNow();
+        }
+      } catch (e) {
+        console.warn('[notes] the widget refresh failed:', e);
+      }
+    }
+
     async function saveNote() {
       // 🔒 منع الحفظ المزدوج
       if (state.isSaving) return;
@@ -2069,6 +2082,7 @@ headerTitle: الملاحظات
           } else {
             state.myNotes = [cloudNote].concat(state.myNotes.filter(n => n.id !== cloudNote.id));
             saveToStorage(KEYS.MY_NOTES, state.myNotes);
+          refreshWidgetNotes();
             updateMineCount();
             showToast('تم حفظ ملاحظتك');
             closeAddModal();

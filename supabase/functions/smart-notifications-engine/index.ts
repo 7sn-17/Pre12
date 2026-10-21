@@ -17,6 +17,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { createSender, sendBatch, takeInvalidTokens, type FcmMessage } from '../_shared/fcm.ts';
 import {
   DAILY_CAP,
+  SCENARIOS,
   WEEKLY_CAP,
   buildContext,
   composeMessage,
@@ -64,6 +65,9 @@ Deno.serve(async (req) => {
     }
     const mode: string = String(payload.mode || 'run');
     const forcedScenario: string | null = payload.scenario ? String(payload.scenario) : null;
+    // ⭐⭐ Phase W14 — «اختبار قسري»: يتجاهل كل الشروط (لا سلسلة في خطر؟ لا
+    //   فرق!) والسقوف اليومية/الأسبوعية، ويرسل إلى جهاز المُرسِل فوراً.
+    const forceTest = payload.forceTest === true || payload.forceTest === 'true';
 
     /* ── 1) الحماية ── */
     // ⭐⭐ W12 — مصدرا سرّ واحد: الـVault (مصدر الحقيقة) **أو** متغيّر البيئة.
@@ -263,11 +267,22 @@ Deno.serve(async (req) => {
         forceScenario: forcedScenario,
         ignoreLimits: true,
       });
-      if (!ownSelection) {
+
+      // ⭐⭐ W14 — مع forceTest نرسل **دائماً**: إن لم ينطبق أي سيناريو
+      //   نختار أقرب واحد (أو «agenda») بدل أن نردّ «skipped» بلا شيء.
+      const chosen = ownSelection
+        ? ownSelection.scenario
+        : (forcedScenario ? SCENARIOS.find((s) => s.id === forcedScenario) : null) ||
+          SCENARIOS.find((s) => s.id === 'agenda') ||
+          SCENARIOS[0];
+      if (!chosen) {
         return json({ ok: true, mode, sent: 0, failed: 0, skipped: 1 });
       }
+      const reason = ownSelection
+        ? ownSelection.reason
+        : 'اختبار قسري (forceTest) — لا شروط ولا سقوف';
 
-      const ownMessage = composeMessage(ownCtx, ownSelection.scenario, ownSelection.reason);
+      const ownMessage = composeMessage(ownCtx, chosen, reason);
       const ownActions = ownSelection.scenario.allowTaskAction && ownCtx.pendingTask
         ? [
             { title: 'تم الإنجاز', action: 'mark_done' },
@@ -301,7 +316,7 @@ Deno.serve(async (req) => {
           body: ownMessage.body,
           target: ownMessage.target,
           payload: ownFcm.data,
-          reason: ownSelection.reason + ' (test)',
+          reason: reason + (forceTest ? ' [forceTest]' : ' (test)'),
           sent: ok,
           error: ok ? null : 'failed',
         });
@@ -328,6 +343,8 @@ Deno.serve(async (req) => {
         title: ownMessage.title,
         body: ownMessage.body,
         url: ownMessage.url,
+        forced: forceTest,
+        reason: reason,
         fcm: sender?.mode,
       });
     }
