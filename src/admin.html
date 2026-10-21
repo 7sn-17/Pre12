@@ -3495,26 +3495,55 @@ function deleteUser(userId) {
     onConfirm: async () => {
       showToast('جاري الحذف...', 'info');
 
+      // ⭐⭐⭐ Phase W16 — الجذر الحقيقي للعطل:
+      //   كان الحذف يتمّ من المتصفّح برمز المستخدم (authenticated)،
+      //   وجدول `profiles` لا يملك سياسة DELETE إطلاقاً ⇒ RLS يرفضه،
+      //   ولم يكن `auth.users` يُحذف أبداً ⇒ «فشل صامت».
+      //   الآن: دالة `delete-user-account` بصلاحية service_role، وهي
+      //   تتحقّق من دور المستدعي (admin/moderator) بنفسها.
       try {
-        await supabaseClient
-          .from('notes')
-          .delete()
-          .eq('user_id', userId);
+        // ⭐ getSession() يُنشّح الرمز إن كان منتهياً (functions.invoke يُرفقه تلقائياً).
+        await supabaseClient.auth.getSession();
 
-        const { error: profileError } = await supabaseClient
-          .from('profiles')
-          .delete()
-          .eq('id', userId);
+        const response = await supabaseClient.functions.invoke('delete-user-account', {
+          body: { user_id: userId, confirm: 'DELETE' }
+        });
 
-        if (profileError) throw profileError;
+        const invokeError = response && response.error;
+        if (invokeError) {
+          const ctx = invokeError.context;
+          let message = invokeError.message || 'تعذّر حذف المستخدم';
+          // ⭐ نعرض نصّ الخادم الحقيقي بدل رسالة عامة.
+          if (ctx && typeof ctx.json === 'function') {
+            try {
+              const payload = await ctx.json();
+              if (payload && (payload.message || payload.error)) {
+                message = payload.message || payload.error;
+              }
+            } catch (e) { /* الردّ ليس JSON — نكتفي بالرسالة */ }
+          }
+          throw new Error(message);
+        }
 
-        showToast('تم حذف المستخدم بنجاح');
+        const payload = response.data || {};
+        if (payload.error) throw new Error(payload.message || payload.error);
+
+        const details = [];
+        if (payload.cleaned) {
+          Object.keys(payload.cleaned).forEach(function (key) {
+            const n = payload.cleaned[key];
+            if (n) details.push(key + ': ' + n);
+          });
+        }
+        if (payload.removedFiles) details.push('ملفات: ' + payload.removedFiles);
+
+        showToast('تم حذف المستخدم بنجاح' + (details.length ? ' (' + details.join(' · ') + ')' : ''), 'success');
         await loadUsers();
         await loadStats();
 
       } catch (err) {
         console.error('deleteUser error:', err);
-        showToast('تعذّر حذف المستخدم: ' + err.message, 'error');
+        showToast('تعذّر حذف المستخدم: ' + ((err && err.message) || err), 'error');
       }
     }
   });

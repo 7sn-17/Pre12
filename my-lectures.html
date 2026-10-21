@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="5.0.7">
+<meta name="app-version" content="5.0.8">
 <title>محاضراتي — المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -2628,7 +2628,7 @@ body {
 <script src="notifications.js"></script>
 
 
-<script src="app.js?v=5.0.7"></script>
+<script src="app.js?v=5.0.8"></script>
 <script>
 
 var LECTURE_BUCKET = 'schedule-images';
@@ -4933,8 +4933,11 @@ function renderAlbumRequests() {
   if (empty) empty.hidden = true;
 
   list.innerHTML = requests.map(function (request) {
-    // ⭐ صاحب الألبوم هو من يقرر؛ صاحب الطلب يرى حالة طلبه فقط.
-    const canDecide = (owner || isRequestOwner(request)) && request.status === 'pending';
+    // ⭐⭐⭐ Phase W16 — **صاحب الألبوم وحده** يقرّر.
+    //   كانت الواجهة تُظهر أزرار القبول/Rفض لصاحب الطلب أيضاً، والسياسة
+    //   (RLS) تسمح بالتحديث لصاحب الألبوم فقط ⇒ كان الطلب يُرفض بصمت
+    //   (أو تُضاف الصورة مرّتين). الآن الواجهة مطابقة للسياسة تماماً.
+    const canDecide = owner && request.status === 'pending';
     let actions = '';
     if (canDecide) {
       actions = '<span class="request-actions">' +
@@ -5084,7 +5087,8 @@ async function acceptAlbumRequest(requestId) {
   const request = (lectureState.requests || []).find(function (item) { return String(item.id) === String(requestId); });
   if (!request) return;
   const album = getActiveAlbum();
-  if (!album || !(isAlbumOwner(album) || isRequestOwner(request))) {
+  // ⭐ W16 — القبول حقّ صاحب الألبوم فقط (وسياسة RLS كذلك).
+  if (!album || !isAlbumOwner(album)) {
     lectureShowToast('لا يمكنك قبول طلبات في ألبوم لا تملكه', true);
     return;
   }
@@ -5119,7 +5123,8 @@ async function acceptAlbumRequest(requestId) {
     const insert = await supabaseClient
       .from('schedule_images')
       .insert({
-        user_id: lectureState.user.id,
+        // ⭐ W16 — الصورة المقبولة ملكُ صاحب الألبوم (لا ملك من قبلها).
+        user_id: album.user_id || lectureState.user.id,
         album_id: album.id,
         title: request.title || 'صورة محاضرة',
         description: null,
@@ -5159,7 +5164,8 @@ async function rejectAlbumRequest(requestId) {
   const request = (lectureState.requests || []).find(function (item) { return String(item.id) === String(requestId); });
   if (!request) return;
   const album = getActiveAlbum();
-  if (!album || !(isAlbumOwner(album) || isRequestOwner(request))) {
+  // ⭐ W16 — الرفض حقّ صاحب الألبوم فقط (وسياسة RLS كذلك).
+  if (!album || !isAlbumOwner(album)) {
     lectureShowToast('لا يمكنك رفض طلبات في ألبوم لا تملكه', true);
     return;
   }

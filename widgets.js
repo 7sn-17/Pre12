@@ -389,12 +389,18 @@
           .replace(/\s+/g, ' ')
           .trim();
         var title = String(note.title || '').replace(/\s+/g, ' ').trim();
-        // ⭐⭐ Phase W15 — السطر الأول = العنوان، السطر الثاني = المحتوى.
-        //   (ملاحظة بلا محتوى ⇒ سطر واحد فقط، لا تكرار).
+        // ⭐⭐⭐ Phase W16 — «الخريطة الصريحة» لعنوان/محتوى الملاحظة:
+        //   العنوان: من `title`، وإلا أول ١٥ حرفاً من المحتوى، وإلا «ملاحظة».
+        //   المحتوى: من `content`، وإلا العنوان نفسه (فلا سطر ثانٍ فارغ،
+        //   ولا تكرار — الKotlin يتجاهل النصّ المطابق للعنوان تماماً).
+        if (!title) title = cutText(body, 15) || 'ملاحظة';
+        if (!body) body = title;
         return {
           id: String(note.id || ('note-' + index)),
-          title: cutText(title || body, 46),
-          text: cutText(body, 110),
+          title: cutText(title, 46),
+          // ⭐ ٦٤ حرفاً: ما يتّسع فعلياً في سطرين من العمود الضيّق،
+          //   مع «…» حقيقي لأن الـRemoteViews لا يقصّ بالنقاط.
+          text: cutText(body, 64),
           kind: 'note',
           done: false
         };

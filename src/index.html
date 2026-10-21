@@ -6025,11 +6025,48 @@ i.fab {
       return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
 
+    /**
+     * ⭐⭐⭐ Phase W16 — تظليل نتيجة البحث.
+     *   • صار **آمناً** (تهريب HTML) — كان يُعيد النصّ خاماً ✗.
+     *   • ويقبل التطابق العربي «المتساوي» (الألف/الياء/التاء المربوطة)
+     *     عبر `foldArabic` الذي **يحافظ على المواضع** ⇒ التظليل صحيح.
+     */
+    function escapeForHighlight(text) {
+      return String(text === undefined || text === null ? '' : text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     function highlightText(text, query) {
-      if (!query) return text;
-      const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(`(${escaped})`, 'gi');
-      return text.replace(regex, '<mark>$1</mark>');
+      const raw = String(text === undefined || text === null ? '' : text);
+      const q = String(query === undefined || query === null ? '' : query);
+      if (!q) return escapeForHighlight(raw);
+
+      // 1) التطابق الحرفي
+      const idx = raw.toLowerCase().indexOf(q.toLowerCase());
+      if (idx >= 0) {
+        return escapeForHighlight(raw.slice(0, idx)) +
+          '<mark>' + escapeForHighlight(raw.slice(idx, idx + q.length)) + '</mark>' +
+          escapeForHighlight(raw.slice(idx + q.length));
+      }
+
+      // 2) ⭐ التطابق العربي «المتساوي» (المواضع محفوظة)
+      const engine = window.MedAppSearch;
+      if (engine && typeof engine.foldArabic === 'function') {
+        const foldedRaw = engine.foldArabic(raw);
+        const foldedQuery = engine.foldArabic(q);
+        const fidx = foldedRaw.indexOf(foldedQuery);
+        if (fidx >= 0) {
+          return escapeForHighlight(raw.slice(0, fidx)) +
+            '<mark>' + escapeForHighlight(raw.slice(fidx, fidx + foldedQuery.length)) + '</mark>' +
+            escapeForHighlight(raw.slice(fidx + foldedQuery.length));
+        }
+      }
+
+      return escapeForHighlight(raw);
     }
 
     function getArabicGreeting() {
@@ -6519,8 +6556,9 @@ function openLastActivity() {
       // ⭐⭐ عند تغيّر الاسم أو الصورة نُعيد الرسم فوراً
       if (!window.__medappProfileListener) {
         window.__medappProfileListener = true;
-        window.addEventListener('medapp:profile-updated', async function () {
+        window.addEventListener('medapp:profile-updated', async function (event) {
           try {
+            const detail = event && event.detail ? event.detail : null;
             const sess = await getSession();
             if (!sess) return;
             const fresh = await getProfile(sess.user.id);
@@ -6535,6 +6573,9 @@ function openLastActivity() {
                 greeting.textContent = `${getArabicGreeting()}، ${displayName.split(' ')[0]}`;
               }
               lucide.createIcons();
+            } else if (detail && detail.full_name) {
+              // ⭐ W16 — بلا شبكة: نطبّق الاسم الجديد فوراً على كل الواجهة.
+              applyProfileNameEverywhere(detail.full_name);
             }
           } catch (e) {}
         });
@@ -7501,10 +7542,72 @@ function openLastActivity() {
         return;
       }
 
-      // ⭐⭐ تحديث الواجهة فوراً — بلا إعادة تحميل
-      const nameEl = document.getElementById('userCardName');
-      if (nameEl) nameEl.textContent = result.full_name;
+      // ⭐⭐⭐ Phase W16 — «الاسم يتغيّر في كل مكان» فوراً:
+      //   بطاقة المستخدم تُعاد بناؤها بالكامل (فلا يكفي تعديل `textContent`)،
+      //   والتحية تُحدَّث، وكل عنصر يحمل الاسم في الصفحة يتغيّر.
+      applyProfileNameEverywhere(result.full_name);
       showToast('تم تحديث الاسم', 'success');
+    }
+
+    /**
+     * ⭐⭐⭐ W16 — يطبّق الاسم الجديد على **كل** الواجهة بلا إعادة تحميل.
+     * @param {string} fullName
+     */
+    function applyProfileNameEverywhere(fullName) {
+      const name = String(fullName || '').trim();
+      if (!name) return;
+
+      // 1) بطاقة المستخدم (تُعاد بناؤها بالكامل ⇒ نستدعي الرسم من جديد)
+      try {
+        const profile = (typeof getCachedProfile === 'function') ? getCachedProfile() : null;
+        const user = (typeof getAuthUser === 'function') ? getAuthUser() : null;
+        if (profile) {
+          profile.full_name = name;
+          if (typeof renderUserCard === 'function' && user) renderUserCard(profile, user);
+        }
+      } catch (e) {}
+
+      // 2) كل عنصر يحمل الاسم
+      document.querySelectorAll('[data-profile-name]').forEach(function (el) {
+        el.textContent = name;
+      });
+      const nameEl = document.getElementById('userCardName');
+      if (nameEl) nameEl.textContent = name;
+
+      // 3) التحية (الاسم الأول فقط)
+      const greeting = document.getElementById('welcomeGreeting');
+      if (greeting) {
+        const first = name.split(' ')[0];
+        const arabic = (typeof getArabicGreeting === 'function') ? getArabicGreeting() : 'مرحباً';
+        greeting.textContent = arabic + '، ' + first;
+      }
+
+      // 4) ⭐ الشريط العلوي / أيّ نصّ «@user» في الصفحة
+      try {
+        document.querySelectorAll('.user-name, .topbar-user-name, [data-user-display]').forEach(function (el) {
+          el.textContent = name;
+        });
+      } catch (e) {}
+
+      // 5) ⭐ الملاحظات المحلية تحمل اسم صاحبها — نحدّثه فوراً
+      try {
+        const raw = localStorage.getItem('medfav_my_notes_v3');
+        if (raw) {
+          const notes = JSON.parse(raw);
+          if (Array.isArray(notes) && notes.length) {
+            let touched = false;
+            notes.forEach(function (note) {
+              if (note && note.author_name && note.author_name !== name) {
+                note.author_name = name;
+                touched = true;
+              }
+            });
+            if (touched) localStorage.setItem('medfav_my_notes_v3', JSON.stringify(notes));
+          }
+        }
+      } catch (e) {}
+
+      try { lucide.createIcons(); } catch (e) {}
     }
 
     function renderUserCard(profile, user, options) {

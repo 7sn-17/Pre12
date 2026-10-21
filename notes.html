@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="5.0.7">
+<meta name="app-version" content="5.0.8">
 <title>الملاحظات - المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -2491,7 +2491,7 @@ header {
         id="notesSearch"
         class="search-input" 
         placeholder="ابحث في الملاحظات..."
-        oninput="handleSearch(this.value)"
+        >
       >
       <i data-lucide="search" class="icon-right"></i>
     </div>
@@ -2617,7 +2617,7 @@ header {
 <script src="widgets.js"></script>
 
 
-  <script src="app.js?v=5.0.7"></script>
+  <script src="app.js?v=5.0.8"></script>
 <script>
 
     lucide.createIcons();
@@ -2951,8 +2951,37 @@ header {
     // Search
     // ============================================
     function handleSearch(query) {
-      state.searchQuery = (query || '').toLowerCase().trim();
+      // ⭐⭐⭐ W16 — تطبيع عربي: «احمد» تطابق «أحمد» في العناوين والمحتوى.
+      state.searchQuery = arabicNormalize(query);
       renderNotes();
+    }
+
+    /**
+     * ⭐⭐⭐ W16 — ربط حقل البحث عبر `search.js`:
+     *   أثناء التكوين (لوحة المفاتيح العربية) تكون قيمة الـDOM قديمة ⇒
+     *   `oninput` وحده لا يعمل ⇒ نستخدم محرّك البحث الذي يقرأ مخزن الـIME.
+     */
+    function bindSearchField() {
+      const input = document.getElementById('notesSearch');
+      if (!input) return;
+      const engine = window.MedAppSearch;
+      if (engine && typeof engine.bindSearchInput === 'function') {
+        engine.bindSearchInput(input, function (value) { handleSearch(value); });
+      } else {
+        input.addEventListener('input', function (e) { handleSearch(e.target.value); });
+        input.addEventListener('compositionend', function (e) { handleSearch(e.target.value); });
+      }
+    }
+
+    /**
+     * ⭐ W16 — تطبيع النصّ العربي (يستخدم محرّك search.js إن كان محمّلاً).
+     */
+    function arabicNormalize(value) {
+      const engine = window.MedAppSearch;
+      if (engine && typeof engine.normalizeArabic === 'function') {
+        return engine.normalizeArabic(value);
+      }
+      return String(value === undefined || value === null ? '' : value).toLowerCase().trim();
     }
 
     // ============================================
@@ -2972,10 +3001,11 @@ header {
           : [...sharedPendingNotes(), ...state.sharedNotes];
         
         if (state.searchQuery) {
-          notes = notes.filter(n => 
-            (n.title || '').toLowerCase().includes(state.searchQuery) ||
-            (n.content || '').toLowerCase().includes(state.searchQuery) ||
-            (n.author_name && n.author_name.toLowerCase().includes(state.searchQuery))
+          // ⭐ W16 — تطبيع الجانبين.
+          notes = notes.filter(n =>
+            arabicNormalize(n.title).includes(state.searchQuery) ||
+            arabicNormalize(n.content).includes(state.searchQuery) ||
+            arabicNormalize(n.author_name).includes(state.searchQuery)
           );
         }
         
@@ -3473,6 +3503,9 @@ header {
     // ============================================
     async function init() {
       try {
+        // ⭐⭐⭐ W16 — ربط حقل البحث (لوحة المفاتيح العربية) قبل أي شيء.
+        bindSearchField();
+
         // تحميل الملاحظات المعلقة
         state.pendingNotes = loadFromStorage(KEYS.PENDING, []);
         if (!Array.isArray(state.pendingNotes)) state.pendingNotes = [];

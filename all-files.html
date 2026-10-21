@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="5.0.7">
+<meta name="app-version" content="5.0.8">
 <title>جميع الملفات — المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -1637,7 +1637,7 @@ header {
   <div class="search-wrapper">
     <input type="text" id="searchInput" class="search-input"
            placeholder="ابحث في جميع الملفات..."
-           oninput="handleSearch(this.value)">
+           >
     <i class="fa-solid fa-magnifying-glass icon-right"></i>
     <span class="icon-left" id="searchClear" onclick="clearSearch()">
       <i class="fa-solid fa-xmark"></i>
@@ -1668,7 +1668,7 @@ header {
 <script src="notifications.js"></script>
 
 
-<script src="app.js?v=5.0.7"></script>
+<script src="app.js?v=5.0.8"></script>
 <script>
 
 /* ═══════════════════════════════════════════════════════
@@ -1899,8 +1899,38 @@ function openFile(file) {
 /* ═══════════════════════════════════════════════════════
    البحث
    ═══════════════════════════════════════════════════════ */
+/**
+ * ⭐⭐⭐ Phase W16 — تطبيع النصّ العربي قبل المقارنة.
+ *   «احمد» تطابق «أحمد» · «الاوراق» تطابق «الأوراق» · «مستشفي» تطابق «مستشفى».
+ *   (المحرك `search.js` يوفّر التطبيع؛本页 a fallback احتياطي.)
+ */
+function arabicNormalize(value) {
+  const engine = window.MedAppSearch;
+  if (engine && typeof engine.normalizeArabic === 'function') {
+    return engine.normalizeArabic(value);
+  }
+  return String(value === undefined || value === null ? '' : value).toLowerCase().trim();
+}
+
+/**
+ * ⭐⭐⭐ Phase W16 — ربط حقل البحث عبر محرّك `search.js`:
+ *   يتعامل مع **لوحة المفاتيح العربية** (التكوين) ⇒ الحرف يظهر فوراً
+ *   بدل انتظار Enter. (كان `oninput` وحده ⇒ قيمة قديمة أثناء التكوين.)
+ */
+function bindSearchField() {
+  const input = document.getElementById('searchInput');
+  if (!input) return;
+  const engine = window.MedAppSearch;
+  if (engine && typeof engine.bindSearchInput === 'function') {
+    engine.bindSearchInput(input, function (value) { handleSearch(value); });
+  } else {
+    input.addEventListener('input', function (e) { handleSearch(e.target.value); });
+    input.addEventListener('compositionend', function (e) { handleSearch(e.target.value); });
+  }
+}
+
 function handleSearch(query) {
-  currentSearch = query.toLowerCase().trim();
+  currentSearch = arabicNormalize(query);
   document.getElementById('searchClear').classList.toggle('visible', currentSearch.length > 0);
 
   if (!currentSearch) {
@@ -1908,10 +1938,11 @@ function handleSearch(query) {
     return;
   }
 
+  // ⭐ W16 — النصّ مطبَّع على الجانبين ⇒ «احمد» تطابق «أحمد».
   const filtered = allFiles.filter(f =>
-    (f.title || '').toLowerCase().includes(currentSearch) ||
-    (f.description || '').toLowerCase().includes(currentSearch) ||
-    (f.subjects?.name || '').toLowerCase().includes(currentSearch)
+    arabicNormalize(f.title).includes(currentSearch) ||
+    arabicNormalize(f.description).includes(currentSearch) ||
+    arabicNormalize(f.subjects?.name).includes(currentSearch)
   );
 
   renderFiles(filtered);
@@ -1955,6 +1986,7 @@ document.addEventListener('keydown', (e) => {
 /* ═══════════════════════════════════════════════════════
    التشغيل
    ═══════════════════════════════════════════════════════ */
+bindSearchField();
 loadAllFiles();
 
 

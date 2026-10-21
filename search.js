@@ -30,8 +30,68 @@
     return global.supabaseClient || null;
   }
 
+  /* ==========================================================
+     ⭐⭐⭐ Phase W16 — تطبيع النصّ العربي (جذر «البحث لا يعمل بالعربي»)
+     ------------------------------------------------------------
+     المشكلة: المستخدم يكتب «احمد» والملف عنوانه «أحمد» ⇒
+     `includes()` لا يطابق أبداً ⇒ «لا شيء يحدث» (بينما الإنجليزي
+     يعمل لأنّه لا يحتاج تطبيعاً).
+
+     `normalizeArabic` يزيل التشكيل والتطويل ويوحّد صور الألف
+     والياء والتاء المربوطة والهمزات — فيطابق «احمد» ← «أحمد»
+     و«مستشفي» ← «مستشفى».
+
+     `foldArabic` هو **نفس التطبيع لكن بمواضعه** (كل حرف ← حرف):
+     نحتاجه في بحث الـPDF حيث تعتمد مواضع التظليل على أرقام
+     الحروف الأصلية (فلا يجوز تغيير طول النصّ).
+     ========================================================== */
+
+  // التشكيل + التطويل + علامات قرآنية.
+  var ARABIC_MARKS = /[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u08D3-\u08FF\u0640]/g;
+
+  /** صور الألف → ا */
+  var ALEF_FORMS = /[\u0622\u0623\u0625\u0671\u0672\u0673\u0675]/g;
+  /** ؤ → و ، ئ → ي (كلٌّ منهما حرف واحد ⇒ المواضع محفوظة) */
+  var HAMZA_FORMS = /[\u0624\u0626]/g;
+  /** ى + ی + ي الفارسية → ي */
+  var ALEF_MAKSURA = /[\u0649\u06CC\u06D2]/g;
+  /** ة → ه ، ک → ك ، گ → گ */
+  var TA_MARBUTA = /\u0629/g;
+  var KEHEH = /\u06A9/g;
+
+  /**
+   * ⭐ التطبيع الكامل — يُستخدم في البحث المحلي (لا موضع للكلمة).
+   */
+  function normalizeArabic(value) {
+    return String(value === undefined || value === null ? '' : value)
+      .replace(ARABIC_MARKS, '')
+      .replace(ALEF_FORMS, '\u0627')
+      .replace(HAMZA_FORMS, '\u0648')
+      .replace(ALEF_MAKSURA, '\u064A')
+      .replace(TA_MARBUTA, '\u0647')
+      .replace(KEHEH, '\u0643')
+      .replace(/\u0626/g, '\u064A')
+      .toLowerCase()
+      .trim();
+  }
+
+  /**
+   * ⭐ تطبيع **يحافظ على المواضع** (كل حرف ← حرف واحد) — لبحث الـPDF
+   *   حيث تُستعمل أرقام الحروف لتظليل النتيجة.
+   */
+  function foldArabic(value) {
+    return String(value === undefined || value === null ? '' : value)
+      .replace(ALEF_FORMS, '\u0627')
+      .replace(HAMZA_FORMS, '\u0648')
+      .replace(ALEF_MAKSURA, '\u064A')
+      .replace(TA_MARBUTA, '\u0647')
+      .replace(KEHEH, '\u0643')
+      .replace(/\u0626/g, '\u064A')
+      .toLowerCase();
+  }
+
   function normalize(value) {
-    return String(value === undefined || value === null ? '' : value).toLowerCase().trim();
+    return normalizeArabic(value);
   }
 
   /** ⭐ اسم المادة من الملف (يدعم السلسلة والعنصر) */
@@ -52,11 +112,12 @@
     if (!file) return false;
     var needle = normalize(q);
     if (!needle) return false;
-    var title = String(file.title || '').toLowerCase();
+    // ⭐ W16 — النصّ **مطبَّع** أيضاً: «احمد» تطابق «أحمد»…
+    var title = normalizeArabic(file.title);
     if (title.includes(needle)) return true;
-    var description = String(file.description || '').toLowerCase();
+    var description = normalizeArabic(file.description);
     if (description.includes(needle)) return true;
-    var subject = String(subjectNameOf(file) || '').toLowerCase();
+    var subject = normalizeArabic(subjectNameOf(file));
     if (subject.includes(needle)) return true;
     return false;
   }
@@ -236,19 +297,67 @@
       input.__medappSearchHandlers = null;
     }
 
+    // ⭐⭐⭐ Phase W16 — «الIME العربي»: لماذا كانت الحروف لا تُلتقط؟
+    // ---------------------------------------------------------------
+    // لوحة المفاتيح العربية (Gboard/Samsung) تُنتج **تكويناً** (composition):
+    // أثناء التكوين قد يُطلَق حدث `input` بينما قيمة الحقل في الـDOM
+    // **متأخّرة** عن مخزن الـIME ⇒ كان البحث يقرأ قيمة قديمة ⇒
+    // «لا شيء يحدث» حتى Enter أو حذف حرف (وهما يطلقان حدث input حقيقياً).
+    //
+    // الحل: أثناء التكوين يكون **مخزن الـIME هو الحقيقة**:
+    //   القيمة = (نصّ ما قبل التكوين) + (الجزء المُركَّب الآن)
+    // وهذا صحيح في كل المتصفّحات: في Chromium الـDOM يسبق المخزن،
+    // وفي بعض WebViews يتأخّر عن المخزن — والحساب نفسه يصحّ في الحالتين.
+    var composing = false;
+    var baseValue = '';
+
+    function readDomValue() {
+      try { return input.value || ''; } catch (e) { return ''; }
+    }
+
+    function computeValue(event) {
+      var value = readDomValue();
+      var data = (event && typeof event.data === 'string') ? event.data : '';
+
+      if (composing && data) {
+        // ⭐ أثناء التكوين: المخزن + ما قبله.
+        return baseValue + data;
+      }
+      if (data && value && value.indexOf(data) === -1) {
+        // ⭐ الـDOM متأخّر عن المخزن: نُلحق الجزء الجديد.
+        var caret = -1;
+        try { caret = input.selectionStart; } catch (e) {}
+        if (caret >= 0 && caret <= value.length) {
+          return value.slice(0, caret) + data + value.slice(caret);
+        }
+        return value + data;
+      }
+      return value || data || '';
+    }
+
     // ⭐ المعالج: لا شروط، لا تأخير — القيمة الخام للحقل فوراً.
     var handleSearchInput = function (event) {
-      var value = event && event.target ? event.target.value : input.value;
-      if ((value === undefined || value === null || value === '') && event && event.data) {
-        value = event.data;
-      }
+      var value = computeValue(event);
       handler(String(value === undefined || value === null ? '' : value), event);
+    };
+
+    var handleCompositionStart = function () {
+      composing = true;
+      baseValue = readDomValue();
+    };
+
+    var handleCompositionEnd = function (event) {
+      // ⭐ نحسب **قبل** إيقاف التكوين (المخزن هو الحقيقة في هذه اللحظة).
+      handleSearchInput(event);
+      composing = false;
+      baseValue = '';
     };
 
     var handlers = {
       input: handleSearchInput,
+      compositionstart: handleCompositionStart,
       compositionupdate: handleSearchInput,
-      compositionend: handleSearchInput,
+      compositionend: handleCompositionEnd,
       keyup: handleSearchInput
     };
     input.__medappSearchHandlers = handlers;
@@ -267,6 +376,9 @@
     searchLocal: searchLocal,
     matchesText: matchesText,
     mergeFiles: mergeFiles,
-    normalize: normalize
+    normalize: normalize,
+    // ⭐⭐⭐ W16 — أدوات التطبيع العربي (تستخدمها كل صفحات البحث).
+    normalizeArabic: normalizeArabic,
+    foldArabic: foldArabic
   };
 })(window);

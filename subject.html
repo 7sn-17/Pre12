@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="5.0.7">
+<meta name="app-version" content="5.0.8">
 <title>المواد — المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -2126,7 +2126,7 @@ header {
       id="fileSearchInput"
       class="search-input"
       placeholder="ابحث في ملفات المادة..."
-      oninput="handleSearch(this.value)"
+      >
     >
     <i data-lucide="search" class="icon-right"></i>
     <span class="icon-left" id="searchClear" onclick="clearSearch()">
@@ -2169,7 +2169,7 @@ header {
 <script src="notifications.js"></script>
 
 
-<script src="app.js?v=5.0.7"></script>
+<script src="app.js?v=5.0.8"></script>
 <script>
 
 /* ═══════════════════════════════════════════════════════
@@ -2592,8 +2592,36 @@ function selectCategory(cat, btnEl) {
 /* ═══════════════════════════════════════════════════════
    البحث
    ═══════════════════════════════════════════════════════ */
+/**
+ * ⭐⭐⭐ Phase W16 — تطبيع النصّ العربي قبل المقارنة.
+ *   «احمد» تطابق «أحمد» · «الاوراق» تطابق «الأوراق» · «مستشفي» تطابق «مستشفى».
+ *   (المحرك `search.js` يوفّر التطبيع؛本页 a fallback احتياطي.)
+ */
+function arabicNormalize(value) {
+  const engine = window.MedAppSearch;
+  if (engine && typeof engine.normalizeArabic === 'function') {
+    return engine.normalizeArabic(value);
+  }
+  return String(value === undefined || value === null ? '' : value).toLowerCase().trim();
+}
+
+/**
+ * ⭐⭐⭐ Phase W16 — ربط حقل البحث عبر `search.js` (التكوين العربي).
+ */
+function bindSearchField() {
+  const input = document.getElementById('fileSearchInput');
+  if (!input) return;
+  const engine = window.MedAppSearch;
+  if (engine && typeof engine.bindSearchInput === 'function') {
+    engine.bindSearchInput(input, function (value) { handleSearch(value); });
+  } else {
+    input.addEventListener('input', function (e) { handleSearch(e.target.value); });
+    input.addEventListener('compositionend', function (e) { handleSearch(e.target.value); });
+  }
+}
+
 function handleSearch(q) {
-  state.currentSearch = q.toLowerCase().trim();
+  state.currentSearch = arabicNormalize(q);
   document.getElementById('searchClear').classList.toggle('visible', state.currentSearch.length > 0);
   applyFilters();
 }
@@ -2618,9 +2646,10 @@ function applyFilters() {
   }
 
   if (state.currentSearch) {
+    // ⭐ W16 — تطبيع الجانبين (الألف/الياء/التاء المربوطة/التشكيل).
     filtered = filtered.filter(f =>
-      (f.title || '').toLowerCase().includes(state.currentSearch) ||
-      (f.description || '').toLowerCase().includes(state.currentSearch)
+      arabicNormalize(f.title).includes(state.currentSearch) ||
+      arabicNormalize(f.description).includes(state.currentSearch)
     );
   }
 
@@ -3032,6 +3061,9 @@ document.head.appendChild(styleSheet);
    ═══════════════════════════════════════════════════════ */
 async function init() {
   createParticles();
+
+  // ⭐ W16 — ربط البحث (يتعامل مع لوحة المفاتيح العربية).
+  bindSearchField();
 
   const session = await getSession();
   if (session) state.currentUser = session.user;

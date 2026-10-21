@@ -244,17 +244,29 @@ async function syncProfileAvatar(user) {
  * ⭐⭐ تعديل الاسم الكامل.
  * يحدّث: Supabase Auth (user_metadata) + جدول profiles + النسخة المحلية.
  */
+/**
+ * ⭐⭐⭐ Phase W16 — «تعديل الاسم» لا يتراجع بعد إعادة الدخول.
+ *
+ * الجذر الحقيقي:
+ *   • كان خطأ تحديث جدول `profiles` **مُهمَلاً** (تحذير في الـconsole فقط)
+ *     ⇒ الدالة كانت تُبلّغ بالنجاح بينما لم يُحفظ شيء في القاعدة
+ *     ⇒ عند إعادة الدخول كان الاسم القديم يعود ✗.
+ *   • والنسخة المحلية (الكاش) كانت تُحدَّث فقط إن وُجدت مسبقاً،
+ *    ⇒ الواجهة يعرض الاسم القديم حتى تُعاد المزامنة ✗.
+ *
+ * الترتيب الآن:
+ *   1) جدول `profiles` (مصدر الحقيقة) — خطؤه **يُبلَّغ** ولا يُخفى؛
+ *   2) `user_metadata` في auth.users (ثانوي — فشله لا يُبطل الحفظ)؛
+ *   3) الكاش المحلي — **دائماً** (يُنشأ إن لم يكن)؛
+ *   4) حدث `medapp:profile-updated` ⇒ إعادة رسم فورية لكل الواجهات.
+ */
 async function updateProfileName(newName) {
   var clean = String(newName || '').trim().replace(/\s+/g, ' ');
   if (!clean) return { success: false, error: 'الاسم لا يمكن أن يكون فارغاً' };
   if (clean.length > 60) return { success: false, error: 'الاسم طويل جداً (60 حرفاً كحد أقصى)' };
 
   try {
-    // 1) بيانات المصادقة
-    var userResult = await supabaseClient.auth.updateUser({ data: { full_name: clean } });
-    if (userResult && userResult.error) throw userResult.error;
-
-    // 2) جدول الملف الشخصي
+    // 0) معرّف المستخدم
     var userId = '';
     try {
       var current = (typeof getAuthUser === 'function') ? getAuthUser() : null;
@@ -266,28 +278,56 @@ async function updateProfileName(newName) {
                 sessionResult.data.session.user && sessionResult.data.session.user.id) || '';
     }
 
+    // 1) ⭐ جدول الملف الشخصي أولاً — مصدر الحقيقة. خطؤه خطأ حقيقي.
     if (userId) {
       var profileResult = await supabaseClient
         .from('profiles')
-        .update({ full_name: clean })
+        .update({ full_name: clean, updated_at: new Date().toISOString() })
         .eq('id', userId);
       if (profileResult && profileResult.error) {
         console.warn('[auth] the profile name could not be saved:', profileResult.error.message);
+        return {
+          success: false,
+          error: translateAuthError(profileResult.error.message) || 'تعذّر حفظ الاسم في الملف الشخصي'
+        };
       }
     }
 
-    // 3) النسخة المحلية
+    // 2) بيانات المصادقة (ثانوية — فشُلها لا يُنقض الحفظ ولا يُصفّره)
+    try {
+      var userResult = await supabaseClient.auth.updateUser({ data: { full_name: clean } });
+      if (userResult && userResult.error) {
+        console.warn('[auth] the auth metadata could not be updated:', userResult.error.message);
+      }
+    } catch (e) {
+      console.warn('[auth] the auth metadata could not be updated:', e);
+    }
+
+    // 3) النسخة المحلية — دائماً (حتى لو لم تكن موجودة بعد)
     if (userId) {
       var cached = getCachedProfile(userId);
+      if (!cached) {
+        // ⭐ لا كاش بعد: نجلبه مرّة واحدة (بلا إبطاء الواجهة) ثم نكتبه.
+        try {
+          var fresh = await supabaseClient
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .maybeSingle();
+          if (!fresh || fresh.error || !fresh.data) cached = null;
+          else cached = fresh.data;
+        } catch (e) { cached = null; }
+      }
       if (cached) {
         cached.full_name = clean;
         cacheProfile(cached);
       }
     }
 
+    // 4) ⭐ حدث إعادة الرسم الفوري
     try {
       window.dispatchEvent(new CustomEvent('medapp:profile-updated', {
-        detail: { full_name: clean }
+        detail: { full_name: clean, user_id: userId }
       }));
     } catch (e) {}
 

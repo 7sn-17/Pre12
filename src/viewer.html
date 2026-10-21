@@ -1722,8 +1722,21 @@ function updateSearchStatus() {
 /**
  * ⭐ البحث في الفهرس — من أول حرف.
  */
+/**
+ * ⭐⭐⭐ Phase W16 — تطبيع عربي **يحافظ على المواضع**.
+ *   السبب: مواضع التظليل داخل الـPDF تُحسب من أرقام حروف النصّ الأصلي،
+ *   فلا يجوز تغيير طوله (ولذلك نستخدم foldArabic لا normalizeArabic).
+ */
+function arabicFold(value) {
+  const engine = window.MedAppSearch;
+  if (engine && typeof engine.foldArabic === 'function') {
+    return engine.foldArabic(value);
+  }
+  return String(value === undefined || value === null ? '' : value).toLowerCase();
+}
+
 function searchDocument(term) {
-  const q = String(term || '').trim().toLowerCase();
+  const q = arabicFold(String(term || '').trim());
   state.searchTerm = q;
 
   if (!q) {
@@ -1741,7 +1754,8 @@ function searchDocument(term) {
   for (const page of pages) {
     const entry = state.textIndex.get(page);
     if (!entry || !entry.text) continue;
-    const hay = entry.text.toLowerCase();
+    // ⭐ W16 — نفس التطبيع على النصّ (المواضع محفوظة ⇒ التظليل صحيح).
+    const hay = arabicFold(entry.text);
     // ⭐ v4.6.4 — includes(): مطابقة متجاهلة لحالة الأحرف
     if (!hay.includes(q)) continue;
     let idx = hay.indexOf(q);

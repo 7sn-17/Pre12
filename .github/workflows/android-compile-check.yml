@@ -78,6 +78,10 @@ jobs:
         working-directory: android
         run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
 
+      - name: 🧪 Unit tests (the notes-widget regression guard)
+        working-directory: android
+        run: ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace
+
       - name: ✅ Verify the APK and the widget entry
         run: |
           set -e
