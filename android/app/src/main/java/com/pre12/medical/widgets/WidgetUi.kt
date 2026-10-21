@@ -34,7 +34,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
-import ColorProvider
+import androidx.glance.unit.ColorProvider
 import com.pre12.medical.MainActivity
 
 /**
