@@ -691,44 +691,54 @@ on every sync.
 - Widget → app: toggle writes prefs immediately (optimistic), and the app drains
   `pending.tasks` on next open, applying to `task_progress` with
   `completed_at`, then clears the key and pushes back the canonical payload.
-- **No network in widgets.** No WorkManager polling in Phase 1–3.
+- **Network only through WorkManager (W5).** The rendered widget still never
+  touches the network: `ToggleTaskAction` commits prefs, queues the change and
+  asks `WidgetSync` for a one-time, network-constrained upload. The worker posts
+  the queue to `task_progress` with the user's JWT (refreshed when needed) and
+  never clears the queue — the WebView drain owns that, because localStorage
+  must receive the toggle too. No polling, no periodic work.
 
 ### 10.7 Files (as built)
 
 ```
 widgets.js                        ← root, shipped + precached in sw.js
                                     payload builders (tasks/streak/notes),
-                                    plugin wrapper, pending drain, pin API
+                                    session forwarding, pending drain,
+                                    deep-link landing, pin API
 
 android/app/src/main/java/com/pre12/medical/widgets/
 ├── WidgetBridge.kt               SharedPreferences group + JSON parsers,
-│                                 optimistic toggle, pending queue, merge
-├── WidgetPalette.kt              27 M3 roles from widget_color_* (4 sets)
+│                                 optimistic toggle + doneAt, pending queue,
+│                                 mergePending, Supabase session store
+├── WidgetPalette.kt              28 M3 roles from widget_color_* (4 sets)
 ├── WidgetUi.kt                   GlassCard, Hairline, Chip, IconBadge,
-│                                 ColumnScope.WidgetEmptyState
-├── TodayTasksWidget.kt           interactive tasks (row budget via LocalSize)
+│                                 ColumnScope.WidgetEmptyState, openAppAction(path)
+├── TodayTasksWidget.kt           interactive tasks, pending-only list, row
+│                                 budget via LocalSize, all-done celebration
 ├── SimpleStreakWidget.kt         flame hero
 ├── DetailedStreakWidget.kt       7-day map + today halo
-├── NotesWidget.kt                pinned goals → notes
-├── ToggleTaskAction.kt           ActionCallback (prefs + queue + broadcast)
+├── NotesWidget.kt                three variants (combined / goals / notes) +
+│                                 their receivers
+├── ToggleTaskAction.kt           ActionCallback: prefs + queue + WorkManager
+│                                 + broadcast + tick frame + vanish frame
+├── WidgetSync.kt                 WorkManager uploader (task_progress upsert,
+│                                 JWT refresh, exponential backoff)
 └── MedWidgetsPlugin.kt           Capacitor bridge + requestPinAppWidget
 
 android/app/src/main/res/
-├── xml/{today_tasks,simple_streak,detailed_streak,notes}_widget_info.xml
-├── layout/widget_*_preview.xml               API 31+ picker previews
-├── drawable/widget_ic_{flame,pin,tasks}.xml  tinted vectors
+├── xml/{today_tasks,simple_streak,detailed_streak,notes,goals,notes_only}_widget_info.xml
+├── layout/widget_*_preview.xml               API 31+ picker previews (6)
+├── drawable/widget_ic_{flame,pin,tasks,check,target,note}.xml   tinted vectors
+├── drawable/widget_anim_check.xml + animator/widget_check_trim.xml  AVD tick
 ├── drawable/widget_preview_*                  preview shapes/graphics
 ├── values/widget_colors.xml + night + v31 + night-v31   (28 roles each)
 └── values/strings.xml + styles.xml            widget strings + preview styles
-
-Open (W4/W5):
-├── docs/widgets/design-spec.md   pixel spec + screenshots per state
-└── deep links (pre12://) from widget rows to the right screen
 ```
 
-`AndroidManifest.xml` has four `<receiver>` entries
+`AndroidManifest.xml` has **six** `<receiver>` entries
 (`android.appwidget.action.APPWIDGET_UPDATE`, `exported="false"`,
-`meta-data android.appwidget.provider`).
+`meta-data android.appwidget.provider`) plus a `pre12` VIEW intent filter on
+`MainActivity` for the widget deep links (read through `@capacitor/app`).
 
 ### 10.8 Delivery plan
 
@@ -738,12 +748,28 @@ Open (W4/W5):
 | **W1 (done)** | Kotlin 2.2.21 + Compose compiler + **Glance 1.2.0**, `WidgetBridge.kt`, `WidgetPalette.kt`, static «مهام اليوم» (`TodayTasksWidget` + receiver + provider XML + picker previews) | `assembleDebug` green in CI (run `39559126314`); receiver present in the merged manifest |
 | **W2 (done)** | Tasks fully interactive (`ToggleTaskAction`, optimistic prefs, `pending.tasks`, publish race guard) + `widgets.js` + `MedWidgetsPlugin` + in-app «إضافة ودجت» | CI `39566019522`; JS contract test green; toggles survive a killed app |
 | **W3 (done)** | `SimpleStreakWidget` + `DetailedStreakWidget` (done / missed / today halo / freeze) | Shipped with W2; pixel check still needs hardware |
-| **W4** | `NotesWidget` shipped with W2 — remaining: deep links from widget rows | Taps land on the right screen/row |
-| **W5** | Polish: dynamic-color matrix, RTL audit, previews, haptics, celebration state, accessibility labels | Passes the §10.1 quality bar on a real device |
-| **W6** | Release: version bump, CHANGELOG, CI green, APK verified, widget section in the store listing | Shipped |
+| **W4 (done)** | Deep links `pre12://{tasks,streak,notes,goals}` from every header/CTA; `widgets.js` lands on the card/page (`getLaunchUrl` + `appUrlOpen`) | CI `39573818995` asserts the scheme in the merged manifest |
+| **W5 (done)** | Offline-first `WidgetSyncWorker`, disappearing completed rows + AVD tick, notes/goals/notes-only variants, About cards, settings tiles ×6 | CI `39573818995` (debug) + `39574288079` (signed beta) green |
+| **W6 (pending)** | Merge to `main`, bump to `5.0.0`, production APK + version.json, widget section in the store listing | Shipped |
 
-**Version policy during widgets:** stay on `4.6.7` through W1–W4 (feature
-branch). Bump only when merging to `main` for release (W5/W6).
+**Version policy:** W1–W2 stayed on `4.6.7` (`versionCode 37`). The test branch
+now carries **`5.0.0-beta.1` (`versionCode 38`)** so the beta installs over the
+stable build; `main` is untouched until the merge.
+
+### 10.8.1 Beta channel (no merge)
+
+- Release: **`v5.0.0-beta.1`** (prerelease, `make_latest: false`), APK
+  `Medical_Platform_v5.0.0-beta.1.apk`, 14,932,771 B, SHA-256
+  `1808da12…a5555`. `gh run 39574288079`.
+- The release workflow is now version-aware: a `-` in the version skips the
+  Supabase `Medical_Platform_Latest.apk` / `version.json` upload, the URL
+  verification and the production push notification. Production stays on
+  `v4.6.7` (verified by fetching the public `version.json` after the build).
+- Beta size grew from 10.16 MB (v4.6.7) to 14.93 MB — Glance + Compose runtime
+  + WorkManager, three dex files, no minification.
+- Offline contract: `pending.tasks` is never cleared by the worker (only by the
+  WebView drain) because localStorage still has to receive the toggle; duplicate
+  upserts are idempotent on `(user_id, plan_date, task_id)`.
 
 ### 10.9 Risks & mitigations
 

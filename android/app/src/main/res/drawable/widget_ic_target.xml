@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ⭐⭐ Phase W5 — goal/target glyph (goals-only variant). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M12,3.2 a8.8,8.8 0 1,0 0,17.6 a8.8,8.8 0 1,0 0,-17.6"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.9" />
+    <path
+        android:pathData="M12,8.6 a3.4,3.4 0 1,0 0,6.8 a3.4,3.4 0 1,0 0,-6.8"
+        android:fillColor="#FFFFFFFF" />
+</vector>

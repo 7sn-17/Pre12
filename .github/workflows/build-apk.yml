@@ -72,7 +72,7 @@ jobs:
           echo "── the main pages ──"
           ls android/app/src/main/assets/public/*.html
           echo "── the shared scripts ──"
-          for f in app.js auth.js db.js files.js sync.js streak.js native.js notifications.js ui.js theme-init.js sw.js; do
+          for f in app.js auth.js db.js files.js sync.js streak.js native.js notifications.js ui.js theme-init.js widgets.js sw.js; do
             if [ ! -f "android/app/src/main/assets/public/$f" ]; then
               echo "::error::$f is missing from the android assets"
               exit 1
@@ -255,7 +255,7 @@ jobs:
           unzip -l "$APK" | grep "lib/" | head -n 12
 
           echo "── the essentials ──"
-          for entry in "assets/public/index.html" "assets/public/confirm.html" "assets/public/login.html" "assets/public/ui.js" "assets/public/app.js" "assets/public/auth.js" "assets/public/native.js" "assets/public/sw.js" "assets/public/icon-512.png" "classes.dex" "resources.arsc" "AndroidManifest.xml"; do
+          for entry in "assets/public/index.html" "assets/public/confirm.html" "assets/public/login.html" "assets/public/ui.js" "assets/public/app.js" "assets/public/auth.js" "assets/public/native.js" "assets/public/widgets.js" "assets/public/sw.js" "assets/public/icon-512.png" "classes.dex" "resources.arsc" "AndroidManifest.xml"; do
             if unzip -l "$APK" | grep -q "$entry"; then
               echo "   ✅ $entry"
             else
@@ -292,6 +292,10 @@ jobs:
           cat release-notes.md
 
       - name: ☁️ Upload the APK + version.json to Supabase Storage
+        # ⭐⭐ beta channel: a `-` in the version (5.0.0-beta.1) means this is a
+        #    test build. It must NOT overwrite Medical_Platform_Latest.apk or
+        #    version.json — otherwise every stable user would be offered a beta.
+        if: ${{ !contains(steps.version.outputs.version, '-') }}
         # ⭐ TASK 2 (v4.2.0): اسم ثابت Medical_Platform_Latest.apk يُستبدل
         #    عند كل إصدار، مع version.json لنظام التحديث داخل التطبيق.
         env:
@@ -328,6 +332,7 @@ jobs:
           upload "version.json" "version.json" "application/json" "no-cache"
 
       - name: 🌍 Verify the Supabase release URLs
+        if: ${{ !contains(steps.version.outputs.version, '-') }}
         run: |
           BASE="https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases"
           echo "── version.json ──"
@@ -377,13 +382,17 @@ jobs:
           body_path: ./release-notes.md
           fail_on_unmatched_files: true
           draft: false
-          make_latest: true
-          prerelease: false
+          # ⭐⭐ beta: `prerelease` + `make_latest: false` keeps the stable
+          #    release as "Latest" and the beta downloadable only by link.
+          prerelease: ${{ contains(steps.version.outputs.version, '-') }}
+          make_latest: ${{ !contains(steps.version.outputs.version, '-') }}
 
       - name: 🔔 Send the update notification to all users
         # ⭐ TASK 6 — بعد نشر الإصدار بنجاح، نستدعي دالة
         #    send-update-notification بمفتاح service_role لإرسال
         #    إشعار Push لكل الأجهزة التي حفظت رمز FCM.
+        # ⭐⭐ beta: never announce a test build to production devices.
+        if: ${{ !contains(steps.version.outputs.version, '-') }}
         continue-on-error: true
         env:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

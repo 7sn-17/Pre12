@@ -30,36 +30,85 @@ import androidx.glance.text.TextStyle
 import com.pre12.medical.R
 
 /**
- * ⭐⭐ Phase W2 — «ملاحظاتي وأهدافي» widget.
+ * ⭐⭐ Phase W2/W5 — Notes & Goals, three picker variants.
  *
- * Shows up to three pinned items: active goals first (nearest deadline wins),
- * then the newest personal notes. Each row carries the pin glyph, so the widget
- * reads as a pinboard rather than a generic list.
+ *   • [NotesWidget]      «ملاحظاتي وأهدافي» — goals and notes interleaved
+ *   • [GoalsWidget]      «أهدافي»           — goals only
+ *   • [NotesOnlyWidget]  «ملاحظاتي»         — notes only
  *
- * The whole card is tappable (opens the app); the rows themselves stay passive so
- * a stray tap can never delete or edit a note from the home screen.
+ * Android's widget picker lists each provider separately, so the *variant is
+ * chosen from the system dialog* — no configuration activity, no extra tap, and
+ * the launcher keeps three independent instances the user can place side by side.
+ *
+ * The JS payload carries up to six items interleaved (`goal, note, goal, …`), so
+ * filtering here is enough for every variant to find its own top three. Combined
+ * slices the interleaved list; the focused variants filter by kind.
+ *
+ * The rows are passive by design (a stray tap can never edit a note); the header
+ * and the empty-state CTA deep-link to `pre12://notes` or `pre12://goals`.
  */
-class NotesWidget : GlanceAppWidget() {
+enum class NotesVariant {
+    COMBINED,
+    GOALS,
+    NOTES
+}
+
+abstract class VariantNotesWidget(private val variant: NotesVariant) : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val notes = WidgetBridge.readNotes(context)
         provideContent {
             GlanceTheme(colors = WidgetPalette.colors) {
-                NotesContent(notes)
+                NotesContent(notes, variant)
             }
         }
     }
 }
 
+/** Combined variant — the one referenced by `notes_widget_info.xml`. */
+class NotesWidget : VariantNotesWidget(NotesVariant.COMBINED)
+
+/** Goals-only variant. */
+class GoalsWidget : VariantNotesWidget(NotesVariant.GOALS)
+
+/** Notes-only variant. */
+class NotesOnlyWidget : VariantNotesWidget(NotesVariant.NOTES)
+
 class NotesWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = NotesWidget()
 }
 
+class GoalsWidgetReceiver : GlanceAppWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = GoalsWidget()
+}
+
+class NotesOnlyWidgetReceiver : GlanceAppWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = NotesOnlyWidget()
+}
+
 @Composable
-private fun NotesContent(notes: PinnedNotes) {
+private fun NotesContent(notes: PinnedNotes, variant: NotesVariant) {
     val colors = GlanceTheme.colors
-    val openApp = openAppAction()
     val maxItems = if (LocalSize.current.height >= 150.dp) 3 else 2
+
+    val items = when (variant) {
+        NotesVariant.COMBINED -> notes.items
+        NotesVariant.GOALS -> notes.items.filter { it.kind == "goal" }
+        NotesVariant.NOTES -> notes.items.filter { it.kind == "note" }
+    }.take(maxItems)
+
+    val title = when (variant) {
+        NotesVariant.COMBINED -> "ملاحظاتي وأهدافي"
+        NotesVariant.GOALS -> "أهدافي"
+        NotesVariant.NOTES -> "ملاحظاتي"
+    }
+    val iconRes = when (variant) {
+        NotesVariant.GOALS -> R.drawable.widget_ic_target
+        NotesVariant.NOTES -> R.drawable.widget_ic_note
+        NotesVariant.COMBINED -> R.drawable.widget_ic_pin
+    }
+    val path = if (variant == NotesVariant.GOALS) "goals" else "notes"
+    val openApp = openAppAction(path)
 
     GlassCard(padding = 14.dp) {
         Row(
@@ -69,7 +118,7 @@ private fun NotesContent(notes: PinnedNotes) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconBadge(
-                iconRes = R.drawable.widget_ic_pin,
+                iconRes = iconRes,
                 size = 15.dp,
                 badgeSize = 30.dp,
                 background = colors.primaryContainer,
@@ -80,7 +129,7 @@ private fun NotesContent(notes: PinnedNotes) {
 
             Column(modifier = GlanceModifier.defaultWeight()) {
                 Text(
-                    text = "ملاحظاتي وأهدافي",
+                    text = title,
                     style = TextStyle(
                         color = colors.onSurface,
                         fontSize = 14.sp,
@@ -90,7 +139,7 @@ private fun NotesContent(notes: PinnedNotes) {
                     maxLines = 1
                 )
                 Text(
-                    text = if (notes.isEmpty) "مساحة صغيرة لأفكارك" else "${notes.total} عنصر محفوظ",
+                    text = subtitle(variant, notes, items.size),
                     style = TextStyle(
                         color = colors.onSurfaceVariant,
                         fontSize = 10.sp,
@@ -100,23 +149,33 @@ private fun NotesContent(notes: PinnedNotes) {
                     maxLines = 1
                 )
             }
+
+            if (items.isNotEmpty()) {
+                Spacer(GlanceModifier.width(6.dp))
+                Chip(
+                    text = "${items.size}",
+                    background = colors.primaryContainer,
+                    foreground = colors.onPrimaryContainer
+                )
+            }
         }
 
         Spacer(GlanceModifier.height(7.dp))
         Hairline()
         Spacer(GlanceModifier.height(7.dp))
 
-        if (notes.isEmpty) {
+        if (items.isEmpty()) {
             WidgetEmptyState(
-                title = "لا توجد ملاحظات بعد",
-                message = "أضف هدفاً أو ملاحظة لتظهر هنا",
-                cta = "أضف الآن",
-                iconRes = R.drawable.widget_ic_pin
+                title = emptyTitle(variant),
+                message = emptyMessage(variant),
+                cta = if (variant == NotesVariant.GOALS) "أضف هدفاً" else "أضف الآن",
+                iconRes = iconRes,
+                path = path
             )
         } else {
-            notes.items.take(maxItems).forEachIndexed { index, item ->
+            items.forEachIndexed { index, item ->
                 NoteRow(item, colors)
-                if (index != notes.items.take(maxItems).lastIndex) {
+                if (index != items.lastIndex) {
                     Spacer(GlanceModifier.height(5.dp))
                 }
             }
@@ -131,7 +190,9 @@ private fun NoteRow(item: PinnedItem, colors: ColorProviders) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Image(
-            provider = ImageProvider(R.drawable.widget_ic_pin),
+            provider = ImageProvider(
+                if (item.kind == "goal") R.drawable.widget_ic_target else R.drawable.widget_ic_note
+            ),
             contentDescription = null,
             modifier = GlanceModifier.size(12.dp),
             colorFilter = androidx.glance.ColorFilter.tint(colors.primary)
@@ -151,4 +212,31 @@ private fun NoteRow(item: PinnedItem, colors: ColorProviders) {
             maxLines = 1
         )
     }
+}
+
+private fun subtitle(variant: NotesVariant, notes: PinnedNotes, visible: Int): String {
+    if (visible == 0) {
+        return when (variant) {
+            NotesVariant.COMBINED -> "مساحة صغيرة لأفكارك"
+            NotesVariant.GOALS -> "حدّد ما تريد إنجازه"
+            NotesVariant.NOTES -> "أفكارك السريعة في مكان واحد"
+        }
+    }
+    return when (variant) {
+        NotesVariant.GOALS -> "$visible هدف قيد العمل"
+        NotesVariant.NOTES -> "$visible ملاحظة مثبّتة"
+        NotesVariant.COMBINED -> "${notes.total} عنصر محفوظ"
+    }
+}
+
+private fun emptyTitle(variant: NotesVariant): String = when (variant) {
+    NotesVariant.COMBINED -> "لا توجد ملاحظات بعد"
+    NotesVariant.GOALS -> "لا توجد أهداف بعد"
+    NotesVariant.NOTES -> "لا توجد ملاحظات بعد"
+}
+
+private fun emptyMessage(variant: NotesVariant): String = when (variant) {
+    NotesVariant.COMBINED -> "أضف هدفاً أو ملاحظة لتظهر هنا"
+    NotesVariant.GOALS -> "هدف واحد صغير يكفي للبدء"
+    NotesVariant.NOTES -> "اكتب فكرتك الأولى وثبّتها هنا"
 }

@@ -29,7 +29,14 @@ import org.json.JSONObject
 data class TaskItem(
     val id: String,
     val title: String,
-    val isCompleted: Boolean
+    val isCompleted: Boolean,
+    val subject: String = "",
+    /**
+     * Epoch millis of the completion. Used by the card to keep a just-checked
+     * task on screen for ~0.9 s (strike-through + animated tick), then let it
+     * leave the list so the next pending task takes its place.
+     */
+    val doneAt: Long = 0L
 )
 
 data class TodayTasks(
@@ -48,6 +55,14 @@ data class TodayTasks(
 
     val totalCount: Int
         get() = if (total > 0) total else items.size
+
+    /** Rows the widget should still show (open tasks + the one just ticked). */
+    val pendingItems: List<TaskItem>
+        get() = items.filter { !it.isCompleted }
+
+    /** Every task of the day is complete — show the celebration row. */
+    val allDone: Boolean
+        get() = totalCount > 0 && completedCount >= totalCount
 
     /** 0f..1f, safe for an empty day. */
     val progress: Float
@@ -126,7 +141,21 @@ data class PendingToggle(
     val id: String,
     val date: String,
     val done: Boolean,
-    val at: String
+    val at: String,
+    val title: String = "",
+    val subject: String = ""
+)
+
+/**
+ * Supabase credentials handed over by `widgets.js` so a WorkManager job can
+ * finish the upload with no WebView alive. The anon key is public by design;
+ * the JWT is the user's own session and never leaves the app's private prefs.
+ */
+data class WidgetSession(
+    val accessToken: String,
+    val refreshToken: String,
+    val userId: String,
+    val expiresAt: Long
 )
 
 // ---------------------------------------------------------------------------
@@ -143,6 +172,7 @@ object WidgetBridge {
     const val KEY_STREAK = "streak.summary"
     const val KEY_NOTES = "notes.pinned"
     const val KEY_PENDING = "pending.tasks"
+    const val KEY_SESSION = "sync.session"
 
     /** Hard ceilings so a corrupt payload can never bloat the RemoteViews tree. */
     private const val MAX_TASKS = 12
@@ -190,6 +220,11 @@ object WidgetBridge {
                 val item = array.optJSONObject(index) ?: continue
                 if (item.optString("id") != taskId) continue
                 item.put("done", done)
+                item.put("isCompleted", done)
+                // The stamp is what drives the "disappear after 0.9 s" effect:
+                // the immediate redraw keeps the row (strike + tick), the delayed
+                // one filters it out and the list reflows.
+                item.put("doneAt", if (done) System.currentTimeMillis() else 0L)
                 found = true
                 if (done) completed++
             }
@@ -271,7 +306,9 @@ object WidgetBridge {
                 items += TaskItem(
                     id = obj.optString("id", "task-$index"),
                     title = title,
-                    isCompleted = obj.optBoolean("done", obj.optBoolean("isCompleted", false))
+                    isCompleted = obj.optBoolean("done", obj.optBoolean("isCompleted", false)),
+                    subject = obj.optString("subject", ""),
+                    doneAt = obj.optLong("doneAt", 0L)
                 )
             }
             val total = root.optInt("total", items.size).takeIf { it > 0 } ?: items.size
@@ -361,12 +398,19 @@ object WidgetBridge {
      * `date|id`, so rapid taps keep only the latest intent.
      */
     @Synchronized
-    fun queuePendingToggle(context: Context, taskId: String, date: String, done: Boolean) {
+    fun queuePendingToggle(
+        context: Context,
+        taskId: String,
+        date: String,
+        done: Boolean,
+        title: String = "",
+        subject: String = ""
+    ) {
         try {
             val existing = parsePending(prefs(context).getString(KEY_PENDING, null))
             val merged = LinkedHashMap<String, PendingToggle>()
             existing.forEach { merged[it.date + "|" + it.id] = it }
-            merged[date + "|" + taskId] = PendingToggle(taskId, date, done, isoNow())
+            merged[date + "|" + taskId] = PendingToggle(taskId, date, done, isoNow(), title, subject)
             val trimmed = merged.values.toList().takeLast(MAX_PENDING)
             val array = JSONArray()
             trimmed.forEach { item ->
@@ -376,6 +420,8 @@ object WidgetBridge {
                         .put("date", item.date)
                         .put("done", item.done)
                         .put("at", item.at)
+                        .put("title", item.title)
+                        .put("subject", item.subject)
                 )
             }
             prefs(context).edit().putString(KEY_PENDING, array.toString()).commit()
@@ -400,7 +446,9 @@ object WidgetBridge {
                     id = id,
                     date = obj.optString("date", ""),
                     done = obj.optBoolean("done", false),
-                    at = obj.optString("at", "")
+                    at = obj.optString("at", ""),
+                    title = obj.optString("title", ""),
+                    subject = obj.optString("subject", "")
                 )
             }
             out
@@ -412,6 +460,54 @@ object WidgetBridge {
     @Synchronized
     fun clearPending(context: Context) {
         prefs(context).edit().remove(KEY_PENDING).apply()
+    }
+
+    // -- Supabase session (used by WidgetSyncWorker) ----------------------------
+
+    /**
+     * `widgets.js` forwards the live Supabase session on every publish, so the
+     * WorkManager job can upload a checkbox change long after the WebView died.
+     * Stored in the same private prefs group as the widget payloads.
+     */
+    @Synchronized
+    fun saveSession(context: Context, json: String?) {
+        if (json.isNullOrBlank()) return
+        try {
+            val root = JSONObject(json)
+            if (root.optString("accessToken", "").isEmpty()) return
+            prefs(context).edit().putString(KEY_SESSION, root.toString()).commit()
+        } catch (_: Exception) {
+        }
+    }
+
+    fun readSession(context: Context): WidgetSession? {
+        val raw = prefs(context).getString(KEY_SESSION, null) ?: return null
+        return try {
+            val root = JSONObject(raw)
+            val access = root.optString("accessToken", "")
+            val user = root.optString("userId", "")
+            if (access.isEmpty() || user.isEmpty()) return null
+            WidgetSession(
+                accessToken = access,
+                refreshToken = root.optString("refreshToken", ""),
+                userId = user,
+                expiresAt = root.optLong("expiresAt", 0L)
+            )
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /** Persists a refreshed token pair without touching the user id. */
+    @Synchronized
+    fun updateSessionTokens(context: Context, accessToken: String, refreshToken: String, expiresAt: Long) {
+        val current = readSession(context) ?: return
+        val root = JSONObject()
+            .put("accessToken", accessToken)
+            .put("refreshToken", refreshToken.ifEmpty { current.refreshToken })
+            .put("userId", current.userId)
+            .put("expiresAt", expiresAt)
+        prefs(context).edit().putString(KEY_SESSION, root.toString()).commit()
     }
 
     private fun isoNow(): String =

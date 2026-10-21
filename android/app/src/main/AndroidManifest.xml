@@ -22,6 +22,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- ⭐⭐ Phase W4 — روابط الودجات العميقة:
+                 pre12://tasks · pre12://streak · pre12://notes · pre12://goals
+                 تُقرأ عبر @capacitor/app (getLaunchUrl + appUrlOpen). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="pre12" />
+            </intent-filter>
+
             <!-- ⭐ روابط تسجيل الدخول (تأكيد البريد / استعادة كلمة المرور).
                  com.pre12.medical://login-callback -->
             <intent-filter android:autoVerify="true">
@@ -88,6 +98,32 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/notes_widget_info" />
+        </receiver>
+
+        <!-- ⭐⭐ Phase W5 — variant B: goals only. -->
+        <receiver
+            android:name=".widgets.GoalsWidgetReceiver"
+            android:exported="false"
+            android:label="@string/widget_goals_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/goals_widget_info" />
+        </receiver>
+
+        <!-- ⭐⭐ Phase W5 — variant C: notes only. -->
+        <receiver
+            android:name=".widgets.NotesOnlyWidgetReceiver"
+            android:exported="false"
+            android:label="@string/widget_notes_only_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/notes_only_widget_info" />
         </receiver>
 
         <provider

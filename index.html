@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="4.6.7">
+<meta name="app-version" content="5.0.0-beta.1">
 <title>السنة التحضيرية - المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -6620,7 +6620,7 @@ i.fab {
         <div class="settings-icon"><i data-lucide="info"></i></div>
         <div class="settings-text">
           <h4>حول التطبيق</h4>
-          <p id="aboutVersionText">الإصدار 4.6.7 • السنة التحضيرية</p>
+          <p id="aboutVersionText">الإصدار 5.0.0-beta.1 • السنة التحضيرية</p>
         </div>
       </div>
       <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
@@ -6783,6 +6783,30 @@ i.fab {
         </span>
         <span class="widget-tile-foot">
           <span class="widget-tile-label">ملاحظاتي وأهدافي</span>
+          <span class="widget-tile-add"><i data-lucide="plus"></i></span>
+        </span>
+      </button>
+
+      <button type="button" class="widget-tile" data-widget="goals" onclick="addHomeWidget('goals')">
+        <span class="widget-tile-preview preview-notes" aria-hidden="true">
+          <span class="pn-head"><i data-lucide="target"></i><span></span></span>
+          <span class="pn-row"><i data-lucide="target"></i><span></span></span>
+          <span class="pn-row"><i data-lucide="target"></i><span class="short"></span></span>
+        </span>
+        <span class="widget-tile-foot">
+          <span class="widget-tile-label">أهدافي فقط</span>
+          <span class="widget-tile-add"><i data-lucide="plus"></i></span>
+        </span>
+      </button>
+
+      <button type="button" class="widget-tile" data-widget="notes_only" onclick="addHomeWidget('notes_only')">
+        <span class="widget-tile-preview preview-notes" aria-hidden="true">
+          <span class="pn-head"><i data-lucide="notebook-pen"></i><span></span></span>
+          <span class="pn-row"><i data-lucide="notebook-pen"></i><span></span></span>
+          <span class="pn-row"><i data-lucide="notebook-pen"></i><span class="short"></span></span>
+        </span>
+        <span class="widget-tile-foot">
+          <span class="widget-tile-label">ملاحظاتي فقط</span>
           <span class="widget-tile-add"><i data-lucide="plus"></i></span>
         </span>
       </button>
@@ -7006,7 +7030,7 @@ i.fab {
 <script src="widgets.js"></script>
 
 
-  <script src="app.js?v=4.6.7"></script>
+  <script src="app.js?v=5.0.0-beta.1"></script>
 <script>
 
     lucide.createIcons();

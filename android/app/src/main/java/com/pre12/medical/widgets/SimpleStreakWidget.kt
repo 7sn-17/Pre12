@@ -54,7 +54,7 @@ class SimpleStreakWidgetReceiver : GlanceAppWidgetReceiver() {
 @Composable
 private fun SimpleStreakContent(streak: StreakSummary) {
     val colors = GlanceTheme.colors
-    val openApp = openAppAction()
+    val openApp = openAppAction("streak")
     val compact = LocalSize.current.height < 150.dp
     val started = streak.current > 0
 

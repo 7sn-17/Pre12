@@ -23,7 +23,8 @@
   var KEY_GOALS = 'medfav_goals';
   var KEY_NOTES = 'medfav_my_notes_v3';
   var MAX_TASKS = 12;
-  var MAX_NOTES = 3;
+  var MAX_NOTES = 6;          // 3 goals + 3 notes — each variant filters its own
+  var MAX_PER_KIND = 3;
 
   var planPromise = null;
   var refreshing = null;
@@ -98,6 +99,7 @@
     var tomb = Object.create(null);
     var legacy = Object.create(null);
     var dates = Object.create(null);
+    var at = Object.create(null);
 
     function parseKey(key, prefix) {
       var rest = key.slice(prefix.length);
@@ -109,13 +111,14 @@
       for (var i = 0; i < localStorage.length; i++) {
         var key = localStorage.key(i) || '';
         if (key.indexOf('task_at_') === 0) {
-          var at = parseKey(key, 'task_at_');
-          if (!at) continue;
+          var parsedKey = parseKey(key, 'task_at_');
+          if (!parsedKey) continue;
           var stamp = readJson(key, null);
-          var id = at.date + '|' + at.id;
+          var id = parsedKey.date + '|' + parsedKey.id;
           if (stamp && stamp.done === true) {
             done[id] = true;
-            dates[at.date] = true;
+            dates[parsedKey.date] = true;
+            if (stamp.at) at[id] = stamp.at;
           } else if (stamp && stamp.done === false) {
             tomb[id] = true;
           }
@@ -140,7 +143,7 @@
       delete legacy[id];
     });
 
-    return { done: done, dates: dates };
+    return { done: done, dates: dates, at: at };
   }
 
   // ----------------------------------------------------------
@@ -195,16 +198,33 @@
       }
     });
 
+    // Pending taps also carry their timestamp, so the widget can show the
+    // strike-through frame before the row disappears.
+    var pendingAt = Object.create(null);
+    (pending || []).forEach(function (change) {
+      if (change && change.id && change.at) {
+        pendingAt[String(change.date || date) + '|' + String(change.id)] = change.at;
+      }
+    });
+
     var items = all.map(function (task) {
       var title = String(task.task || task.subject || '').trim();
       var key = date + '|' + task.id;
       var isDone = key in overrides ? overrides[key] : !!scan.done[key];
+      var stamp = isDone ? (pendingAt[key] || scan.at[key] || '') : '';
+      var doneAt = 0;
+      if (stamp) {
+        var parsed = Date.parse(stamp);
+        if (!isNaN(parsed)) doneAt = parsed;
+      }
       return {
         id: String(task.id),
         title: title || String(task.subject || 'مهمة'),
+        subject: String(task.subject || ''),
         date: date,
         done: isDone,
-        isCompleted: isDone
+        isCompleted: isDone,
+        doneAt: doneAt
       };
     });
 
@@ -302,10 +322,7 @@
     if (!Array.isArray(goals)) goals = [];
     if (!Array.isArray(notes)) notes = [];
 
-    var items = [];
-
-    // Goals first: unfinished, nearest deadline wins, then newest.
-    goals
+    var goalRows = goals
       .filter(function (goal) { return goal && !goal.completed && goal.text; })
       .sort(function (a, b) {
         var da = a.deadline || '9999-12-31';
@@ -313,35 +330,42 @@
         if (da !== db) return da < db ? -1 : 1;
         return new Date(b.created_at || 0) - new Date(a.created_at || 0);
       })
-      .forEach(function (goal) {
-        if (items.length >= MAX_NOTES) return;
-        items.push({
-          id: String(goal.id || ('goal-' + items.length)),
-          text: String(goal.text).trim(),
+      .slice(0, MAX_PER_KIND)
+      .map(function (goal, index) {
+        return {
+          id: String(goal.id || ('goal-' + index)),
+          text: String(goal.text).replace(/\s+/g, ' ').trim().slice(0, 90),
           kind: 'goal',
           done: !!goal.completed
-        });
+        };
       });
 
-    // Then the newest personal notes.
-    notes
+    var noteRows = notes
       .filter(function (note) { return note && (note.title || note.content); })
       .sort(function (a, b) {
         return new Date(b.created_at || 0) - new Date(a.created_at || 0);
       })
-      .forEach(function (note) {
-        if (items.length >= MAX_NOTES) return;
+      .slice(0, MAX_PER_KIND)
+      .map(function (note, index) {
         var text = note.title || note.content || '';
-        items.push({
-          id: String(note.id || ('note-' + items.length)),
+        return {
+          id: String(note.id || ('note-' + index)),
           text: String(text).replace(/\s+/g, ' ').trim().slice(0, 90),
           kind: 'note',
           done: false
-        });
+        };
       });
 
+    // Interleave: goal, note, goal, note, goal, note.
+    // Combined widget → first 3 (both kinds); goals-only → filter; notes-only → filter.
+    var items = [];
+    for (var i = 0; i < MAX_PER_KIND; i++) {
+      if (goalRows[i]) items.push(goalRows[i]);
+      if (noteRows[i]) items.push(noteRows[i]);
+    }
+
     return {
-      items: items,
+      items: items.slice(0, MAX_NOTES),
       total: goals.length + notes.length,
       updatedAt: new Date().toISOString()
     };
@@ -392,6 +416,29 @@
     return pending.length;
   }
 
+  /**
+   * The WorkManager uploader needs a JWT to write `task_progress` while the
+   * WebView is gone. It lives in the same private prefs group as the payloads;
+   * `refreshSession` keeps it fresh on every publish.
+   */
+  async function readSession() {
+    try {
+      var client = global.supabaseClient;
+      if (!client || !client.auth || typeof client.auth.getSession !== 'function') return null;
+      var result = await client.auth.getSession();
+      var session = result && result.data ? result.data.session : null;
+      if (!session || !session.access_token || !session.user) return null;
+      return {
+        accessToken: session.access_token,
+        refreshToken: session.refresh_token || '',
+        userId: session.user.id,
+        expiresAt: session.expires_at || 0
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+
   async function publish(reason, pending) {
     var api = plugin();
     if (!api) return false;
@@ -399,12 +446,14 @@
     var tasks = await buildTasksPayload(pending);
     var streak = buildStreakPayload();
     var notes = buildNotesPayload();
+    var session = await readSession();
 
     try {
       await api.publishWidgets({
         tasks: JSON.stringify(tasks),
         streak: JSON.stringify(streak),
         notes: JSON.stringify(notes),
+        session: session,
         source: reason || 'auto'
       });
       return true;
@@ -497,6 +546,138 @@
   }
 
   // ----------------------------------------------------------
+  // Deep links (Phase W4) — pre12://tasks | streak | notes | goals
+  // ----------------------------------------------------------
+
+  var pendingDeepLink = null;
+
+  function currentPage() {
+    return (location.pathname || '').split('/').pop() || 'index.html';
+  }
+
+  function navigateTo(url) {
+    try {
+      if (global.MedApp && typeof global.MedApp.navigate === 'function') {
+        global.MedApp.navigate(url);
+        return true;
+      }
+    } catch (e) {}
+    try {
+      location.href = url;
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function openTodayCard() {
+    var card = document.getElementById('todayCard');
+    if (!card) {
+      // The home tab may not be active yet (settings opens first on some flows).
+      var home = document.querySelector('[data-tab="home"], #navHome');
+      if (home) {
+        try { home.click(); } catch (e) {}
+      }
+      card = document.getElementById('todayCard');
+    }
+    if (card) {
+      try { card.click(); } catch (e) {}
+      try { card.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+    }
+  }
+
+  function scrollToFirst(selectors) {
+    for (var i = 0; i < selectors.length; i++) {
+      var node = document.querySelector(selectors[i]);
+      if (node) {
+        try { node.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * `pre12://tasks` lands on the today card, `streak` on the progress page,
+   * `notes`/`goals` on their pages. The path comes from the widget's
+   * `openAppAction(path)` in Kotlin.
+   */
+  function handleDeepLink(url) {
+    if (!url) return false;
+    var match = String(url).match(/^pre12:\/\/([^\/?#]+)/i);
+    if (!match) return false;
+    var target = match[1].toLowerCase();
+    var here = currentPage();
+
+    if (target === 'tasks') {
+      if (here === 'index.html') {
+        setTimeout(openTodayCard, 450);
+      } else {
+        navigateTo('index.html?deep=tasks');
+      }
+      return true;
+    }
+
+    if (target === 'streak') {
+      if (here === 'progress.html') {
+        setTimeout(function () {
+          scrollToFirst(['#streakSection', '#streakCard', '[data-streak]', '.streak-card']);
+        }, 500);
+      } else {
+        navigateTo('progress.html?deep=streak');
+      }
+      return true;
+    }
+
+    if (target === 'notes') {
+      if (here !== 'notes.html') navigateTo('notes.html');
+      return true;
+    }
+
+    if (target === 'goals') {
+      if (here !== 'goals.html') navigateTo('goals.html');
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Cold start: the URL is on the activity intent (captured by @capacitor/app's
+   * getLaunchUrl). Warm start: `appUrlOpen`. The `?deep=` query is the fallback
+   * used when the navigation happens between pages.
+   */
+  async function primeDeepLinks() {
+    try {
+      var params = new URLSearchParams(location.search || '');
+      var queued = params.get('deep');
+      if (queued) {
+        setTimeout(function () { handleDeepLink('pre12://' + queued); }, 700);
+      }
+    } catch (e) {}
+
+    var cap = capacitor();
+    var app = cap && cap.Plugins ? cap.Plugins.App : null;
+    if (!app) return;
+
+    try {
+      if (typeof app.getLaunchUrl === 'function') {
+        var launch = await app.getLaunchUrl();
+        if (launch && launch.url) {
+          pendingDeepLink = launch.url;
+          setTimeout(function () { handleDeepLink(pendingDeepLink); }, 800);
+        }
+      }
+      if (typeof app.addListener === 'function') {
+        var handle = app.addListener('appUrlOpen', function (data) {
+          if (data && data.url) handleDeepLink(data.url);
+        });
+        if (handle && typeof handle.catch === 'function') handle.catch(function () {});
+      }
+    } catch (e) {}
+  }
+
+  // ----------------------------------------------------------
   // Boot
   // ----------------------------------------------------------
 
@@ -505,9 +686,13 @@
     // The Capacitor bridge can finish registering a beat after DOMContentLoaded.
     setTimeout(syncDiscoveryUi, 1500);
     document.addEventListener('deviceready', syncDiscoveryUi);
-    if (!plugin()) return;
+    if (!plugin()) {
+      primeDeepLinks();
+      return;
+    }
 
     refresh('boot');
+    primeDeepLinks();
 
     document.addEventListener('visibilitychange', function () {
       if (!document.hidden) refresh('visible');
@@ -540,6 +725,7 @@
     buildTasksPayload: buildTasksPayload,
     buildStreakPayload: buildStreakPayload,
     buildNotesPayload: buildNotesPayload,
+    handleDeepLink: handleDeepLink,
     isAvailable: function () { return !!plugin(); },
     isNativeAndroid: isNativeAndroid
   };

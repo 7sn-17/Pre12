@@ -5,9 +5,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.glance.ColorFilter
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.LocalSize
 import androidx.glance.action.Action
 import androidx.glance.action.clickable
@@ -36,22 +39,27 @@ import androidx.glance.text.TextStyle
 import com.pre12.medical.R
 
 /**
- * ⭐⭐ Phase W2 — «مهام اليوم» interactive widget.
+ * ⭐⭐ Phase W2/W5 — «مهام اليوم» interactive widget.
  *
  * Interaction is split so a mis-tap can never change data:
  *   • the status circle toggles the task ([ToggleTaskAction]);
- *   • the task text and the header open the app.
+ *   • the task text and the header deep-link to `pre12://tasks`.
  *
- * The card is genuinely responsive. Instead of hard-coding "4 rows" and letting
- * the launcher clip the last one, it measures itself with [LocalSize] and spends
- * the available height on whole rows:
+ * ### Completion choreography
+ * A checked task stays in the list for [ToggleTaskAction.VANISH_DELAY_MS]:
+ * filled tick (animated vector where the launcher honours it) + strike-through.
+ * The delayed second frame then drops it, so the widget always list *pending*
+ * work and the next task moves up. RemoteViews has no layout animation API —
+ * the reflow is the animation.
+ *
+ * ### Size honesty
+ * Instead of hard-coding "4 rows" and letting the launcher clip the last one,
+ * the card measures itself with [LocalSize] and spends the height on whole rows:
  *
  *   height 130 dp → compact chrome, 2 rows
- *   height 180 dp → progress bar, 3 rows
- *   height 210 dp → 4 rows
- *
- * The alternative (a fixed 4-row list) is the most common widget bug: the fourth
- * checkbox is drawn outside the RemoteViews bounds and simply never appears.
+ *   height 165 dp → progress bar, 2 rows
+ *   height 195 dp → 3 rows
+ *   height 230 dp → 4 rows
  */
 class TodayTasksWidget : GlanceAppWidget() {
 
@@ -79,13 +87,25 @@ class TodayTasksWidgetReceiver : GlanceAppWidgetReceiver() {
 private fun TodayTasksContent(state: TodayTasks) {
     val colors = GlanceTheme.colors
     val height = LocalSize.current.height
+    val openApp = openAppAction("tasks")
+
     val compact = height < 145.dp
     val withProgress = height >= 165.dp && !state.isEmpty
-    val openApp = openAppAction()
     val rowHeight = if (compact) 24.dp else 28.dp
     val gap = if (compact) 4.dp else 5.dp
     val chrome = (if (compact) 64.dp else 77.dp) + (if (withProgress) 18.dp else 0.dp)
-    val maxRows = (((height - chrome) + gap) / (rowHeight + gap)).toInt().coerceIn(1, 4)
+
+    // Just-completed tasks keep their row for one beat; everything older is gone,
+    // so a widget never becomes a graveyard of struck-through rows.
+    val now = System.currentTimeMillis()
+    val visible = state.items.filter { item ->
+        !item.isCompleted ||
+            (item.doneAt > 0 && now - item.doneAt < ToggleTaskAction.VANISH_DELAY_MS)
+    }
+
+    val maxRows = if (visible.isEmpty()) 0 else {
+        (((height - chrome) + gap) / (rowHeight + gap)).toInt().coerceIn(1, 4)
+    }
 
     GlassCard(padding = if (compact) 12.dp else 16.dp) {
         Row(
@@ -108,7 +128,7 @@ private fun TodayTasksContent(state: TodayTasks) {
                 )
                 Spacer(GlanceModifier.height(2.dp))
                 Text(
-                    text = subtitle(state),
+                    text = subtitle(state, visible.size),
                     style = TextStyle(
                         color = colors.onSurfaceVariant,
                         fontSize = if (compact) 9.5.sp else 10.5.sp,
@@ -145,15 +165,18 @@ private fun TodayTasksContent(state: TodayTasks) {
             Spacer(GlanceModifier.height(if (compact) 6.dp else 8.dp))
         }
 
-        if (state.isEmpty) {
-            WidgetEmptyState(
+        when {
+            state.isEmpty -> WidgetEmptyState(
                 title = "لا توجد مهام لليوم",
                 message = "خطّتك لهذا اليوم فارغة — استمتع بيومك 🌿",
                 cta = "افتح التطبيق",
-                iconRes = R.drawable.widget_ic_tasks
+                iconRes = R.drawable.widget_ic_tasks,
+                path = "tasks"
             )
-        } else {
-            TaskList(state, colors, maxRows, openApp, compact)
+
+            visible.isEmpty() -> AllDoneRow(state, colors, openApp)
+
+            else -> TaskList(state, visible, colors, maxRows, openApp, compact)
         }
     }
 }
@@ -161,19 +184,18 @@ private fun TodayTasksContent(state: TodayTasks) {
 @Composable
 private fun TaskList(
     state: TodayTasks,
+    visible: List<TaskItem>,
     colors: ColorProviders,
     maxRows: Int,
     openApp: Action,
     compact: Boolean
 ) {
-    val visible = state.items.take(maxRows)
+    val rows = visible.take(maxRows)
     val gap = if (compact) 4.dp else 5.dp
 
-    // The counter chip already says how many tasks exist; a "+N more" line would
-    // steal a row's worth of height and risk clipping on a 4×2 grid.
-    visible.forEachIndexed { index, item ->
+    rows.forEachIndexed { index, item ->
         TaskRow(item, state.date, colors, openApp, compact)
-        if (index != visible.lastIndex) {
+        if (index != rows.lastIndex) {
             Spacer(GlanceModifier.height(gap))
         }
     }
@@ -190,10 +212,14 @@ private fun TaskRow(
     val toggle = ToggleTaskAction.action(
         taskId = item.id,
         date = date,
-        done = !item.isCompleted
+        done = !item.isCompleted,
+        title = item.title,
+        subject = item.subject
     )
     val rowHeight = if (compact) 24.dp else 28.dp
     val circleSize = if (compact) 16.dp else 18.dp
+    val justCompleted = item.isCompleted && item.doneAt > 0 &&
+        System.currentTimeMillis() - item.doneAt < ToggleTaskAction.VANISH_DELAY_MS
 
     Row(
         modifier = GlanceModifier.fillMaxWidth(),
@@ -207,7 +233,7 @@ private fun TaskRow(
                 .clickable(toggle),
             contentAlignment = Alignment.Center
         ) {
-            CheckCircle(item.isCompleted, colors, circleSize)
+            CheckCircle(item.isCompleted, justCompleted, colors, circleSize)
         }
 
         Spacer(GlanceModifier.width(8.dp))
@@ -235,9 +261,19 @@ private fun TaskRow(
     }
 }
 
-/** 18 dp checkbox: filled + ✓ when done, 1 dp ring when open. */
+/**
+ * Status circle. A completed task shows a real vector tick — and the *animated*
+ * variant on the frame right after the tap, so the check draws itself (260 ms
+ * trim) wherever the launcher starts animated vectors inside RemoteViews. If it
+ * does not, the vector's end state is still a correct tick.
+ */
 @Composable
-private fun CheckCircle(completed: Boolean, colors: ColorProviders, size: Dp) {
+private fun CheckCircle(
+    completed: Boolean,
+    justCompleted: Boolean,
+    colors: ColorProviders,
+    size: Dp
+) {
     Box(
         modifier = GlanceModifier
             .size(size)
@@ -246,15 +282,13 @@ private fun CheckCircle(completed: Boolean, colors: ColorProviders, size: Dp) {
         contentAlignment = Alignment.Center
     ) {
         if (completed) {
-            Text(
-                text = "✓",
-                style = TextStyle(
-                    color = colors.onPrimary,
-                    fontSize = if (size <= 16.dp) 10.sp else 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
+            Image(
+                provider = ImageProvider(
+                    if (justCompleted) R.drawable.widget_anim_check else R.drawable.widget_ic_check
                 ),
-                maxLines = 1
+                contentDescription = null,
+                modifier = GlanceModifier.size(size * 0.72f),
+                colorFilter = ColorFilter.tint(colors.onPrimary)
             )
         } else {
             // Empty core = the "hole" of the ring (no border modifier exists).
@@ -268,10 +302,54 @@ private fun CheckCircle(completed: Boolean, colors: ColorProviders, size: Dp) {
     }
 }
 
-private fun subtitle(state: TodayTasks): String {
+/** Shown when every task of the day is done (and the rows have vanished). */
+@Composable
+private fun AllDoneRow(state: TodayTasks, colors: ColorProviders, openApp: Action) {
+    Row(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .background(colors.secondaryContainer)
+            .cornerRadius(12.dp)
+            .padding(horizontal = 10.dp, vertical = 8.dp)
+            .clickable(openApp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconBadge(
+            iconRes = R.drawable.widget_ic_check,
+            size = 13.dp,
+            badgeSize = 24.dp,
+            background = colors.primary,
+            tint = colors.onPrimary
+        )
+        Spacer(GlanceModifier.width(8.dp))
+        Column(modifier = GlanceModifier.defaultWeight()) {
+            Text(
+                text = "أنجزت كل مهام اليوم 🎉",
+                style = TextStyle(
+                    color = colors.onSecondaryContainer,
+                    fontSize = 12.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Start
+                ),
+                maxLines = 1
+            )
+            Text(
+                text = "${state.completedCount} مهمة مكتملة — سلسلتك بأمان",
+                style = TextStyle(
+                    color = colors.onSecondaryContainer,
+                    fontSize = 9.5.sp,
+                    textAlign = TextAlign.Start
+                ),
+                maxLines = 1
+            )
+        }
+    }
+}
+
+private fun subtitle(state: TodayTasks, visibleCount: Int): String {
     if (state.isEmpty) return "خطّتك لهذا اليوم"
+    if (state.allDone && visibleCount == 0) return "يوم مكتمل بالكامل"
     return when {
-        state.completedCount >= state.totalCount -> "أنجزت كل مهام اليوم 🎉"
         state.completedCount == 0 -> "لم تبدأ بعد — ابدأ بمهمة واحدة"
         else -> "${state.completedCount} من ${state.totalCount} مكتملة"
     }

@@ -21,6 +21,13 @@
     <string name="widget_detailed_streak_description">خريطة آخر 7 أيام: مكتمل، فائت، واليوم المتوهّج</string>
     <string name="widget_notes_label">ملاحظاتي وأهدافي</string>
     <string name="widget_notes_description">أهدافك النشطة وأحدث ملاحظاتك مثبّتة على الشاشة الرئيسية</string>
+    <string name="widget_goals_label">أهدافي</string>
+    <string name="widget_goals_description">أهدافك النشطة فقط — بدون ملاحظات، مباشرة على الشاشة الرئيسية</string>
+    <string name="widget_notes_only_label">ملاحظاتي</string>
+    <string name="widget_notes_only_description">أحدث ملاحظاتك المثبّتة فقط — بدون أهداف</string>
+    <string name="widget_preview_goal_1">إنهاء 3 محاضرات كيمياء</string>
+    <string name="widget_preview_goal_2">مراجعة التشريح قبل الخميس</string>
+    <string name="widget_preview_goal_3">حل 20 سؤالاً في الفسيولوجيا</string>
     <string name="widget_preview_streak_number">12</string>
     <string name="widget_preview_streak_label">يوم متتالي</string>
     <string name="widget_preview_streak_stats">الأفضل 20 · تجميدات 2</string>

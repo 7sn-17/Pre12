@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ⭐⭐ Phase W5 — self-drawing tick (260 ms) used on the frame right after a tap.
+  RemoteViews can run this: the ImageView starts the AVD when it becomes
+  visible. If a launcher does not, the vector's end state is still a correct tick,
+  so the fallback is visually identical, just not animated.
+-->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/widget_ic_check">
+    <target
+        android:name="check"
+        android:animation="@animator/widget_check_trim" />
+</animated-vector>

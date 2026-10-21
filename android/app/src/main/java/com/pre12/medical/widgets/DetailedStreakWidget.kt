@@ -62,7 +62,7 @@ class DetailedStreakWidgetReceiver : GlanceAppWidgetReceiver() {
 @Composable
 private fun DetailedStreakContent(streak: StreakSummary) {
     val colors = GlanceTheme.colors
-    val openApp = openAppAction()
+    val openApp = openAppAction("streak")
 
     GlassCard(padding = 14.dp) {
         Row(
@@ -122,6 +122,7 @@ private fun DetailedStreakContent(streak: StreakSummary) {
 
         if (streak.days.isEmpty()) {
             WidgetEmptyState(
+                path = "streak",
                 title = "لا توجد بيانات بعد",
                 message = "أنجز مهمة واحدة لتشعل سلسلتك",
                 cta = "افتح التطبيق",

@@ -1,6 +1,7 @@
 package com.pre12.medical.widgets
 
 import android.content.Intent
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -61,17 +62,30 @@ import com.pre12.medical.MainActivity
 internal val ColorProviders.glassEdge
     get() = WidgetPalette.glassStroke
 
-/** Opens the app (single-top) from any widget surface. */
+/**
+ * Opens the app from any widget surface.
+ *
+ * Phase W4: pass a path (`"tasks"`, `"streak"`, `"notes"`, `"goals"`) and the
+ * intent carries `pre12://<path>` as its data. Capacitor's App plugin surfaces
+ * that URL to JS (`getLaunchUrl` on a cold start, `appUrlOpen` when the app is
+ * already alive), so `widgets.js` can land the user on the right screen instead
+ * of the generic home tab. The explicit component keeps the intent out of any
+ * browser/chooser; the data URI also makes each PendingIntent unique, which is
+ * what stops Glance from conflating the four header actions.
+ */
 @Composable
-internal fun openAppAction(): Action {
+internal fun openAppAction(path: String? = null): Action {
     val context = LocalContext.current
-    val intent = Intent(context, MainActivity::class.java).apply {
-        addFlags(
-            Intent.FLAG_ACTIVITY_NEW_TASK or
-                Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                Intent.FLAG_ACTIVITY_SINGLE_TOP
-        )
+    val intent = if (path.isNullOrBlank()) {
+        Intent(context, MainActivity::class.java)
+    } else {
+        Intent(Intent.ACTION_VIEW, Uri.parse("pre12://$path"), context, MainActivity::class.java)
     }
+    intent.addFlags(
+        Intent.FLAG_ACTIVITY_NEW_TASK or
+            Intent.FLAG_ACTIVITY_CLEAR_TOP or
+            Intent.FLAG_ACTIVITY_SINGLE_TOP
+    )
     return actionStartActivity(intent)
 }
 
@@ -229,10 +243,11 @@ internal fun ColumnScope.WidgetEmptyState(
     title: String,
     message: String,
     cta: String,
-    iconRes: Int? = null
+    iconRes: Int? = null,
+    path: String? = null
 ) {
     val colors = GlanceTheme.colors
-    val openApp = openAppAction()
+    val openApp = openAppAction(path)
 
     Box(
         modifier = GlanceModifier

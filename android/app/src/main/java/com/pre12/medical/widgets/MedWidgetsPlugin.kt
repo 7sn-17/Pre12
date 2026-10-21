@@ -43,6 +43,10 @@ class MedWidgetsPlugin : Plugin() {
     private var toggleReceiver: BroadcastReceiver? = null
 
     override fun load() {
+        // A previous run may have queued toggles and died before uploading.
+        // WorkManager is unique + network-constrained, so this is cheap.
+        WidgetSync.schedule(context)
+
         val filter = IntentFilter(ToggleTaskAction.ACTION_TASK_TOGGLED)
         val listener = object : BroadcastReceiver() {
             override fun onReceive(receiverContext: Context?, intent: Intent?) {
@@ -96,13 +100,20 @@ class MedWidgetsPlugin : Plugin() {
             if (WidgetBridge.write(ctx, WidgetBridge.KEY_NOTES, it)) written++
         }
 
+        // ⭐ Offline-first: the WorkManager job needs a JWT to upload a checkbox
+        //    change while the WebView is gone. The session is refreshed by JS on
+        //    every publish, so it is never staler than the last app visit.
+        call.getObject("session")?.let { WidgetBridge.saveSession(ctx, it.toString()) }
+
         WidgetBridge.writeMeta(ctx, call.getString("source") ?: "app")
         requestUpdate(
             ctx,
             TodayTasksWidgetReceiver::class.java,
             SimpleStreakWidgetReceiver::class.java,
             DetailedStreakWidgetReceiver::class.java,
-            NotesWidgetReceiver::class.java
+            NotesWidgetReceiver::class.java,
+            GoalsWidgetReceiver::class.java,
+            NotesOnlyWidgetReceiver::class.java
         )
         call.resolve(JSObject().put("written", written))
     }
@@ -150,7 +161,12 @@ class MedWidgetsPlugin : Plugin() {
         val ctx = context
         val ok = WidgetBridge.write(ctx, WidgetBridge.KEY_NOTES, json)
         WidgetBridge.writeMeta(ctx, "notes")
-        requestUpdate(ctx, NotesWidgetReceiver::class.java)
+        requestUpdate(
+            ctx,
+            NotesWidgetReceiver::class.java,
+            GoalsWidgetReceiver::class.java,
+            NotesOnlyWidgetReceiver::class.java
+        )
         call.resolve(JSObject().put("updated", ok))
     }
 
@@ -249,6 +265,8 @@ class MedWidgetsPlugin : Plugin() {
         "streak" -> SimpleStreakWidgetReceiver::class.java
         "streak_detail", "streakDetail" -> DetailedStreakWidgetReceiver::class.java
         "notes" -> NotesWidgetReceiver::class.java
+        "goals" -> GoalsWidgetReceiver::class.java
+        "notes_only", "notesOnly" -> NotesOnlyWidgetReceiver::class.java
         else -> null
     }
 }
