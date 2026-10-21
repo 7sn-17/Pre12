@@ -113,9 +113,12 @@ private fun DetailedStreakContent(streak: StreakSummary) {
             )
         }
 
-        Spacer(GlanceModifier.height(10.dp))
+        // 8 dp gutters keep the full card at ~128 dp: header 34 + gutters 17 +
+        // week row 49 + padding 28. At the provider's 130 dp minimum, 10 dp
+        // gutters would clip the today halo.
+        Spacer(GlanceModifier.height(8.dp))
         Hairline()
-        Spacer(GlanceModifier.height(10.dp))
+        Spacer(GlanceModifier.height(8.dp))
 
         if (streak.days.isEmpty()) {
             WidgetEmptyState(
