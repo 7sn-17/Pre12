@@ -19,7 +19,8 @@ import kotlinx.coroutines.delay
  *   1. flip the bit inside `tasks.today` + stamp `doneAt` (`commit()`);
  *   2. append the change to `pending.tasks` (with its title) → durable queue;
  *   3. `update(...)` **immediately** → tick (animated vector) + strike-through;
- *   4. broadcast to a *running* app → the WebView/JS syncs in the background;
+ *   4. broadcast to a *running* app → the WebView/JS applies the tap locally
+ *      and repaints the open screen (`widgetTaskToggled` + `taskUpdated`);
  *   5. schedule a WorkManager upload → Supabase syncs with the app closed;
  *   6. `delay(900)` + `update(...)` → the completed row leaves the list and the
  *      next pending task takes its place.

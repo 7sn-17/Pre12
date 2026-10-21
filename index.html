@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="5.0.0-beta.3">
+<meta name="app-version" content="5.0.0-beta.4">
 <title>السنة التحضيرية - المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -2928,6 +2928,29 @@
       100% { opacity: 0; transform: translateY(-10px) scale(0.985); }
     }
 
+    /* ⭐ Phase W8 — 300 ms strike-through + fade the instant a task is ticked.
+       The class is added optimistically (before any network call), so the
+       feedback lands in the same frame as the tap. */
+    .today-task.done {
+      animation: todayTaskDone 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    .today-task.done .today-task-text-inner {
+      background-size: 100% 1.5px;
+      transition: background-size 0.3s ease;
+    }
+
+    .today-task.done .today-task-meta {
+      opacity: 0.4;
+      transition: opacity 0.3s ease;
+    }
+
+    @keyframes todayTaskDone {
+      0%   { opacity: 1; transform: translateY(0) scale(1); }
+      55%  { opacity: 0.86; transform: translateY(0) scale(0.995); }
+      100% { opacity: 0.4; transform: translateY(-4px) scale(0.99); }
+    }
+
     .today-task-input {
       position: absolute;
       width: 1px; height: 1px;
@@ -3192,6 +3215,7 @@
       .today-card:hover { transform: none; }
       .today-sheet { transition: none; }
       .today-task.is-removing { animation-duration: 0.01s; }
+      .today-task.done { animation-duration: 0.01s; }
       .today-confetti { display: none; }
     }
 
@@ -6620,7 +6644,7 @@ i.fab {
         <div class="settings-icon"><i data-lucide="info"></i></div>
         <div class="settings-text">
           <h4>حول التطبيق</h4>
-          <p id="aboutVersionText">الإصدار 5.0.0-beta.3 • السنة التحضيرية</p>
+          <p id="aboutVersionText">الإصدار 5.0.0-beta.4 • السنة التحضيرية</p>
         </div>
       </div>
       <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
@@ -7030,7 +7054,7 @@ i.fab {
 <script src="widgets.js"></script>
 
 
-  <script src="app.js?v=5.0.0-beta.3"></script>
+  <script src="app.js?v=5.0.0-beta.4"></script>
 <script>
 
     lucide.createIcons();
@@ -9681,11 +9705,77 @@ function showAbout() {
       }
     }
 
+    /**
+     * ⭐⭐ Phase W8 — app → widget, instantly.
+     *
+     * The widget lives in another process, so the honest "instant" path is the
+     * native bridge: `updateWidgetTasks` writes the payload into prefs and
+     * repaints the card. No plan fetch, no Supabase, no await — the plan is
+     * already in memory here, and the widget is repainted in the same tick.
+     */
+    function todayBuildWidgetTasksPayload(justToggled) {
+      var source = (todayPlanState.todayTasks || []).concat(todayPlanState.missedTasks || []);
+      var stamp = Date.now();
+      var items = source.map(function (task) {
+        var done = todayIsTaskDone(task);
+        var isJustToggled = justToggled &&
+          String(task.id) === String(justToggled.id) &&
+          String(task.date || todayPlanState.dateKey) === String(justToggled.date || todayPlanState.dateKey);
+        return {
+          id: String(task.id),
+          title: String(task.task || task.subject || 'مهمة'),
+          subject: String(task.subject || ''),
+          date: String(task.date || todayPlanState.dateKey),
+          done: done,
+          isCompleted: done,
+          // The widget keeps a just-completed row for 0.9 s (tick + strike).
+          doneAt: isJustToggled && done ? stamp : 0
+        };
+      });
+      var done = items.filter(function (item) { return item.done; }).length;
+      return {
+        date: todayPlanState.dateKey,
+        total: items.length,
+        done: done,
+        progress: items.length ? done / items.length : 0,
+        items: items.slice(0, 12),
+        updatedAt: new Date().toISOString()
+      };
+    }
+
+    function todayPushTasksToWidget(justToggled) {
+      try {
+        var cap = window.Capacitor;
+        var api = cap && cap.Plugins ? cap.Plugins.MedWidgets : null;
+        if (!api || typeof api.updateWidgetTasks !== 'function') return;
+        api.updateWidgetTasks({ json: JSON.stringify(todayBuildWidgetTasksPayload(justToggled)) });
+      } catch (e) {
+        console.warn('[today] widget push failed:', e);
+      }
+    }
+
+    function todayTaskRowElement(taskId, taskDate) {
+      try {
+        var inputs = document.querySelectorAll('.today-task-input');
+        for (var i = 0; i < inputs.length; i++) {
+          var input = inputs[i];
+          if (String(input.getAttribute('data-task-id')) !== String(taskId)) continue;
+          var date = input.getAttribute('data-task-date');
+          if (taskDate && date && String(date) !== String(taskDate)) continue;
+          if (input.closest) return input.closest('.today-task');
+          return input.parentElement;
+        }
+      } catch (e) {}
+      return null;
+    }
+
     function todaySetTaskDone(task, done) {
       // ⭐ المصدر الوحيد: sync.js يتكفّل بالحالة المحلية + الطابور +
       //    الحدث العام 'taskUpdated' (فتتحدّث كل الواجهات) + الرفع السحابي.
       if (typeof setTaskCompleted === 'function') {
         setTaskCompleted(task.date || todayPlanState.dateKey, task.id, done, task, 'today-card');
+        // ⭐ W8 — the widget is refreshed *now*, not after the network.
+        todayPushTasksToWidget({ id: task.id, date: task.date || todayPlanState.dateKey });
         return;
       }
 
@@ -10290,6 +10380,20 @@ function showAbout() {
 
       var wasTabDone = todayActiveTabDone();
       todaySetTaskDone(task, checked);
+
+      // ⭐ W8 — optimistic 300 ms strike-through + fade, with zero waiting.
+      var row = todayTaskRowElement(task.id, task.date);
+      if (row) {
+        if (checked) {
+          row.classList.remove('done');
+          // restart the animation if the row is re-ticked
+          void row.offsetWidth;
+          row.classList.add('done');
+        } else {
+          row.classList.remove('done');
+        }
+      }
+
       var nowTabDone = todayActiveTabDone();
       var isMissedRow = todayPlanState.activeTab === 'missed' &&
         String(task.date || '') !== String(todayPlanState.dateKey);
@@ -11020,6 +11124,12 @@ function showAbout() {
       document.addEventListener('taskUpdated', function () {
         try { renderTodayCard(); } catch (e) {}
         try { updateStreakCounter(); } catch (e) {}
+        // ⭐⭐ Phase W8 — a toggle made on the *home screen* (the widget) must
+        //    repaint the open sheet too, not only the summary card.
+        try {
+          var sheet = document.getElementById('todaySheetOverlay');
+          if (sheet && sheet.classList.contains('open')) renderTodaySheet();
+        } catch (e) {}
       });
     }
 

@@ -1,23 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  ⭐⭐ Phase W7 — «مهام اليوم» is a 2×3 card (140×160 dp minimum).
+  ⭐⭐ Phase W8 — «مهام اليوم» is a WIDE 3×2 card (250×120 dp minimum).
 
-  targetCellWidth/Height (API 31+) place it exactly on the launcher grid; the
-  legacy minWidth/minHeight keep older launchers in the same ballpark. The card
-  is still resizable: `TodayTasksWidget` budgets its rows from `LocalSize`, and
-  the text is 16 sp so it survives 1.3× font scale.
+  The user asked for landscape: one wide column with the title, the counter and
+  the task rows. targetCellWidth/Height (API 31+) place it exactly on the
+  launcher grid; the legacy minWidth/minHeight keep older launchers close. The
+  card is still resizable — `TodayTasksWidget` budgets its rows from
+  `LocalSize`, and the task text is 16 sp so it survives 1.3× font scale.
 -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_today_tasks_description"
     android:initialLayout="@layout/glance_default_loading_layout"
-    android:minWidth="140dp"
-    android:minHeight="160dp"
-    android:minResizeWidth="140dp"
-    android:minResizeHeight="160dp"
+    android:minWidth="250dp"
+    android:minHeight="120dp"
+    android:minResizeWidth="180dp"
+    android:minResizeHeight="120dp"
     android:maxResizeWidth="420dp"
     android:maxResizeHeight="340dp"
-    android:targetCellWidth="2"
-    android:targetCellHeight="3"
+    android:targetCellWidth="3"
+    android:targetCellHeight="2"
     android:previewLayout="@layout/widget_today_tasks_preview"
     android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="1800000"

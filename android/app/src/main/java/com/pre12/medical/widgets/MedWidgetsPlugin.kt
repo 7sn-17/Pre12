@@ -23,14 +23,15 @@ import com.getcapacitor.annotation.CapacitorPlugin
  *  • **updateWidgetTasks / updateWidgetStreak / updateWidgetNotes** — granular
  *    variants (the phase asked for `updateWidgetTasks(tasksJson)` explicitly).
  *  • **openWidgetPicker** — asks the launcher for its widget picker so the user
- *    can choose among all seven widgets (see [PICKER_ACTIONS] for the honest
+ *    can choose among all the widgets (see [PICKER_ACTIONS] for the honest
  *    story: Android exposes no public picker intent, so this is best-effort).
  *  • **requestPinWidget** — opens the system "add to home screen" dialog for a
  *    chosen widget (Android 8+; the launcher may still refuse, which we report).
  *  • **getPendingToggles / clearPendingToggles** — drain the checkbox changes the
  *    widget queued while the WebView was closed.
- *  • **widgetTaskToggled** event — forwarded to JS while the app is running, so
- *    Supabase sync happens in seconds instead of on the next launch.
+ *  • **widgetTaskToggled / taskUpdated** events — forwarded to JS while the app
+ *    is running, so the open screen repaints at once and Supabase syncs in
+ *    seconds instead of on the next launch.
  *
  * Writes are `commit()` (synchronous) on purpose: an optimistic checkbox must be
  * on disk before the redraw reads it back.
@@ -57,7 +58,12 @@ class MedWidgetsPlugin : Plugin() {
                 payload.put("taskId", intent?.getStringExtra(ToggleTaskAction.EXTRA_TASK_ID))
                 payload.put("date", intent?.getStringExtra(ToggleTaskAction.EXTRA_DATE))
                 payload.put("done", intent?.getBooleanExtra(ToggleTaskAction.EXTRA_DONE, false) ?: false)
+                // ⭐⭐ Phase W8 — the widget speaks to the WebView in both
+                //    dialects: `widgetTaskToggled` (the raw tap) and
+                //    `taskUpdated` (the generic "your data changed" event the
+                //    app listens to). Both are local — no network involved.
                 notifyListeners("widgetTaskToggled", payload)
+                notifyListeners("taskUpdated", payload)
             }
         }
         try {
@@ -102,9 +108,6 @@ class MedWidgetsPlugin : Plugin() {
         call.getString("notes")?.let {
             if (WidgetBridge.write(ctx, WidgetBridge.KEY_NOTES, it)) written++
         }
-        call.getString("lectures")?.let {
-            if (WidgetBridge.write(ctx, WidgetBridge.KEY_LECTURES, it)) written++
-        }
 
         // ⭐ Phase W7 — repaint BEFORE any secondary bookkeeping. The writes
         //    above use `commit()`, so the launcher can already read fresh state;
@@ -116,8 +119,7 @@ class MedWidgetsPlugin : Plugin() {
             DetailedStreakWidgetReceiver::class.java,
             NotesWidgetReceiver::class.java,
             GoalsWidgetReceiver::class.java,
-            NotesOnlyWidgetReceiver::class.java,
-            LecturesWidgetReceiver::class.java
+            NotesOnlyWidgetReceiver::class.java
         )
 
         // ⭐ Offline-first: the WorkManager job needs a JWT to upload a checkbox
@@ -321,7 +323,6 @@ class MedWidgetsPlugin : Plugin() {
         "notes" -> NotesWidgetReceiver::class.java
         "goals" -> GoalsWidgetReceiver::class.java
         "notes_only", "notesOnly" -> NotesOnlyWidgetReceiver::class.java
-        "lectures", "lecture" -> LecturesWidgetReceiver::class.java
         else -> null
     }
 

@@ -140,22 +140,6 @@ data class PinnedNotes(
 }
 
 // ---------------------------------------------------------------------------
-// Next lecture
-// ---------------------------------------------------------------------------
-
-data class NextLecture(
-    val title: String = "",
-    val subject: String = "",
-    val instructor: String = "",
-    val whenText: String = "",
-    /** Web asset path of the subject cover (`plans/phys.jpg`), empty if unknown. */
-    val cover: String = "",
-    val updatedAt: String = ""
-) {
-    val isEmpty: Boolean
-        get() = title.isBlank()
-}
-
 // ---------------------------------------------------------------------------
 // Pending toggles (widget → app)
 // ---------------------------------------------------------------------------
@@ -194,7 +178,6 @@ object WidgetBridge {
     const val KEY_TASKS_TODAY = "tasks.today"
     const val KEY_STREAK = "streak.summary"
     const val KEY_NOTES = "notes.pinned"
-    const val KEY_LECTURES = "lectures.next"
     const val KEY_PENDING = "pending.tasks"
     const val KEY_SESSION = "sync.session"
 
@@ -417,28 +400,6 @@ object WidgetBridge {
             )
         } catch (_: Exception) {
             PinnedNotes()
-        }
-    }
-
-    // -- next lecture ---------------------------------------------------------
-
-    fun readLecture(context: Context): NextLecture =
-        parseLecture(prefs(context).getString(KEY_LECTURES, null))
-
-    fun parseLecture(raw: String?): NextLecture {
-        if (raw.isNullOrBlank()) return NextLecture()
-        return try {
-            val root = JSONObject(raw)
-            NextLecture(
-                title = root.optString("title", "").trim(),
-                subject = root.optString("subject", "").trim(),
-                instructor = root.optString("instructor", "").trim(),
-                whenText = root.optString("when", "").trim(),
-                cover = root.optString("cover", "").trim(),
-                updatedAt = root.optString("updatedAt", "")
-            )
-        } catch (_: Exception) {
-            NextLecture()
         }
     }
 

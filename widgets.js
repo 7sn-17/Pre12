@@ -10,7 +10,6 @@
 //   tasks.today    ← plans-data.json + task_<date>_<id> keys
 //   streak.summary ← MedAppStreakCore over the same completion keys
 //   notes.pinned   ← medfav_goals (with progress %) + medfav_my_notes_v3
-//   lectures.next  ← the next lecture in plans-data.json
 //   pending.tasks  → drained here, then written through setTaskCompleted()
 //
 // Everything is best-effort: on the web (no native plugin) every entry point is
@@ -30,6 +29,9 @@
   var planPromise = null;
   var refreshing = null;
   var refreshQueued = false;
+  // The last payload that actually had tasks: a failed plan fetch must never
+  // wipe a working card.
+  var lastTasksJson = '';
 
   // ----------------------------------------------------------
   // Environment
@@ -349,16 +351,27 @@
       });
 
     var noteRows = notes
-      .filter(function (note) { return note && (note.title || note.content); })
+      .filter(function (note) {
+        return note && (note.content || note.body || note.title);
+      })
       .sort(function (a, b) {
         return new Date(b.created_at || 0) - new Date(a.created_at || 0);
       })
       .slice(0, MAX_PER_KIND)
       .map(function (note, index) {
-        var text = note.title || note.content || '';
+        // ⭐⭐ Phase W8 — the widget shows the *content* of the note, not only
+        // its title. The title stays as the fallback for a note that has no
+        // body yet, and the text is cut with a real ellipsis because
+        // RemoteViews cannot ellipsize by itself.
+        var body = String(note.content || note.body || note.text || '')
+          .replace(/\s+/g, ' ')
+          .trim();
+        var title = String(note.title || '').replace(/\s+/g, ' ').trim();
+        var text = body || title;
+        if (text.length > 110) text = text.slice(0, 109) + '…';
         return {
           id: String(note.id || ('note-' + index)),
-          text: String(text).replace(/\s+/g, ' ').trim().slice(0, 90),
+          text: text,
           kind: 'note',
           done: false
         };
@@ -375,88 +388,6 @@
     return {
       items: items.slice(0, MAX_NOTES),
       total: goals.length + notes.length,
-      updatedAt: new Date().toISOString()
-    };
-  }
-
-  /**
-   * The next lecture: today's plan first, otherwise the first upcoming day that
-   * has one. The widget only needs a title, a subject, an instructor and a
-   * human date — everything else would be noise on a 2×2 card.
-   */
-  /**
-   * Phase W7 — the 1×1 album tile shows a real cover, offline.
-   *
-   * RemoteViews cannot download an image, so the cover is one of the five
-   * subject artworks the web build already ships in `plans/` (also used by
-   * `plans.html`). `LecturesWidget.kt` reads it from the APK assets; an unknown
-   * subject simply gets the branded gradient instead.
-   */
-  var PLAN_COVERS = [
-    { test: /كيمياء|chem/i, cover: 'plans/chem.jpg' },
-    { test: /بيولوج|bio/i, cover: 'plans/bio.jpg' },
-    { test: /فيزياء|phys/i, cover: 'plans/phys.jpg' },
-    { test: /إنجليز|انجليز|english/i, cover: 'plans/eng.jpg' },
-    { test: /تاريخ|history|zero/i, cover: 'plans/zero.jpg' }
-  ];
-
-  function coverForSubject(subject) {
-    var value = String(subject || '');
-    for (var i = 0; i < PLAN_COVERS.length; i++) {
-      if (PLAN_COVERS[i].test.test(value)) return PLAN_COVERS[i].cover;
-    }
-    return '';
-  }
-
-  function buildLecturesPayload(plan) {
-    var today = todayKey();
-    var dates = Object.keys(plan || {})
-      .filter(function (key) { return /^\d{4}-\d{2}-\d{2}$/.test(key); })
-      .sort();
-
-    var pickDate = '';
-    if (Array.isArray(plan && plan[today]) && plan[today].length) {
-      pickDate = today;
-    } else {
-      for (var i = 0; i < dates.length; i++) {
-        if (dates[i] > today && Array.isArray(plan[dates[i]]) && plan[dates[i]].length) {
-          pickDate = dates[i];
-          break;
-        }
-      }
-    }
-
-    if (!pickDate) {
-      return { title: '', cover: '', updatedAt: new Date().toISOString() };
-    }
-
-    var list = (plan[pickDate] || []).filter(function (task) {
-      return task && (task.task || task.subject);
-    });
-    if (!list.length) {
-      return { title: '', cover: '', updatedAt: new Date().toISOString() };
-    }
-
-    var lecture = list[0];
-    var when = pickDate === today ? 'اليوم' : pickDate;
-    try {
-      var d = new Date(today + 'T00:00:00');
-      d.setDate(d.getDate() + 1);
-      var tomorrow = d.getFullYear() + '-' +
-        String(d.getMonth() + 1).padStart(2, '0') + '-' +
-        String(d.getDate()).padStart(2, '0');
-      if (pickDate === tomorrow) when = 'غداً';
-    } catch (e) {}
-    var time = lecture.time || lecture.start_time || '';
-    if (time) when += ' · ' + String(time);
-
-    return {
-      title: String(lecture.task || lecture.subject || '').replace(/\s+/g, ' ').trim().slice(0, 90),
-      subject: String(lecture.subject || ''),
-      instructor: String(lecture.instructor || ''),
-      when: when,
-      cover: coverForSubject(lecture.subject),
-      date: pickDate,
       updatedAt: new Date().toISOString()
     };
   }
@@ -533,25 +464,55 @@
     var api = plugin();
     if (!api) return false;
 
-    var plan = await loadPlan();
     var tasks = await buildTasksPayload(pending);
+    var tasksJson = JSON.stringify(tasks);
+    if (tasks.items && tasks.items.length) {
+      lastTasksJson = tasksJson;
+    } else if (lastTasksJson) {
+      // ⭐ W8 — the plan fetch failed (offline / cold start): keep the card
+      //    that is already on the home screen instead of blanking it.
+      tasksJson = lastTasksJson;
+    }
+
     var streak = buildStreakPayload();
     var notes = buildNotesPayload();
-    var lectures = buildLecturesPayload(plan);
     var session = await readSession();
 
     try {
       await api.publishWidgets({
-        tasks: JSON.stringify(tasks),
+        tasks: tasksJson,
         streak: JSON.stringify(streak),
         notes: JSON.stringify(notes),
-        lectures: JSON.stringify(lectures),
         session: session,
         source: reason || 'auto'
       });
       return true;
     } catch (e) {
       console.warn('[widgets] publish failed:', e && e.message ? e.message : e);
+      return false;
+    }
+  }
+
+  /**
+   * ⭐⭐ Phase W8 — the fast path: repaint *only* the tasks card, right now.
+   *
+   * `publishWidgets` is the full pipeline (plan fetch + streak + notes + a
+   * session round-trip). For a checkbox tap only the task list changed, so
+   * this writes the task payload and asks the launcher to repaint — no
+   * network, no plan reload, no Supabase.
+   */
+  async function pushTasksNow() {
+    var api = plugin();
+    if (!api || typeof api.updateWidgetTasks !== 'function') return false;
+    try {
+      var pending = await readPending();
+      var tasks = await buildTasksPayload(pending);
+      if (!tasks.items || !tasks.items.length) return false;
+      lastTasksJson = JSON.stringify(tasks);
+      await api.updateWidgetTasks({ json: lastTasksJson });
+      return true;
+    } catch (e) {
+      console.warn('[widgets] fast task push failed:', e && e.message ? e.message : e);
       return false;
     }
   }
@@ -907,6 +868,9 @@
     });
 
     global.addEventListener('taskUpdated', function () {
+      // ⭐ W8 — repaint the card first (no network), then let the full
+      //    publish catch up with the streak and the notes.
+      pushTasksNow();
       setTimeout(function () { refresh('task'); }, 350);
     });
 
@@ -917,11 +881,21 @@
     try {
       var api = plugin();
       if (api && typeof api.addListener === 'function') {
+        // ⭐ W8 — a widget tap is applied to the app *now*: the pending queue
+        //    is drained locally, `setTaskCompleted` writes the local state and
+        //    dispatches 'taskUpdated', so the open screen repaints at once.
         var registration = api.addListener('widgetTaskToggled', function () {
-          setTimeout(function () { refresh('widget-toggle'); }, 250);
+          refresh('widget-toggle');
         });
         if (registration && typeof registration.catch === 'function') {
           registration.catch(function () {});
+        }
+
+        var taskRegistration = api.addListener('taskUpdated', function () {
+          refresh('widget-task');
+        });
+        if (taskRegistration && typeof taskRegistration.catch === 'function') {
+          taskRegistration.catch(function () {});
         }
       }
     } catch (e) {}
@@ -929,11 +903,11 @@
 
   global.MedAppWidgets = {
     refresh: refresh,
+    pushTasksNow: pushTasksNow,
     addHomeWidget: addHomeWidget,
     buildTasksPayload: buildTasksPayload,
     buildStreakPayload: buildStreakPayload,
     buildNotesPayload: buildNotesPayload,
-    buildLecturesPayload: buildLecturesPayload,
     handleDeepLink: handleDeepLink,
     isAvailable: function () { return !!plugin(); },
     isNativeAndroid: isNativeAndroid

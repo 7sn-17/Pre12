@@ -33,16 +33,21 @@ import androidx.glance.unit.ColorProvider
 import com.pre12.medical.R
 
 /**
- * ⭐⭐ Phase W7 — «مهام اليوم» at the approved 2×3 size.
+ * ⭐⭐ Phase W8 — «مهام اليوم» is a **wide 3×2** card (250×120 dp minimum).
+ *
+ * The user asked for landscape: the title, the counter and the task rows now
+ * share one wide column instead of a tall stack, and the row budget comes from
+ * [LocalSize] so a resize never draws outside the RemoteViews bounds.
  *
  * Reference dimensions (`widget_reference_final.html`):
  *   • `linear-gradient(145deg, #1e293b, #0f172a)`, 28 dp radius, 16 dp padding;
  *   • title 20 sp / 800, task text 16 sp / 500.
  *
- * The card is now **portrait**: at 140–160 dp wide a title + counter badge on one
- * line would clip, so the 20 sp title gets its own row and the `done/total` pill
- * sits on a compact meta line underneath. Rows are still budgeted from
- * [LocalSize], so a resize never draws outside the RemoteViews bounds.
+ * The card keeps two layouts:
+ *   • **wide** (≥230 dp) — title + pill + counter on a single header line, then
+ *     full-width rows with a 16 sp task title;
+ *   • **narrow** (a 2×3 card the user may still resize to) — the title on its
+ *     own line and the pill underneath, so nothing is ever clipped.
  *
  * Interaction is split so a mis-tap can never change data: the status ring
  * toggles; the text and the header deep-link to `pre12://tasks`.
@@ -63,14 +68,13 @@ class TodayTasksWidgetReceiver : GlanceAppWidgetReceiver() {
 @Composable
 private fun TodayTasksCard(state: TodayTasks) {
     val size = LocalSize.current
-    val tight = size.height < 200.dp
+    val wide = size.width >= 230.dp
+    val tight = size.height < 150.dp
 
     val pad = if (tight) 12.dp else 16.dp
-    val titleLine = 27.dp
-    val metaLine = 15.dp
-    val headerGap = if (tight) 6.dp else 8.dp
+    val headerLine = 28.dp
     val rowHeight = if (tight) 28.dp else 30.dp
-    val rowGap = 6.dp
+    val baseGap = if (tight) 5.dp else 6.dp
     val circle = if (tight) 20.dp else 22.dp
     val rowText = 16.sp
 
@@ -84,11 +88,21 @@ private fun TodayTasksCard(state: TodayTasks) {
             (item.doneAt > 0 && now - item.doneAt < ToggleTaskAction.VANISH_DELAY_MS)
     }
 
-    val chrome = pad * 2 + titleLine + 2.dp + metaLine + headerGap
-    val maxRows = (((size.height - chrome) + rowGap) / (rowHeight + rowGap))
+    val chrome = pad * 2 + headerLine + baseGap
+    val capacity = (((size.height - chrome) + baseGap) / (rowHeight + baseGap))
         .toInt()
         .coerceIn(1, 6)
-    val rows = visible.take(maxRows)
+    val rows = visible.take(capacity)
+
+    // No "massive empty gap": the leftover height is shared between the rows as
+    // a little more air, and only what is really left stays empty.
+    val gaps = baseGap * (rows.size - 1).coerceAtLeast(0)
+    val leftover = size.height - chrome - rowHeight * rows.size - gaps
+    val rowGap = if (rows.size > 1) {
+        baseGap + (leftover / rows.size).coerceIn(0.dp, 8.dp)
+    } else {
+        baseGap
+    }
 
     Box(
         modifier = GlanceModifier
@@ -97,9 +111,13 @@ private fun TodayTasksCard(state: TodayTasks) {
             .padding(pad)
     ) {
         Column(modifier = GlanceModifier.fillMaxSize()) {
-            Header(state, openApp, tight)
+            if (wide) {
+                WideHeader(state, openApp)
+            } else {
+                NarrowHeader(state, openApp, tight)
+            }
 
-            Gap(headerGap)
+            Gap(baseGap)
 
             when {
                 state.isEmpty -> EmptyDay(openApp)
@@ -118,8 +136,58 @@ private fun TodayTasksCard(state: TodayTasks) {
     }
 }
 
+/** Wide layout: title, pill and counter share one line. */
 @Composable
-private fun Header(state: TodayTasks, openApp: Action, tight: Boolean) {
+private fun WideHeader(state: TodayTasks, openApp: Action) {
+    Row(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .clickable(openApp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "مهام اليوم",
+            style = wText(WidgetSkin.White, 20.sp, FontWeight.Bold),
+            maxLines = 1
+        )
+
+        HGap(10.dp)
+
+        if (!state.isEmpty) {
+            Badge(
+                text = "${state.completedCount}/${state.totalCount}",
+                background = WidgetSkin.EmeraldSoft,
+                foreground = WidgetSkin.EmeraldBright,
+                horizontal = 7.dp,
+                vertical = 2.dp,
+                corner = 7.dp,
+                fontSize = 10.sp
+            )
+        }
+
+        HGap(8.dp)
+
+        Text(
+            text = if (state.allDone) {
+                "أنجزت كل مهام اليوم"
+            } else if (state.isEmpty) {
+                "لا مهام لهذا اليوم"
+            } else {
+                "مكتملة اليوم"
+            },
+            style = wText(
+                if (state.allDone) WidgetSkin.EmeraldBright else WidgetSkin.Slate400,
+                10.sp,
+                FontWeight.Medium
+            ),
+            maxLines = 1
+        )
+    }
+}
+
+/** Narrow layout (2×3): the pill gets its own line under the title. */
+@Composable
+private fun NarrowHeader(state: TodayTasks, openApp: Action, tight: Boolean) {
     Column(
         modifier = GlanceModifier
             .fillMaxWidth()

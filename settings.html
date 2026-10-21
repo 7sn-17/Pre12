@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="5.0.0-beta.3">
+<meta name="app-version" content="5.0.0-beta.4">
 <title>الودجات الذكية - المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -1197,6 +1197,7 @@
       --accent-glow: rgba(16, 185, 129, 0.28);
       --text-primary: #f0fdf4;
       --text-secondary: #94a3b8;
+      --line: rgba(52, 211, 153, 0.18);
     }
 
     * { box-sizing: border-box; }
@@ -1219,44 +1220,57 @@
 
     .settings-card {
       width: 100%;
-      max-width: 400px;
-      padding: 30px 24px 26px;
-      border-radius: 28px;
+      max-width: 420px;
+      padding: 32px 24px 26px;
+      border-radius: 30px;
       text-align: center;
-      background: linear-gradient(165deg, rgba(17, 44, 34, 0.92), rgba(8, 25, 19, 0.94));
-      border: 1px solid rgba(52, 211, 153, 0.24);
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(165deg, rgba(17, 44, 34, 0.94), rgba(8, 25, 19, 0.96));
+      border: 1px solid rgba(52, 211, 153, 0.26);
       box-shadow:
         0 40px 90px -30px rgba(0, 0, 0, 0.85),
-        0 0 70px -26px var(--accent-glow);
+        0 0 80px -30px var(--accent-glow),
+        inset 0 1px 0 rgba(255, 255, 255, 0.07);
+    }
+
+    /* بريق خفيف يمرّ فوق البطاقة */
+    .settings-card::before {
+      content: "";
+      position: absolute;
+      inset: -60% -30% auto -30%;
+      height: 120%;
+      background: radial-gradient(60% 40% at 50% 0%, rgba(52, 211, 153, 0.16), transparent 70%);
+      pointer-events: none;
     }
 
     .settings-icon {
-      width: 72px;
-      height: 72px;
+      width: 74px;
+      height: 74px;
       margin: 0 auto 16px;
-      border-radius: 22px;
+      border-radius: 24px;
       display: flex;
       align-items: center;
       justify-content: center;
       color: #d1fae5;
-      background: linear-gradient(140deg, rgba(52, 211, 153, 0.28), rgba(5, 150, 105, 0.12));
+      background: linear-gradient(140deg, rgba(52, 211, 153, 0.30), rgba(5, 150, 105, 0.12));
       border: 1px solid rgba(52, 211, 153, 0.45);
       box-shadow:
         0 0 0 6px rgba(16, 185, 129, 0.07),
-        0 0 34px -8px rgba(52, 211, 153, 0.6);
+        0 0 40px -8px rgba(52, 211, 153, 0.6);
     }
 
-    .settings-icon i { width: 32px; height: 32px; }
+    .settings-icon i { width: 34px; height: 34px; }
 
     .settings-title {
       margin: 0 0 6px;
-      font-size: 1.2rem;
+      font-size: 1.24rem;
       font-weight: 800;
       letter-spacing: -0.01em;
     }
 
     .settings-sub {
-      margin: 0 0 22px;
+      margin: 0 0 24px;
       font-size: 0.82rem;
       line-height: 1.9;
       color: var(--text-secondary);
@@ -1264,47 +1278,87 @@
 
     /* ⭐ الزرّ الوحيد في هذه الصفحة — «إضافة ودجت للشاشة» */
     .widget-cta {
+      position: relative;
       width: 100%;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 10px;
-      padding: 16px 20px;
-      border: none;
-      border-radius: 18px;
+      padding: 17px 22px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 20px;
       font-family: inherit;
-      font-size: 0.95rem;
+      font-size: 0.98rem;
       font-weight: 800;
       color: #ffffff;
       cursor: pointer;
-      background: linear-gradient(135deg, var(--accent-light), var(--accent-emerald) 46%, var(--accent-dark));
+      overflow: hidden;
+      background: linear-gradient(135deg, #34d399 0%, #10b981 42%, #047857 100%);
       box-shadow:
-        0 16px 36px -14px rgba(16, 185, 129, 0.95),
-        inset 0 1px 0 rgba(255, 255, 255, 0.24);
-      transition: transform 0.16s ease, box-shadow 0.16s ease;
+        0 18px 40px -16px rgba(16, 185, 129, 0.95),
+        0 4px 14px -6px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.28);
+      transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.18s ease, filter 0.18s ease;
     }
 
+    /* لمعة تمرّ على الزرّ */
+    .widget-cta::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 45%;
+      left: -60%;
+      background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.32), transparent);
+      transform: skewX(-18deg);
+      animation: ctaSheen 4.5s ease-in-out infinite;
+    }
+
+    @keyframes ctaSheen {
+      0%, 62% { left: -60%; }
+      100% { left: 130%; }
+    }
+
+    .widget-cta:hover { filter: brightness(1.06); }
+
     .widget-cta:active {
-      transform: scale(0.98);
+      transform: scale(0.975);
       box-shadow: 0 8px 22px -12px rgba(16, 185, 129, 0.9);
     }
 
-    .widget-cta i { width: 19px; height: 19px; }
+    .widget-cta:disabled {
+      opacity: 0.65;
+      filter: saturate(0.7);
+      cursor: default;
+    }
+
+    .widget-cta i { width: 20px; height: 20px; }
+
+    /* ⭐ الشرح تحت الزرّ مباشرة */
+    .widget-hint {
+      margin: 13px 2px 0;
+      font-size: 0.72rem;
+      font-weight: 600;
+      line-height: 1.8;
+      color: var(--text-secondary);
+    }
 
     .settings-status {
       min-height: 20px;
-      margin: 14px 0 0;
+      margin: 12px 0 0;
       font-size: 0.74rem;
-      font-weight: 600;
+      font-weight: 700;
       line-height: 1.7;
-      color: var(--text-secondary);
+      color: #6ee7b7;
     }
+
+    .settings-status.is-error { color: #fca5a5; }
 
     /* يظهر فقط إذا لم يوفّر المُشغّل نافذة اختيار النظام. */
     .widget-chooser {
       margin-top: 18px;
       padding-top: 16px;
-      border-top: 1px solid rgba(52, 211, 153, 0.16);
+      border-top: 1px solid var(--line);
       text-align: start;
     }
 
@@ -1325,15 +1379,22 @@
       padding: 11px 12px;
       margin-bottom: 8px;
       border-radius: 16px;
-      border: 1px solid rgba(52, 211, 153, 0.18);
+      border: 1px solid var(--line);
       background: rgba(6, 78, 59, 0.35);
       color: var(--text-primary);
       font-family: inherit;
       text-align: start;
       cursor: pointer;
+      transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
     }
 
     .widget-choice:last-child { margin-bottom: 0; }
+
+    .widget-choice:hover {
+      border-color: rgba(52, 211, 153, 0.42);
+      background: rgba(6, 78, 59, 0.55);
+    }
+
     .widget-choice:active { transform: scale(0.985); }
 
     .widget-choice-icon {
@@ -1368,6 +1429,10 @@
       <span>إضافة ودجت للشاشة</span>
     </button>
 
+    <p class="widget-hint">
+      إذا لم تعمل القائمة، يمكنك إضافة الودجت بالضغط المطول على شاشتك الرئيسية ثم اختيار «الودجات» (Widgets).
+    </p>
+
     <p class="settings-status" id="settingsStatus" aria-live="polite"></p>
 
     <section class="widget-chooser" id="widgetChooser" hidden>
@@ -1376,7 +1441,7 @@
         <span class="widget-choice-icon"><i data-lucide="list-checks"></i></span>
         <span class="widget-choice-copy">
           <span class="widget-choice-name">مهام اليوم</span>
-          <span class="widget-choice-sub">2×3 — قائمة مهامك مع مربّعات الإنجاز</span>
+          <span class="widget-choice-sub">3×2 — قائمة مهامك مع مربّعات الإنجاز</span>
         </span>
       </button>
       <button type="button" class="widget-choice" data-kind="streak">
@@ -1386,11 +1451,11 @@
           <span class="widget-choice-sub">1×1 — عدد أيامك المتتالية</span>
         </span>
       </button>
-      <button type="button" class="widget-choice" data-kind="lectures">
-        <span class="widget-choice-icon"><i data-lucide="image"></i></span>
+      <button type="button" class="widget-choice" data-kind="streak_detail">
+        <span class="widget-choice-icon"><i data-lucide="calendar-days"></i></span>
         <span class="widget-choice-copy">
-          <span class="widget-choice-name">المحاضرة القادمة</span>
-          <span class="widget-choice-sub">1×1 — غلاف المادة، والضغط يفتح الألبوم</span>
+          <span class="widget-choice-name">سلسلة مفصّلة</span>
+          <span class="widget-choice-sub">4×2 — رقم كبير وخريطة أسبوع من ٧ أيام</span>
         </span>
       </button>
       <button type="button" class="widget-choice" data-kind="notes">
@@ -1400,85 +1465,143 @@
           <span class="widget-choice-sub">2×2 — ورق أزرق وبنفسجي مع نسب التقدّم</span>
         </span>
       </button>
-      <button type="button" class="widget-choice" data-kind="streak_detail">
-        <span class="widget-choice-icon"><i data-lucide="calendar-days"></i></span>
+      <button type="button" class="widget-choice" data-kind="goals">
+        <span class="widget-choice-icon"><i data-lucide="target"></i></span>
         <span class="widget-choice-copy">
-          <span class="widget-choice-name">سلسلة مفصّلة</span>
-          <span class="widget-choice-sub">4×2 — أرقام كبيرة وأسبوع كامل</span>
+          <span class="widget-choice-name">أهدافي</span>
+          <span class="widget-choice-sub">2×2 — ورقة زرقاء لنسب التقدّم</span>
+        </span>
+      </button>
+      <button type="button" class="widget-choice" data-kind="notes_only">
+        <span class="widget-choice-icon"><i data-lucide="notebook-pen"></i></span>
+        <span class="widget-choice-copy">
+          <span class="widget-choice-name">ملاحظاتي</span>
+          <span class="widget-choice-sub">2×2 — ورقة بنفسجية لمحتوى الملاحظات</span>
         </span>
       </button>
     </section>
   </main>
 
   <script>
-    lucide.createIcons();
+    (function () {
+      'use strict';
 
-    function setStatus(text) {
-      var el = document.getElementById('settingsStatus');
-      if (el) el.textContent = text || '';
-    }
+      var button = document.getElementById('addWidgetBtn');
+      var statusEl = document.getElementById('settingsStatus');
+      var chooser = document.getElementById('widgetChooser');
+      var busy = false;
 
-    function api() {
-      var cap = window.Capacitor;
-      return cap && cap.Plugins ? cap.Plugins.MedWidgets : null;
-    }
-
-    /**
-     * Phase W7 — the button asks the launcher for its *picker* (all widgets).
-     * Android only guarantees "pin this one", so when no launcher entry point
-     * answers, the five-widget chooser below appears instead of pinning blindly.
-     */
-    async function addWidget() {
-      var bridge = api();
-      if (!bridge) {
-        setStatus('إضافة الودجات متاحة داخل تطبيق أندرويد فقط.');
-        return;
+      function setStatus(text, isError) {
+        if (!statusEl) return;
+        statusEl.textContent = text || '';
+        statusEl.classList.toggle('is-error', !!isError);
       }
 
-      setStatus('جارٍ فتح نافذة الودجات…');
-      try {
-        var result = await bridge.openWidgetPicker();
-        if (result && result.opened) {
-          setStatus('اختر الودجت الذي تريده من نافذة النظام.');
-          document.getElementById('widgetChooser').hidden = true;
+      function bridge() {
+        var cap = window.Capacitor;
+        if (!cap || !cap.Plugins) return null;
+        var api = cap.Plugins.MedWidgets;
+        if (!api) return null;
+        return api;
+      }
+
+      function showChooser() {
+        if (chooser) chooser.hidden = false;
+      }
+
+      /**
+       * ⭐⭐ Phase W8 — the button really works now.
+       *
+       * The order is deliberate:
+       *   1) `openWidgetPicker()` — the launcher's own widget picker, which
+       *      lists every widget of the app;
+       *   2) `requestPinWidget()` — the documented system "add to home screen"
+       *      dialog for a single widget, when the launcher has no picker;
+       *   3) the in-page chooser — always available, one tap from the answer.
+       */
+      async function addWidget() {
+        if (busy) return;
+        var api = bridge();
+        if (!api) {
+          setStatus('إضافة الودجات متاحة داخل تطبيق أندرويد فقط.', true);
+          showChooser();
           return;
         }
-        document.getElementById('widgetChooser').hidden = false;
-        setStatus('مُشغّل جهازك لا يعرض قائمة عامة — اختر الودجت من القائمة التالية.');
-      } catch (e) {
-        document.getElementById('widgetChooser').hidden = false;
-        setStatus('تعذّر فتح نافذة النظام — اختر الودجت من القائمة التالية.');
-      }
-    }
 
-    async function pinWidget(kind, name) {
-      var bridge = api();
-      if (!bridge) return;
-      try {
-        var result = await bridge.requestPinWidget({ kind: kind });
-        if (result && result.requested === false) {
-          setStatus('لا يدعم المُشغّل نافذة الإضافة — اضغط مطوّلاً على الشاشة الرئيسية ثم «الودجات».');
-        } else {
-          setStatus('تم فتح نافذة إضافة «' + name + '» — اضغط «إضافة».');
+        busy = true;
+        if (button) button.disabled = true;
+        setStatus('جارٍ فتح نافذة الودجات…');
+
+        try {
+          if (typeof api.openWidgetPicker === 'function') {
+            var picked = await api.openWidgetPicker();
+            if (picked && picked.opened) {
+              setStatus('اختر الودجت الذي تريده من نافذة النظام.');
+              if (chooser) chooser.hidden = true;
+              return;
+            }
+          }
+
+          if (typeof api.requestPinWidget === 'function') {
+            var pinned = await api.requestPinWidget({ kind: 'tasks' });
+            if (pinned && pinned.requested === false) {
+              setStatus('لا يدعم المُشغّل نافذة الإضافة — اختر الودجت من القائمة أدناه.', true);
+              showChooser();
+              return;
+            }
+            setStatus('تم فتح نافذة الإضافة — اختر «مهام اليوم» أو أي ودجت آخر.');
+            return;
+          }
+
+          setStatus('اختر الودجت من القائمة أدناه.');
+          showChooser();
+        } catch (e) {
+          setStatus('تعذّر فتح نافذة النظام — اختر الودجت من القائمة أدناه.', true);
+          showChooser();
+        } finally {
+          busy = false;
+          if (button) button.disabled = false;
         }
+      }
+
+      async function pinWidget(kind, name) {
+        var api = bridge();
+        if (!api || typeof api.requestPinWidget !== 'function') {
+          setStatus('إضافة الودجات متاحة داخل تطبيق أندرويد فقط.', true);
+          return;
+        }
+        try {
+          var result = await api.requestPinWidget({ kind: kind });
+          if (result && result.requested === false) {
+            setStatus('لا يدعم المُشغّل نافذة الإضافة — اضغط مطوّلاً على الشاشة الرئيسية ثم «الودجات».', true);
+          } else {
+            setStatus('تم فتح نافذة إضافة «' + name + '» — اضغط «إضافة».');
+          }
+        } catch (e) {
+          setStatus('تعذّرت إضافة الودجت — حاول من الشاشة الرئيسية.', true);
+        }
+      }
+
+      // ⭐ The listeners are attached *before* the icon library runs: a missing
+      //    icon must never leave the button dead.
+      if (button) button.addEventListener('click', addWidget);
+
+      Array.prototype.forEach.call(
+        document.querySelectorAll('.widget-choice'),
+        function (choice) {
+          choice.addEventListener('click', function () {
+            var nameEl = choice.querySelector('.widget-choice-name');
+            pinWidget(choice.getAttribute('data-kind'), nameEl ? nameEl.textContent : '');
+          });
+        }
+      );
+
+      try {
+        if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
       } catch (e) {
-        setStatus('تعذّرت إضافة الودجت — حاول من الشاشة الرئيسية.');
+        console.warn('[settings] icons failed:', e);
       }
-    }
-
-    document.getElementById('addWidgetBtn').addEventListener('click', addWidget);
-
-    Array.prototype.forEach.call(
-      document.querySelectorAll('.widget-choice'),
-      function (button) {
-        button.addEventListener('click', function () {
-          pinWidget(
-            button.getAttribute('data-kind'),
-            button.querySelector('.widget-choice-name').textContent
-          );
-        });
-      }
-    );
+    })();
   </script>
 </body>
 </html>

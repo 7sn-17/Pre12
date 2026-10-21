@@ -2,6 +2,7 @@ package com.pre12.medical.widgets
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -28,21 +29,25 @@ import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
+import androidx.glance.unit.ColorProvider
 import com.pre12.medical.R
 
 /**
- * ⭐⭐ Phase W6 — «سلسلة الأيام · أسبوعي» (detailed, 4×2, approved design).
+ * ⭐⭐ Phase W8 — «سلسلة الأيام · أسبوعي» rebuilt (4×2).
  *
- * Split view:
- *   • left  — ember glow, flame, current streak at display size;
- *   • right — the last seven days as labelled circles: emerald tick for a done
- *     day, a white ring for today, a slate dash for a missed day and ❄ for a
- *     freeze.
+ * The old card was unreadable: a tiny emoji flame, a number that lost its
+ * scale and week dots that were too small to scan. The new one follows the
+ * premium language of the 1×1 badge:
  *
- * The halo/ring replaces a real shadow: RemoteViews cannot draw one, so the glow
- * is a concentric layer — which is also how Material treats focus.
+ *   • **left** — a vector flame, the streak at 48 sp and «يوم متتالي»;
+ *   • **right** — the seven days as 32 dp rings, each with a thick border and
+ *     its Arabic initial (س، ح، ن، ث، ر، خ، ج) inside, so a glance is enough.
  *
- * A tap anywhere opens `pre12://streak`.
+ * The rings are drawn with nested boxes (a coloured ring + an inner disc)
+ * because RemoteViews cannot stroke a shape.
+ *
+ * Glance 1.2 has no fractional weights, so the 26 / 74 split is computed from
+ * the real card width: exact on every launcher, no guessing.
  */
 class DetailedStreakWidget : GlanceAppWidget() {
 
@@ -59,15 +64,13 @@ class DetailedStreakWidgetReceiver : GlanceAppWidgetReceiver() {
 @Composable
 private fun DetailedStreakCard(streak: StreakSummary) {
     val size = LocalSize.current
-    val compact = size.height < 150.dp
-    val marker = if (compact) 20.dp else 24.dp
-    val pad = if (compact) 12.dp else 14.dp
-    val gutter = if (compact) 10.dp else 14.dp
+    val roomy = size.height >= 130.dp
+    val marker = if (roomy) 32.dp else 26.dp
+    val pad = if (roomy) 14.dp else 10.dp
+    val gutter = if (roomy) 12.dp else 8.dp
 
-    // Glance 1.2 has no fractional weights, so the 36 / 64 split is computed
-    // from the real card width: exact on every launcher, no guessing.
     val inner = (size.width - pad * 2 - 1.dp - gutter).coerceAtLeast(0.dp)
-    val heroWidth = inner * 0.36f
+    val heroWidth = inner * 0.26f
 
     Box(
         modifier = GlanceModifier
@@ -82,7 +85,7 @@ private fun DetailedStreakCard(streak: StreakSummary) {
         ) {
             HeroColumn(
                 streak = streak,
-                compact = compact,
+                roomy = roomy,
                 modifier = GlanceModifier.width(heroWidth)
             )
             VerticalHairline()
@@ -90,7 +93,7 @@ private fun DetailedStreakCard(streak: StreakSummary) {
             WeekMap(
                 streak = streak,
                 marker = marker,
-                compact = compact,
+                roomy = roomy,
                 modifier = GlanceModifier.width(inner - heroWidth)
             )
         }
@@ -98,181 +101,157 @@ private fun DetailedStreakCard(streak: StreakSummary) {
 }
 
 @Composable
-private fun HeroColumn(streak: StreakSummary, compact: Boolean, modifier: GlanceModifier) {
+private fun HeroColumn(streak: StreakSummary, roomy: Boolean, modifier: GlanceModifier) {
     Column(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "🔥",
-            style = wText(
-                WidgetSkin.FlameOrange,
-                if (compact) 16.sp else 19.sp,
-                FontWeight.Bold,
-                TextAlign.Center
-            ),
-            maxLines = 1
+        Image(
+            provider = ImageProvider(R.drawable.widget_ic_flame),
+            contentDescription = null,
+            modifier = GlanceModifier.size(if (roomy) 28.dp else 22.dp),
+            colorFilter = androidx.glance.ColorFilter.tint(ColorProvider(WidgetSkin.FlameOrange))
         )
+
         Text(
             text = streak.current.toString(),
             style = wText(
                 WidgetSkin.White,
-                40.sp,
+                48.sp,
                 FontWeight.Bold,
                 TextAlign.Center
             ),
             maxLines = 1
         )
+
         Text(
             text = "يوم متتالي",
-            style = wText(WidgetSkin.Slate400, if (compact) 8.5.sp else 9.5.sp, FontWeight.Medium, TextAlign.Center),
+            style = wText(
+                WidgetSkin.Slate400,
+                if (roomy) 11.sp else 9.sp,
+                FontWeight.Medium,
+                TextAlign.Center
+            ),
             maxLines = 1
         )
     }
 }
 
 @Composable
-private fun WeekMap(streak: StreakSummary, marker: Dp, compact: Boolean, modifier: GlanceModifier) {
+private fun WeekMap(streak: StreakSummary, marker: Dp, roomy: Boolean, modifier: GlanceModifier) {
     Column(modifier = modifier) {
         Text(
             text = if (streak.todayDone) "أسبوعك · اليوم مكتمل ✓" else "آخر ٧ أيام",
             style = wText(
                 if (streak.todayDone) WidgetSkin.EmeraldBright else WidgetSkin.Slate400,
-                if (compact) 8.sp else 9.sp,
-                FontWeight.Medium
+                if (roomy) 11.sp else 9.sp,
+                FontWeight.Bold
             ),
             maxLines = 1
         )
 
-        Gap(if (compact) 5.dp else 7.dp)
+        Gap(if (roomy) 8.dp else 5.dp)
 
         if (streak.days.isEmpty()) {
             Text(
                 text = "أنجز مهمة واحدة لتشعل سلسلتك",
-                style = wText(WidgetSkin.Slate400, 9.sp),
+                style = wText(WidgetSkin.Slate400, if (roomy) 10.sp else 9.sp),
                 maxLines = 1
             )
             return@Column
         }
 
-        Row(modifier = GlanceModifier.fillMaxWidth()) {
-            streak.days.forEach { day ->
-                Column(
-                    modifier = GlanceModifier.defaultWeight(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = day.label,
-                        style = wText(
-                            if (day.state == StreakDayState.TODAY ||
-                                day.state == StreakDayState.TODAY_DONE
-                            ) {
-                                WidgetSkin.White
-                            } else {
-                                WidgetSkin.Slate500
-                            },
-                            8.sp,
-                            FontWeight.Medium,
-                            TextAlign.Center
-                        ),
-                        maxLines = 1
-                    )
-                    Gap(3.dp)
-                    DayMarker(day.state, marker)
-                }
-            }
+        // Seven rings in a 4 + 3 grid: a single row of 32 dp rings does not fit
+        // in the right half of a 4×2 card, and the two rows stay perfectly even.
+        val firstRow = streak.days.take(4)
+        val secondRow = streak.days.drop(4)
+
+        DayRow(firstRow, marker)
+        if (secondRow.isNotEmpty()) {
+            Gap(if (roomy) 10.dp else 6.dp)
+            DayRow(secondRow, marker)
         }
     }
 }
 
 @Composable
-private fun DayMarker(state: StreakDayState, size: Dp) {
-    when (state) {
-        StreakDayState.DONE -> FilledMarker(size)
-
-        StreakDayState.TODAY_DONE -> Box(
-            modifier = GlanceModifier
-                .size(size)
-                .background(ImageProvider(R.drawable.widget_circle_today)),
-            contentAlignment = Alignment.Center
-        ) {
-            Box(
-                modifier = GlanceModifier
-                    .size(size - 8.dp)
-                    .background(WidgetSkin.Emerald)
-                    .cornerRadius((size - 8.dp) / 2),
-                contentAlignment = Alignment.Center
+private fun DayRow(days: List<StreakDay>, marker: Dp) {
+    Row(modifier = GlanceModifier.fillMaxWidth()) {
+        days.forEach { day ->
+            Column(
+                modifier = GlanceModifier.defaultWeight(),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Image(
-                    provider = ImageProvider(R.drawable.widget_ic_check),
-                    contentDescription = null,
-                    modifier = GlanceModifier.size(size * 0.38f),
-                    colorFilter = androidx.glance.ColorFilter.tint(
-                        androidx.glance.unit.ColorProvider(WidgetSkin.White)
-                    )
-                )
+                DayMarker(day.state, day.label, marker)
             }
         }
-
-        StreakDayState.TODAY -> Box(
-            modifier = GlanceModifier
-                .size(size)
-                .background(ImageProvider(R.drawable.widget_circle_today)),
-            contentAlignment = Alignment.Center
-        ) {
-            Box(
-                modifier = GlanceModifier
-                    .size(size * 0.34f)
-                    .background(WidgetSkin.White)
-                    .cornerRadius(size * 0.17f)
-            ) {}
-        }
-
-        StreakDayState.FREEZE -> Box(
-            modifier = GlanceModifier
-                .size(size)
-                .background(ImageProvider(R.drawable.widget_circle_missed)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "❄",
-                style = wText(WidgetSkin.Slate300, 9.sp, FontWeight.Bold, TextAlign.Center),
-                maxLines = 1
-            )
-        }
-
-        StreakDayState.MISSED -> Box(
-            modifier = GlanceModifier
-                .size(size)
-                .background(ImageProvider(R.drawable.widget_circle_missed)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "–",
-                style = wText(WidgetSkin.Slate500, 9.sp, FontWeight.Bold, TextAlign.Center),
-                maxLines = 1
-            )
+        // Keep the second row aligned with the first (3 rings, not 4).
+        repeat(4 - days.size) {
+            Box(modifier = GlanceModifier.defaultWeight().size(marker)) {}
         }
     }
 }
 
 @Composable
-private fun FilledMarker(size: Dp) {
+private fun DayMarker(state: StreakDayState, label: String, size: Dp) {
+    val ring: Color
+    val fill: Color
+    val ink: Color
+
+    when (state) {
+        StreakDayState.DONE -> {
+            ring = WidgetSkin.Emerald
+            fill = WidgetSkin.Ink900
+            ink = WidgetSkin.EmeraldBright
+        }
+
+        StreakDayState.TODAY_DONE -> {
+            ring = WidgetSkin.EmeraldBright
+            fill = WidgetSkin.Emerald
+            ink = WidgetSkin.White
+        }
+
+        StreakDayState.TODAY -> {
+            ring = WidgetSkin.White
+            fill = WidgetSkin.Ink800
+            ink = WidgetSkin.White
+        }
+
+        StreakDayState.FREEZE -> {
+            ring = Color(0xFF38BDF8)
+            fill = WidgetSkin.Ink900
+            ink = Color(0xFFBAE6FD)
+        }
+
+        StreakDayState.MISSED -> {
+            ring = WidgetSkin.Ink700
+            fill = WidgetSkin.Ink900
+            ink = WidgetSkin.Slate500
+        }
+    }
+
+    val inner = size - 6.dp
+
     Box(
         modifier = GlanceModifier
             .size(size)
-            .background(WidgetSkin.Emerald)
+            .background(ColorProvider(ring))
             .cornerRadius(size / 2),
         contentAlignment = Alignment.Center
     ) {
-        Image(
-            provider = ImageProvider(R.drawable.widget_ic_check),
-            contentDescription = null,
-            modifier = GlanceModifier.size(size * 0.48f),
-            colorFilter = androidx.glance.ColorFilter.tint(
-                androidx.glance.unit.ColorProvider(WidgetSkin.White)
+        Box(
+            modifier = GlanceModifier
+                .size(inner)
+                .background(ColorProvider(fill))
+                .cornerRadius(inner / 2),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = label,
+                style = wText(ink, 13.sp, FontWeight.Bold, TextAlign.Center),
+                maxLines = 1
             )
-        )
+        }
     }
 }

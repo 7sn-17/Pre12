@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Phase W6 — split streak card: ember glow on the number side, quiet week map. -->
+<!--
+  Phase W8 — the 4×2 streak card: midnight slate with a subtle red ember glow
+  behind the flame side, and a hairline edge that separates it from the
+  wallpaper without shouting.
+-->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
@@ -10,12 +14,12 @@
     <item>
         <shape android:shape="rectangle">
             <gradient
-                android:centerColor="#1FF97316"
-                android:centerX="0.2"
-                android:centerY="0.45"
+                android:centerColor="#1AE44444"
+                android:centerX="0.16"
+                android:centerY="0.46"
                 android:endColor="#000F172A"
-                android:gradientRadius="120dp"
-                android:startColor="#59EF4444"
+                android:gradientRadius="130dp"
+                android:startColor="#4DEF4444"
                 android:type="radial" />
             <corners android:radius="28dp" />
         </shape>

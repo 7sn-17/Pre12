@@ -97,34 +97,38 @@ private fun NotesCard(notes: PinnedNotes, variant: NotesVariant) {
 
 @Composable
 private fun GoalsNote(items: List<PinnedItem>, height: androidx.compose.ui.unit.Dp) {
+    val twoLines = height >= 130.dp
     StickyHalf(
         title = "أهدافي",
         paperRes = R.drawable.widget_bg_sticky_goal,
         ink = WidgetSkin.GoalInk,
         accent = WidgetSkin.GoalAccent,
-        items = items.take(maxRowsForSingle(height)),
+        items = items.take(maxRowsForSingle(height, twoLines)),
         addPath = "add-goal",
         openPath = "goals",
         showPercent = true,
         showHint = true,
         compact = height < 150.dp,
+        twoLines = twoLines,
         modifier = GlanceModifier.fillMaxSize()
     )
 }
 
 @Composable
 private fun PlainNote(items: List<PinnedItem>, height: androidx.compose.ui.unit.Dp) {
+    val twoLines = height >= 130.dp
     StickyHalf(
         title = "ملاحظاتي",
         paperRes = R.drawable.widget_bg_sticky_note,
         ink = WidgetSkin.NoteInk,
         accent = WidgetSkin.NoteAccent,
-        items = items.take(maxRowsForSingle(height)),
+        items = items.take(maxRowsForSingle(height, twoLines)),
         addPath = "add-note",
         openPath = "notes",
         showPercent = false,
         showHint = true,
         compact = height < 150.dp,
+        twoLines = twoLines,
         modifier = GlanceModifier.fillMaxSize()
     )
 }
@@ -138,13 +142,16 @@ private fun CombinedNotes(
 ) {
     val sideBySide = width >= 230.dp
     val compact = height < 150.dp
+    // Stacked halves are short: one line each. Side-by-side halves are as tall
+    // as the card, so they get the full two lines.
+    val twoLines = sideBySide
     val rows = when {
         !sideBySide -> when {
             height >= 170.dp -> 2
             height >= 130.dp -> 1
             else -> 0
         }
-        height >= 170.dp -> 3
+        height >= 200.dp -> 3
         else -> 2
     }
 
@@ -161,6 +168,7 @@ private fun CombinedNotes(
                 showPercent = true,
                 showHint = true,
                 compact = compact,
+                twoLines = twoLines,
                 modifier = GlanceModifier.defaultWeight().fillMaxHeight()
             )
             HGap(8.dp)
@@ -175,6 +183,7 @@ private fun CombinedNotes(
                 showPercent = false,
                 showHint = true,
                 compact = compact,
+                twoLines = twoLines,
                 modifier = GlanceModifier.defaultWeight().fillMaxHeight()
             )
         }
@@ -191,6 +200,7 @@ private fun CombinedNotes(
                 showPercent = true,
                 showHint = false,
                 compact = true,
+                twoLines = false,
                 modifier = GlanceModifier.defaultWeight().fillMaxWidth()
             )
             Gap(6.dp)
@@ -205,17 +215,25 @@ private fun CombinedNotes(
                 showPercent = false,
                 showHint = false,
                 compact = true,
+                twoLines = false,
                 modifier = GlanceModifier.defaultWeight().fillMaxWidth()
             )
         }
     }
 }
 
-private fun maxRowsForSingle(height: androidx.compose.ui.unit.Dp): Int = when {
-    height >= 220.dp -> 4
-    height >= 170.dp -> 3
-    height >= 140.dp -> 2
-    else -> 1
+/**
+ * How many rows fit in a sticky card.
+ *
+ * `chrome` is the tape + title + the gap under it + the bottom padding; a
+ * two-line row is twice as tall as a one-line row, so the budget follows the
+ * line count instead of a hard-coded table.
+ */
+private fun maxRowsForSingle(height: androidx.compose.ui.unit.Dp, twoLines: Boolean): Int {
+    val chrome = 50.dp
+    val row = if (twoLines) 40.dp else 20.dp
+    val gap = 3.dp
+    return (((height - chrome + gap) / (row + gap)).toInt()).coerceIn(1, 4)
 }
 
 @Composable
@@ -230,6 +248,7 @@ private fun StickyHalf(
     showPercent: Boolean,
     showHint: Boolean,
     compact: Boolean,
+    twoLines: Boolean,
     modifier: GlanceModifier
 ) {
     val open = openAppAction(openPath)
@@ -243,7 +262,7 @@ private fun StickyHalf(
                 start = 9.dp,
                 end = 9.dp,
                 top = if (compact) 18.dp else 22.dp,
-                bottom = if (compact) 4.dp else 8.dp
+                bottom = if (compact) 2.dp else 8.dp
             )
             .clickable(open)
     ) {
@@ -279,7 +298,7 @@ private fun StickyHalf(
                 }
             } else {
                 items.forEachIndexed { index, item ->
-                    StickyRow(item, ink, accent, showPercent, compact)
+                    StickyRow(item, ink, accent, showPercent, twoLines)
                     if (index != items.lastIndex) Gap(if (compact) 2.dp else 3.dp)
                 }
             }
@@ -293,7 +312,7 @@ private fun StickyRow(
     ink: Color,
     accent: Color,
     showPercent: Boolean,
-    compact: Boolean
+    twoLines: Boolean
 ) {
     Row(
         modifier = GlanceModifier.fillMaxWidth(),
@@ -310,11 +329,12 @@ private fun StickyRow(
             modifier = GlanceModifier.defaultWeight(),
             style = wText(
                 color = if (item.isDone) WidgetSkin.PaperMuted else WidgetSkin.PaperInk,
-                size = 14.sp,
+                size = 15.sp,
                 weight = FontWeight.Medium,
                 decoration = if (item.isDone) TextDecoration.LineThrough else null
             ),
-            maxLines = 1
+            // ⭐ W8 — two lines of the note itself, not just its title.
+            maxLines = if (twoLines) 2 else 1
         )
         if (showPercent) {
             item.percent?.let { value ->
