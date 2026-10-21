@@ -228,12 +228,14 @@ private fun TaskRow(item: TaskItem, colors: ColorProviders) {
                     maxLines = 1
                 )
             } else {
+                // Empty core = the "hole" of the ring. Glance still needs a
+                // content lambda, so pass an empty one.
                 Box(
                     modifier = GlanceModifier
                         .size(14.dp)
                         .background(colors.surface)
                         .cornerRadius(7.dp)
-                )
+                ) {}
             }
         }
 
