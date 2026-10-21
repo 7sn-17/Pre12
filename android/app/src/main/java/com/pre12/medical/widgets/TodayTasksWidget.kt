@@ -25,6 +25,7 @@ import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
+import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.text.FontWeight
@@ -267,9 +268,8 @@ private fun NarrowHeader(state: TodayTasks, openApp: Action, tight: Boolean) {
 /**
  * The task list.
  *
- * Every row carries `defaultWeight()`, so the rows share the height that is
- * left under the header: a card with two tasks and a card with four both look
- * full instead of leaving a dead gap at the bottom.
+ * Every task gets its own row with a fixed height; when there are many tasks
+ * the height shrinks a little so all of them stay visible.
  */
 /**
  * ⭐⭐ Phase W14 — عمود بسيط: كل مهمة صفٌّ بارتفاع ثابت.
