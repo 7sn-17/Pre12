@@ -22,6 +22,7 @@ on:
       - 'package-lock.json'
       - 'build.js'
       - 'src/**'
+      - 'widgets.js'
       - '.github/workflows/android-compile-check.yml'
   pull_request:
     branches:
@@ -86,12 +87,14 @@ jobs:
           # The receiver and its provider metadata must survive manifest merging.
           AAPT2="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" 2>/dev/null | sort -V | tail -1)/aapt2"
           if [ -x "$AAPT2" ] && "$AAPT2" dump xmltree "$APK" --file AndroidManifest.xml > /tmp/manifest.txt 2>/dev/null; then
-            if grep -q "TodayTasksWidgetReceiver" /tmp/manifest.txt; then
-              echo "✅ TodayTasksWidgetReceiver is registered in the merged manifest"
-            else
-              echo "::error::TodayTasksWidgetReceiver missing from the merged manifest"
-              exit 1
-            fi
+            for receiver in TodayTasksWidgetReceiver SimpleStreakWidgetReceiver DetailedStreakWidgetReceiver NotesWidgetReceiver; do
+              if grep -q "$receiver" /tmp/manifest.txt; then
+                echo "✅ $receiver is registered in the merged manifest"
+              else
+                echo "::error::$receiver missing from the merged manifest"
+                exit 1
+              fi
+            done
           else
             echo "::warning::aapt2 unavailable — skipped the manifest assertion"
           fi

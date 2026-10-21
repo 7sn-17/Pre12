@@ -42,5 +42,6 @@
     <color name="widget_color_inverse_surface">#FF0F172A</color>
     <color name="widget_color_inverse_primary">#FF6EE7B7</color>
 
+    <color name="widget_color_glass_stroke">#1F10B981</color>
     <color name="widget_color_widget_background">#FFECFDF5</color>
 </resources>

@@ -19,4 +19,21 @@
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
     </style>
+
+    <!-- ⭐⭐ Phase W2 — widget picker previews -->
+    <style name="WidgetPreviewDay">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">#FF64748B</item>
+        <item name="android:textSize">10sp</item>
+    </style>
+
+    <style name="WidgetPreviewDot">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">26dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:scaleType">fitCenter</item>
+    </style>
 </resources>

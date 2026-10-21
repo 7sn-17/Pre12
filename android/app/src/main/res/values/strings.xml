@@ -13,4 +13,26 @@
     <string name="widget_today_tasks_preview_task_done">مراجعة التشريح — محاضرة 4</string>
     <string name="widget_today_tasks_preview_task_open">تمارين الفسيولوجيا</string>
     <string name="widget_today_tasks_preview_task_open2">قراءة ملخص الكيمياء</string>
+
+    <!-- ⭐⭐ Phase W2 — widgets (streak + notes) -->
+    <string name="widget_simple_streak_label">سلسلة الأيام</string>
+    <string name="widget_simple_streak_description">سلسلتك الحالية كرقم كبير مع أفضل سلسلة وتجميداتك</string>
+    <string name="widget_detailed_streak_label">سلسلة الأيام · أسبوعي</string>
+    <string name="widget_detailed_streak_description">خريطة آخر 7 أيام: مكتمل، فائت، واليوم المتوهّج</string>
+    <string name="widget_notes_label">ملاحظاتي وأهدافي</string>
+    <string name="widget_notes_description">أهدافك النشطة وأحدث ملاحظاتك مثبّتة على الشاشة الرئيسية</string>
+    <string name="widget_preview_streak_number">12</string>
+    <string name="widget_preview_streak_label">يوم متتالي</string>
+    <string name="widget_preview_streak_stats">الأفضل 20 · تجميدات 2</string>
+    <string name="widget_preview_streak_best">الأفضل 20</string>
+    <string name="widget_preview_day_sat">س</string>
+    <string name="widget_preview_day_sun">ح</string>
+    <string name="widget_preview_day_mon">ن</string>
+    <string name="widget_preview_day_tue">ث</string>
+    <string name="widget_preview_day_wed">ر</string>
+    <string name="widget_preview_day_thu">خ</string>
+    <string name="widget_preview_day_fri">ج</string>
+    <string name="widget_preview_note_1">إنهاء مراجعة التشريح — محاضرة 4</string>
+    <string name="widget_preview_note_2">ملاحظة: أعِد قراءة جدول الأسبوع الأول</string>
+    <string name="widget_preview_note_3">هدف: إنهاء 3 محاضرات كيمياء</string>
 </resources>

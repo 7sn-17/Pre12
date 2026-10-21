@@ -57,4 +57,10 @@ internal object WidgetPalette {
 
         widgetBackground = ColorProvider(R.color.widget_color_widget_background)
     )
+
+    /**
+     * The 1 dp translucent edge that fakes glassmorphism on RemoteViews.
+     * Also used for hairlines so every separator shares one tone.
+     */
+    val glassStroke: ColorProvider = ColorProvider(R.color.widget_color_glass_stroke)
 }

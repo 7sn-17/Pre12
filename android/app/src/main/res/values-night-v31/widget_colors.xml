@@ -38,5 +38,6 @@
     <color name="widget_color_inverse_surface">@android:color/system_neutral1_100</color>
     <color name="widget_color_inverse_primary">@android:color/system_accent1_600</color>
 
+    <color name="widget_color_glass_stroke">#26FFFFFF</color>
     <color name="widget_color_widget_background">@android:color/system_accent2_800</color>
 </resources>

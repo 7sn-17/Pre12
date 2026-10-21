@@ -3,6 +3,7 @@ package com.pre12.medical;
 import android.os.Bundle;
 
 import com.getcapacitor.BridgeActivity;
+import com.pre12.medical.widgets.MedWidgetsPlugin;
 
 import ee.forgr.capacitor.social.login.ModifiedMainActivityForSocialLoginPlugin;
 
@@ -22,6 +23,10 @@ public class MainActivity extends BridgeActivity
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        // ⭐⭐ Phase W2 — local plugin (home-screen widgets).
+        //    Must be registered before super.onCreate(): BridgeActivity hands the
+        //    builder to Capacitor during creation.
+        registerPlugin(MedWidgetsPlugin.class);
         super.onCreate(savedInstanceState);
     }
 

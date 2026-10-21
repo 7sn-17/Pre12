@@ -51,6 +51,45 @@
                 android:resource="@xml/today_tasks_widget_info" />
         </receiver>
 
+        <!-- ⭐⭐ Phase W2 — «سلسلة الأيام» -->
+        <receiver
+            android:name=".widgets.SimpleStreakWidgetReceiver"
+            android:exported="false"
+            android:label="@string/widget_simple_streak_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/simple_streak_widget_info" />
+        </receiver>
+
+        <!-- ⭐⭐ Phase W2 — «سلسلة الأيام · أسبوعي» -->
+        <receiver
+            android:name=".widgets.DetailedStreakWidgetReceiver"
+            android:exported="false"
+            android:label="@string/widget_detailed_streak_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/detailed_streak_widget_info" />
+        </receiver>
+
+        <!-- ⭐⭐ Phase W2 — «ملاحظاتي وأهدافي» -->
+        <receiver
+            android:name=".widgets.NotesWidgetReceiver"
+            android:exported="false"
+            android:label="@string/widget_notes_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/notes_widget_info" />
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

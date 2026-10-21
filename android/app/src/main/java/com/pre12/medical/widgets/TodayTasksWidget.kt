@@ -7,10 +7,11 @@ import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
+import androidx.glance.LocalSize
+import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.LinearProgressIndicator
-import androidx.glance.appwidget.appWidgetBackground
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
@@ -31,34 +32,17 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
 import androidx.glance.text.TextDecoration
 import androidx.glance.text.TextStyle
+import com.pre12.medical.R
 
 /**
- * ⭐⭐ Phase W1 — «مهام اليوم» (Today's Tasks) home-screen widget.
+ * ⭐⭐ Phase W2 — «مهام اليوم» interactive widget.
  *
- * Renders a 4×2 card:
+ * Tap a row → [ToggleTaskAction] flips the checkbox, stores the change and
+ * redraws. Tap the header → the app opens. The widget is responsive: a 4×2 grid
+ * shows 2 rows, a taller resize grows to 4 rows (see [rowsForHeight]).
  *
- *   ┌────────────────────────────────────┐
- *   │ مهام اليوم           3 / 8          │  title + counter chip
- *   │ 3 من 8 مكتملة                       │  subtitle
- *   │ ▰▰▰▰▱▱▱▱▱▱                          │  progress (Material You primary)
- *   │ ✓( مراجعة التشريح )                  │  completed · struck through
- *   │ ○  تمارين الفسيولوجيا                │  open
- *   │ ○  قراءة ملخص الكيمياء               │
- *   └────────────────────────────────────┘
- *
- * W1 is intentionally **static** (no click actions yet); W2 adds
- * `ToggleTaskAction` on each row. Data comes from SharedPreferences through
- * [WidgetBridge], so the widget renders real numbers as soon as the web layer
- * starts publishing them.
- *
- * Design notes:
- *  • RTL is honoured by Glance at translation time — the checkbox circle is the
- *    first logical child, so it lands on the right edge in Arabic.
- *  • No shadows/blur: widgets render through RemoteViews. The "premium" feel
- *    comes from the 24 dp radius, generous padding, tonal hierarchy and a
- *    single 4 dp accent bar — not from effects that cannot be drawn.
- *  • Colours always come from [WidgetPalette], never from literal ints, so the
- *    Material You + dark-mode matrices work without branching in UI code.
+ * Visual language: 24 dp glass card, 16 dp padding, tonal header, 4 dp progress
+ * bar, 18 dp status circles, strikethrough + muted colour when done.
  */
 private const val MAX_VISIBLE_TASKS = 4
 
@@ -87,19 +71,52 @@ class TodayTasksWidgetReceiver : GlanceAppWidgetReceiver() {
 @Composable
 private fun TodayTasksContent(state: TodayTasks) {
     val colors = GlanceTheme.colors
+    val maxRows = rowsForHeight(LocalSize.current.height)
+    val openApp = openAppAction()
 
-    Column(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .background(colors.surface)
-            .cornerRadius(24.dp)
-            .padding(16.dp)
-            .appWidgetBackground(),
-        horizontalAlignment = Alignment.Start
-    ) {
-        Header(state, colors)
+    GlassCard {
+        Row(
+            modifier = GlanceModifier
+                .fillMaxWidth()
+                .cornerRadius(10.dp)
+                .clickable(openApp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = GlanceModifier.defaultWeight()) {
+                Text(
+                    text = "مهام اليوم",
+                    style = TextStyle(
+                        color = colors.onSurface,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Start
+                    ),
+                    maxLines = 1
+                )
+                Spacer(GlanceModifier.height(2.dp))
+                Text(
+                    text = subtitle(state),
+                    style = TextStyle(
+                        color = colors.onSurfaceVariant,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Start
+                    ),
+                    maxLines = 1
+                )
+            }
 
-        Spacer(GlanceModifier.height(12.dp))
+            if (!state.isEmpty) {
+                Spacer(GlanceModifier.width(8.dp))
+                Chip(
+                    text = "${state.completedCount} / ${state.totalCount}",
+                    background = colors.primaryContainer,
+                    foreground = colors.onPrimaryContainer
+                )
+            }
+        }
+
+        Spacer(GlanceModifier.height(10.dp))
 
         LinearProgressIndicator(
             progress = state.progress,
@@ -114,86 +131,38 @@ private fun TodayTasksContent(state: TodayTasks) {
         Spacer(GlanceModifier.height(12.dp))
 
         if (state.isEmpty) {
-            EmptyState(colors)
+            WidgetEmptyState(
+                title = "لا توجد مهام لليوم",
+                message = "خطّتك لهذا اليوم فارغة — استمتع بيومك 🌿",
+                cta = "افتح التطبيق",
+                iconRes = R.drawable.widget_ic_tasks
+            )
         } else {
-            TaskList(state, colors)
+            TaskList(state, colors, maxRows)
         }
     }
 }
 
 @Composable
-private fun Header(state: TodayTasks, colors: ColorProviders) {
-    Row(
-        modifier = GlanceModifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = GlanceModifier.defaultWeight()) {
-            Text(
-                text = "مهام اليوم",
-                style = TextStyle(
-                    color = colors.onSurface,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Start
-                ),
-                maxLines = 1
-            )
-            Spacer(GlanceModifier.height(2.dp))
-            Text(
-                text = subtitle(state),
-                style = TextStyle(
-                    color = colors.onSurfaceVariant,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Start
-                ),
-                maxLines = 1
-            )
-        }
-
-        if (!state.isEmpty) {
-            Spacer(GlanceModifier.width(8.dp))
-            Box(
-                modifier = GlanceModifier
-                    .background(colors.primaryContainer)
-                    .cornerRadius(11.dp)
-                    .padding(horizontal = 10.dp, vertical = 5.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "${state.completedCount} / ${state.totalCount}",
-                    style = TextStyle(
-                        color = colors.onPrimaryContainer,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    ),
-                    maxLines = 1
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun TaskList(state: TodayTasks, colors: ColorProviders) {
-    val visible = state.items.take(MAX_VISIBLE_TASKS)
+private fun TaskList(state: TodayTasks, colors: ColorProviders, maxRows: Int) {
+    val visible = state.items.take(maxRows)
+    val completed = state.items.count { it.isCompleted }
 
     visible.forEachIndexed { index, item ->
-        TaskRow(item, colors)
+        TaskRow(item, state.date, colors)
         if (index != visible.lastIndex) {
-            Spacer(GlanceModifier.height(9.dp))
+            Spacer(GlanceModifier.height(6.dp))
         }
     }
 
     val remaining = state.items.size - visible.size
-    if (remaining > 0) {
-        Spacer(GlanceModifier.height(9.dp))
+    if (remaining > 0 && maxRows >= 3) {
+        Spacer(GlanceModifier.height(8.dp))
         Text(
-            text = "+$remaining مهام أخرى",
+            text = "+$remaining مهام أخرى · $completed مكتملة",
             style = TextStyle(
                 color = colors.onSurfaceVariant,
-                fontSize = 11.sp,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.Start
             ),
@@ -203,9 +172,19 @@ private fun TaskList(state: TodayTasks, colors: ColorProviders) {
 }
 
 @Composable
-private fun TaskRow(item: TaskItem, colors: ColorProviders) {
+private fun TaskRow(item: TaskItem, date: String, colors: ColorProviders) {
+    val toggle = ToggleTaskAction.action(
+        taskId = item.id,
+        date = date,
+        done = !item.isCompleted
+    )
+
     Row(
-        modifier = GlanceModifier.fillMaxWidth(),
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .cornerRadius(9.dp)
+            .padding(vertical = 3.dp)
+            .clickable(toggle),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // A 1 dp ring without a border modifier: outer circle + surface core.
@@ -228,8 +207,7 @@ private fun TaskRow(item: TaskItem, colors: ColorProviders) {
                     maxLines = 1
                 )
             } else {
-                // Empty core = the "hole" of the ring. Glance still needs a
-                // content lambda, so pass an empty one.
+                // Empty core = the "hole" of the ring.
                 Box(
                     modifier = GlanceModifier
                         .size(14.dp)
@@ -246,7 +224,7 @@ private fun TaskRow(item: TaskItem, colors: ColorProviders) {
             modifier = GlanceModifier.defaultWeight(),
             style = TextStyle(
                 color = if (item.isCompleted) colors.onSurfaceVariant else colors.onSurface,
-                fontSize = 13.sp,
+                fontSize = 12.5.sp,
                 fontWeight = if (item.isCompleted) FontWeight.Normal else FontWeight.Medium,
                 textAlign = TextAlign.Start,
                 textDecoration = if (item.isCompleted) TextDecoration.LineThrough else null
@@ -256,35 +234,15 @@ private fun TaskRow(item: TaskItem, colors: ColorProviders) {
     }
 }
 
-@Composable
-private fun EmptyState(colors: ColorProviders) {
-    Box(
-        modifier = GlanceModifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "لا توجد مهام لليوم",
-                style = TextStyle(
-                    color = colors.onSurface,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                ),
-                maxLines = 1
-            )
-            Spacer(GlanceModifier.height(4.dp))
-            Text(
-                text = "استمتع بيومك 🌿",
-                style = TextStyle(
-                    color = colors.onSurfaceVariant,
-                    fontSize = 11.sp,
-                    textAlign = TextAlign.Center
-                ),
-                maxLines = 1
-            )
-        }
-    }
+/**
+ * Cell → rows. A 4×2 launcher cell is ~140 dp of usable height, so two rows is
+ * the honest default; resizing the widget vertically reveals more tasks instead
+ * of clipping the list.
+ */
+private fun rowsForHeight(height: androidx.compose.ui.unit.Dp): Int = when {
+    height >= 200.dp -> 4
+    height >= 168.dp -> 3
+    else -> 2
 }
 
 private fun subtitle(state: TodayTasks): String {

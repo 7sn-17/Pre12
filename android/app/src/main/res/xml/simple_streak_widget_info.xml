@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ⭐⭐ Phase W2 — «سلسلة الأيام» provider metadata.
+
+  4×2 cell on the launcher grid, 250×130 dp minimum so the hero number and the
+  stats footer never fight for space. Vertical resize only adds breathing room;
+  the layout itself is fixed and readable at 2 rows.
+
+  Corner radius (24 dp) is applied by `GlassCard` in Kotlin — the only place a
+  widget background can be clipped correctly.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_simple_streak_description"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:minWidth="250dp"
+    android:minHeight="130dp"
+    android:minResizeWidth="180dp"
+    android:minResizeHeight="130dp"
+    android:maxResizeWidth="420dp"
+    android:maxResizeHeight="300dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:previewLayout="@layout/widget_simple_streak_preview"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="1800000"
+    android:widgetCategory="home_screen" />
