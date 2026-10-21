@@ -973,3 +973,51 @@ Production untouched: `releases/latest` is still **v4.6.7** and the Supabase
 **Not verifiable without hardware:** the rendered pixels (3×2 crop, 32 dp rings,
 1.3× font scale), whether a given launcher exposes a picker intent, and the
 real system pin dialog.
+
+---
+
+### Phase W9 Completion Log (2026-10-21) — the "perfection strike"
+
+**Goal:** the two things that made the app feel broken — a widget that ignored
+the tap, and a settings page frozen in an old cache — plus the remaining UI
+polish. Shipped as **v5.0.0-beta.5** (branch only, `main` untouched).
+
+#### The root causes (both were real, both were silent)
+
+| Symptom | Real cause | Fix |
+|---|---|---|
+| "Clicking a task in the widget does nothing until the phone restarts" | Glance 1.x keeps the composition alive in a session and `update()` only asks it to **recompose**. Our payload was read *before* `provideContent`, so the closure captured it forever — every redraw re-used the first payload. | Every widget now reads its payload **inside** the composition (`LocalContext.current`), so each recomposition sees the current prefs. |
+| "Clicking a task in the app does not update the widget" | The SPA shell (`app.js`) removes every window/document listener of the view it replaces — and `widgets.js` is an *external* script, so it is never executed again. The whole widget bridge died after the first navigation. | `widgets.js` re-binds itself through a `MutationObserver` (not a DOM listener, so the shell cannot remove it) and the binding is idempotent. |
+| "The settings page shows the old UI" | After an app update the WebView still holds the previous HTML in its HTTP cache, and the shell fetched pages cache-first. | `sw.js` fetches HTML with `cache: 'no-store'`, the shell does the same, and `CACHE_VERSION` moved to `v5.0.0-beta.5`. |
+
+#### What else landed
+
+- `ToggleTaskAction` now runs the exact sequence: **read prefs → mark the task →
+  save (`commit`) → `GlanceAppWidget.update()` → then** the broadcast and the
+  WorkManager upload.
+- **One premium button** in `index.html` (the six old tiles are gone) with the
+  helper text under it, and a light-mode skin (`#e8f5e9` / `#1b5e20`). The
+  standalone `src/settings.html` was deleted — it was a mistake.
+- `triggerAddWidget()`: picker → pin dialog → toast, never a network call.
+- Tasks card: the title is **centred** with a hairline under the header, and the
+  rows carry `defaultWeight()` so a short list fills the card instead of
+  leaving a dead gap.
+- Detailed streak: the seven days now show their **full Arabic names** under
+  32 dp rings in a 4 + 3 block that fills the right half.
+- Notes & goals: the **title** (15 sp bold) on the first line and the
+  **content** (13 sp) underneath, both cut with a real ellipsis in JS.
+- Deep links: the shell (`app.js`) now owns the Capacitor `pre12://` listener
+  and re-dispatches it as `medapp:deeplink`, also after an SPA swap; a new
+  `pre12://updates` target opens the update dialog.
+- The `medapp_updates` notification channel already existed in
+  `notifications.js` and is created on every start.
+
+**Verification:** compile check **`39614036094` → success**; release build
+**`39614639801` → success**. Prerelease `v5.0.0-beta.5` (tag on `07f110a`), APK
+**15,051,965 bytes**, SHA-256
+`fd746aac57b0e6b16c217a8e7e95bdd85044c4bf70257f8aca4517986e91013e`.
+Production untouched: `releases/latest` is still **v4.6.7**, Supabase
+`version.json` still reports 4.6.7.
+
+**Not verifiable without hardware:** the rendered pixels (the 3×2 crop, the
+32 dp rings, 1.3× font scale) and the real system pin dialog.
