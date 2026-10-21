@@ -208,22 +208,16 @@
   }
 
   /**
-   * ⭐⭐⭐ v4.6.5/v4.6.6 — ربط حقل البحث بطريقة «آمنة» لا تُخطئ أبداً.
+   * ⭐⭐⭐⭐ v4.6.7 — «الضربة النهائية»: ربط حقل البحث بدون أي مرشّح.
    *
-   *   المشكلة (عربية): مع لوحة المفاتيح العربية (IME) داخل WebView
-   *   قد لا يُطلق المتصفّح حدث 'input' أثناء التكوين، فيبدو أنّ
-   *   البحث لا يستجيب حتى يُحذف حرف (الحذف يُنهي التكوين فيُطلق
-   *   'input' من جديد).
+   *   القاعدة الذهبية: **لا نفحص** e.isComposing ولا inputType ولا
+   *   أي شرط آخر — ولا نؤجّل البحث خلف مؤقّت. نقرأ قيمة الحقل فوراً
+   *   ونبحث. هكذا ينفّذ البحث عند **كل حرف** (عربي أو إنجليزي).
    *
-   *   الحل (نهائي):
-   *   1) تدمير أي مستمعين سابقين على الحقل.
-   *   2) 'input' واحد **بلا أي شرط** — لا inputType ولا isComposing
-   *      ولا compositionstart (يغطّي insertText/deleteContentBackward
-   *      واللصق والتصحيح التلقائي).
-   *   3) 'compositionupdate' بنفس المعالج — هذا هو الحدث الذي يُطلقه
-   *      WebView فعلياً مع كل حرف أثناء التكوين العربي، فيصير البحث
-   *      حيّاً أثناء الكتابة (باستخدام القيمة الخام للحقل).
-   *   4) 'compositionend' — آخر الكلمة العربية بعد انتهاء التكوين.
+   *   الأحداث التي نربطها (كلها تستدعي نفس المعالج):
+   *     input · compositionupdate · compositionend · keyup
+   *   (لوحة المفاتيح العربية قد تحجب 'input' أثناء التكوين، وkeyup
+   *    يضمن الاستجابة مهما كان سلوك الـIME).
    *
    * @param {HTMLInputElement} input
    * @param {function} handler  (value, event) => void
@@ -231,10 +225,10 @@
   function bindSearchInput(input, handler) {
     if (!input || typeof handler !== 'function') return;
 
-    // ⭐ 1) تدمير كل المستمعين السابقين على هذا الحقل.
+    // ⭐ تدمير أي مستمعين سابقين على هذا الحقل.
     var previous = input.__medappSearchHandlers;
     if (previous) {
-      ['input', 'compositionend', 'compositionstart', 'compositionupdate', 'keyup', 'keydown', 'change', 'paste', 'cut', 'submit'].forEach(function (type) {
+      Object.keys(previous).forEach(function (type) {
         var fn = previous[type];
         if (!fn) return;
         try { input.removeEventListener(type, fn); } catch (e) {}
@@ -242,26 +236,25 @@
       input.__medappSearchHandlers = null;
     }
 
-    // ⭐ 2) المعالج الموحّد — بلا أي شرط على نوع الإدخال.
-    var onChange = function (event) {
+    // ⭐ المعالج: لا شروط، لا تأخير — القيمة الخام للحقل فوراً.
+    var handleSearchInput = function (event) {
       var value = event && event.target ? event.target.value : input.value;
       if ((value === undefined || value === null || value === '') && event && event.data) {
-        // ⭐ بعض إصدارات WebView تُرسل نصّ التكوين وحده.
         value = event.data;
       }
       handler(String(value === undefined || value === null ? '' : value), event);
     };
 
-    input.__medappSearchHandlers = {
-      input: onChange,
-      compositionupdate: onChange,
-      compositionend: onChange
+    var handlers = {
+      input: handleSearchInput,
+      compositionupdate: handleSearchInput,
+      compositionend: handleSearchInput,
+      keyup: handleSearchInput
     };
-    input.addEventListener('input', onChange);
-    // ⭐ 3)Compositionupdate — حدث كل حرف أثناء التكوين العربي.
-    input.addEventListener('compositionupdate', onChange);
-    // ⭐ 4)Compositionend — آخر الكلمة العربية.
-    input.addEventListener('compositionend', onChange);
+    input.__medappSearchHandlers = handlers;
+    Object.keys(handlers).forEach(function (type) {
+      input.addEventListener(type, handlers[type]);
+    });
   }
 
   global.MedAppSearch = {

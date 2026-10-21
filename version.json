@@ -1,5 +1,5 @@
 {
-  "latest_version": "4.6.6",
+  "latest_version": "4.6.7",
   "download_url": "https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk",
-  "changelog": "بحث عربي حيّ: مع لوحة المفاتيح العربية (IME) داخل الـWebView قد يُحجب حدث 'input' أثناء التكوين — صار البحث يستجيب عبر 'compositionupdate' (كل حرف) و'compositionend' بلا أي شرط على inputType أو isComposing.\nقفز PDF موثوق: إغلاق النافذة ← إجبار العارض على الصفحة الهدف ← انتظار رسمها ← التمرير إلى الموضع Y الدقيق بـ scrollIntoView.\nتظليل واضح: صندوق أحمر برتقالي (rgba(255,100,100,0.6)) داخل حاوية الصفحة مع z-index:10 فوق الـcanvas.\nعارض PDF محسّن: شريط أزرار عائم قابل للسحب (ضغط مطوّل + سحب) يُحفظ موضعه بين الجلسات، وتكبير باللمس (pinch) مع سحب المحتوى عند التكبير — عبر CSS transform على المسرح."
+  "changelog": "بحث عربي فوري: حُذف منطق الربط القديم بالكامل؛ صار الربط على 'input' + 'compositionupdate' + 'compositionend' + 'keyup' مع البحث الفوري بلا مؤقّت ولا شرط isComposing/inputType — فينفّذ البحث عند كل حرف.\nقفز دقيق رغم الـvirtualization: ننتظر ظهور عنصر النصّ فعلياً في الـDOM ثم نمرّر إلى موضعه بالإزاحة الصحيحة (‏-100px).\nتظليل أصفر ساطع: rgba(255,235,59,0.8) بـ z-index 999 فوق الـcanvas.\nزرّ نسخ: يظهر عند تحديد النصّ داخل الملف، ينسخ إلى الحافظة ويعرض «تم النسخ»."
 }

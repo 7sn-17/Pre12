@@ -3,7 +3,7 @@
 // Version 4.1.0 — SPA shell + network-first HTML + cache-first JSON
 // ============================================
 
-const CACHE_VERSION = 'v4.6.6';
+const CACHE_VERSION = 'v4.6.7';
 const STATIC_CACHE  = `medfav-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `medfav-runtime-${CACHE_VERSION}`;
 const PDF_CACHE     = `medfav-pdf-${CACHE_VERSION}`;
@@ -49,7 +49,7 @@ const PRECACHE_URLS = [
   '/ui.js',
   '/search.js',
   '/app.js',
-  '/app.js?v=4.6.6',
+  '/app.js?v=4.6.7',
   '/streak.js',
   '/native.js',
   '/notifications.js',

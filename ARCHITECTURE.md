@@ -98,7 +98,7 @@
 - A small shell `<style data-shell>` adds View Transitions rules, global
   smooth scrolling, the top navigation loader and light-theme header/shadow
   polish.
-- `<script src="app.js?v=4.6.6">` is injected on SPA pages only.
+- `<script src="app.js?v=4.6.7">` is injected on SPA pages only.
 - SPA navigation gets a short (~0.2 s) cross-fade in browsers that support the
   View Transitions API. Full page loads are unchanged. The fixed bottom nav and
   the sticky header are frozen and never move, fade or show a ghost shadow.
@@ -259,7 +259,7 @@ Requirements: **Node.js ≥ 18**. `acorn` is a production dependency, so
 6. Expands `{{#if key}}…{{/if}}` and `{{#unless key}}…{{/unless}}`.
 7. Replaces `{{token}}` with values (unknown tokens become empty).
 8. **On SPA pages only:** injects
-   `<script src="app.js?v=4.6.6"></script>` before the first inline body
+   `<script src="app.js?v=4.6.7"></script>` before the first inline body
    script and rewrites top-level `const`/`let`/`class` to `var`.
 9. Writes the finished HTML to **`./<page>.html`** and **`dist/<page>.html`**
    (identical copies).
@@ -347,7 +347,7 @@ headerTitle: صفحة جديدة
   - scripts with `src` (external libraries — loaded once, never re-run);
   - scripts with `data-shell` (shell code — initial load only);
   - non-JavaScript data blocks (`application/json`, etc.).
-- It inserts `<script src="app.js?v=4.6.6"></script>` before the **first**
+- It inserts `<script src="app.js?v=4.6.7"></script>` before the **first**
   inline body script.
 - It rewrites **Program-level only**:
   - `const x = …` → `var x = …`

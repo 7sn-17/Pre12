@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#f8fafb">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="4.6.6">
+<meta name="app-version" content="4.6.7">
 <title>معاينة الملف — المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -1444,7 +1444,34 @@ body {
   cursor: text;
   transform-origin: 0% 0%;
   pointer-events: auto;
+  /* ⭐⭐ v4.6.7 — TASK 3: تفعيل تحديد/نسخ النصّ داخل الـPDF */
+  user-select: text;
+  -webkit-user-select: text;
 }
+
+/* ⭐⭐ v4.6.7 — TASK 3: زرّ «نسخ» العائم (يظهر عند التحديد فقط) */
+.pdf-copy-btn {
+  position: fixed;
+  z-index: 130;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong, rgba(16, 185, 129, 0.4));
+  background: var(--bg-overlay, rgba(10, 26, 20, 0.96));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: var(--text-primary, #f0fdf4);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 14px 34px -14px rgba(0, 0, 0, 0.7);
+}
+
+.pdf-copy-btn.show { display: inline-flex; }
+.pdf-copy-btn svg { width: 15px; height: 15px; }
 
 .pdf-page .text-layer span::selection {
   background: rgba(16, 185, 129, 0.4);
@@ -1607,8 +1634,8 @@ body.single-page .pdf-page.current { margin-bottom: 0; }
 
 .pdf-highlight-box {
   position: absolute;
-  background-color: rgba(255, 100, 100, 0.6);
-  z-index: 10;
+  background-color: rgba(255, 235, 59, 0.8);
+  z-index: 999;
   pointer-events: none;
   mix-blend-mode: multiply;
   border-radius: 4px;
@@ -1632,19 +1659,19 @@ body.single-page .pdf-page.current { margin-bottom: 0; }
 }
 
 .pdf-page .text-layer span.hit {
-  background-color: rgba(255, 235, 59, 0.6);
+  background-color: rgba(255, 235, 59, 0.8);
   background-image: none;
-  z-index: 9999;
+  z-index: 999;
   pointer-events: none;
   mix-blend-mode: multiply;
   border-radius: 3px;
-  box-shadow: 0 0 0 1px rgba(202, 138, 4, 0.65);
+  box-shadow: 0 0 0 1px rgba(202, 138, 4, 0.7);
 }
 
 .pdf-page .text-layer span.current {
-  background-color: rgba(255, 235, 59, 0.6);
+  background-color: rgba(255, 235, 59, 0.8);
   background-image: none;
-  z-index: 10000;
+  z-index: 999;
   pointer-events: none;
   mix-blend-mode: multiply;
   border-radius: 3px;
@@ -2041,6 +2068,14 @@ main.viewer {
   </div>
 </main>
 
+<!-- ⭐⭐ v4.6.7: زرّ نسخ النصّ المحدد -->
+<button class="pdf-copy-btn" id="pdfCopyBtn" type="button">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+  </svg>
+  <span>نسخ</span>
+</button>
+
 <!-- ⭐ v4.6.2: شريط أزرار عائم -->
 <div class="fab-bar" id="fabBar">
   <button class="fab-btn" id="zoomInBtn" title="تكبير">
@@ -2112,7 +2147,7 @@ main.viewer {
 <script src="notifications.js"></script>
 
 
-<script src="app.js?v=4.6.6"></script>
+<script src="app.js?v=4.6.7"></script>
 <script>
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -2165,6 +2200,7 @@ var els = {
   headerPagePill:$('headerPagePill'),
   stage:         $('pdfStage'),
   fabBar:        $('fabBar'),
+  copyBtn:       $('pdfCopyBtn'),
   zoomInBtn:     $('zoomInBtn'),
   zoomOutBtn:    $('zoomOutBtn'),
   pageModeBtn:   $('pageModeBtn'),
@@ -3029,21 +3065,30 @@ async function jumpToMatch(match) {
     el.scrollIntoView({ behavior: 'auto', block: 'start' });
   }
 
-  // ⭐ STEP 3: انتظار رسم الصفحة (قد تكون حُرّرت من الذاكرة).
+  // ⭐ STEP 3: انتظار رسم الصفحة + ظهور عنصر النصّ (المشكلة: الت	virtualization
+  //   يحذف محتوى الصفحات البعيدة، فننتظر ظهور العنصر فعلياً).
   await ensurePageRendered(pageNum);
-  await new Promise(function (resolve) {
-    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(function () { resolve(); });
-    else setTimeout(resolve, 16);
-  });
+  var span = await waitForTextElement(pageNum, match.itemIdx, 3000);
 
-  // ⭐ STEP 4: إيجاد عنصر النصّ المطابق (المسافة Y الدقيقة).
   el = document.querySelector('.pdf-page[data-page-num="' + pageNum + '"]');
   if (!el) return;
-  var span = el.querySelector('.text-layer span[data-idx="' + match.itemIdx + '"]');
 
-  // ⭐ STEP 5: التمرير إلى الموضع الدقيق.
-  if (span && typeof span.scrollIntoView === 'function') {
-    span.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  // ⭐ STEP 4: التمرير إلى الموضع الدقيق (إزاحة 100px لأعلى centré).
+  if (span) {
+    var viewerRect = els.viewer.getBoundingClientRect();
+    var spanRect = span.getBoundingClientRect();
+    var targetTop = els.viewer.scrollTop + (spanRect.top - viewerRect.top) - 100;
+    if (typeof els.viewer.scrollTo === 'function') {
+      els.viewer.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+    }
+    if (typeof span.scrollIntoView === 'function') {
+      span.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    // ⭐ احتياط: إن كان التمرير على النافذة itself.
+    var doc = document.scrollingElement || document.documentElement;
+    if (doc && doc.scrollHeight > els.viewer.scrollHeight + 4) {
+      window.scrollTo({ top: Math.max(0, spanRect.top + window.scrollY - 100), behavior: 'smooth' });
+    }
   } else {
     // ⭐ احتياط: الصفحة نفسها (لم يُبنَ طبقة النصّ).
     el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -3058,6 +3103,78 @@ async function jumpToMatch(match) {
     clearTimeout(hudTimer);
     hudTimer = setTimeout(() => els.pageHud.classList.remove('show'), 1400);
   }
+}
+
+/* ═══════════════════════════════════════════════════════
+   ⭐⭐⭐ v4.6.7 — TASK 3: زرّ «نسخ» الذي يظهر عند تحديد النصّ
+   ═══════════════════════════════════════════════════════ */
+function initCopyButton() {
+  const btn = els.copyBtn;
+  if (!btn) return;
+
+  function hideCopyButton() {
+    btn.classList.remove('show');
+  }
+
+  function syncCopyButton() {
+    const sel = window.getSelection ? window.getSelection() : null;
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) { hideCopyButton(); return; }
+    const text = sel.toString();
+    if (!text || !text.trim()) { hideCopyButton(); return; }
+
+    let rect = null;
+    try { rect = sel.getRangeAt(0).getBoundingClientRect(); } catch (e) { rect = null; }
+    if (!rect || (!rect.width && !rect.height)) { hideCopyButton(); return; }
+
+    const top = Math.max(8, rect.top - 48);
+    const left = Math.min(
+      Math.max(8, window.innerWidth - 96),
+      Math.max(8, rect.left + rect.width / 2 - 34)
+    );
+    btn.style.top = top + 'px';
+    btn.style.left = left + 'px';
+    btn.dataset.text = text;
+    btn.classList.add('show');
+  }
+
+  document.addEventListener('selectionchange', syncCopyButton);
+  if (els.viewer) {
+    els.viewer.addEventListener('mouseup', function () { setTimeout(syncCopyButton, 10); });
+    els.viewer.addEventListener('touchend', function () { setTimeout(syncCopyButton, 10); });
+  }
+
+  btn.addEventListener('click', function () {
+    const text = btn.dataset.text || '';
+    if (!text) { hideCopyButton(); return; }
+    const done = function () {
+      showToast('تم النسخ', 'success');
+      hideCopyButton();
+      try {
+        const sel = window.getSelection && window.getSelection();
+        if (sel && sel.removeAllRanges) sel.removeAllRanges();
+      } catch (e) {}
+    };
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        Promise.resolve(navigator.clipboard.writeText(text)).then(done, function () {
+          showToast('تعذّر النسخ', 'error');
+        });
+        return;
+      }
+      // ⭐ احتياط للمتصفّحات القديمة
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+      done();
+    } catch (e) {
+      showToast('تعذّر النسخ', 'error');
+    }
+  });
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -3286,6 +3403,26 @@ function bindFabDrag() {
   }, true);
 }
 
+/**
+ * ⭐⭐⭐ v4.6.7 — ننتظر ظهور عنصر النصّ في الـDOM.
+ *   (الصفحات مُvirtualized: قد يكون محتواها حُذف، فنستدعيه وننتظر.)
+ */
+function waitForTextElement(pageNum, itemIdx, timeoutMs) {
+  return new Promise(function (resolve) {
+    const started = Date.now();
+    const limit = timeoutMs || 3000;
+    function check() {
+      const el = document.querySelector('.pdf-page[data-page-num="' + pageNum + '"]');
+      const span = el ? el.querySelector('.text-layer span[data-idx="' + itemIdx + '"]') : null;
+      if (span) { resolve(span); return; }
+      if (Date.now() - started > limit) { resolve(null); return; }
+      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(check);
+      else setTimeout(check, 60);
+    }
+    check();
+  });
+}
+
 /** ⭐ تظليل كل مطابقات الصفحة + المطابقة الحالية بلون أقوى */
 function highlightMatch(match) {
   document.querySelectorAll('.text-layer span.hit, .text-layer span.current')
@@ -3325,8 +3462,9 @@ function highlightMatch(match) {
   box.style.top = (spanRect.top - pageRect.top - 2) + 'px';
   box.style.width = (spanRect.width + 4) + 'px';
   box.style.height = (spanRect.height + 4) + 'px';
-  box.style.backgroundColor = 'rgba(255, 100, 100, 0.6)';
-  box.style.zIndex = '10';
+  // ⭐ v4.6.7 — أصفر ساطع + z-index 999 (فوق الـcanvas وطبقة النصّ)
+  box.style.backgroundColor = 'rgba(255, 235, 59, 0.8)';
+  box.style.zIndex = '999';
   box.style.pointerEvents = 'none';
   box.style.borderRadius = '4px';
   box.style.boxShadow = '0 0 0 2px rgba(255, 80, 80, 0.85)';
@@ -3529,6 +3667,8 @@ async function init() {
     bindStageGestures();
     bindFabDrag();
     restoreFabPosition();
+    // ⭐ v4.6.7 — TASK 3: زرّ النسخ
+    initCopyButton();
 
     // ⭐ v4.6.2 — الفهرسة الكاملة في الخلفية (بحث فوري من أول حرف)
     setTimeout(() => { buildSearchIndex(); }, 400);
@@ -3575,44 +3715,24 @@ function bindViewerSearchInput() {
   const input = els.searchInput;
   if (!input) return;
 
+  // ⭐⭐⭐ v4.6.7 — البحث فوراً عند كل حرف: لا مؤقّت ولا شرط.
   const engine = window.MedAppSearch;
   if (engine && typeof engine.bindSearchInput === 'function') {
     engine.bindSearchInput(input, (value) => {
-      if (searchTimeout) {
-        clearTimeout(searchTimeout);
-        searchTimeout = null;
-      }
-      if (!String(value || '').trim()) {
-        searchDocument('');
-        return;
-      }
-      // ⭐ تأخير 250ms ثم البحث — ينفّذ من أول حرف بلا Enter.
-      searchTimeout = setTimeout(() => {
-        searchTimeout = null;
-        performSearch(value);
-      }, 250);
+      performSearch(value);
     });
     return;
   }
 
   // ⭐ احتياط: نفس السلوك بدون المحرّك.
   const onChange = (event) => {
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-      searchTimeout = null;
-    }
     const value = event.target.value;
-    if (!String(value || '').trim()) {
-      searchDocument('');
-      return;
-    }
-    searchTimeout = setTimeout(() => {
-      searchTimeout = null;
-      performSearch(value);
-    }, 250);
+    performSearch(value);
   };
   input.addEventListener('input', onChange);
+  input.addEventListener('compositionupdate', onChange);
   input.addEventListener('compositionend', onChange);
+  input.addEventListener('keyup', onChange);
 }
 
 bindViewerSearchInput();

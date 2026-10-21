@@ -2,7 +2,20 @@
 
 **التطبيق الرسمي لطلاب الطب في سوريا**
 
-⬇️ [تحميل v4.6.6](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+⬇️ [تحميل v4.6.7](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+
+## ✨ v4.6.7 — بحث عربي فوري + قفز دقيق + زرّ نسخ
+
+- **بحث عربي فوري**: حُذف منطق الربط القديم بالكامل؛ صار الربط على
+  'input' + 'compositionupdate' + 'compositionend' + 'keyup' مع البحث
+  الفوري بلا مؤقّت ولا شرط isComposing/inputType — فينفّذ البحث عند
+  **كل حرف**.
+- **قفز دقيق رغم الـvirtualization**: ننتظر ظهور عنصر النصّ فعلياً في
+  الـDOM ثم نمرّر إلى موضعه بالإزاحة الصحيحة (‏-100px).
+- **تظليل أصفر ساطع**: rgba(255,235,59,0.8) بـ z-index 999 فوق الـcanvas.
+- **زرّ نسخ**: يظهر عند تحديد النصّ داخل الملف، ينسخ إلى الحافظة ويعرض
+  «تم النسخ».
+- **الإصدار**: 4.6.7 (‏versionCode 37).
 
 ## ✨ v4.6.6 — الضربة الأخيرة للبحث (عربي + PDF)
 
