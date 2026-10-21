@@ -1358,3 +1358,60 @@ belongs to the album owner.
 - CI: the compile check **39670174907** (with the new unit tests) ✅ and the
   release build ✅ · local suites: 38 + 16 + 14 = **68 assertions green** ·
   43 inline scripts syntax-checked ✅.
+
+---
+
+### Phase W17 Completion Log (2026-10-22) — **v5.0.9** (the profile trigger)
+
+**Release:** `v5.0.9` (versionCode 48) — GitHub **Latest**, live on Supabase
+Storage, `version.json` = 5.0.9. APK **15,089,759 bytes**, SHA-256
+`a0dc688e06a8235283ef84c754df7c308c3aa61f533bd0712e7f914a9955c289`
+(re-downloaded and re-hashed independently ✓).
+
+#### What the MCP inspection found (the real root cause)
+| Check | Result |
+|---|---|
+| `pg_trigger` on `auth.users` | **EMPTY** — no trigger at all |
+| `public.handle_new_user()` | **present and correct** (full_name/name + avatar_url/picture) — it was simply never called |
+| `auth.users` vs `profiles` | 3 users · **1 profile** → two users (Google) had no profile row |
+| `pg_policies` on `profiles` | SELECT + UPDATE only — **no INSERT** ⇒ a client-side upsert was rejected by RLS |
+| `relforcerowsecurity` | false ⇒ the `SECURITY DEFINER` trigger bypasses RLS ✓ |
+
+⇒ The chain was: *no trigger* → *no profile row* → the UI fell back to
+`email.split('@')[0]` (the "hnt317601" name) and to the initial letter (no
+avatar) → and the name could not be saved because there was no row to save it in.
+
+#### The fixes
+1. **The trigger** (recreated, with a guard so a failure can never break the
+   signup) + the `profiles` INSERT/DELETE policies for the user's own row
+   (`with check auth.uid() = id and role = 'student'` ⇒ no self-promotion) +
+   a **backfill** of the two orphan users.
+2. **The client is the second line of defence**: `ensureProfileRow()` upserts
+   the row from the session metadata whenever it is missing or unnamed — in
+   `loadUser()` on every page and in `runFullUserSync()`.
+3. **The name no longer reverts**: Google rewrites `raw_user_meta_data` on
+   every sign-in, and the avatar sync used to copy that provider name over the
+   user's own. Now the avatar sync never writes a name, `ensureProfileRow`
+   only fills an empty one, and the trigger's conflict path keeps the existing
+   name (`coalesce(nullif(profiles.full_name,''), excluded.full_name)`).
+4. **One avatar chain everywhere**: `profiles.avatar_url` → the session
+   metadata (`avatar_url`/`picture`) → the initial letter — in the settings
+   card, the notes (the shared authors' avatars are fetched once), the admin
+   user list, the progress list and the admin's student page.
+5. **Album request notifications**: the `albumRequest` scenario in the shared
+   brain (the exact payload «📸 طلب جديد: يريد {الاسم} إضافة صورة إلى ألبومك
+   '{الألبوم}'.» → `my-lectures.html?album=<id>`) + a real **database webhook**
+   (a trigger on `album_requests` → `pg_net` → the engine, the secret from the
+   Vault) ⇒ the owner is notified in **seconds**, not at the next 30-minute run.
+
+#### Verified live (MCP)
+- A simulated `auth.users` insert created the profile with the Google name and
+  picture (inside a transaction, then rolled back — nothing left behind).
+- The webhook fired: `net._http_response` → `200 {"ok":true,"sent":1,…}` and the
+  `notification_log` row with the exact body and the album target ✓ (the test
+  rows were deleted afterwards).
+- `auth.users` 3 · `profiles` 3 · the trigger, the policies and the RLS flags
+  re-read after the migration ✓.
+- CI: the compile check **39677737022** ✅ and the release build ✅ · local
+  suites: 47 + 10 + 14 + 16 = **87 assertions green** · 31 inline scripts
+  syntax-checked ✅.
