@@ -64,11 +64,11 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="3dp"
                 android:layout_weight="1"
-                android:fontFamily="@font/tajawal_regular"
+                android:fontFamily="@font/tajawal_bold"
                 android:maxLines="1"
                 android:text="@string/widget_preview_goal_1"
                 android:textColor="#FF1E293B"
-                android:textSize="14sp" />
+                android:textSize="15sp" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -143,11 +143,11 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="3dp"
                 android:layout_weight="1"
-                android:fontFamily="@font/tajawal_regular"
+                android:fontFamily="@font/tajawal_bold"
                 android:maxLines="1"
                 android:text="@string/widget_preview_note_2"
                 android:textColor="#FF1E293B"
-                android:textSize="14sp" />
+                android:textSize="15sp" />
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>

@@ -56,10 +56,10 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="3dp"
             android:layout_weight="1"
-            android:fontFamily="@font/tajawal_regular"
+            android:fontFamily="@font/tajawal_bold"
             android:text="@string/widget_preview_goal_1"
             android:textColor="#FF1E293B"
-            android:textSize="14sp" />
+            android:textSize="15sp" />
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -90,10 +90,10 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="3dp"
             android:layout_weight="1"
-            android:fontFamily="@font/tajawal_regular"
+            android:fontFamily="@font/tajawal_bold"
             android:text="@string/widget_preview_goal_2"
             android:textColor="#FF1E293B"
-            android:textSize="14sp" />
+            android:textSize="15sp" />
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -124,10 +124,10 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="3dp"
             android:layout_weight="1"
-            android:fontFamily="@font/tajawal_regular"
+            android:fontFamily="@font/tajawal_bold"
             android:text="@string/widget_preview_goal_3"
             android:textColor="#FF1E293B"
-            android:textSize="14sp" />
+            android:textSize="15sp" />
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
