@@ -50,6 +50,7 @@ const PRECACHE_URLS = [
   '/search.js',
   '/app.js',
   '/app.js?v=4.6.7',
+  '/widgets.js',
   '/streak.js',
   '/native.js',
   '/notifications.js',

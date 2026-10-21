@@ -3,7 +3,7 @@ title: أهدافي - المنصة الطبية
 libs: supabase, lucide
 themeInit: false
 snippets: themeDark
-scripts: supabase-config, auth, native, notifications
+scripts: supabase-config, auth, streak, native, notifications, widgets
 sw: true
 backHref: index.html
 headerTitle: أهدافي
@@ -930,6 +930,12 @@ headerTitle: أهدافي
       } catch (err) {
         console.error('saveGoals error:', err);
       }
+      // ⭐⭐ Phase W2 — حدّث ودجت «ملاحظاتي وأهدافي» بعد كل تغيير.
+      try {
+        if (window.MedAppWidgets && typeof window.MedAppWidgets.refresh === 'function') {
+          window.MedAppWidgets.refresh('goals');
+        }
+      } catch (e) {}
     }
 
     // ============================================

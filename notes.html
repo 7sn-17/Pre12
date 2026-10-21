@@ -2611,8 +2611,10 @@ header {
 <script src="auth.js"></script>
 <script src="db.js"></script>
 <script src="sync.js"></script>
+<script src="streak.js"></script>
 <script src="native.js"></script>
 <script src="notifications.js"></script>
+<script src="widgets.js"></script>
 
 
   <script src="app.js?v=4.6.7"></script>
@@ -2654,6 +2656,12 @@ header {
     function saveToStorage(key, data) {
       try {
         localStorage.setItem(key, JSON.stringify(data));
+        // ⭐⭐ Phase W2 — ودجت الملاحظات يقرأ هذه المفاتيح مباشرة.
+        try {
+          if (window.MedAppWidgets && typeof window.MedAppWidgets.refresh === 'function') {
+            window.MedAppWidgets.refresh('notes');
+          }
+        } catch (e) {}
         return true;
       } catch (err) {
         console.error('saveToStorage error:', err);

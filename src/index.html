@@ -2,7 +2,7 @@
 title: السنة التحضيرية - المنصة الطبية
 libs: fontawesome-jsdelivr, supabase, lucide
 snippets: onboardingRedirect
-scripts: supabase-config, auth, db, files, sync, streak, native, notifications
+scripts: supabase-config, auth, db, files, sync, streak, native, notifications, widgets
 sw: true
 -->
 <!DOCTYPE html>
@@ -41,9 +41,22 @@ sw: true
       --card-shadow-hover: 0 10px 26px -14px rgba(2, 18, 13, 0.48);
       --card-shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.05);
       --particle-glow: rgba(16, 185, 129, 0.45);
+
+      /* ⭐⭐ Phase W2 — ودجات الشاشة الرئيسية (معاينات مصغّرة) */
+      --wp-surface: linear-gradient(150deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.012));
+      --wp-border: rgba(255, 255, 255, 0.085);
+      --wp-strong: rgba(255, 255, 255, 0.42);
+      --wp-soft: rgba(255, 255, 255, 0.24);
+      --wp-faint: rgba(255, 255, 255, 0.10);
     }
 
     [data-theme="light"] {
+      --wp-surface: linear-gradient(150deg, #ffffff, #eaf6f0);
+      --wp-border: rgba(6, 78, 59, 0.10);
+      --wp-strong: rgba(6, 78, 59, 0.42);
+      --wp-soft: rgba(6, 78, 59, 0.22);
+      --wp-faint: rgba(6, 78, 59, 0.10);
+
       --bg-main: #f8fafb;
       --bg-card: rgba(255, 255, 255, 0.85);
       --bg-card-hover: rgba(255, 255, 255, 0.95);
@@ -3561,6 +3574,233 @@ i.fab {
 
     .settings-item:hover .settings-arrow { color: var(--accent-light); transform: translateX(-4px); }
 
+    /* ⭐⭐ Phase W2 — الشاشة الرئيسية: اكتشاف الودجات */
+    .widget-hero {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 15px;
+      margin-bottom: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-lg);
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.13), rgba(16, 185, 129, 0.015));
+    }
+
+    .widget-hero-glow {
+      position: absolute;
+      inset-inline-start: -34px;
+      top: -46px;
+      width: 128px;
+      height: 128px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--accent-glow-strong), transparent 70%);
+      pointer-events: none;
+    }
+
+    .widget-hero-icon {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      flex-shrink: 0;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
+      color: #fff;
+      box-shadow: 0 10px 22px -10px var(--accent-glow-strong);
+    }
+
+    .widget-hero-icon i { width: 21px; height: 21px; }
+
+    .widget-hero-copy { position: relative; min-width: 0; }
+
+    .widget-hero-copy h4 {
+      margin: 0 0 3px;
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+
+    .widget-hero-copy p {
+      margin: 0;
+      font-size: 0.71rem;
+      line-height: 1.55;
+      color: var(--text-secondary);
+    }
+
+    .widget-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .widget-tile {
+      -webkit-appearance: none;
+      appearance: none;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      width: 100%;
+      margin: 0;
+      padding: 11px;
+      border: 1px solid var(--border-card);
+      border-radius: 16px;
+      background: var(--bg-card);
+      color: inherit;
+      font-family: inherit;
+      text-align: start;
+      cursor: pointer;
+      transition: transform var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
+    }
+
+    .widget-tile:hover { border-color: var(--border-card-hover); background: var(--bg-card-hover); }
+    .widget-tile:active { transform: scale(0.975); }
+    .widget-tile:focus-visible { outline: 2px solid var(--accent-emerald); outline-offset: 2px; }
+
+    .widget-tile-preview {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-height: 64px;
+      padding: 9px;
+      border: 1px solid var(--wp-border);
+      border-radius: 11px;
+      background: var(--wp-surface);
+    }
+
+    .widget-tile-preview.preview-streak { flex-direction: row; align-items: center; gap: 9px; }
+
+    .pt-head, .pd-head, .pn-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .pt-title, .pd-title, .pn-head > span:last-child {
+      flex: 1;
+      height: 5px;
+      border-radius: 3px;
+      background: var(--wp-strong);
+    }
+
+    .pt-chip, .pd-chip {
+      width: 18px;
+      height: 7px;
+      border-radius: 4px;
+      background: var(--accent-emerald);
+      opacity: 0.85;
+    }
+
+    .pt-bar {
+      display: block;
+      height: 3px;
+      border-radius: 2px;
+      background: var(--wp-faint);
+      overflow: hidden;
+    }
+
+    .pt-bar > span {
+      display: block;
+      width: 42%;
+      height: 100%;
+      border-radius: 2px;
+      background: var(--accent-emerald);
+    }
+
+    .pt-row, .pn-row { display: flex; align-items: center; gap: 6px; }
+
+    .pt-dot {
+      width: 9px;
+      height: 9px;
+      flex-shrink: 0;
+      border: 1.5px solid var(--wp-strong);
+      border-radius: 50%;
+    }
+
+    .pt-dot.done { border-color: var(--accent-emerald); background: var(--accent-emerald); }
+
+    .pt-line { flex: 1; height: 4px; border-radius: 2px; background: var(--wp-soft); }
+    .pt-line.short { max-width: 60%; }
+
+    .ps-flame {
+      display: grid;
+      place-items: center;
+      width: 32px;
+      height: 32px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background: rgba(16, 185, 129, 0.16);
+      color: var(--accent-light);
+    }
+
+    .ps-flame i { width: 17px; height: 17px; }
+    .ps-copy { display: flex; flex-direction: column; gap: 1px; }
+
+    .ps-number {
+      font-size: 1.3rem;
+      font-weight: 900;
+      line-height: 1;
+      color: var(--text-primary);
+    }
+
+    .ps-label { font-size: 0.55rem; color: var(--text-secondary); }
+
+    .pd-days { display: flex; justify-content: space-between; gap: 2px; }
+
+    .pd-day { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+
+    .pd-day b { font-size: 0.42rem; font-weight: 600; color: var(--text-muted); }
+
+    .pd-dot {
+      width: 7px;
+      height: 7px;
+      border: 1px solid var(--wp-strong);
+      border-radius: 50%;
+    }
+
+    .pd-dot.done { border-color: var(--accent-emerald); background: var(--accent-emerald); }
+    .pd-dot.today { border: 2px solid var(--accent-emerald); }
+
+    .pn-head i, .pn-row i { width: 9px; height: 9px; flex-shrink: 0; color: var(--accent-light); }
+    .pn-row span { flex: 1; height: 4px; border-radius: 2px; background: var(--wp-soft); }
+    .pn-row span.short { max-width: 58%; }
+
+    .widget-tile-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .widget-tile-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .widget-tile-add {
+      display: grid;
+      place-items: center;
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      background: rgba(16, 185, 129, 0.16);
+      color: var(--accent-light);
+    }
+
+    .widget-tile-add i { width: 13px; height: 13px; }
+
+    .widget-hint {
+      margin: 10px 2px 0;
+      font-size: 0.67rem;
+      line-height: 1.6;
+      color: var(--text-muted);
+    }
+
     /* Toggle Switch */
     .toggle-switch {
       position: relative;
@@ -5279,7 +5519,88 @@ i.fab {
     </div>
   </div>
 
-  <!-- ⭐⭐ 5) منطقة الخطر -->
+  <!-- ⭐⭐ 5) الشاشة الرئيسية — ودجات (Phase W2) -->
+  <div class="settings-group" id="homeWidgetsGroup" style="display: none;">
+    <div class="settings-group-title">
+      <i data-lucide="layout-dashboard"></i>
+      <span>الشاشة الرئيسية</span>
+    </div>
+
+    <div class="widget-hero">
+      <span class="widget-hero-glow" aria-hidden="true"></span>
+      <div class="widget-hero-icon"><i data-lucide="grip"></i></div>
+      <div class="widget-hero-copy">
+        <h4>إضافة ودجت للشاشة الرئيسية</h4>
+        <p>تابع مهامك وسلسلتك وملاحظاتك دون فتح التطبيق</p>
+      </div>
+    </div>
+
+    <div class="widget-grid">
+      <button type="button" class="widget-tile" data-widget="tasks" onclick="addHomeWidget('tasks')">
+        <span class="widget-tile-preview preview-tasks" aria-hidden="true">
+          <span class="pt-head"><span class="pt-title"></span><span class="pt-chip"></span></span>
+          <span class="pt-bar"><span></span></span>
+          <span class="pt-row"><span class="pt-dot done"></span><span class="pt-line"></span></span>
+          <span class="pt-row"><span class="pt-dot"></span><span class="pt-line short"></span></span>
+        </span>
+        <span class="widget-tile-foot">
+          <span class="widget-tile-label">مهام اليوم</span>
+          <span class="widget-tile-add"><i data-lucide="plus"></i></span>
+        </span>
+      </button>
+
+      <button type="button" class="widget-tile" data-widget="streak" onclick="addHomeWidget('streak')">
+        <span class="widget-tile-preview preview-streak" aria-hidden="true">
+          <span class="ps-flame"><i data-lucide="flame"></i></span>
+          <span class="ps-copy">
+            <span class="ps-number">12</span>
+            <span class="ps-label">يوم متتالي</span>
+          </span>
+        </span>
+        <span class="widget-tile-foot">
+          <span class="widget-tile-label">سلسلة الأيام</span>
+          <span class="widget-tile-add"><i data-lucide="plus"></i></span>
+        </span>
+      </button>
+
+      <button type="button" class="widget-tile" data-widget="streak_detail" onclick="addHomeWidget('streak_detail')">
+        <span class="widget-tile-preview preview-detail" aria-hidden="true">
+          <span class="pd-head"><span class="pd-title"></span><span class="pd-chip"></span></span>
+          <span class="pd-days">
+            <span class="pd-day"><b>س</b><span class="pd-dot done"></span></span>
+            <span class="pd-day"><b>ح</b><span class="pd-dot done"></span></span>
+            <span class="pd-day"><b>ن</b><span class="pd-dot"></span></span>
+            <span class="pd-day"><b>ث</b><span class="pd-dot today"></span></span>
+            <span class="pd-day"><b>ر</b><span class="pd-dot"></span></span>
+            <span class="pd-day"><b>خ</b><span class="pd-dot done"></span></span>
+            <span class="pd-day"><b>ج</b><span class="pd-dot done"></span></span>
+          </span>
+        </span>
+        <span class="widget-tile-foot">
+          <span class="widget-tile-label">سلسلة · أسبوعي</span>
+          <span class="widget-tile-add"><i data-lucide="plus"></i></span>
+        </span>
+      </button>
+
+      <button type="button" class="widget-tile" data-widget="notes" onclick="addHomeWidget('notes')">
+        <span class="widget-tile-preview preview-notes" aria-hidden="true">
+          <span class="pn-head"><i data-lucide="pin"></i><span></span></span>
+          <span class="pn-row"><i data-lucide="pin"></i><span></span></span>
+          <span class="pn-row"><i data-lucide="pin"></i><span class="short"></span></span>
+        </span>
+        <span class="widget-tile-foot">
+          <span class="widget-tile-label">ملاحظاتي وأهدافي</span>
+          <span class="widget-tile-add"><i data-lucide="plus"></i></span>
+        </span>
+      </button>
+    </div>
+
+    <p class="widget-hint" id="widgetHint">
+      اضغط «+» لتثبيت الودجت مباشرة على شاشتك الرئيسية، أو اضغط مطوّلاً على الشاشة الرئيسية ثم «الودجات».
+    </p>
+  </div>
+
+  <!-- ⭐⭐ 6) منطقة الخطر -->
   <div class="settings-group">
     <div class="settings-group-title" style="color: var(--medapp-red, #f87171);">
       <i data-lucide="triangle-alert"></i>

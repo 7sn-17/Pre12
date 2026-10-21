@@ -2056,8 +2056,10 @@
   <!-- Scripts -->
 <script src="supabase-config.js"></script>
 <script src="auth.js"></script>
+<script src="streak.js"></script>
 <script src="native.js"></script>
 <script src="notifications.js"></script>
+<script src="widgets.js"></script>
 
 
   <script src="app.js?v=4.6.7"></script>
@@ -2126,6 +2128,12 @@
       } catch (err) {
         console.error('saveGoals error:', err);
       }
+      // ⭐⭐ Phase W2 — حدّث ودجت «ملاحظاتي وأهدافي» بعد كل تغيير.
+      try {
+        if (window.MedAppWidgets && typeof window.MedAppWidgets.refresh === 'function') {
+          window.MedAppWidgets.refresh('goals');
+        }
+      } catch (e) {}
     }
 
     // ============================================
