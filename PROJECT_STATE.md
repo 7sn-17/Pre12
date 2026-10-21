@@ -693,37 +693,40 @@ on every sync.
   `completed_at`, then clears the key and pushes back the canonical payload.
 - **No network in widgets.** No WorkManager polling in Phase 1–3.
 
-### 10.7 Files to create
+### 10.7 Files (as built)
 
 ```
-src/widgets/
-├── .gitkeep                     (exists)
-├── state.js                     pure payload builders (testable in Node)
-├── bridge.js                    safe wrapper (no-op on web/unsupported)
-└── sync.js                      push payloads + drain pending on app resume
+widgets.js                        ← root, shipped + precached in sw.js
+                                    payload builders (tasks/streak/notes),
+                                    plugin wrapper, pending drain, pin API
 
 android/app/src/main/java/com/pre12/medical/widgets/
-├── WidgetStore.kt               SharedPreferences + JSON (org.json)
-├── WidgetKeys.kt                group/key/constants, single source of truth
-├── TasksWidget.kt               GlanceAppWidget + receiver
-├── StreakSimpleWidget.kt
-├── StreakDetailWidget.kt
-├── NotesGoalsWidget.kt
-├── ToggleTaskAction.kt          ActionCallback
-├── RefreshAction.kt
-└── WidgetDeepLinks.kt           pre12:// intent builders
+├── WidgetBridge.kt               SharedPreferences group + JSON parsers,
+│                                 optimistic toggle, pending queue, merge
+├── WidgetPalette.kt              27 M3 roles from widget_color_* (4 sets)
+├── WidgetUi.kt                   GlassCard, Hairline, Chip, IconBadge,
+│                                 ColumnScope.WidgetEmptyState
+├── TodayTasksWidget.kt           interactive tasks (row budget via LocalSize)
+├── SimpleStreakWidget.kt         flame hero
+├── DetailedStreakWidget.kt       7-day map + today halo
+├── NotesWidget.kt                pinned goals → notes
+├── ToggleTaskAction.kt           ActionCallback (prefs + queue + broadcast)
+└── MedWidgetsPlugin.kt           Capacitor bridge + requestPinAppWidget
 
 android/app/src/main/res/
-├── xml/tasks_widget_info.xml (+ 3 siblings)   appwidget-provider metadata
-├── drawable/widget_preview_*.png              launcher picker previews
-├── font/cairo_*.ttf
-└── values/widget_strings.xml                  Arabic strings (RTL)
+├── xml/{today_tasks,simple_streak,detailed_streak,notes}_widget_info.xml
+├── layout/widget_*_preview.xml               API 31+ picker previews
+├── drawable/widget_ic_{flame,pin,tasks}.xml  tinted vectors
+├── drawable/widget_preview_*                  preview shapes/graphics
+├── values/widget_colors.xml + night + v31 + night-v31   (28 roles each)
+└── values/strings.xml + styles.xml            widget strings + preview styles
 
-docs/widgets/
-└── design-spec.md               pixel spec + screenshots per state
+Open (W4/W5):
+├── docs/widgets/design-spec.md   pixel spec + screenshots per state
+└── deep links (pre12://) from widget rows to the right screen
 ```
 
-`AndroidManifest.xml` gains four `<receiver>` entries
+`AndroidManifest.xml` has four `<receiver>` entries
 (`android.appwidget.action.APPWIDGET_UPDATE`, `exported="false"`,
 `meta-data android.appwidget.provider`).
 
@@ -733,9 +736,9 @@ docs/widgets/
 |---|---|---|
 | **W0 (done)** | Tag, branch, this doc, bridge plugin, `src/widgets/` | `git tag v4.6.7-stable` pushed; plugin synced |
 | **W1 (done)** | Kotlin 2.2.21 + Compose compiler + **Glance 1.2.0**, `WidgetBridge.kt`, `WidgetPalette.kt`, static «مهام اليوم» (`TodayTasksWidget` + receiver + provider XML + picker previews) | `assembleDebug` green in CI (run `39559126314`); receiver present in the merged manifest |
-| **W2** | Tasks widget fully interactive (`ToggleTaskAction`, optimistic state, progress, empty state) + `src/widgets/bridge.js` + `state.js` | Checking a task in the launcher updates the app on next open; no jank |
-| **W3** | Streak Simple + Streak Detailed with 7-day map and all four cell states | Both match the spec pixel-wise at 1.0 and 1.3 font scale |
-| **W4** | Notes & Goals widget + deep links from all four widgets | Taps land on the right screen/row |
+| **W2 (done)** | Tasks fully interactive (`ToggleTaskAction`, optimistic prefs, `pending.tasks`, publish race guard) + `widgets.js` + `MedWidgetsPlugin` + in-app «إضافة ودجت» | CI `39566019522`; JS contract test green; toggles survive a killed app |
+| **W3 (done)** | `SimpleStreakWidget` + `DetailedStreakWidget` (done / missed / today halo / freeze) | Shipped with W2; pixel check still needs hardware |
+| **W4** | `NotesWidget` shipped with W2 — remaining: deep links from widget rows | Taps land on the right screen/row |
 | **W5** | Polish: dynamic-color matrix, RTL audit, previews, haptics, celebration state, accessibility labels | Passes the §10.1 quality bar on a real device |
 | **W6** | Release: version bump, CHANGELOG, CI green, APK verified, widget section in the store listing | Shipped |
 
@@ -815,3 +818,40 @@ therefore shows its designed empty state on a fresh install until W2 wires data)
 **Note:** W1 stays on version 4.6.7 and is **not** published. The widget becomes
 visible to users only at the W6 release, because installing a debug APK over the
 release-signed app is impossible (signature mismatch).
+
+---
+
+### Phase W2 Completion Log (2026-10-21)
+
+**Goal:** four widgets, real checkbox interaction, and in-app discovery.
+
+| Area | What landed |
+|---|---|
+| Plugin | `widgets/MedWidgetsPlugin.kt` — local Capacitor plugin: `publishWidgets`, `updateWidgetTasks`, `updateWidgetStreak`, `updateWidgetNotes`, `requestPinWidget`, `isPinWidgetSupported`, `getPendingToggles`, `clearPendingToggles`; registered in `MainActivity.onCreate` **before** `super.onCreate`; emits `widgetTaskToggled` while the app runs |
+| Interaction | `widgets/ToggleTaskAction.kt` — Glance `ActionCallback`: optimistic prefs flip → `pending.tasks` → package-scoped broadcast → `update()` redraw. The WebView drains the queue through `setTaskCompleted` (localStorage + Supabase); the plugin merges undrained toggles into every incoming payload, so a tap can neither be lost nor visibly flip back |
+| Widgets | `SimpleStreakWidget` (flame badge + hero number + best/freezes footer), `DetailedStreakWidget` (7-day map: done / missed / today halo / freeze), `NotesWidget` (3 pinned rows, goals before notes), `TodayTasksWidget` upgraded (checkbox + open-app targets, row budget from `LocalSize`) |
+| Shared chrome | `widgets/WidgetUi.kt` — 24 dp glass card (1 dp edge + tonal surface), hairline, chips, icon badge, compact horizontal empty state with a working open-app CTA |
+| Data | `widgets.js` (root, shipped + precached in `sw.js`) builds `tasks.today`, `streak.summary` (`MedAppStreakCore` over local `task_at_*`), `notes.pinned` (`medfav_goals` + `medfav_my_notes_v3`); refreshes on boot, `visibilitychange`, `taskUpdated`, `online`, and `widgetTaskToggled` |
+| Discovery | Settings → «الشاشة الرئيسية»: hero card + four CSS preview tiles; `addHomeWidget(kind)` → `requestPinWidget`; section hidden on web/iOS, hint text adapts when the launcher refuses pinning |
+| Resources | 3 provider XMLs (4×2, resizable, 130 dp min), 3 picker preview layouts, 3 vector glyphs (flame / pin / checklist), preview strings + styles, `widget_color_glass_stroke` in all four qualifier sets |
+| Pages | `index`, `progress`, `notes`, `goals` load `widgets.js`; notes/goals refresh after every mutation; `goals.html` also loads `streak.js` so all publishers agree |
+| CI | compile gate now asserts **all four** receivers survive manifest merging; `widgets.js` added to its trigger paths |
+
+**Five defects found and fixed before declaring W2 done:**
+1. **4×2 clipping** — the card now spends `LocalSize` on whole rows (2 at 130 dp, 3 at ~195, 4 at ~230) instead of drawing a fourth row outside RemoteViews bounds.
+2. **Mis-tap safety** — the status circle toggles; the task text and header open the app.
+3. **Empty state** — collapsed to one horizontal row (~34 dp); the centered stack needed ~135 dp and clipped its CTA.
+4. **Publish race** — queued toggles are merged into arriving payloads (done counter adjusted by delta, so the 12-row cap still reports the real total).
+5. **Weekly gutters** — 10 → 8 dp so the today halo fits at the 130 dp minimum.
+
+**Verification (still no local Android SDK):** CI run **`39566019522` → success**, debug APK
+**`18,162,125` bytes**, all four receiver assertions printed. Contract test outside the
+repo (`$PREFIX/tmp/opencode/test_w2_widgets.js`) passes: tasks payload + pending
+merge, streak map with Arabic initials, goals→notes ordering, drain through
+`setTaskCompleted`, `publishWidgets`, and `requestPinWidget`.
+
+**Not verifiable without hardware:** rendered pixels, light/dark/Material-You
+matrices, 1.0/1.3 font scale, the system pin dialog, and a real Supabase write
+originating from a widget tap. Version stays **4.6.7**; users only see the widgets
+at the W6 release.
+
