@@ -908,3 +908,37 @@ at the W6 release.
 resource id, so Tajawal applies only where the launcher exposes the family; and
 RemoteViews has no network image pipeline, so the lecture “cover” is bundled art.
 Both are documented in code.
+
+---
+
+### Phase W7 Completion Log (2026-10-21)
+
+**Goal:** instant sync, the corrected widget sizes, readable type, and a working
+"add widget" button — shipped as **v5.0.0-beta.3** (still on
+`feature/home-screen-widgets`, nothing merged to `main`).
+
+| Area | What landed |
+|---|---|
+| Instant sync | `ToggleTaskAction` now writes prefs (`commit()`) → queues the durable toggle → **redraws (`GlanceAppWidget.update()`)** → broadcasts to the WebView → *then* enqueues WorkManager. The tick no longer waits for the network or the job queue. `MedWidgetsPlugin.publishWidgets` triggers the redraw before the session/meta bookkeeping. |
+| Tasks | Now **2×3** (`minWidth 140dp`, `minHeight 160dp`, `targetCell 2×3`): 20 sp title, 16 sp rows, the `done/total` pill moved to its own meta line so the narrow column never clips it, rows budgeted from `LocalSize` (2 at 160 dp → 3 at ~218 dp). |
+| Streak | `SimpleStreakWidget` is **1×1 only** (`resizeMode="none"`): vector flame (22 dp, not an emoji line box) + 32 sp number on `#0f172a` with a 1 dp `#ef4444` border. `DetailedStreakWidget` keeps 4×2 and now uses 40 sp numbers. |
+| Lectures | Now **1×1**: the subject cover (`plans/phys.jpg` …, bundled in the WebView assets) fills the tile through an `Image` layer with `ContentScale.Crop`, decoded offline to RGB_565 ≤320 px so the RemoteViews bitmap stays well inside the ~1 MB binder limit. A tap opens the album. |
+| Notes & goals | Titles 18 sp, rows 14 sp, bigger `+`, row budget re-tuned (1 row at 110 dp → 4 at 220 dp). |
+| Settings | `MedWidgetsPlugin.openWidgetPicker()` asks the launcher for its widget picker (Android exposes no public picker intent, so every known launcher dialect is tried in order). If none answers, `src/settings.html` reveals an in-page chooser with all five widgets, each row calling the documented `requestPinWidget`. The in-app premium card in `widgets.js` uses the same path. |
+| Version | `5.0.0-beta.3` / `versionCode 40` across `package.json`, `package-lock.json`, `build.js`, `sw.js`, `build.gradle`; `version.json` regenerated from the CHANGELOG. |
+
+**Two Glance facts that shaped the code (found by reading the Glance sources):**
+a *background* only accepts a drawable resource (`setViewBackgroundResource`), so
+a bitmap cover can never be a background — it must be an `Image` layer; and
+`ContentScale` lives in `androidx.glance.layout` (not `androidx.glance`).
+
+**Verification:** compile check **`39597148314` → success**; release build
+**`39597813937` → success**. Prerelease `v5.0.0-beta.3` (tag on `8ce3839`), APK
+**15,059,184 bytes**, SHA-256
+`c5b9e4914c8849ddb4426f678186ea9720a6848131a37cb1d74f6180f883f08a`.
+Production is untouched: `releases/latest` is still **v4.6.7** and the Supabase
+`version.json` still reports 4.6.7 (the workflow skips Storage + notifications
+for any version containing a `-`).
+
+**Not verifiable without hardware:** the rendered pixels (1×1 crop, 1.3× font
+scale), which launchers expose a picker intent, and the real system pin dialog.
