@@ -1181,3 +1181,63 @@ tagged `v5.0.5`, pushed with the tag. The GitHub release is **Latest** (not a
 prerelease) and the APK is live on Supabase Storage: **15,064,941 bytes**,
 SHA-256 `42ab4a960a6a36a29e4a478c8e39af332f9ab2f26c79c863d2b9964ad8c17293`.
 The in-app update system now offers 5.0.5 (`version.json` = 5.0.5).
+
+---
+
+### Phase W14 Completion Log (2026-10-21) — **the widget actually works now**
+
+**Release:** `v5.0.6` (versionCode 45) — GitHub **Latest**, live on Supabase
+Storage, `version.json` = 5.0.6. APK **15,067,233 bytes**, SHA-256
+`71900a147fd2f23baf05391aafefffcae78f3c26b5af4f521a449708f0318635`.
+
+#### The root cause (finally found — and it explains three symptoms at once)
+
+> *Glance 1.x keeps the composition alive in a session (~45 s) and `update()`
+> only asks that session to **recompose**. Compose **skips** any lambda whose
+> parameters did not change and that reads **no state** — so our content re-used
+> the **first** payload forever.*
+
+That single fact produced all three of the user's complaints:
+
+| Symptom | Why |
+|---|---|
+| "the checkbox does nothing (no ✓, no strike-through)" | the redraw replayed the *old* payload — the tick was written to prefs but never rendered |
+| "only 1 task shows" | the old payload still had the task as *not* done… and the completed row was filtered out by the 0.9 s "vanish" rule |
+| "the sync needs a phone restart" | only a **new session** (or a reboot) re-ran `provideGlance` and re-read the prefs |
+
+**The fix:** every widget now reads a **real Compose state** inside its content
+(`WidgetRefreshSignal.version` — a `mutableStateOf` bumped by the plugin on
+every repaint and by the checkbox action right after the prefs write). A content
+that reads a state can no longer be skipped → it re-reads SharedPreferences and
+the new RemoteViews reach the launcher **in the same millisecond** (no network,
+no WorkManager).
+
+#### The four tasks
+
+1. **Smart Lab «Send now»** — the engine accepts `forceTest: true`: it ignores
+   every scenario condition and the daily/weekly caps and pushes **to the
+   requesting device only** (deployed as v29). The client now surfaces the
+   **real** server error (403/400/…) instead of a generic message.
+2. **Tasks widget** — no weights, no Spacers, no truncation: **every** task of
+   the day is rendered as a simple column, and a **completed task stays** in the
+   list with its ✓ and its strike-through (that is the proof the tap landed).
+   The row height shrinks slightly when there are many tasks so nothing clips.
+3. **Notes widget** — line 1 = the **title** (15 sp bold), line 2 = the
+   **content** (13 sp grey), in *every* layout including the stacked one (the
+   content line used to be hidden there). The payload maps the real note keys
+   (`title` / `content`) and cuts both with a real ellipsis.
+4. **Zero-lag sync** — completing a task, adding or deleting a note, and
+   changing a goal all publish to the widget **immediately**
+   (`pushTasksNow` / `pushNotesNow` — no plan fetch, no network); the task push
+   also refreshes the streak card in the same tick.
+
+#### Verification
+- Local suite `tools/test-notification-scenarios.ts` — **38/38 green**.
+- Compile check **`39648436914` → success** (one real error caught: a missing
+  Glance `height` import).
+- Release build **`39649066961` → success**; the APK was re-downloaded and
+  re-hashed independently.
+- Live engine (**v29**): the cron path returns `200` with
+  `caps:{daily:6,weekly:30}` and `sent:0, skipped:1` — i.e. **no event, no
+  notification** (event-driven ✓); the test mode without a user JWT now
+  answers with a precise, actionable error.
