@@ -204,6 +204,59 @@ object WidgetBridge {
         }
     }
 
+    /**
+     * Re-applies every queued checkbox change on top of a *fresh* payload coming
+     * from the app.
+     *
+     * Why this exists: the widget can be tapped while `widgets.js` is publishing
+     * (e.g. the app just resumed). The JS payload is built from localStorage,
+     * which does not yet contain that tap, so writing it blindly would flip the
+     * checkbox back until the queue is drained. Merging here makes the optimistic
+     * state win the race — a toggle can never be lost, even for one frame.
+     *
+     * `done` is adjusted by the delta rather than recounted, so a payload that
+     * was capped at [MAX_TASKS] rows still reports the correct total.
+     */
+    @Synchronized
+    fun mergePending(context: Context, tasksJson: String): String {
+        val pending = readPending(context)
+        if (pending.isEmpty()) return tasksJson
+
+        return try {
+            val root = JSONObject(tasksJson)
+            val items = root.optJSONArray("items") ?: return tasksJson
+            val date = root.optString("date", "")
+
+            val overrides = HashMap<String, Boolean>()
+            pending.forEach { overrides[it.date + "|" + it.id] = it.done }
+
+            var delta = 0
+            for (index in 0 until items.length()) {
+                val item = items.optJSONObject(index) ?: continue
+                val key = date + "|" + item.optString("id")
+                val desired = overrides[key] ?: continue
+                val before = item.optBoolean("done", false)
+                if (before != desired) {
+                    item.put("done", desired)
+                    item.put("isCompleted", desired)
+                    delta += if (desired) 1 else -1
+                }
+            }
+
+            if (delta != 0) {
+                val done = (root.optInt("done", 0) + delta)
+                    .coerceIn(0, root.optInt("total", 0).coerceAtLeast(1))
+                root.put("done", done)
+                val total = root.optInt("total", 0)
+                root.put("progress", if (total > 0) done.toFloat() / total.toFloat() else 0f)
+                root.put("updatedAt", isoNow())
+            }
+            root.toString()
+        } catch (_: Exception) {
+            tasksJson
+        }
+    }
+
     fun parseTodayTasks(raw: String?): TodayTasks {
         if (raw.isNullOrBlank()) return TodayTasks()
         return try {

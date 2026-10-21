@@ -85,8 +85,9 @@ class MedWidgetsPlugin : Plugin() {
         val ctx = context
         var written = 0
 
-        call.getString("tasks")?.let {
-            if (WidgetBridge.write(ctx, WidgetBridge.KEY_TASKS_TODAY, it)) written++
+        call.getString("tasks")?.let { raw ->
+            val merged = WidgetBridge.mergePending(ctx, raw)
+            if (WidgetBridge.write(ctx, WidgetBridge.KEY_TASKS_TODAY, merged)) written++
         }
         call.getString("streak")?.let {
             if (WidgetBridge.write(ctx, WidgetBridge.KEY_STREAK, it)) written++
@@ -115,7 +116,11 @@ class MedWidgetsPlugin : Plugin() {
             return
         }
         val ctx = context
-        val ok = WidgetBridge.write(ctx, WidgetBridge.KEY_TASKS_TODAY, json)
+        val ok = WidgetBridge.write(
+            ctx,
+            WidgetBridge.KEY_TASKS_TODAY,
+            WidgetBridge.mergePending(ctx, json)
+        )
         WidgetBridge.writeMeta(ctx, "tasks")
         requestUpdate(ctx, TodayTasksWidgetReceiver::class.java)
         call.resolve(JSObject().put("updated", ok))
