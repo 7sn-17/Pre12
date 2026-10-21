@@ -942,3 +942,34 @@ for any version containing a `-`).
 
 **Not verifiable without hardware:** the rendered pixels (1×1 crop, 1.3× font
 scale), which launchers expose a picker intent, and the real system pin dialog.
+
+---
+
+### Phase W8 Completion Log (2026-10-21)
+
+**Goal:** the final polish before release — instant sync in both directions,
+task animations, the wide tasks card, a readable week map, and the lectures
+widget removed. Shipped as **v5.0.0-beta.4** (branch only, `main` untouched).
+
+| Area | What landed |
+|---|---|
+| App → widget | `index.html` builds the task payload from the plan already in memory and calls `MedWidgets.updateWidgetTasks(...)` **inside the tap** — no plan fetch, no Supabase, no await. `widgets.js` adds `pushTasksNow()` as the generic fast path for every other page, and `publish()` no longer overwrites a working card with an empty list when the plan fetch fails. |
+| Widget → app | `ToggleTaskAction` writes prefs → redraws → broadcasts; the plugin now emits **both** `widgetTaskToggled` and `taskUpdated` to the WebView. The pending queue is drained locally (no 250 ms delay), `setTaskCompleted` dispatches the DOM `taskUpdated`, and `index.html` repaints the card *and* the open sheet. |
+| In-app animation | A `.today-task.done` class strikes the row through and fades it over 300 ms — added optimistically on tap, never waiting for the network. |
+| Tasks card | Now **wide 3×2** (`minWidth 250dp`, `minHeight 120dp`, `targetCell 3×2`): title 20 sp, tasks 16 sp, the `done/total` pill and the counter on the header line, and the leftover height shared between the rows as air instead of a dead gap. |
+| Lectures widget | **Deleted completely**: `LecturesWidget.kt`, its provider XML, its picker preview, its background drawable, its strings, the manifest receiver, the bridge payload (`NextLecture`/`KEY_LECTURES`), the plugin mapping and the JS builder. The compile gate now asserts six receivers. |
+| Notes & goals | The widget shows the note **content** (not only the title) at 15 sp, two lines with a real ellipsis cut in JS (RemoteViews cannot ellipsize), titles 18 sp. The row budget follows the line count instead of a fixed table. |
+| Detailed streak | Rebuilt: a vector flame + **48 sp** number + «يوم متتالي» on the left (26 % of the real width), and the seven days as **32 dp rings** on the right — a 4 + 3 grid, each ring a thick border (nested boxes) with its Arabic initial inside. |
+| Settings | The button works for real: `openWidgetPicker()` → documented `requestPinWidget()` → an in-page six-widget chooser. The listeners are attached **before** the icon library runs (a missing icon could never leave the button dead), and the requested helper text sits right under the button. |
+| Version | `5.0.0-beta.4` / `versionCode 41`. |
+
+**Verification:** compile check **`39603445654` → success**; release build
+**`39604230731` → success**. Prerelease `v5.0.0-beta.4` (tag on `61f0b5f`), APK
+**15,061,358 bytes**, SHA-256
+`b081e7e5d88d24b9209c0bd7941fe0149689f8b546bb99ed5a6142fcd80add7d`.
+Production untouched: `releases/latest` is still **v4.6.7** and the Supabase
+`version.json` still reports 4.6.7.
+
+**Not verifiable without hardware:** the rendered pixels (3×2 crop, 32 dp rings,
+1.3× font scale), whether a given launcher exposes a picker intent, and the
+real system pin dialog.
