@@ -1205,6 +1205,8 @@ async function initProgress() {
 
 window.addEventListener('online', function () {
   updateProgressSyncNote();
+  // ⭐⭐⭐ Phase W17.1 — تحميل remote مرّة واحدة كل ٣٠ ثانية كحدّ أقصى.
+  if (!(window.medappThrottle ? window.medappThrottle('progress:remote', 30000) : true)) return;
   if (!progressState.loading) {
     loadRemoteCompletion().then(function () { renderProgress(); });
   }

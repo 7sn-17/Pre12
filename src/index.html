@@ -10693,6 +10693,10 @@ function showAbout() {
   window.addEventListener('online', () => {
     syncNetworkSnackbar();
 
+    // ⭐⭐⭐ Phase W17.1 — إعادة تحميل البيانات مرّة واحدة كل ٣٠ ثانية
+    //   كحدّ أقصى (كانت كل محاولة شبكة تُطلق ثلاث عمليات).
+    if (!(window.medappThrottle ? window.medappThrottle('index:reload-data', 30000) : true)) return;
+
     // إعادة تحميل البيانات
     setTimeout(() => {
       if (typeof loadSubjects === 'function') loadSubjects();

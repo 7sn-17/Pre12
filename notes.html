@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="5.0.9">
+<meta name="app-version" content="5.1.0">
 <title>الملاحظات - المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -2493,7 +2493,6 @@ header {
         class="search-input" 
         placeholder="ابحث في الملاحظات..."
         >
-      >
       <i data-lucide="search" class="icon-right"></i>
     </div>
 
@@ -2618,7 +2617,7 @@ header {
 <script src="widgets.js"></script>
 
 
-  <script src="app.js?v=5.0.9"></script>
+  <script src="app.js?v=5.1.0"></script>
 <script>
 
     lucide.createIcons();
@@ -3533,6 +3532,9 @@ header {
     // ============================================
     window.addEventListener('online', () => {
       showConnectionBanner(true);
+      // ⭐⭐⭐ Phase W17.1 — مزامنة المعلّق مرّة واحدة كل ٣٠ ثانية كحدّ أقصى
+      //   (كان كل حدث 'online' المكرّر يُطلق مزامنة ⇒ طلبات بلا داعٍ).
+      if (!(window.medappThrottle ? window.medappThrottle('notes:sync-pending', 30000) : true)) return;
       // انتظار قصير ثم مزامنة
       setTimeout(() => {
         syncPending();

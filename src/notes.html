@@ -1179,7 +1179,6 @@ headerTitle: الملاحظات
         class="search-input" 
         placeholder="ابحث في الملاحظات..."
         >
-      >
       <i data-lucide="search" class="icon-right"></i>
     </div>
 
@@ -2209,6 +2208,9 @@ headerTitle: الملاحظات
     // ============================================
     window.addEventListener('online', () => {
       showConnectionBanner(true);
+      // ⭐⭐⭐ Phase W17.1 — مزامنة المعلّق مرّة واحدة كل ٣٠ ثانية كحدّ أقصى
+      //   (كان كل حدث 'online' المكرّر يُطلق مزامنة ⇒ طلبات بلا داعٍ).
+      if (!(window.medappThrottle ? window.medappThrottle('notes:sync-pending', 30000) : true)) return;
       // انتظار قصير ثم مزامنة
       setTimeout(() => {
         syncPending();

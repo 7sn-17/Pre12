@@ -986,6 +986,8 @@
     global.addEventListener('taskUpdated', handlers.taskUpdated);
 
     handlers.online = function () {
+      // ⭐⭐⭐ Phase W17.1 — نشر الودجات مرّة واحدة كل ٣٠ ثانية كحدّ أقصى.
+      if (!(global.medappThrottle ? global.medappThrottle('widgets:refresh', 30000) : true)) return;
       setTimeout(function () { refresh('online'); }, 1200);
     };
     global.addEventListener('online', handlers.online);

@@ -896,7 +896,9 @@ async function isFileFavorite(fileId) {
 // ============================================
 // 14. مراقبة الاتصال
 // ============================================
+// ⭐⭐⭐ Phase W17.1 — تنظيف الكاش مرّة واحدة كل ٣٠ ثانية كحدّ أقصى.
 window.addEventListener('online', () => {
+  if (!(window.medappThrottle ? window.medappThrottle('files:clear-cache', 30000) : true)) return;
   clearOldCache();
 });
 

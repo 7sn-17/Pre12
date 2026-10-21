@@ -1178,7 +1178,10 @@ function getLocalActiveDates() {
   return dates;
 }
 
+// ⭐⭐⭐ Phase W17.1 — لا تدفّق الطلبات: «عودة الاتصال» كانت تُطلق
+//   تفريغ الطابور في كل حدث (وهو يتكرّر على أندرويد) ⇒ خُنقناه.
 window.addEventListener('online', function () {
+  if (!(window.medappThrottle ? window.medappThrottle('db:flush-queue', 20000) : true)) return;
   setTimeout(flushTaskProgressQueue, 600);
 });
 
@@ -1194,12 +1197,6 @@ if (document.readyState === 'loading') {
 // ============================================
 // 14. مراقبة حالة الاتصال
 // ============================================
-window.addEventListener('online', () => {
-});
-
-window.addEventListener('offline', () => {
-});
-
 // ⭐ معالجة عند إغلاق الصفحة
 window.addEventListener('beforeunload', () => {
   if (dbInstance) {

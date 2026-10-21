@@ -2099,6 +2099,9 @@ async function loadLectureData() {
 
   try {
     await loadCloudData();
+    // ⭐ W17.1 — نُسجّل وقت آخر تحميل ⇒ لا تحميل مزدوج ولا إعادة مزامنة
+    //   فورية (الأحداث المكرّرة تُتجاهل).
+    lectureLastSyncAt = Date.now();
     lectureState.cloud = true;
     // ننسخ محلياً في الخلفية حتى يعمل التطبيق بلا شبكة لاحقاً.
     mirrorCloudToLocal();
@@ -4112,6 +4115,11 @@ async function initLecturePage() {
     // ⭐ تهيئة أحداث المعرض (السحب / القرص / التكبير)
     galleryInitEvents();
 
+    // ⭐⭐⭐ W17.1 — نُسجّل وقت البدء **قبل** أي تحميل ⇒ لو وصل حدث
+    //   'online' أثناء التهيئة (وهو ما كانت تفعله الإضافة) لا يُطلق
+    //   تحميلاً ثانياً (تحميل واحد + صمت ✓).
+    lectureLastSyncAt = Date.now();
+
     // ⭐ Offline-first: بلا شبكة نقرأ من IndexedDB فوراً — بلا أي طلب شبكة.
     await loadLectureData();
 
@@ -4156,17 +4164,46 @@ function updateOfflineBanner() {
 }
 
 /**
- * ⭐ عند عودة الاتصال: حدّث البيانات من السحابة فوراً.
- * وعند انقطاعه: انتقل إلى البيانات المحلية الفورية.
+ * ⭐⭐⭐ Phase W17.1 — «يُحمَّل مرّة، ويُزامن مرّة، ثم يصمت».
+ *
+ * الجذر الحقيقي للحلقة: إضافة Capacitor (Network) تُطلق `networkStatusChange`
+ * عند **كل تغيّر في خصائص الشبكة** (لا عند تغيّر الاتصال فقط) ⇒ كان حدث
+ * 'online' يصل كل بضع ثوانٍ، وكل حدث كان:
+ *   • يُحمّل ٤ استعلامات (ألبومي + صوري + الألبومات العامة + صورها)،
+ *   • يُعيد رسم الصفحة،
+ *   • ويعرض «عاد الاتصال — تم تحديث المحاضرات» ⇒ نافذة كل بضع ثوانٍ ✗.
+ *
+ * ⭐ الآن:
+ *   • لا مزامنة خلال ٣٠ ثانية من آخر تحميل (فلا تحميل مزدوج عند البدء)؛
+ *   • لا مزامنة أثناء مزامنة جارية؛
+ *   • والرسالة تظهر **فقط** عند عودة اتصال حقيقية (بعد إصلاح native.js).
  */
+var lectureLastSyncAt = 0;
+var lectureSyncInFlight = false;
+var LECTURE_SYNC_MIN_GAP = 30000;
+
 function watchLectureConnection() {
   window.addEventListener('online', async function () {
     updateOfflineBanner();
-    await loadLectureData();
-    setLectureTab(lectureState.tab);
-    renderAlbums();
-    if (lectureState.activeAlbumId) renderAlbumDetail();
-    lectureShowToast('عاد الاتصال — تم تحديث المحاضرات');
+
+    // ⭐ لا تدفّق: لا مزامنة حديثة، ولا مزامنة أثناء مزامنة.
+    if (lectureSyncInFlight) return;
+    var now = Date.now();
+    if (now - lectureLastSyncAt < LECTURE_SYNC_MIN_GAP) return;
+
+    lectureSyncInFlight = true;
+    try {
+      await loadLectureData();
+      lectureLastSyncAt = Date.now();
+      setLectureTab(lectureState.tab);
+      renderAlbums();
+      if (lectureState.activeAlbumId) renderAlbumDetail();
+      lectureShowToast('عاد الاتصال — تم تحديث المحاضرات');
+    } catch (err) {
+      console.warn('[lectures] the reconnect refresh failed:', err);
+    } finally {
+      lectureSyncInFlight = false;
+    }
   });
 
   window.addEventListener('offline', function () {

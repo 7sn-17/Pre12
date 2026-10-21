@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="5.0.9">
+<meta name="app-version" content="5.1.0">
 <title>تقدمي — المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -2044,7 +2044,7 @@ body {
 <script src="widgets.js"></script>
 
 
-<script src="app.js?v=5.0.9"></script>
+<script src="app.js?v=5.1.0"></script>
 <script>
 
 var PROGRESS_SUBJECTS = [
@@ -2525,6 +2525,8 @@ async function initProgress() {
 
 window.addEventListener('online', function () {
   updateProgressSyncNote();
+  // ⭐⭐⭐ Phase W17.1 — تحميل remote مرّة واحدة كل ٣٠ ثانية كحدّ أقصى.
+  if (!(window.medappThrottle ? window.medappThrottle('progress:remote', 30000) : true)) return;
   if (!progressState.loading) {
     loadRemoteCompletion().then(function () { renderProgress(); });
   }

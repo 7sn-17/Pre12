@@ -1198,7 +1198,11 @@
     }
   };
 
+  // ⭐⭐⭐ Phase W17.1 — المزامنة الكاملة مرّة واحدة كل ٣٠ ثانية كحدّ أقصى:
+  //   كان كل حدث 'online' (وهو يتكرّر على أندرويد) يُطلق مزامنة كاملة
+  //   (مهام + مفضّلة + ملاحظات + ملف شخصي) ⇒ tens of requests بلا داعٍ.
   global.addEventListener('online', function () {
+    if (!(global.medappThrottle ? global.medappThrottle('sync:full', 30000) : true)) return;
     setTimeout(async function () {
       var userId = await directUserId();
       if (userId) runFullUserSync({ id: userId }, { force: true });

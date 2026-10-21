@@ -207,18 +207,44 @@
     }
   }
 
-  // ─────────────────────────────────────────────
-  // 4) حالة الشبكة + أحداث عامة
-  // ─────────────────────────────────────────────
-  function dispatchNet(state) {
+  // ⭐⭐⭐ Phase W17.1 — «الحلقة الصامتة» (الجذر الحقيقي)
+  //
+  // على أندرويد يُطلق إضافة Capacitor (Network) الحدث `networkStatusChange`
+  // عند **كل تغيير في خصائص الشبكة** (onCapabilitiesChanged) — لا عند تغيّر
+  // الاتصال فقط. فيُطلق الحدث مرّاتٍ كثيرة رغم أن الاتصال ثابت، وكل حدث
+  // كان يمرّر إلى **كل** مستمعي 'online' في التطبيق:
+  //     db.js (تفريغ الطابور) · files.js (تنظيف الكاش) ·
+  //     sync.js (مزامنة كاملة) · widgets.js (نشر الودجات) ·
+  //     my-lectures.html (ألبومات + صور + إشعارات) …
+  // ⇒ ~٢٠ طلباً إلى Supabase في كل مرة + «عاد الاتصال — تم تحديث المحاضرات»
+  //    كل بضع ثوانٍ (وهو ما شكا منه المستخدم + فاتورة Supabase).
+  //
+  // ⭐ الحل: نُطلق الحدث **فقط عند تغيّر الحالة فعلاً** (وليس عند تكرارها)
+  //   ⇒ كل شيء أسفل التطبيق يهدأ. (والحماية الثانية: خنق ٣٠ ثانية داخل
+  //   كل صفحة ⇒ حتى التبدّل الحقيقي السريع لا يولّد طلبات كثيرة.)
+  var lastNetState = '';
+  var lastNetAt = 0;
+
+  function dispatchNet(state, force) {
+    var now = Date.now();
+    if (!force) {
+      // ⭐⭐⭐ نفس الحالة ⇒ لا حدث. **هذا هو الإصلاح كلّه**:
+      //   إضافة Network تُطلق الحدث عند كل تغيّر في خصائص الشبكة (لا عند
+      //   تغيّر الاتصال) ⇒ كان الحدث يتكرّر عشرات المرّات.
+      //   (الحماية الثانية: خنق ٣٠ ثانية داخل كل صفحة ✓)
+      if (state === lastNetState) return false;
+    }
+    lastNetState = state;
+    lastNetAt = now;
     try {
       global.dispatchEvent(new CustomEvent(state, { detail: { online: state === 'online' } }));
     } catch (e) {}
+    return true;
   }
 
   function bindNetwork() {
     if (!isNative) {
-      // على الويب نستمع لحدثي المتصفح القياسيين.
+      // على الويب نستمع لحدثي المتصفّح القياسيين.
       global.addEventListener('online', function () { dispatchNet('online'); });
       global.addEventListener('offline', function () { dispatchNet('offline'); });
       return;
@@ -229,15 +255,52 @@
     try {
       Network.addListener('networkStatusChange', function (status) {
         var online = !!(status && status.connected);
-        dispatchNet(online ? 'online' : 'offline');
+        var state = online ? 'online' : 'offline';
+        // ⭐⭐⭐ أول استدعاء = **الحالة الحالية** لا تغيّرٌ ⇒ نسجّلها فقط
+        //   (وإلا استقبلت كل صفحة حدث 'online' عند البدء ⇒ تحميل مزدوج).
+        if (lastNetState === '') {
+          lastNetState = state;
+          lastNetAt = Date.now();
+          return;
+        }
+        // ⭐ dispatchNet يتجاهل تكرار الحالة بنفسه.
+        dispatchNet(state);
       });
       if (typeof Network.getStatus === 'function') {
         Network.getStatus().then(function (status) {
-          dispatchNet(status && status.connected ? 'online' : 'offline');
+          var online = !!(status && status.connected);
+          // ⭐⭐⭐ نُسجّل الحالة **فقط** ولا نُطلق حدثاً: الصفحة تحمّل
+          //   بياناتها بنفسها، وإطلاق 'online' عند البدء يعني تحميلاً
+          //   مزدوجاً لكل صفحة.
+          lastNetState = online ? 'online' : 'offline';
+          lastNetAt = Date.now();
         }).catch(function () {});
       }
     } catch (e) {
       console.warn('[native] network binding failed:', e);
+    }
+  }
+
+  /**
+   * ⭐⭐⭐ W17.1 — «خنق» (throttle) عام: نُنفّذ العملية مرّة واحدة كل
+   *   `periodMs` على الأكثر. يستعمله كل مستمع 'online' في التطبيق كي
+   *   لا يتحوّل حدثٌ واحد إلى عشرات الطلبات.
+   *
+   * @param {string} key       اسم العملية
+   * @param {number} periodMs  أقلّ فاصل بين عمليتين (ms)
+   * @returns {boolean} true إن كان من حقّ التنفيذ الآن.
+   */
+  function medappThrottle(key, periodMs) {
+    try {
+      var store = global.__medappThrottleStore || (global.__medappThrottleStore = {});
+      var now = Date.now();
+      var last = Number(store[key] || 0);
+      var wait = Math.max(0, Number(periodMs) || 0);
+      if (now - last < wait) return false;
+      store[key] = now;
+      return true;
+    } catch (e) {
+      return true;
     }
   }
 
@@ -1779,6 +1842,8 @@
   }
 
   // واجهة عامة صغيرة
+  // ⭐ W17.1 — أداة الخنق مشتركة بين كل الملفات.
+  global.medappThrottle = medappThrottle;
   global.MedAppNative = {
     state: nativeState,
     isNative: function () { return isNative; },
