@@ -759,8 +759,12 @@ stable build; `main` is untouched until the merge.
 ### 10.8.1 Beta channel (no merge)
 
 - Release: **`v5.0.0-beta.1`** (prerelease, `make_latest: false`), APK
-  `Medical_Platform_v5.0.0-beta.1.apk`, 14,932,771 B, SHA-256
-  `1808da12…a5555`. `gh run 39574288079`.
+  `Medical_Platform_v5.0.0-beta.1.apk`, **14,933,555 B**, SHA-256
+  `1a8195cc55750bc8abc80ffa4a3844d9c8111ef56ae117d948c56a3e745decd8`,
+  tag at `0b0639d`.
+- Runs: `39574288079` (workflow_dispatch on the branch) and `39576600897`
+  (the `v*` tag push rebuilds and replaces the assets — the final file is from
+  the tag run; the release step is idempotent).
 - The release workflow is now version-aware: a `-` in the version skips the
   Supabase `Medical_Platform_Latest.apk` / `version.json` upload, the URL
   verification and the production push notification. Production stays on
