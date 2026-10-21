@@ -365,15 +365,29 @@ Deno.serve(async (req) => {
         now,
         logs: userLogs,
         forceScenario: forcedScenario,
-        ignoreLimits: mode === 'preview' || mode === 'test',
+        // ⭐ forceTest يتجاهل السقوف وساعات الصمت أيضاً (معاينة/تشخيص).
+        ignoreLimits: mode === 'preview' || mode === 'test' || forceTest,
       });
 
-      if (!selection) {
+      // ⭐⭐ W15 — مع forceTest نرسل دائماً: إن لم ينطبق أي سيناريو نأخذ
+      //   أقرب واحد بدل «skipped» (يسهّل الفحص اليدوي عبر MCP).
+      const chosen = selection
+        ? selection.scenario
+        : forceTest
+          ? (forcedScenario ? SCENARIOS.find((s) => s.id === forcedScenario) : null) ||
+            SCENARIOS.find((s) => s.id === 'agenda') ||
+            SCENARIOS[0]
+          : null;
+      if (!chosen) {
         skipped++;
         continue;
       }
 
-      const message = composeMessage(ctx, selection.scenario, selection.reason);
+      const message = composeMessage(
+        ctx,
+        chosen,
+        selection ? selection.reason : 'اختبار قسري (forceTest)'
+      );
 
       // ⭐ أزرار الإجراء تُرسل ضمن البيانات (FCM v1 لا يدعمها في الإشعار).
       const actions = selection.scenario.allowTaskAction && ctx.pendingTask

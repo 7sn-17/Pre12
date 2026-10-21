@@ -389,10 +389,12 @@
           .replace(/\s+/g, ' ')
           .trim();
         var title = String(note.title || '').replace(/\s+/g, ' ').trim();
+        // ⭐⭐ Phase W15 — السطر الأول = العنوان، السطر الثاني = المحتوى.
+        //   (ملاحظة بلا محتوى ⇒ سطر واحد فقط، لا تكرار).
         return {
           id: String(note.id || ('note-' + index)),
           title: cutText(title || body, 46),
-          text: cutText(body || title, 110),
+          text: cutText(body, 110),
           kind: 'note',
           done: false
         };

@@ -1361,19 +1361,106 @@
    * ⭐ W10 — معاينة سيناريو من المحرّك الذكي **بدون** إرسال.
    * تعيد الرسالة كما ستصل حرفياً + سبب اختيارها.
    */
-  function previewNotificationScenario(scenarioId) {
-    var client = global.supabaseClient;
-    if (!client || typeof client.functions !== 'function') {
-      return Promise.reject(new Error('المحرّك الذكي متاح داخل التطبيق فقط'));
+  /**
+   * ⭐⭐⭐ Phase W15 — استدعاء محرّك الإشعارات **بطريقة لا تفشل صامتاً**.
+   *
+   * المشكلة القديمة: كان الكود يعتمد على `client.functions.invoke` فقط، فإن
+   * تعذّر الوصول إلى `functions` (أو لم يكن الـclient جاهزاً بعد) ظهرت رسالة
+   * مضلِّلة «المحرّك الذكي متاح داخل التطبيق فقط» — والسبب الحقيقي كان
+   * شيئاً آخر تماماً.
+   *
+   * الآن: نستدعي الدالة عبر `fetch` مباشرةً (مع رمز المستخدم JWT) — وهو
+   * مسار لا يعتمد على الـSDK — ونُظهر **نصّ الخطأ الحقيقي** كما ورد من
+   * الخادم.
+   */
+  function engineEndpoint() {
+    var url = global.SUPABASE_URL || '';
+    if (!url) {
+      try {
+        var cfg = global.supabaseConfig || null;
+        if (cfg && cfg.url) url = cfg.url;
+      } catch (e) {}
     }
+    if (!url) {
+      var scripts = document.querySelectorAll('script[src*="supabase-config"]');
+      for (var i = 0; i < scripts.length; i++) {
+        var m = /SUPABASE_URL\s*=\s*'([^']+)'/.exec(scripts[i].textContent || '');
+        if (m) { url = m[1]; break; }
+      }
+    }
+    return url ? String(url).replace(/\/$/, '') + '/functions/v1/smart-notifications-engine' : '';
+  }
+
+  function engineAnonKey() {
+    if (global.SUPABASE_ANON_KEY) return global.SUPABASE_ANON_KEY;
+    try {
+      var scripts = document.querySelectorAll('script[src*="supabase-config"]');
+      for (var i = 0; i < scripts.length; i++) {
+        var m = /SUPABASE_ANON_KEY\s*=\s*'([^']+)'/.exec(scripts[i].textContent || '');
+        if (m) return m[1];
+      }
+    } catch (e) {}
+    return '';
+  }
+
+  function engineAccessToken() {
+    var client = global.supabaseClient;
+    if (!client || !client.auth || typeof client.auth.getSession !== 'function') {
+      return Promise.resolve('');
+    }
+    return client.auth.getSession()
+      .then(function (r) {
+        return (r && r.data && r.data.session && r.data.session.access_token) || '';
+      })
+      .catch(function () { return ''; });
+  }
+
+  function invokeNotificationEngine(body) {
+    var endpoint = engineEndpoint();
+    if (!endpoint) {
+      return Promise.reject(new Error(
+        'تعذّر تحديد عنوان الدالة — تحقّق من إعداد SUPABASE_URL في supabase-config.js'
+      ));
+    }
+
+    return engineAccessToken().then(function (token) {
+      var headers = { 'Content-Type': 'application/json' };
+      var anon = engineAnonKey();
+      if (anon) headers.apikey = anon;
+      // ⭐ بدون رمز لا يمكن للخادم أن يعرف صاحب الجهاز ⇒ نُبلغ بالسبب.
+      if (token) headers.Authorization = 'Bearer ' + token;
+
+      return fetch(endpoint, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(body)
+      }).then(function (response) {
+        return response.text().then(function (text) {
+          var data = null;
+          try { data = text ? JSON.parse(text) : null; } catch (e) { data = null; }
+          if (!response.ok) {
+            var message = (data && (data.error || data.message)) ||
+              ('HTTP ' + response.status + ' ' + (text || '').slice(0, 200));
+            var err = new Error(String(message));
+            err.status = response.status;
+            err.response = data;
+            throw err;
+          }
+          if (data && data.ok === false) {
+            var err2 = new Error(String(data.error || 'تعذّر الإرسال'));
+            err2.response = data;
+            throw err2;
+          }
+          return data || {};
+        });
+      });
+    });
+  }
+
+  function previewNotificationScenario(scenarioId) {
     var body = { mode: 'preview' };
     if (scenarioId) body.scenario = String(scenarioId);
-    return client.functions.invoke('smart-notifications-engine', { body: body })
-      .then(function (result) {
-        var data = result && result.data ? result.data : result;
-        if (!data || !data.ok) throw new Error((data && data.error) || 'تعذّرت المعاينة');
-        return data;
-      });
+    return invokeNotificationEngine(body);
   }
 
   /**
@@ -1381,26 +1468,11 @@
    *(mode: 'test' — يتجاهل السقوف ويهمل التوقيت، وهذا مقصود للاختبار)
    */
   function sendNotificationScenario(scenarioId) {
-    var client = global.supabaseClient;
-    if (!client || typeof client.functions !== 'function') {
-      return Promise.reject(new Error('المحرّك الذكي متاح داخل التطبيق فقط'));
-    }
-    // ⭐⭐ Phase W14 — forceTest: يتجاهل شروط السيناريو والسقوف ويرسل فوراً.
+    // ⭐⭐ Phase W15 — forceTest: يتجاهل كل الشروط والسقوف ويرسل إلى جهاز
+    //   المُرسِل فوراً (بلا شروط ولا سقوف ولا أوقات صمت).
     var body = { mode: 'test', forceTest: true };
     if (scenarioId) body.scenario = String(scenarioId);
-    return client.functions.invoke('smart-notifications-engine', { body: body })
-      .then(function (result) {
-        var data = result && result.data ? result.data : result;
-        if (!data || !data.ok) {
-          // ⭐ نُظهر الخطأ الحقيقي (403/400/….) بدل رسالة عامة.
-          var message = (data && (data.error || data.message)) || 'تعذّر الإرسال';
-          var err = new Error(String(message));
-          err.code = (data && data.code) || '';
-          err.response = data || null;
-          throw err;
-        }
-        return data;
-      });
+    return invokeNotificationEngine(body);
   }
 
   /** ⭐ W10 — تشخيص: ماذا يعرف المحرّك عن حالة المستخدم الآن؟ */

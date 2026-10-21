@@ -2,6 +2,7 @@ package com.pre12.medical.widgets
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.glance.GlanceId
 import androidx.glance.action.Action
 import androidx.glance.action.ActionParameters
@@ -72,25 +73,45 @@ class ToggleTaskAction : ActionCallback {
 
         // ── 3) SAVE (synchronous) ───────────────────────────────────────────
         if (updated != null) {
-            WidgetBridge.writeTasksJson(context, updated)
+            val saved = WidgetBridge.writeTasksJson(context, updated)
+            Log.i(
+                TAG,
+                "toggle saved: task=$taskId done=$done saved=$saved " +
+                    "at=${System.currentTimeMillis()}"
+            )
         }
+
+        // ⭐⭐⭐ Phase W15 — النبضة **قبل** أي كتابة أخرى: هي التي تجعل
+        //   الـcomposition المعايشة تُبطل وتُعاد قراءتها، فيظهر ✓ والشطب في
+        //   **الملّي ثانية** (بلا شبكة وبلا WorkManager).
+        WidgetRefreshSignal.bump()
+
+        // ── 4) REDRAW NOW (synchronous, before anything else) ──────────────
+        // The composition re-reads the payload on every recomposition (see
+        // TodayTasksWidget.kt), so this frame already shows the new state.
+        var painted = false
+        try {
+            TodayTasksWidget().update(context, glanceId)
+            painted = true
+        } catch (e: Throwable) {
+            Log.w(TAG, "the targeted redraw failed, falling back to all instances", e)
+            try {
+                // ⭐ شبكة أمان: كل نُسخ الودجت على الشاشة.
+                TodayTasksWidget().updateAll(context)
+                painted = true
+            } catch (e2: Throwable) {
+                Log.e(TAG, "the redraw failed completely", e2)
+            }
+        }
+        Log.i(
+            TAG,
+            "toggle applied: task=$taskId done=$done painted=$painted " +
+                "at=${System.currentTimeMillis()}"
+        )
 
         // Durable queue: also a synchronous prefs commit, and the toggle must
         // survive process death even if the very next frame kills us.
         WidgetBridge.queuePendingToggle(context, taskId, date, done, title, subject)
-
-        // ⭐⭐⭐ W14 — نبضة فورية: تجعل الـcomposition المعايشة تُبطل وتُعاد
-        //   قراءتها، فيظهر ✓ والشطب في **الملّي ثانية** (بلا شبكة).
-        WidgetRefreshSignal.bump()
-
-        // ── 4) REDRAW NOW ──────────────────────────────────────────────────
-        // The composition re-reads the payload on every recomposition (see
-        // TodayTasksWidget.kt), so this frame already shows the new state.
-        try {
-            TodayTasksWidget().update(context, glanceId)
-        } catch (_: Throwable) {
-            // A dead launcher must not stop the sync below.
-        }
 
         // ── 5) BACKGROUND SYNC ──────────────────────────────────────────────
         // Wake a running app (JS drains the queue + syncs Supabase). Fired
@@ -118,6 +139,9 @@ class ToggleTaskAction : ActionCallback {
     }
 
     companion object {
+        /** ⭐ W15 — وسم السجلّ لتسهيل الفحص اليدوي عبر logcat. */
+        private const val TAG = "MedWidgetsToggle"
+
         const val ACTION_TASK_TOGGLED = "com.pre12.medical.action.WIDGET_TASK_TOGGLED"
         const val EXTRA_TASK_ID = "taskId"
         const val EXTRA_DATE = "date"
