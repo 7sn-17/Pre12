@@ -374,6 +374,11 @@ jobs:
           # ⭐ الـ Release يحتاج تاجاً — ننشئه من رقم الإصدار في package.json
           #    (وإن كان موجوداً، يُحدَّث الـ Release ويُستبدل الملف).
           tag_name: v${{ steps.version.outputs.version }}
+          # ⭐⭐ The tag must point at the commit that was actually built. Without
+          #    this, a workflow_dispatch run on a feature branch tags the
+          #    **default branch** HEAD and the release's source archive is wrong
+          #    (the APK itself is always built from the dispatched ref).
+          target_commitish: ${{ github.sha }}
           files: |
             android/app/build/outputs/apk/release/Medical_Platform_v${{ steps.version.outputs.version }}.apk
             android/app/build/outputs/apk/release/Medical_Platform_v${{ steps.version.outputs.version }}.apk.sha256
