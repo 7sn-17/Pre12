@@ -151,7 +151,7 @@ private fun WideHeader(state: TodayTasks, openApp: Action) {
     ) {
         Box(
             modifier = GlanceModifier.defaultWeight(),
-            contentAlignment = Alignment.Start
+            contentAlignment = Alignment.TopStart
         ) {
             if (!state.isEmpty) {
                 Badge(
@@ -174,7 +174,7 @@ private fun WideHeader(state: TodayTasks, openApp: Action) {
 
         Box(
             modifier = GlanceModifier.defaultWeight(),
-            contentAlignment = Alignment.End
+            contentAlignment = Alignment.TopEnd
         ) {
             Text(
                 text = if (state.allDone) {
