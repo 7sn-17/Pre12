@@ -16,6 +16,8 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { createSender, sendBatch, takeInvalidTokens, type FcmMessage } from '../_shared/fcm.ts';
 import {
+  DAILY_CAP,
+  WEEKLY_CAP,
   buildContext,
   composeMessage,
   selectScenario,
@@ -35,9 +37,6 @@ const corsHeaders = {
 };
 
 /** ⭐ الحدّ اليومي والأسبوعي (ضبط الانضباط). */
-const DAILY_CAP = 3;
-const WEEKLY_CAP = 12;
-
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -67,12 +66,19 @@ Deno.serve(async (req) => {
     const forcedScenario: string | null = payload.scenario ? String(payload.scenario) : null;
 
     /* ── 1) الحماية ── */
-    const expected = Deno.env.get('CRON_SECRET') || (await readVaultSecret(admin, 'cron_secret'));
-    if (!expected) return json({ error: 'CRON_SECRET is not configured' }, 500);
+    // ⭐⭐ W12 — مصدرا سرّ واحد: الـVault (مصدر الحقيقة) **أو** متغيّر البيئة.
+    //   (نشرُ الوظيفة قد يترك متغيّر بيئة قديماً يختلف عن الـVault، ف نقبل كليهما.)
+    const vaultSecret = await readVaultSecret(admin, 'cron_secret');
+    const envSecret = Deno.env.get('CRON_SECRET');
+    if (!vaultSecret && !envSecret) {
+      return json({ error: 'CRON_SECRET is not configured' }, 500);
+    }
 
     const provided = req.headers.get('x-cron-secret') || '';
-    let authorized = provided === expected;
-    let authReason = authorized ? 'cron-secret' : '';
+    let authorized = !!provided && (provided === vaultSecret || provided === envSecret);
+    let authReason = authorized
+      ? (provided === vaultSecret ? 'vault-secret' : 'env-secret')
+      : '';
 
     const authHeader = req.headers.get('Authorization') || '';
     const bearer = authHeader.replace(/^Bearer\s+/i, '').trim();
@@ -84,17 +90,27 @@ Deno.serve(async (req) => {
     }
 
     // ⭐ أدمن/مشرف — لتشغيل المحرّك يدوياً من التطبيق.
+    // ⭐⭐ W12 — صاحب الحساب يستطيع تشغيل وضع «أرسل إليّ الآن» لجهازه
+    //   وحده (وهذا ما يضمنه الكود أدناه). أما التشغيل التلقائي (cron) فيبقى
+    //   للسرّ/الأدمن.
+    let callerId = '';
     if (!authorized && bearer) {
       const { data: userData } = await admin.auth.getUser(bearer);
       if (userData?.user) {
-        const { data: profile } = await admin
-          .from('profiles')
-          .select('role')
-          .eq('id', userData.user.id)
-          .maybeSingle();
-        if (profile && (profile.role === 'admin' || profile.role === 'moderator')) {
+        callerId = userData.user.id;
+        if (mode === 'test') {
           authorized = true;
-          authReason = 'admin-role';
+          authReason = 'authenticated-user';
+        } else {
+          const { data: profile } = await admin
+            .from('profiles')
+            .select('role')
+            .eq('id', userData.user.id)
+            .maybeSingle();
+          if (profile && (profile.role === 'admin' || profile.role === 'moderator')) {
+            authorized = true;
+            authReason = 'admin-role';
+          }
         }
       }
     }
@@ -191,6 +207,14 @@ Deno.serve(async (req) => {
     }
 
     /* ── 6) the loop ── */
+    // ⭐⭐ W12 — the daily/weekly cap counts **smart notifications only**.
+    //   The fixed 8 AM / 8 PM reminders are scheduled on the device (they never
+    //   pass through here), and admin / update pushes are not "smart" — neither
+    //   may eat into the ceiling.
+    const smartIds = new Set(scenarioCatalog().map((s) => s.id));
+    const smartLogsOf = (userId: string): LogRow[] =>
+      (logsByUser.get(userId) || []).filter((l) => smartIds.has(String(l.category || '')));
+
     const progressByUser = new Map<string, ProgressRow[]>();
     for (const row of (progress || []) as ProgressRow[]) {
       const list = progressByUser.get(row.user_id) || [];
@@ -211,6 +235,103 @@ Deno.serve(async (req) => {
     const logRows: any[] = [];
     const previews: any[] = [];
 
+    // ⭐⭐ W12 — وضع «أرسل إليّ الآن»: جهاز المُرسِل وحده، لا غيره.
+    if (mode === 'test') {
+      if (!callerId) return json({ error: 'forbidden' }, 403);
+      const { data: ownProfile } = await admin
+        .from('profiles')
+        .select(
+          'id, email, full_name, fcm_token, notify_enabled, last_notification_at, created_at, timezone, notification_prefs, quiet_start, quiet_end',
+        )
+        .eq('id', callerId)
+        .maybeSingle();
+      if (!ownProfile || !ownProfile.fcm_token) {
+        return json({ error: 'no FCM token for this device - enable notifications first' }, 400);
+      }
+
+      const ownCtx = buildContext(
+        ownProfile as unknown as ProfileRow,
+        progressByUser.get(callerId) || [],
+        goalsByUser.get(callerId) || [],
+        filesByUser,
+        smartLogsOf(callerId),
+        now,
+      );
+      const ownSelection = selectScenario(ownCtx, {
+        now,
+        logs: smartLogsOf(callerId),
+        forceScenario: forcedScenario,
+        ignoreLimits: true,
+      });
+      if (!ownSelection) {
+        return json({ ok: true, mode, sent: 0, failed: 0, skipped: 1 });
+      }
+
+      const ownMessage = composeMessage(ownCtx, ownSelection.scenario, ownSelection.reason);
+      const ownActions = ownSelection.scenario.allowTaskAction && ownCtx.pendingTask
+        ? [
+            { title: 'تم الإنجاز', action: 'mark_done' },
+            { title: 'لاحقاً', action: 'later' },
+          ]
+        : undefined;
+      const ownFcm: FcmMessage = {
+        title: ownMessage.title,
+        body: ownMessage.body,
+        data: {
+          ...ownMessage.data,
+          ...(ownActions
+            ? {
+                actions: ownActions.map((a) => a.action).join(','),
+                actions_titles: ownActions.map((a) => a.title).join('|'),
+              }
+            : {}),
+        },
+        channelId: ownMessage.channel as ChannelId,
+        ...(ownActions ? { actions: ownActions } : {}),
+      };
+
+      const ok = await sendOne(sender!, ownProfile.fcm_token, ownFcm);
+      try {
+        await admin.from('notification_log').insert({
+          user_id: callerId,
+          category: ownMessage.scenario,
+          scenario: ownMessage.scenario,
+          channel: ownMessage.channel,
+          title: ownMessage.title,
+          body: ownMessage.body,
+          target: ownMessage.target,
+          payload: ownFcm.data,
+          reason: ownSelection.reason + ' (test)',
+          sent: ok,
+          error: ok ? null : 'failed',
+        });
+      } catch (e) {
+        console.warn('[smart-engine] could not write the log:', e);
+      }
+      if (ok) {
+        try {
+          await admin
+            .from('profiles')
+            .update({ last_notification_at: new Date().toISOString() })
+            .eq('id', callerId);
+        } catch (e) {}
+      }
+
+      return json({
+        ok: true,
+        mode,
+        sent: ok ? 1 : 0,
+        failed: ok ? 0 : 1,
+        skipped: 0,
+        scenario: ownMessage.scenario,
+        channel: ownMessage.channel,
+        title: ownMessage.title,
+        body: ownMessage.body,
+        url: ownMessage.url,
+        fcm: sender?.mode,
+      });
+    }
+
     for (const profile of profiles || []) {
       const p = profile as unknown as ProfileRow;
       const ctx = buildContext(
@@ -218,10 +339,10 @@ Deno.serve(async (req) => {
         progressByUser.get(p.id) || [],
         goalsByUser.get(p.id) || [],
         filesByUser,
-        logsByUser.get(p.id) || [],
+        smartLogsOf(p.id),
         now,
       );
-      const userLogs = logsByUser.get(p.id) || [];
+      const userLogs = smartLogsOf(p.id);
 
       const selection = selectScenario(ctx, {
         now,
@@ -277,41 +398,6 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      if (mode === 'test') {
-        // ⭐ إرسال واحد إلى هذا الجهاز فقط.
-        if (!ctx.notificationsEnabled) {
-          skipped++;
-          continue;
-        }
-        const targetToken = String(payload.token || p.fcm_token || '');
-        if (!targetToken) {
-          skipped++;
-          continue;
-        }
-        const ok = await sendOne(sender!, targetToken, fcmMessage);
-        if (ok) sent++; else failed++;
-        logRows.push({
-          user_id: p.id,
-          category: message.scenario,
-          scenario: message.scenario,
-          channel: message.channel,
-          title: message.title,
-          body: message.body,
-          target: message.target,
-          payload: message.data,
-          reason: message.reason + ' (test)',
-          sent: ok,
-          error: ok ? null : 'failed',
-        });
-        if (ok) {
-          await admin
-            .from('profiles')
-            .update({ last_notification_at: new Date().toISOString() })
-            .eq('id', p.id);
-        }
-        continue;
-      }
-
       /* ── 7) الإرسال الحقيقي ── */
       const result = await sendBatch(sender!, [p.fcm_token!], fcmMessage, 1);
       sent += result.sent;
@@ -336,7 +422,15 @@ Deno.serve(async (req) => {
         title: message.title,
         body: message.body,
         target: message.target,
-        payload: message.data,
+        payload: {
+          ...message.data,
+          ...(actions
+            ? {
+                actions: actions.map((a) => a.action).join(','),
+                actions_titles: actions.map((a) => a.title).join('|'),
+              }
+            : {}),
+        },
         reason: message.reason,
         sent: result.sent > 0,
         error: result.failed ? 'failed' : null,

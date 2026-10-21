@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="5.0.0-beta.6">
+<meta name="app-version" content="5.0.5">
 <title>السنة التحضيرية - المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -6660,7 +6660,7 @@ i.fab {
         <div class="settings-icon"><i data-lucide="info"></i></div>
         <div class="settings-text">
           <h4>حول التطبيق</h4>
-          <p id="aboutVersionText">الإصدار 5.0.0-beta.6 • السنة التحضيرية</p>
+          <p id="aboutVersionText">الإصدار 5.0.5 • السنة التحضيرية</p>
         </div>
       </div>
       <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
@@ -7048,7 +7048,7 @@ i.fab {
 <script src="widgets.js"></script>
 
 
-  <script src="app.js?v=5.0.0-beta.6"></script>
+  <script src="app.js?v=5.0.5"></script>
 <script>
 
     lucide.createIcons();
@@ -7489,33 +7489,162 @@ function openLastActivity() {
      * Nothing here waits for the network: the whole point is that the button
      * opens *something* on the first tap.
      */
+    /** ⭐⭐ Phase W12 — ودجات الودجت (للنافذة الداخلية). */
+    var WIDGET_CHOICES = [
+      { kind: 'tasks', name: 'مهام اليوم', desc: '3×2 — قائمة مهامك مع مربّعات الإنجاز' },
+      { kind: 'streak', name: 'سلسلة الأيام', desc: '1×1 — عدد أيامك المتتالية' },
+      { kind: 'streak_detail', name: 'سلسلة مفصّلة', desc: '4×2 — رقم كبير وخريطة أسبوع من ٧ أيام' },
+      { kind: 'notes', name: 'ملاحظات وأهداف', desc: '2×2 — ورق أزرق وبنفسجي مع نسب التقدّم' },
+      { kind: 'goals', name: 'أهدافي', desc: '2×2 — ورقة زرقاء لنسب التقدّم' },
+      { kind: 'notes_only', name: 'ملاحظاتي', desc: '2×2 — ورقة بنفسجية لمحتوى الملاحظات' }
+    ];
+
+    /** ⭐ يثبّت ودجت محدّداً عبر نافذة النظام. */
+    async function pinWidgetKind(kind, name) {
+      var cap = window.Capacitor;
+      var api = cap && cap.Plugins ? cap.Plugins.MedWidgets : null;
+      if (!api || typeof api.requestPinWidget !== 'function') {
+        showToast('التثبيت متاح داخل تطبيق أندرويد فقط', 'info');
+        return false;
+      }
+      try {
+        var result = await api.requestPinWidget({ kind: kind });
+        if (result && result.requested === false) {
+          showToast('اضغط مطوّلاً على الشاشة الرئيسية ثم اختر «التطبيقات المصغرة»', 'info');
+          return false;
+        }
+        showToast('افتحت نافذة «إضافة ' + (name || '') + '» — اضغط «إضافة»', 'success');
+        return true;
+      } catch (e) {
+        console.warn('[index] the pin failed:', e);
+        showToast('تعذّر فتح نافذة الإضافة', 'error');
+        return false;
+      }
+    }
+
+    /**
+     * ⭐⭐ Phase W12 — الخطوة الثالثة: نافذة اختيار داخل التطبيق.
+     * تظهر فقط إذا فشل التثبيت المباشر وقائمة النظام.
+     */
+    function openWidgetChooserModal() {
+      if (document.getElementById('widgetChooserModal')) return;
+      var overlay = document.createElement('div');
+      overlay.id = 'widgetChooserModal';
+      overlay.setAttribute('dir', 'rtl');
+      overlay.style.cssText =
+        'position:fixed;inset:0;z-index:200000;display:flex;align-items:flex-end;' +
+        'justify-content:center;background:rgba(3,10,8,0.74);backdrop-filter:blur(10px);' +
+        '-webkit-backdrop-filter:blur(10px);padding:18px;';
+
+      var card = document.createElement('div');
+      card.style.cssText =
+        'width:100%;max-width:420px;background:var(--bg-solid,#0d221a);' +
+        'border:1px solid var(--border-card-hover,rgba(16,185,129,0.5));border-radius:22px;' +
+        'padding:18px;box-shadow:0 24px 60px rgba(0,0,0,0.55);' +
+        'color:var(--text-primary,#f0fdf4);font-family:inherit;';
+
+      var heading = document.createElement('div');
+      heading.textContent = 'اختر الودجت';
+      heading.style.cssText = 'font-size:1rem;font-weight:800;margin-bottom:4px;';
+
+      var hint = document.createElement('div');
+      hint.textContent = 'اضغط على الودجت لإضافته إلى شاشتك الرئيسية.';
+      hint.style.cssText =
+        'font-size:0.76rem;line-height:1.7;color:var(--text-secondary,#94a3b8);margin-bottom:12px;';
+
+      var list = document.createElement('div');
+      list.style.cssText = 'display:grid;gap:8px;';
+
+      function close() {
+        try { overlay.remove(); } catch (e) {}
+      }
+
+      WIDGET_CHOICES.forEach(function (choice) {
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.style.cssText =
+          'display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;' +
+          'text-align:start;padding:11px 12px;border-radius:14px;' +
+          'border:1px solid var(--border-card,rgba(16,185,129,0.18));' +
+          'background:var(--bg-card,rgba(16,34,27,0.65));color:inherit;font:inherit;cursor:pointer;';
+        var name = document.createElement('span');
+        name.textContent = choice.name;
+        name.style.cssText = 'font-weight:800;font-size:0.82rem;';
+        var desc = document.createElement('span');
+        desc.textContent = choice.desc;
+        desc.style.cssText = 'font-size:0.66rem;color:var(--text-secondary,#94a3b8);';
+        button.appendChild(name);
+        button.appendChild(desc);
+        button.addEventListener('click', function () {
+          close();
+          pinWidgetKind(choice.kind, choice.name);
+        });
+        list.appendChild(button);
+      });
+
+      var cancel = document.createElement('button');
+      cancel.type = 'button';
+      cancel.textContent = 'إلغاء';
+      cancel.style.cssText =
+        'width:100%;margin-top:10px;padding:11px;border-radius:14px;border:1px solid ' +
+        'var(--border-card,rgba(16,185,129,0.18));background:transparent;color:' +
+        'var(--text-secondary,#94a3b8);font:inherit;font-weight:800;cursor:pointer;';
+      cancel.addEventListener('click', close);
+
+      card.appendChild(heading);
+      card.appendChild(hint);
+      card.appendChild(list);
+      card.appendChild(cancel);
+      overlay.appendChild(card);
+      overlay.addEventListener('click', function (event) {
+        if (event.target === overlay) close();
+      });
+      document.body.appendChild(overlay);
+    }
+
+    /**
+     * ⭐⭐ Phase W12 — «إضافة ودجت للشاشة الرئيسية» بثلاث خطوات:
+     *   1) **التثبيت المباشر** (نافذة «إضافة» التي ينصح بها أندرويد)؛
+     *   2) **قائمة النظام** (كل ودجات التطبيق في مكان واحد)؛
+     *   3) **نافذة داخل التطبيق** (آخر حلّ — لا يبقى المستخدم بلا طريقة).
+     */
     async function triggerAddWidget() {
       var cap = window.Capacitor;
       var api = cap && cap.Plugins ? cap.Plugins.MedWidgets : null;
+
       if (!api) {
-        showToast('إضافة الودجات متاحة داخل تطبيق أندرويد فقط', 'info');
+        openWidgetChooserModal();
         return;
       }
 
+      // 1) التثبيت المباشر
+      try {
+        if (typeof api.requestPinWidget === 'function') {
+          var pinned = await api.requestPinWidget({ kind: 'tasks' });
+          if (pinned && pinned.requested !== false) {
+            showToast('افتحت نافذة الإضافة — اضغط «إضافة»', 'success');
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('[index] the pin request failed:', e);
+      }
+
+      // 2) قائمة النظام
       try {
         if (typeof api.openWidgetPicker === 'function') {
           var picked = await api.openWidgetPicker();
-          if (picked && picked.opened) return;
-        }
-
-        if (typeof api.requestPinWidget === 'function') {
-          var pinned = await api.requestPinWidget({ kind: 'tasks' });
-          if (pinned && pinned.requested === false) {
-            showToast('اضغط مطوّلاً على الشاشة الرئيسية ثم اختر «التطبيقات المصغرة»', 'info');
+          if (picked && picked.opened) {
+            showToast('اختر الودجت من نافذة النظام', 'success');
+            return;
           }
-          return;
         }
-
-        if (typeof addHomeWidget === 'function') addHomeWidget('tasks');
       } catch (e) {
-        console.warn('[index] add widget failed:', e);
-        showToast('تعذّر فتح نافذة الإضافة — جرّب من الشاشة الرئيسية', 'error');
+        console.warn('[index] the picker request failed:', e);
       }
+
+      // 3) النافذة داخل التطبيق
+      openWidgetChooserModal();
     }
 
     function showToast(message, type = 'success') {
@@ -8115,6 +8244,34 @@ function openLastActivity() {
       { id: 'agenda', label: '🗒️ تذكير بالمهام' }
     ];
 
+    /**
+     * ⭐⭐ Phase W12 — بيانات المعاينة المحلية: نفس عناوين ونصوص المحرّك
+     * الذكي بالضبط، ليرى المستخدم التصميم بلا أي طلب شبكة.
+     */
+    var NOTIFICATION_PREVIEW_MOCK = {
+      onboarding: { t: 'أهلاً بك في المنصة الطبية', b: 'أهلاً بك يا حسن في المنصة الطبية! خطوتك الأولى اليوم 💪', c: 'medapp_tasks' },
+      freshStart: { t: 'ابدأ من الصفر — لا بأس', b: 'لم تبدأ بعد؟ لا مشكلة — أنجز مهمة واحدة صغيرة اليوم فقط، والباقي غداً 🌱', c: 'medapp_tasks' },
+      firstWin: { t: 'أول إنجاز! 🎉', b: 'أنجزت أول مهمة لك! هذه البداية التي يصنع منها عادة 🌱', c: 'medapp_streak' },
+      streakRisk: { t: 'حافظ على سلسلتك', b: '🔥 سلسلتك (12 أيام) في خطر. أنجز مهمة سريعة قبل منتصف الليل!', c: 'medapp_streak' },
+      streakMilestone: { t: '🏅 وسام جديد: فارس الأسبوع', b: 'وصلت إلى 7 أيام متتالية — أنت فارس الأسبوع! 🎖️', c: 'medapp_streak' },
+      momentum: { t: 'أنت على موجة 🔥', b: 'أنجزت مهمة في 2 من آخر 3 أيام — الزخم معك الآن. أكمل موجتك 🚀', c: 'medapp_streak' },
+      halfway: { t: 'أنت في منتصف الطريق!', b: 'أنجزت نصف مهام اليوم (2 من 4). الباقي أسهل! 💪', c: 'medapp_tasks' },
+      missed: { t: 'مهام فائتة', b: 'لديك 3 مهمة فائتة — خمس دقائق تكفي لتبدأ 📌', c: 'medapp_tasks' },
+      achievement: { t: 'أنجزت كل مهام اليوم! 🎉', b: 'أكملت 4 مهمة اليوم — أنت أسطورة 🏆', c: 'medapp_tasks' },
+      morningPlan: { t: 'صباح الخير', b: 'صباح الخير يا حسن ☀️! لديك 3 مهام اليوم. ابدأ بالأهم.', c: 'medapp_tasks' },
+      nightOwl: { t: 'نومك جزء من أدائك', b: 'المهمة واحدة وتستحق نوماً — نومك القصير يخفض استيعابك غداً 🧠', c: 'medapp_tasks' },
+      comeback: { t: 'سلسلتك ما زالت محفوظة', b: 'غبت 4 أيام — لا بأس. سلسلتك (3) محفوظة، وعادة واحدة تكفي لعودتك 🌱', c: 'medapp_streak' },
+      reengagement: { t: 'افتقدناك', b: 'افتقدناك يا حسن! طلاب الطب لا يستسلمون — عد لمهامك الآن 📖', c: 'medapp_tasks' },
+      weeklyDigest: { t: 'ملخّص أسبوعك', b: 'أسبوعك: 5 من 7 أيام نشِط، و18 مهمة منجزة. الأكثر إنجازاً: البيولوجيا 📊', c: 'medapp_content' },
+      subjectFocus: { t: 'تركيز اليوم: الكيمياء', b: 'الكيمياء هي الأقل إنجازاً عندك هذا الأسبوع. خمس دقائق مراجعة تُنهيها 📖', c: 'medapp_content' },
+      goalMilestone: { t: 'اقتربت من هدفك!', b: '«مراجعة Pathology» وصل إلى 80٪ — دفعة أخيرة تكفي 🎯', c: 'medapp_content' },
+      goalDue: { t: 'موعد «تسليم بحث» يقترب', b: 'موعد «تسليم بحث» بعد يوم — ساعةّه اليوم قبل أن يهرب ⏳', c: 'medapp_content' },
+      contentNew: { t: 'محتوى جديد', b: '📚 ملف جديد في تاريخ الطب. كن أول من يطّلع عليه!', c: 'medapp_content' },
+      contentForYou: { t: 'محتوى في مادتك المفضّلة', b: 'مادة جديدة في تاريخ الطب — المادة التي تتقنها، فستستفيد منها أكثر 🎯', c: 'medapp_content' },
+      eveningReview: { t: 'راجع يومك بدقائق', b: 'أنهيت مهام اليوم — خمس دقائق مراجعة وستنام وأنت مطمئن 🌙', c: 'medapp_content' },
+      agenda: { t: 'مهام اليوم', b: 'لديك 3 مهام اليوم — ابدأ بنشاط 💪', c: 'medapp_tasks' }
+    };
+
     var NOTIFICATION_CHANNELS_UI = [
       { id: 'tasks', name: 'المهام اليومية', desc: 'خطة اليوم، المهام الفائتة، التذكيرات' },
       { id: 'streak', name: 'سلسلة الدراسة', desc: 'حماية السلسلة، الأوسمة، الزخم' },
@@ -8143,63 +8300,102 @@ function openLastActivity() {
       out.textContent = text || '';
     }
 
-    /** ⭐ معاينة الرسالة (بدون إرسال) + سبب اختيارها. */
+    /**
+     * ⭐⭐ Phase W12 — «عاين الرسالة» = إشعار **محلي** ببيانات تجريبية.
+     *
+     * لا نطلب من الخادم شيئاً: نبني الإشعار على الجهاز بنفس عناوين ونصوص
+     * المحرّك الذكي، فيظهر في شريط الإشعارات خلال ٥ ثوانٍ — تماماً كما سيظهر
+     * الإشعار الحقيقي، بنفس القناة ونفس التصميم.
+     */
     async function previewNotificationScenarioNow() {
-      if (typeof MedAppNotifications === 'undefined' ||
-          typeof MedAppNotifications.previewNotificationScenario !== 'function') {
-        showToast('المحرّك الذكي متاح في تطبيق Android فقط', 'info');
-        return;
-      }
       const btn = document.getElementById('diagPreviewBtn');
       if (btn) btn.disabled = true;
-      showScenarioOutput('جارٍ المعاينة…');
+
+      const scenario = selectedNotificationScenario();
+      const mock = NOTIFICATION_PREVIEW_MOCK[scenario] || {
+        t: 'معاينة إشعار',
+        b: 'هكذا سيظهر الإشعار على جهازك — بدون أي طلب شبكة.',
+        c: 'medapp_tasks'
+      };
+
+      showScenarioOutput([
+        '• ' + mock.t,
+        '  ' + mock.b,
+        '  ↳ القناة: ' + mock.c,
+        '  ↳ معاينة محلية (لا تُرسل إلى الخادم)'
+      ].join('\n'));
+
       try {
-        const data = await MedAppNotifications.previewNotificationScenario(
-          selectedNotificationScenario()
-        );
-        const previews = (data && data.previews) || [];
-        if (!previews.length) {
-          showScenarioOutput('لا يوجد سبب الآن لإرسال إشعار — وهذا بالضبط ما نريد: صمت ذكي ✨');
+        if (typeof MedAppNotifications === 'undefined' ||
+            typeof MedAppNotifications.scheduleLocalPreview !== 'function') {
+          showToast('المعاينة المحلية متاحة في تطبيق Android فقط', 'info');
           return;
         }
-        const lines = previews.map(function (item) {
-          return [
-            '• ' + item.title,
-            '  ' + item.body,
-            '  ↳ ' + item.scenario + ' · ' + item.channel + ' · ' + item.url,
-            '  ↳ السبب: ' + (item.reason || '—')
-          ].join('\n');
+        const result = await MedAppNotifications.scheduleLocalPreview({
+          title: mock.t,
+          body: mock.b,
+          channel: mock.c,
+          seconds: 5
         });
-        showScenarioOutput(lines.join('\n\n'));
-        showToast('تم — هذه هي الرسالة كما ستصل', 'success');
+        if (result && result.ok) {
+          showToast('ستظهر المعاينة في شريط الإشعارات بعد 5 ثوانٍ', 'success');
+        } else {
+          showToast('تعذّرت المعاينة: ' + ((result && result.error) || 'خطأ غير معروف'), 'error');
+        }
       } catch (e) {
-        console.error('[diagnostics] the preview failed:', e);
+        console.error('[diagnostics] the local preview failed:', e);
         showScenarioOutput('تعذّرت المعاينة: ' + ((e && e.message) || 'خطأ غير معروف'));
       } finally {
         if (btn) btn.disabled = false;
       }
     }
 
-    /** ⭐ إرسال إشعار حقيقي إلى هذا الجهاز. */
+    /**
+     * ⭐⭐ Phase W12 — «أرسل إليّ الآن»:
+     *   1) نتأكّد من رمز FCM ونحفظه في `profiles` (بدونه لا يعرف المحرّك
+     *      إلى أي جهاز يرسل!)؛
+     *   2) ثم نطلب من Edge Function إرسال السيناريو المختار **إلى هذا
+     *      الجهاز فقط**.
+     */
     async function sendNotificationScenarioNow() {
       if (typeof MedAppNotifications === 'undefined' ||
           typeof MedAppNotifications.sendNotificationScenario !== 'function') {
-        showToast('المحرّك الذكي متاح في تطبيق Android فقط', 'info');
+        showToast('تعذّر الوصول إلى الإشعارات على هذا المنصّة', 'info');
         return;
       }
       const btn = document.getElementById('diagSendScenarioBtn');
       if (btn) btn.disabled = true;
-      showScenarioOutput('جارٍ الإرسال…');
+
+      showScenarioOutput('جارٍ تجهيز رمز الجهاز…');
       try {
+        // ⭐ 1) الرمز أولاً — وإلاSending an engine call without a token is pointless.
+        let token = '';
+        try {
+          token = await ensureNotificationToken();
+        } catch (e) {
+          console.warn('[diagnostics] the token could not be refreshed:', e);
+        }
+        if (!token) {
+          showScenarioOutput('لم نتمكّن من تسجيل رمز الجهاز — تأكّد من السماح بالإشعارات ثم أعد المحاولة.');
+          showToast('لم نتمكّن من تسجيل رمز الجهاز', 'error');
+          return;
+        }
+        showScenarioOutput('تم تسجيل الرمز ✓ · جارٍ إرسال السيناريو…');
+
+        // ⭐ 2) ثم الطلب الحقيقي.
         const data = await MedAppNotifications.sendNotificationScenario(
           selectedNotificationScenario()
         );
-        showScenarioOutput('تم الإرسال: ' + ((data && data.sent) || 0) +
-          ' رسالة · فشلت: ' + ((data && data.failed) || 0));
+        showScenarioOutput([
+          'تم الإرسال: ' + ((data && data.sent) || 0) + ' رسالة',
+          'فشل: ' + ((data && data.failed) || 0),
+          'الرمز: ' + token.slice(0, 18) + '…'
+        ].join('\n'));
         showToast('أُرسل الإشعار — تحقّق من شريط الإشعارات', 'success');
       } catch (e) {
         console.error('[diagnostics] the send failed:', e);
         showScenarioOutput('تعذّر الإرسال: ' + ((e && e.message) || 'خطأ غير معروف'));
+        showToast('تعذّر الإرسال — تحقّق من الاتصال', 'error');
       } finally {
         if (btn) btn.disabled = false;
       }
@@ -8788,6 +8984,25 @@ if (adminItem && (role === 'admin' || role === 'moderator')) {
         </span>
       `;
       lucide.createIcons();
+
+      // ⭐⭐ W12 — التحديث الخلفي يحدث بعد ثوانٍ؛ نُعيد القراءة لنُظهر
+      //   العدد الجديد فوراً (بلا انتظار المستخدم).
+      if (count !== null && count !== undefined && typeof fetchSubjectFileCount === 'function') {
+        setTimeout(async function () {
+          try {
+            const fresh = await fetchSubjectFileCount(subjectId);
+            if (fresh === null || fresh === count) return;
+            if (!metaEl || !metaEl.isConnected) return;
+            metaEl.innerHTML = `
+              <span class="meta-item">
+                <i data-lucide="file-text"></i>
+                ${fresh} ملف
+              </span>
+            `;
+            lucide.createIcons();
+          } catch (e) {}
+        }, 2500);
+      }
     }
 
     function goToSubject(subject) {

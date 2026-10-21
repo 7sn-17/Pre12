@@ -302,16 +302,39 @@ section('3) فترات التهدئة والسقوف اليومية');
 }
 
 {
-  const logs: LogRow[] = Array.from({ length: 3 }).map((_, i) => ({
+  // ⭐ W12 — السقف صار 6 يومياً، والعدّ يحسب **الإشعارات الذكية فقط**.
+  const logs: LogRow[] = Array.from({ length: 6 }).map((_, i) => ({
     user_id: 'u1',
-    category: 'x' + i,
+    category: i < 5 ? 'agenda' : 'streakRisk',
     title: 't' + i,
     created_at: new Date(NOW.getTime() - i * 3600000).toISOString(),
   }));
   const ctx = ctxOf({}, [row()]);
-  ctx.sentToday = 3;
+  ctx.sentToday = 6;
   const sel = selectScenario(ctx, { now: NOW, logs });
-  check('3 إشعارات اليوم ⇒ السقف اليومي', sel === null, sel?.scenario.id);
+  check('6 إشعارات ذكية اليوم ⇒ السقف اليومي (6)', sel === null, sel?.scenario.id);
+}
+
+{
+  // ⭐ التذكيرات الثابتة (٨ص/٨م) وإشعارات التحديث لا تُحتسب في السقف.
+  const logs: LogRow[] = Array.from({ length: 9 }).map((_, i) => ({
+    user_id: 'u1',
+    category: i % 3 === 0 ? 'reminder_8am' : (i % 3 === 1 ? 'update' : 'admin'),
+    title: 't' + i,
+    created_at: new Date(NOW.getTime() - i * 3600000).toISOString(),
+  }));
+  const ctx = ctxOf({}, [row()]);
+  const sel = selectScenario(ctx, { now: NOW, logs });
+  check('التذكيرات الثابتة لا تستهلك السقف', !!sel, sel?.scenario.id);
+}
+
+{
+  // ⭐ الحدث هو الأساس: بلا حدث حقيقي ⇒ صفر إشعارات (السقف سقفٌ لا حصة).
+  const ctx = ctxOf({}, [
+    row({ task_id: 'a', plan_date: '2026-10-20', completed: true, completed_at: '2026-10-20T08:00:00Z' }),
+  ]);
+  const sel = selectScenario(ctx, { now: NOW, logs: [] });
+  check('بلا حدث ⇒ لا إشعار (السقف ليس حصة)', sel === null, sel?.scenario.id);
 }
 
 {

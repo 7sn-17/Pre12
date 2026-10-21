@@ -234,7 +234,8 @@ private fun CombinedNotes(
  * line count instead of a hard-coded table.
  */
 private fun maxRowsForSingle(height: androidx.compose.ui.unit.Dp, twoLines: Boolean): Int {
-    val chrome = 50.dp
+    // ⭐ W12 — الفاصل تحت العنوان ي��كل 7dp من الارتفاع.
+    val chrome = 57.dp
     // A row with a content line under the title is twice as tall.
     val row = if (twoLines) 42.dp else 22.dp
     val gap = 3.dp
@@ -291,7 +292,11 @@ private fun StickyHalf(
                 )
             }
 
-            Gap(if (compact) 2.dp else 4.dp)
+            // ⭐⭐ Phase W12 — خطّ فاصل تحت العنوان: يفصل «العنوان» عن
+            //   «المحتوى» بصرياً، تماماً كما في الورق اللاصق.
+            Gap(if (compact) 3.dp else 4.dp)
+            Hairline(WidgetSkin.PaperHairline, 1.dp)
+            Gap(if (compact) 3.dp else 4.dp)
 
             if (items.isEmpty()) {
                 if (showHint) {

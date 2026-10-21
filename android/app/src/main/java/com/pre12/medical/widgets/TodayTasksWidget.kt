@@ -83,9 +83,12 @@ private fun TodayTasksCard(state: TodayTasks) {
     val pad = if (tight) 12.dp else 16.dp
     val headerLine = 28.dp
     val metaLine = 17.dp
-    val hairlineGap = if (tight) 5.dp else 7.dp
-    val rowGap = if (tight) 4.dp else 6.dp
-    val minRow = if (tight) 22.dp else 24.dp
+    val hairlineGap = if (tight) 4.dp else 6.dp
+    // ⭐⭐ Phase W12 — نُظهر **كل** المهام التي تتّسع لها البطاقة:
+    //   صفّ 16sp يحتاج ~21dp، والفجوة 4dp، والحدّ الأقصى صار 12
+    //   (maximum الحمولة) بدل 6.
+    val rowGap = 4.dp
+    val minRow = 21.dp
     val circle = if (tight) 20.dp else 22.dp
     val rowText = 16.sp
 
@@ -102,7 +105,7 @@ private fun TodayTasksCard(state: TodayTasks) {
     val headerHeight = if (wide) headerLine else headerLine + metaLine
     val chrome = pad * 2 + headerHeight + hairlineGap + 1.dp + hairlineGap
     val available = (size.height - chrome).coerceAtLeast(0.dp)
-    val capacity = (((available + rowGap) / (minRow + rowGap)).toInt()).coerceIn(1, 6)
+    val capacity = (((available + rowGap) / (minRow + rowGap)).toInt()).coerceIn(1, 12)
     val rows = visible.take(capacity)
 
     Box(

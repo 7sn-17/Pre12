@@ -469,6 +469,9 @@
   }
 
   /** ⭐ يحفظ توكن الإشعارات في جدول profiles — update فقط (RLS آمن) */
+  var TOKEN_SAVE_KEY = 'medapp_fcm_token_saved';
+  var TOKEN_SAVE_TTL_MS = 6 * 60 * 60 * 1000; // ٦ ساعات
+
   function saveFcmToken(token) {
     token = extractFcmToken(token);
     if (!isUsableFcmToken(token)) {
@@ -476,6 +479,17 @@
       return Promise.resolve(false);
     }
     rememberFcmToken(token);
+
+    // ⭐⭐ Phase W12 — لا نُرسل PATCH لنفس الرمز مرّة بعد مرّة:
+    //   كل تشغيل للتطبيق كان يكتب سطراً في سجلّات Supabase بلا فائدة.
+    try {
+      var raw = localStorage.getItem(TOKEN_SAVE_KEY);
+      var saved = raw ? JSON.parse(raw) : null;
+      if (saved && saved.token === token &&
+          (Date.now() - (Number(saved.at) || 0)) < TOKEN_SAVE_TTL_MS) {
+        return Promise.resolve(true);
+      }
+    } catch (e) {}
     // ⭐ v4.3.0 — the client is exposed on window by supabase-config.js.
     var client = global.supabaseClient ||
       (typeof supabaseClient !== 'undefined' ? supabaseClient : null);
@@ -514,6 +528,9 @@
           }
           var rows = (result && result.data) || [];
           if (rows.length) {
+            try {
+              localStorage.setItem(TOKEN_SAVE_KEY, JSON.stringify({ token: token, at: Date.now() }));
+            } catch (e) {}
             console.info(
               '[notifications] the FCM token saved:',
               String(token).slice(0, 18) + '…'
@@ -1392,6 +1409,50 @@
     });
   }
 
+
+  /**
+   * ⭐⭐ Phase W12 — معاينة محلية: إشعار حقيقي على الجهاز ببيانات تجريبية.
+   *
+   * لا تحتاج خادماً ولا شبكة: يبني المستخدم_shape الإشعار من العنوان والنصّ
+   * اللذين نمرّرهما، ويجدول�� بعد ثوانٍ few ليراه بعينه.
+   */
+  function scheduleLocalPreview(options) {
+    var api = plugin('LocalNotifications');
+    if (!api || typeof api.schedule !== 'function') {
+      return Promise.resolve({ ok: false, error: 'الإشعارات المحلية غير متاحة' });
+    }
+    options = options || {};
+    var title = String(options.title || 'معاينة إشعار');
+    var body = String(options.body || '');
+    var channelId = String(options.channel || 'medapp_tasks');
+    var seconds = Math.max(1, Math.min(120, Number(options.seconds) || 5));
+
+    ensureChannels();
+
+    var id = Math.floor(Date.now() / 1000) % 2147483647;
+    return api.schedule({
+      notifications: [{
+        id: id,
+        title: title,
+        body: body,
+        smallIcon: 'ic_stat_icon',
+        channelId: channelId,
+        sound: 'default',
+        schedule: { at: new Date(Date.now() + seconds * 1000) },
+        extra: {
+          action: String(options.action || 'tasks'),
+          channel: channelId,
+          preview: true
+        }
+      }]
+    }).then(function () {
+      return { ok: true, id: id, seconds: seconds };
+    }).catch(function (e) {
+      console.warn('[notifications] the local preview failed:', e);
+      return { ok: false, error: String((e && e.message) || e) };
+    });
+  }
+
   global.MedAppNotifications = {
     CATEGORIES: CATEGORIES,
     pick: pick,
@@ -1427,6 +1488,7 @@
     setChannelPreference: setChannelPreference,
     previewNotificationScenario: previewNotificationScenario,
     sendNotificationScenario: sendNotificationScenario,
-    getNotificationDiagnostics: getNotificationDiagnostics
+    getNotificationDiagnostics: getNotificationDiagnostics,
+    scheduleLocalPreview: scheduleLocalPreview
   };
 })(window);

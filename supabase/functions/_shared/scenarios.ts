@@ -382,10 +382,18 @@ export function buildContext(
   const recent = logs.slice(0, 12);
   const recentCategories = recent.map((l) => l.category);
   const recentTitles = recent.map((l) => l.title);
+  // ⭐⭐ W12 — العدّ يحسب **الإشعارات الذكية فقط**: تذكيرات الثامنة صباحاً
+  //   والمساء تُجدوَل على الجهاز (ولا تمرّ من هنا)، وإشعارات التحديث
+  //   والإدارة ليست «ذكية» أصلاً. فلا تأكل من سقف اليوم.
   const dayStart = now.getTime() - 86400000;
   const weekStart = now.getTime() - 7 * 86400000;
-  const sentToday = logs.filter((l) => new Date(l.created_at).getTime() >= dayStart).length;
-  const sentThisWeek = logs.filter((l) => new Date(l.created_at).getTime() >= weekStart).length;
+  const isSmart = (l: LogRow) => isSmartCategory(String(l.category || ''));
+  const sentToday = logs.filter(
+    (l) => isSmart(l) && new Date(l.created_at).getTime() >= dayStart,
+  ).length;
+  const sentThisWeek = logs.filter(
+    (l) => isSmart(l) && new Date(l.created_at).getTime() >= weekStart,
+  ).length;
 
   /* ── الساعة المعتادة ── */
   const hours = userRows
@@ -1037,6 +1045,21 @@ export const SCENARIOS: Scenario[] = [
  *   2) صمت مُتعلَّم: إن كان الطالب لم يُنجز شيئاً في هذه الساعة أبداً
  *      خلال آخر أسبوعين، فهذه ساعة صمت له أيضاً.
  */
+/**
+ * ⭐ معرّفات السيناريوهات الذكية — كل ما عداها لا يُحتسب في السقف
+ *   (تذكيرات الثامنة صباحاً/المساء، إشعارات التحديث والإدارة).
+ */
+let smartIds: Set<string> | null = null;
+
+export function isSmartCategory(id: string): boolean {
+  if (!smartIds) smartIds = new Set(SCENARIOS.map((s) => s.id));
+  return smartIds.has(String(id || ''));
+}
+
+export function smartCategoryIds(): string[] {
+  return SCENARIOS.map((s) => s.id);
+}
+
 export function isQuietHour(ctx: UserContext): boolean {
   const hour = ctx.localHour;
 
@@ -1066,6 +1089,17 @@ export function isQuietHour(ctx: UserContext): boolean {
 /* ══════════════════════════════════════════════════════════
    4) اختيار السيناريو
    ══════════════════════════════════════════════════════════ */
+
+/**
+ * ⭐⭐ Phase W12 — the pacing ceilings.
+ *
+ * ⭐ IMPORTANT: a cap is a **ceiling, not a quota**. The engine only speaks
+ * when a *real event* happens (a streak at risk, missed tasks, new content, a
+ * goal near its deadline, a first win…). If nothing happened, it sends
+ * **zero** notifications — the daily cap is never a target to fill.
+ */
+export const DAILY_CAP = 6;
+export const WEEKLY_CAP = 30;
 
 export interface SelectionOptions {
   now: Date;
@@ -1118,8 +1152,8 @@ export function selectScenario(
 
   if (!options.ignoreLimits) {
     if (isQuietHour(ctx)) return null;
-    if (ctx.sentToday >= 3) return null;
-    if (ctx.sentThisWeek >= 12) return null;
+    if (ctx.sentToday >= DAILY_CAP) return null;
+    if (ctx.sentThisWeek >= WEEKLY_CAP) return null;
   }
 
   // ⭐ الاختبار اليدوي يتجاوز شرط الظهور: نريد معاينة أي سيناريو.

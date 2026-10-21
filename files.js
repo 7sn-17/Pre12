@@ -179,10 +179,19 @@ async function fetchPlanData(options) {
 }
 
 /**
- * عدد ملفات مادة معيّن — مع تخزين مؤقت حتى يعمل دون اتصال.
+ * ⭐⭐ Phase W12 — عدد ملفات مادة معيّن.
+ *
+ * ⚠️ كان هنا استنزافٌ ضخم لسجلّات Supabase: كل فتح للصفحة كان يرسل
+ *   طلب HEAD لكل مادة (≈٢٧٠٠ طلب في اليوم لكل مادة ⇒ أكثر من ١٦٬٠٠٠
+ *   سجلّ). الآن:
+ *   • النتيجة تُخزَّن محلياً مع **وقت** (TTL)؛
+ *   • إذا كانت新鮮اً نُعيده **فوراً بلا شبكة**؛
+ *   • إذا قَدَم نُعيده ونُحدّثه في الخلفية (stale-while-revalidate)؛
+ *   • الشبكة تُستدعى فقط عند غياب أي نسخة مخزَّنة.
  */
 async function fetchSubjectFileCount(subjectId) {
   const cacheKey = SUBJECT_COUNT_CACHE_KEY;
+  const TTL_MS = 30 * 60 * 1000; // ٣٠ دقيقة
 
   const readAll = () => {
     try {
@@ -200,13 +209,27 @@ async function fetchSubjectFileCount(subjectId) {
     } catch (e) {}
   };
 
-  // ⭐ غير متصل: نقرأ العدد المخزَّن فوراً.
-  if (isOffline()) {
-    const map = readAll();
-    const value = map[String(subjectId)];
-    return typeof value === 'number' ? value : null;
+  const key = String(subjectId);
+  const map = readAll();
+  const entry = map[key];
+
+  // ⭐ نسخة حديثة ⇒ لا شبكة إطلاقاً.
+  if (entry && typeof entry.count === 'number') {
+    const age = Date.now() - (Number(entry.at) || 0);
+    if (age < TTL_MS) return entry.count;
+    // ⭐ نسخة قديمة ⇒ نُعيدها الآن ونُحدّثها في الخلفية.
+    refreshSubjectFileCount(subjectId, readAll, writeAll);
+    return entry.count;
   }
 
+  // ⭐ نسخة قديمة بلا وقت (من الإصدارات السابقة) ⇒ نستخدمها مرّة ونحدّثها.
+  if (entry && typeof entry.count === 'number') {
+    refreshSubjectFileCount(subjectId, readAll, writeAll);
+    return entry.count;
+  }
+
+  // ⭐ لا نسخة ⇒ شبكة (مع مهلة).
+  if (isOffline()) return null;
   try {
     const result = await withTimeout(
       supabaseClient
@@ -218,15 +241,34 @@ async function fetchSubjectFileCount(subjectId) {
     );
     if (result.error) throw result.error;
 
-    const map = readAll();
-    map[String(subjectId)] = count || 0;
-    writeAll(map);
-    return count || 0;
+    const count = result.count || 0;
+    const fresh = readAll();
+    fresh[key] = { count: count, at: Date.now() };
+    writeAll(fresh);
+    return count;
   } catch (err) {
-    const map = readAll();
-    const value = map[String(subjectId)];
-    return typeof value === 'number' ? value : null;
+    return null;
   }
+}
+
+/** ⭐ تحديث خلفي للعدد (بلا انتظار، وبلا 影响 على الواجهة). */
+function refreshSubjectFileCount(subjectId, readAll, writeAll) {
+  if (isOffline()) return;
+  Promise.resolve(
+    withTimeout(
+      supabaseClient
+        .from('files')
+        .select('*', { count: 'exact', head: true })
+        .eq('subject_id', subjectId)
+        .eq('is_published', true),
+      NETWORK_TIMEOUT_MS
+    )
+  ).then(function (result) {
+    if (!result || result.error) return;
+    const map = readAll();
+    map[String(subjectId)] = { count: result.count || 0, at: Date.now() };
+    writeAll(map);
+  }).catch(function () {});
 }
 
 // تنظيف دوري
