@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="5.0.0-beta.5">
+<meta name="app-version" content="5.0.0-beta.6">
 <title>السنة التحضيرية - المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -6660,7 +6660,7 @@ i.fab {
         <div class="settings-icon"><i data-lucide="info"></i></div>
         <div class="settings-text">
           <h4>حول التطبيق</h4>
-          <p id="aboutVersionText">الإصدار 5.0.0-beta.5 • السنة التحضيرية</p>
+          <p id="aboutVersionText">الإصدار 5.0.0-beta.6 • السنة التحضيرية</p>
         </div>
       </div>
       <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
@@ -6695,6 +6695,67 @@ i.fab {
                     font-weight: 800;
                     cursor: pointer;
                   ">نسخ الرمز</button>
+
+          <!-- ⭐⭐ Phase W10 — مختبر السيناريوهات + قنوات الإشعارات -->
+          <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-card);">
+            <p style="margin: 0 0 8px; font-size: 0.78rem; font-weight: 800; color: var(--text-primary);">
+              <i data-lucide="flask-conical" style="width: 14px; height: 14px; vertical-align: -2px;"></i>
+              مختبر المحرّك الذكي
+            </p>
+            <p style="margin: 0 0 10px; font-size: 0.68rem; line-height: 1.7; color: var(--text-secondary);">
+              عاين الرسالة كما ستصل، أو أرسلها إلى جهازك الآن — ٢١ سيناريو يفهم حالةك.
+            </p>
+
+            <select id="diagScenarioSelect" class="settings-select"
+                    style="
+                      width: 100%; padding: 10px 12px; margin-bottom: 10px;
+                      border-radius: 12px; border: 1px solid var(--border-card);
+                      background: var(--bg-elevated, var(--bg-card));
+                      color: var(--text-primary); font-family: inherit; font-size: 0.76rem;
+                    "></select>
+
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+              <button class="settings-item-arrow" id="diagPreviewBtn" type="button"
+                      onclick="previewNotificationScenarioNow()"
+                      style="
+                        padding: 8px 14px; border-radius: 10px;
+                        border: 1px solid rgba(59, 130, 246, 0.46);
+                        background: rgba(59, 130, 246, 0.10);
+                        color: var(--medapp-blue, #60a5fa);
+                        font-family: inherit; font-size: 0.72rem; font-weight: 800; cursor: pointer;
+                      ">عاين الرسالة</button>
+              <button class="settings-item-arrow" id="diagSendScenarioBtn" type="button"
+                      onclick="sendNotificationScenarioNow()"
+                      style="
+                        padding: 8px 14px; border-radius: 10px;
+                        border: 1px solid rgba(16, 185, 129, 0.46);
+                        background: rgba(16, 185, 129, 0.10);
+                        color: var(--accent-light, #34d399);
+                        font-family: inherit; font-size: 0.72rem; font-weight: 800; cursor: pointer;
+                      ">أرسل إليّ الآن</button>
+            </div>
+
+            <pre id="diagScenarioOutput" dir="rtl"
+                 style="
+                   display: none; margin-top: 12px; padding: 12px;
+                   border-radius: 12px; border: 1px solid var(--border-card);
+                   background: var(--bg-elevated, var(--bg-card));
+                   color: var(--text-secondary); font-family: inherit;
+                   font-size: 0.7rem; line-height: 1.8; white-space: pre-wrap;
+                 "></pre>
+          </div>
+
+          <!-- ⭐⭐ Phase W10 — تفضيلات القنوات -->
+          <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-card);">
+            <p style="margin: 0 0 4px; font-size: 0.78rem; font-weight: 800; color: var(--text-primary);">
+              <i data-lucide="bell-ring" style="width: 14px; height: 14px; vertical-align: -2px;"></i>
+              ما الذي تريد أن يصلك؟
+            </p>
+            <p style="margin: 0 0 10px; font-size: 0.68rem; line-height: 1.7; color: var(--text-secondary);">
+              اختر القنوات التي تناسبك — يحترمها المحرّك الذكي فوراً.
+            </p>
+            <div id="diagChannelPrefs" style="display: grid; gap: 8px;"></div>
+          </div>
 
           <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px;">
             <button class="settings-item-arrow" id="diagLocalTestBtn" type="button"
@@ -6987,7 +7048,7 @@ i.fab {
 <script src="widgets.js"></script>
 
 
-  <script src="app.js?v=5.0.0-beta.5"></script>
+  <script src="app.js?v=5.0.0-beta.6"></script>
 <script>
 
     lucide.createIcons();
@@ -7966,6 +8027,14 @@ function openLastActivity() {
         permEl.textContent = 'حالة الإذن: ' + (labels[permission] || permission);
       }
 
+      // ⭐⭐ W10 — مختبر المحرّك + تفضيلات القنوات
+      try {
+        fillNotificationScenarios();
+        await renderNotificationChannelPrefs();
+      } catch (e) {
+        console.warn('[diagnostics] the W10 panels failed:', e);
+      }
+
       lucide.createIcons();
     }
 
@@ -8014,6 +8083,164 @@ function openLastActivity() {
       } finally {
         if (btn) { btn.disabled = false; btn.textContent = 'اختبار التذكير المحلي (10 ثوانٍ)'; }
       }
+    }
+
+    /* ============================================
+       ⭐⭐ Phase W10 — مختبر المحرّك الذكي + تفضيلات القنوات
+       ============================================ */
+
+    /** ⭐ سيناريوهات المحرّك (٢١ سيناريو) بتسميات عربية. */
+    var NOTIFICATION_SCENARIOS = [
+      { id: '', label: '🎯 اختيار المحرّك تلقائياً (حسب حالتك)' },
+      { id: 'onboarding', label: '👋 ترحيب بحساب جديد' },
+      { id: 'freshStart', label: '🌱 بداية جديدة — لم تبدأ بعد' },
+      { id: 'firstWin', label: '🎉 أول إنجاز' },
+      { id: 'streakRisk', label: '🔥 سلسلتك في خطر' },
+      { id: 'streakMilestone', label: '🏅 وسام السلسلة' },
+      { id: 'momentum', label: '🌊 أنت على موجة' },
+      { id: 'halfway', label: '⚡ منتصف الطريق' },
+      { id: 'missed', label: '📌 مهام فائتة' },
+      { id: 'achievement', label: '🏆 أنجزت كل مهام اليوم' },
+      { id: 'morningPlan', label: '☀️ خطة الصباح' },
+      { id: 'nightOwl', label: '🌙 سهر متأخر — نومك جزء من أدائك' },
+      { id: 'comeback', label: '💚 عودة بعد غياب' },
+      { id: 'reengagement', label: '👋 إعادة تفعيل' },
+      { id: 'weeklyDigest', label: '📊 ملخّص الأسبوع' },
+      { id: 'subjectFocus', label: '🎯 ركّز على مادتك الأضعف' },
+      { id: 'goalMilestone', label: '🎯 هدف على وشك الإنجاز' },
+      { id: 'goalDue', label: '⏳ موعد هدف يقترب' },
+      { id: 'contentNew', label: '📚 محتوى جديد' },
+      { id: 'contentForYou', label: '⭐ محتوى يخصّك' },
+      { id: 'eveningReview', label: '📖 مراجعة المساء' },
+      { id: 'agenda', label: '🗒️ تذكير بالمهام' }
+    ];
+
+    var NOTIFICATION_CHANNELS_UI = [
+      { id: 'tasks', name: 'المهام اليومية', desc: 'خطة اليوم، المهام الفائتة، التذكيرات' },
+      { id: 'streak', name: 'سلسلة الدراسة', desc: 'حماية السلسلة، الأوسمة، الزخم' },
+      { id: 'content', name: 'محتوى ومركّز', desc: 'ملفات جديدة، مراجعة المساء، ملخّص الأسبوع' },
+      { id: 'updates', name: 'تحديثات التطبيق', desc: 'إصدارات جديدة وإعلانات مهمة' }
+    ];
+
+    function fillNotificationScenarios() {
+      const select = document.getElementById('diagScenarioSelect');
+      if (!select || select.dataset.filled === '1') return;
+      select.innerHTML = NOTIFICATION_SCENARIOS.map(function (item) {
+        return '<option value="' + item.id + '">' + item.label + '</option>';
+      }).join('');
+      select.dataset.filled = '1';
+    }
+
+    function selectedNotificationScenario() {
+      const select = document.getElementById('diagScenarioSelect');
+      return select ? (select.value || '') : '';
+    }
+
+    function showScenarioOutput(text) {
+      const out = document.getElementById('diagScenarioOutput');
+      if (!out) return;
+      out.style.display = 'block';
+      out.textContent = text || '';
+    }
+
+    /** ⭐ معاينة الرسالة (بدون إرسال) + سبب اختيارها. */
+    async function previewNotificationScenarioNow() {
+      if (typeof MedAppNotifications === 'undefined' ||
+          typeof MedAppNotifications.previewNotificationScenario !== 'function') {
+        showToast('المحرّك الذكي متاح في تطبيق Android فقط', 'info');
+        return;
+      }
+      const btn = document.getElementById('diagPreviewBtn');
+      if (btn) btn.disabled = true;
+      showScenarioOutput('جارٍ المعاينة…');
+      try {
+        const data = await MedAppNotifications.previewNotificationScenario(
+          selectedNotificationScenario()
+        );
+        const previews = (data && data.previews) || [];
+        if (!previews.length) {
+          showScenarioOutput('لا يوجد سبب الآن لإرسال إشعار — وهذا بالضبط ما نريد: صمت ذكي ✨');
+          return;
+        }
+        const lines = previews.map(function (item) {
+          return [
+            '• ' + item.title,
+            '  ' + item.body,
+            '  ↳ ' + item.scenario + ' · ' + item.channel + ' · ' + item.url,
+            '  ↳ السبب: ' + (item.reason || '—')
+          ].join('\n');
+        });
+        showScenarioOutput(lines.join('\n\n'));
+        showToast('تم — هذه هي الرسالة كما ستصل', 'success');
+      } catch (e) {
+        console.error('[diagnostics] the preview failed:', e);
+        showScenarioOutput('تعذّرت المعاينة: ' + ((e && e.message) || 'خطأ غير معروف'));
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    /** ⭐ إرسال إشعار حقيقي إلى هذا الجهاز. */
+    async function sendNotificationScenarioNow() {
+      if (typeof MedAppNotifications === 'undefined' ||
+          typeof MedAppNotifications.sendNotificationScenario !== 'function') {
+        showToast('المحرّك الذكي متاح في تطبيق Android فقط', 'info');
+        return;
+      }
+      const btn = document.getElementById('diagSendScenarioBtn');
+      if (btn) btn.disabled = true;
+      showScenarioOutput('جارٍ الإرسال…');
+      try {
+        const data = await MedAppNotifications.sendNotificationScenario(
+          selectedNotificationScenario()
+        );
+        showScenarioOutput('تم الإرسال: ' + ((data && data.sent) || 0) +
+          ' رسالة · فشلت: ' + ((data && data.failed) || 0));
+        showToast('أُرسل الإشعار — تحقّق من شريط الإشعارات', 'success');
+      } catch (e) {
+        console.error('[diagnostics] the send failed:', e);
+        showScenarioOutput('تعذّر الإرسال: ' + ((e && e.message) || 'خطأ غير معروف'));
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    /** ⭐ تفضيلات القنوات: تُقرأ من الخادم وتُحفظ فوراً. */
+    async function renderNotificationChannelPrefs() {
+      const box = document.getElementById('diagChannelPrefs');
+      if (!box) return;
+      if (typeof MedAppNotifications === 'undefined' ||
+          typeof MedAppNotifications.getChannelPreferences !== 'function') return;
+
+      let prefs = { tasks: true, streak: true, content: true, updates: true };
+      try {
+        prefs = await MedAppNotifications.getChannelPreferences();
+      } catch (e) {}
+
+      box.innerHTML = NOTIFICATION_CHANNELS_UI.map(function (channel) {
+        const on = prefs[channel.id] !== false;
+        return '<label style="display:flex;align-items:center;gap:10px;padding:9px 11px;' +
+          'border-radius:12px;border:1px solid var(--border-card);' +
+          'background:var(--bg-elevated,var(--bg-card));cursor:pointer;">' +
+          '<input type="checkbox" data-channel="' + channel.id + '"' + (on ? ' checked' : '') +
+          ' style="width:16px;height:16px;accent-color:var(--accent-emerald, #10b981);">' +
+          '<span style="display:flex;flex-direction:column;gap:1px;">' +
+          '<span style="font-size:0.76rem;font-weight:800;color:var(--text-primary);">' + channel.name + '</span>' +
+          '<span style="font-size:0.64rem;color:var(--text-secondary);">' + channel.desc + '</span>' +
+          '</span></label>';
+      }).join('');
+
+      box.querySelectorAll('input[data-channel]').forEach(function (input) {
+        input.addEventListener('change', async function () {
+          const id = input.getAttribute('data-channel');
+          try {
+            await MedAppNotifications.setChannelPreference(id, input.checked);
+            showToast('تم تحديث تفضيلات الإشعارات', 'success');
+          } catch (e) {
+            showToast('تعذّر حفظ التفضيلات', 'error');
+          }
+        });
+      });
     }
 
     /** ⭐ يشغّل smart-notifications-engine يدوياً عبر JWT الأدمن (لا cron_secret في العميل). */

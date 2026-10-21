@@ -1164,6 +1164,11 @@
   /** ⭐ يفتح وجهة الإشعار (بدون شريط الإجراءات). */
   function openNotificationTarget(data) {
     try {
+      // ⭐⭐ W10 — إن حملت الحمولة رابط pre12:// فمرّره عبر محرّك الروابط
+      //   العميقة (نفس سلوك ضغط الودجت تماماً).
+      var deepUrl = String((data && (data.url || data.deep_link)) || '');
+      if (deepUrl.indexOf('pre12://') === 0 && routePre12Link(deepUrl)) return;
+
       var action = String((data && data.action) || '').toLowerCase();
       if (action === 'tasks' || action === 'streak') {
         global.location.href = 'index.html#' + action;
@@ -1191,7 +1196,35 @@
           global.location.href = target;
         }
       } else if (action === 'update') {
-        if (global.MedAppUpdate) global.MedAppUpdate.check({ silent: true });
+        // ⭐⭐ W10 — كان `silent: true` فلا تظهر النافذة أبداً: الضغط على إشعار
+        //   التحديث كان يبدو كأنه "لا شيء يحدث". الآن نفتح النافذة صراحةً.
+        if (global.MedAppUpdate) {
+          Promise.resolve(global.MedAppUpdate.check({ silent: false }))
+            .then(function (result) {
+              if (result && result.updateAvailable) return;
+              if (typeof global.showUpdateModal === 'function' && data.version) {
+                global.showUpdateModal({
+                  version: data.version,
+                  notes: data.notes || '',
+                  url: data.url || ''
+                });
+              }
+            })
+            .catch(function () {
+              if (typeof global.showUpdateModal === 'function' && data.version) {
+                global.showUpdateModal({
+                  version: data.version,
+                  notes: data.notes || '',
+                  url: data.url || ''
+                });
+              }
+            });
+        }
+      } else if (action === 'goals') {
+        // ⭐ W10 — هدف «أهدافي» يفتح صفحة الأهداف مباشرة.
+        global.location.href = 'goals.html';
+      } else if (action === 'content' && !data.subject_id && !data.subject_slug) {
+        global.location.href = 'all-files.html';
       } else {
         var explicit = safeInternalTarget(data && (data.url || data.target || data.path));
         global.location.href = explicit || 'index.html';
@@ -1201,10 +1234,68 @@
     }
   }
 
+  /**
+   * ⭐⭐ W10 — يوجّه رابط pre12:// إلى الوجهة الصحيحة.
+   * يستعمل نفس منطق `widgets.js` حتى لا يختلف السلوك بين الإشعار والودجت.
+   */
+  function routePre12Link(url) {
+    try {
+      var match = String(url).match(/^pre12:\/\/([^\/?#]+)/i);
+      if (!match) return false;
+      var target = String(match[1] || '').toLowerCase();
+      var here = (global.location.pathname || '').split('/').pop() || 'index.html';
+
+      if (target === 'tasks' || target === 'today') {
+        if (here === 'index.html') {
+          setTimeout(function () {
+            if (typeof global.openTodaySheet === 'function') global.openTodaySheet('today');
+          }, 400);
+        } else {
+          global.location.href = 'index.html#tasks';
+        }
+        return true;
+      }
+      if (target === 'streak') {
+        if (here === 'index.html') {
+          setTimeout(function () {
+            if (typeof global.openStreakSheet === 'function') global.openStreakSheet();
+          }, 400);
+        } else {
+          global.location.href = 'index.html#streak';
+        }
+        return true;
+      }
+      if (target === 'notes') { global.location.href = 'notes.html'; return true; }
+      if (target === 'goals') { global.location.href = 'goals.html'; return true; }
+      if (target === 'lectures' || target === 'lecture') {
+        global.location.href = 'my-lectures.html';
+        return true;
+      }
+      if (target === 'content') { global.location.href = 'all-files.html'; return true; }
+      if (target === 'updates' || target === 'update') {
+        if (global.MedAppUpdate) global.MedAppUpdate.check({ silent: false });
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.warn('[native] the pre12 link failed:', e);
+      return false;
+    }
+  }
+
   function routeNotification(payload) {
     try {
       // ⭐ v4.5.1 — TASK 4: شريط الإجراءات (تم الإنجاز / لاحقاً) قبل التنقّل.
       var payloadData = (payload && (payload.data || payload.extra)) || payload || {};
+
+      // ⭐⭐ W10 — روابط pre12:// الموحّدة: المحرّك الذكي يرسل
+      //   `url: 'pre12://tasks'` مع كل إشعار، فنعالجها بنفس محرّك الروابط
+      //   العميقة (يصلح سواء كان التطبيق مفتوحاً أو أُطلق من الإشعار).
+      var deepUrl = String(payloadData.url || payloadData.deep_link || '');
+      if (deepUrl.indexOf('pre12://') === 0) {
+        if (routePre12Link(deepUrl)) return;
+      }
+
       if (showNotificationActionSheet(payloadData)) return;
 
       if (global.MedAppNotifications && typeof global.MedAppNotifications.routeNotificationAction === 'function') {

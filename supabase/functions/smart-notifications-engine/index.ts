@@ -1,23 +1,32 @@
 // ============================================================
-// smart-notifications-engine — المحرّك الآلي الذكي
+// smart-notifications-engine — المحرّك الآلي الذكي (Phase W10)
 // ------------------------------------------------------------
-// ⭐ يعمل كل ساعة عبر pg_cron → net.http_post
-// ⭐ 7 فئات × قوالب ضخمة × اختيار عشوائي (Math.random)
-// ⭐ المتغيّرات الديناميكية: {name} {streak} {missed_count} {subject} {task_count}
-// ⭐ حدّ الإرسال: رسالة واحدة لكل مستخدم كل 60 دقيقة على الأقل.
+// ⭐⭐ يعمل كل 30 دقيقة عبر pg_cron → net.http_post
+// ⭐ 21 سيناريو سياقي (لا قوالب عشوائية): كل رسالة لها *سبب* واضح.
+// ⭐ يحترم: تفضيلات القنوات · ساعات الصمت (ثابتة ومُتعلَّمة) ·
+//   فترات التهدئة لكل سيناريو · سقف 3 إشعارات/اليوم و12/أسبوع.
+// ⭐ «لا إشعار بلا سبب»: إن لم يوجد سبب الآن ⇒ صمت.
 //
-// ⭐ categorization:
-//   1. onboarding   → مستخدم جديد لم يُنجز شيئاً
-//   2. reengagement → مستخدم خامل (يومان أو أكثر)
-//   3. streak       → حماية السلسلة (خطر) — سلسلة نشطة ولا إنجاز اليوم
-//   4. halfway      → أنجز نصف مهام اليوم بالضبط (بدأ ولم ينتهِ)
-//   5. content      → ملف جديد في مادة
-//   6. agenda       → جدول اليوم
-//   7. achievement  → إنجازات
+// ⭐⭐ الأوضاع (للتشخيص من داخل التطبيق):
+//   • { "mode": "run" }     → التشغيل الكامل (cron)
+//   • { "mode": "preview" } → تركيب الرسائل **بدون** إرسال (معاينة)
+//   • { "mode": "test", "scenario": "streakRisk" } → إرسال واحد إلى جهازك
 // ============================================================
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { createSender, sendBatch, takeInvalidTokens, type FcmMessage } from '../_shared/fcm.ts';
+import {
+  buildContext,
+  composeMessage,
+  selectScenario,
+  scenarioCatalog,
+  type ChannelId,
+  type FileContext,
+  type GoalRow,
+  type LogRow,
+  type ProfileRow,
+  type ProgressRow,
+} from '../_shared/scenarios.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,166 +34,9 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-/* ══════════════════════════════════════════════════════════
-   1. القوالب الضخمة
-   ══════════════════════════════════════════════════════════ */
-
-const TEMPLATES = {
-  onboarding: {
-    titles: ['أهلاً بك في المنصة الطبية', 'رحلتك تبدأ الآن', 'خطوتك الأولى'],
-    bodies: [
-      'أهلاً بك يا {name} في المنصة الطبية! رحلتك تبدأ الآن 👨‍⚕️.',
-      'خطوتك الأولى نحو التفوق بدأت. لنضع خطة اليوم!',
-      'جاهز لبدء أول مهمة لك؟ 5 دقائق فقط تكفي 🚀.',
-      'مرحباً {name}! سجّل أول مهمة اليوم وابدأ بناء سلسلتك 💪.',
-      'المحتوى كله بانتظارك — ابدأ بمهمة واحدة فقط لتكسر الحاجز.',
-      'أول خطوة هي الأصعب، وبعدها يصبح الأمر سهلاً. لنبدأ ✅.'
-    ],
-  },
-  agenda: {
-    titles: ['صباح الخير', 'مهام اليوم', 'لنبدأ', 'تذكير سريع', 'وقت الانطلاق', 'جدولك جاهز'],
-    bodies: [
-      'صباح الخير يا {name} ☀️! لديك {task_count} مهام اليوم. لنبدأ بنشاط!',
-      'يوم جديد، فرصة جديدة للتفوق. مهامك بانتظارك 📚.',
-      'طالب الطب لا ينام على مهامه! ابدأ يومك الآن 💪.',
-      'مر الوقت ولم تبدأ بعد! تذكّر هدفك، ابدأ بمهمة واحدة الآن ⏳.',
-      'رائع يا {name}! أكملت جميع مهام اليوم. أنت أسطورة 🏆.',
-      'مهمة واحدة الآن تكفي لتُكمل يومك بنجاح — خلّينا نبدأ.',
-      'جدولك جاهز: {task_count} مهام. أتمم واحدة منهم وابدأ.',
-      'قاعدة اليوم: الأهم أولاً، ثم الباقي. ابدأ بالمهمة الأهم 🎯.',
-      'بقي {task_count} مهام فقط. عشر دقائق تقرّبك من نهاية اليوم ✨.'
-    ],
-  },
-  streak: {
-    titles: ['حافظ على سلسلتك', 'سلسلتك في خطر!', 'يوم واحد يحميك', 'وسام الأسبوع', 'انتبه'],
-    bodies: [
-      '🔥 انتبه! سلسلتك ({streak} أيام) في خطر. أنجز مهمة سريعة قبل منتصف الليل!',
-      'لا تدع تعب اليوم يضيع إنجاز الأمس. مهمة واحدة تنقذ سلسلتك ⏰.',
-      'سلسلتك {streak} أيام — لا تكسرها اليوم!',
-      'غداً هو اليوم السابع! حافظ على حماسك لتحصل على شارة الأسبوع 🔥.',
-      'يوم واحد يحمي سلسلة {streak} أيام. أنجز أي مهمة الآن.',
-      'أنجزت {streak} يوماً متتالياً — هل تحطّمها اليوم؟ لا!',
-      'السلسلة كنز: احمِ {streak} يوماً بتعبير بسيط اليوم 💎.',
-      'اقتربت من الشارة — مهمة الليلة تكفي 🎖️.'
-    ],
-  },
-  reengagement: {
-    titles: ['افتقدناك', 'أين أنت؟', 'عد إلينا', 'المكان ينتظرك', 'لنلحق بالركب'],
-    bodies: [
-      'افتقدناك اليوم يا {name}! لديك مهام تنتظرك 📖.',
-      '👋 أين أنت يا {name}؟ زملاؤك يتقدمون، لا تتأخر. لديك {missed_count} مهام فائتة.',
-      'هل تواجه صعوبة؟ تذكّر لماذا بدأت. نحن هنا لدعمك 🤝.',
-      '🚀 {name}، عودتك ستصنع الفارق! لنعوّض ما فات معاً.',
-      'النجاح ليس ألا تسقط، بل أن تنهض بعد السقوط. عد الآن!',
-      'مهمة واحدة اليوم تكفي لعودة القاع. لنبدأ من جديد 🌱.',
-      'المهمة اليوم أهم من الكمال — عودتك تكفي.',
-      'لديك {missed_count} مهام فائتة — لا داعي لإنهائها كلها، ابدأ بواحدة.'
-    ],
-  },
-  content: {
-    titles: ['محتوى جديد', 'ملف جديد', 'أُضيف حديثاً', 'مواد جديدة بانتظارك'],
-    bodies: [
-      '📚 تمت إضافة ملخص/ملف جديد في مادة {subject}. كن أول من يطّلع عليه!',
-      '🆕 محتوى جديد بانتظارك في {subject}. لا تفوّته!',
-      'ملخص {subject} وصل حديثاً — خمس دقائق تكفي لتعرف الجديد.',
-      'أُضيفت مادة إلى {subject}. راجعها قبل أن تتراكم.',
-      'في {subject} جديد — تذكّر أن المعلومة التي لا تُراجع تُنسى.',
-      'محتوى {subject} الأول وصل — أجّلوه ولا تفوّته!'
-    ],
-  },
-  achievement: {
-    titles: ['إنجاز جديد!', 'مبروك!', 'وسام جديد', 'أداء رائع'],
-    bodies: [
-      'أكملت {count} مهمة 🎉 استمر في هذا الإيقاع!',
-      'ممتاز! {count} مهمة منجزة — كل واحدة تقرّبك من هدفك.',
-      'رائع! عدد مهامك المنجزة وصل إلى {count}. استمدّ هذا الإنجاز!',
-      'أنجزت {count} مهمة — الفارق بين طالب وطالب متفوق هو الاستمرارية.',
-      'وسام جديد باسمك 🏅 — استمر، القمة أقرب مما تظن.',
-      '{count} مهمة… هذا ليس صدفة، هذا انضباط. احتفل 🎉'
-    ],
-  },
-  // ⭐ v4.6.0 — TASK 2: «Halfway there!» — لا تُرسل إلا لمن بدأ فعلاً
-  //   وأنجز نصف مهام يومه بالضبط (completed > 0 && completed === floor(total/2)).
-  halfway: {
-    titles: ['أنت في منتصف الطريق!', 'نصف الطريق… واصل!', 'وصلت إلى المنتصف'],
-    bodies: [
-      'أنت في منتصف الطريق! أنجزت نصف مهام اليوم. واصل التقدم 🚀.',
-      'وصلت إلى المنتصف — {completed_count} من {total_count} مهام. الباقي أسهل! 💪.',
-      'نصف مهام اليوم منجزة! أنهيتَ الأصعب، يكفيك إكمال ما تبقّى 🔥.',
-      'المنتصف خلفك — {completed_count} من {total_count}. خطوة أخيرة وتُكمل ✨.'
-    ],
-  },
-  // ⭐ v4.6.1 — TASK 1: «مهام فائتة» — سيناريو قائم بذاته.
-  missed: {
-    titles: ['مهام فائتة', 'لديك مهام مؤجّلة', 'لا تتراكم المؤجّل'],
-    bodies: [
-      'لديك {missed_count} مهمة فائتة من الأيام الماضية — خمس دقائق تكفي لتبدأ.',
-      'مهامك المؤجّلة ({missed_count}) تنتظرك. ابدأ بالأهم منها الآن.',
-      'بقيت {missed_count} مهمة لم تُنجَز — لا تدعها تتراكم 📌.',
-      'خلّص {missed_count} مهمة متأخّرة وستشعر براحة كبيرة ✨.'
-    ],
-  },
-};
-
-/* ══════════════════════════════════════════════════════════
-   2. أدوات
-   ══════════════════════════════════════════════════════════ */
-
-function pick(list: string[]): string {
-  return list[Math.floor(Math.random() * list.length)];
-}
-
-function fill(template: string, vars: Record<string, string | number>): string {
-  return template.replace(/\{(\w+)\}/g, (match, key) => {
-    const value = vars[key];
-    return value === undefined || value === null ? '' : String(value);
-  });
-}
-
-function dayKey(date: Date): string {
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(
-    date.getUTCDate(),
-  ).padStart(2, '0')}`;
-}
-
-/**
- * ⭐⭐ v4.6.4 — Quiet Hours: الساعة المحلية للمستخدم (من profiles.timezone).
- *   إن كانت المنطقة الزمنية غير معروفة نستخدم ساعة UTC.
- */
-function localHour(date: Date, timezone: string | null): number {
-  const tz = String(timezone || '').trim();
-  if (tz) {
-    try {
-      const formatter = new Intl.DateTimeFormat('en-US', {
-        hour: 'numeric',
-        hour12: false,
-        timeZone: tz,
-      });
-      const parts = formatter.formatToParts(date);
-      const hourPart = parts.find((p) => p.type === 'hour');
-      if (hourPart) {
-        const hour = parseInt(hourPart.value, 10);
-        if (!isNaN(hour)) return hour % 24;   // ⭐ 24 = منتصف الليل
-      }
-    } catch (e) {
-      // ⭐ منطقة زمنية غير معروفة — نستخدم UTC
-    }
-  }
-  return date.getUTCHours();
-}
-
-/**
- * ⭐⭐ v4.6.4 — Quiet Hours: بين 00:00 و 08:00 لا يُرسل أي إشعار ذكي.
- */
-function isQuietHour(hour: number): boolean {
-  return hour >= 0 && hour < 8;
-}
-
-function firstName(fullName: string | null, email: string | null): string {
-  if (fullName && fullName.trim()) return fullName.trim().split(' ')[0];
-  if (email) return email.split('@')[0];
-  return 'بطل';
-}
+/** ⭐ الحدّ اليومي والأسبوعي (ضبط الانضباط). */
+const DAILY_CAP = 3;
+const WEEKLY_CAP = 12;
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -192,10 +44,6 @@ function json(body: unknown, status = 200) {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }
-
-/* ══════════════════════════════════════════════════════════
-   3. الدالة
-   ══════════════════════════════════════════════════════════ */
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -208,58 +56,74 @@ Deno.serve(async (req) => {
   });
 
   try {
-    /* ── 1) الحماية: سرّ الـ cron أو أدمن/مشرف (للاختبار اليدوي) ── */
-    const expected = Deno.env.get('CRON_SECRET') ||
-      (await readVaultSecret(admin, 'cron_secret'));
-    if (!expected) {
-      return json({ error: 'CRON_SECRET is not configured' }, 500);
+    /* ── 0) body ── */
+    let payload: any = {};
+    try {
+      payload = await req.json();
+    } catch (e) {
+      payload = {};
     }
+    const mode: string = String(payload.mode || 'run');
+    const forcedScenario: string | null = payload.scenario ? String(payload.scenario) : null;
+
+    /* ── 1) الحماية ── */
+    const expected = Deno.env.get('CRON_SECRET') || (await readVaultSecret(admin, 'cron_secret'));
+    if (!expected) return json({ error: 'CRON_SECRET is not configured' }, 500);
 
     const provided = req.headers.get('x-cron-secret') || '';
     let authorized = provided === expected;
     let authReason = authorized ? 'cron-secret' : '';
 
-    // ⭐ v4.3.0 — يسمح لزر الاختبار في التطبيق بتشغيل المحرّك يدوياً
-    //   باستخدام JWT الأدمن/المشرف (بدون كشف cron_secret للعميل).
-    if (!authorized) {
-      const authHeader = req.headers.get('Authorization') || '';
-      const bearer = authHeader.replace(/^Bearer\s+/i, '').trim();
-      if (bearer) {
-        const { data: userData } = await admin.auth.getUser(bearer);
-        if (userData?.user) {
-          const { data: profile } = await admin
-            .from('profiles')
-            .select('role')
-            .eq('id', userData.user.id)
-            .maybeSingle();
-          if (profile && (profile.role === 'admin' || profile.role === 'moderator')) {
-            authorized = true;
-            authReason = 'admin-role';
-          }
+    const authHeader = req.headers.get('Authorization') || '';
+    const bearer = authHeader.replace(/^Bearer\s+/i, '').trim();
+
+    // ⭐ مشغّل (service role) — للتشخيص الآلي من الخادم.
+    if (!authorized && bearer && serviceKey && bearer === serviceKey) {
+      authorized = true;
+      authReason = 'service-role';
+    }
+
+    // ⭐ أدمن/مشرف — لتشغيل المحرّك يدوياً من التطبيق.
+    if (!authorized && bearer) {
+      const { data: userData } = await admin.auth.getUser(bearer);
+      if (userData?.user) {
+        const { data: profile } = await admin
+          .from('profiles')
+          .select('role')
+          .eq('id', userData.user.id)
+          .maybeSingle();
+        if (profile && (profile.role === 'admin' || profile.role === 'moderator')) {
+          authorized = true;
+          authReason = 'admin-role';
         }
       }
     }
 
-    if (!authorized) {
-      return json({ error: 'forbidden' }, 403);
-    }
-    console.info('[smart-engine] authorized via ' + authReason);
+    if (!authorized) return json({ error: 'forbidden' }, 403);
+    console.info('[smart-engine] authorized via ' + authReason + ' · mode=' + mode);
 
+    const now = new Date();
+
+    /* ── 2) catalogue (للعميل) ── */
+    if (mode === 'catalog') {
+      return json({ ok: true, scenarios: scenarioCatalog(), channels: CHANNEL_META });
+    }
+
+    /* ── 3) sender ── */
     const sender = await createSender();
-    if (!sender) {
+    if (!sender && mode !== 'preview') {
       return json({
         error:
           'FCM is not configured — add the FCM_SERVICE_ACCOUNT secret (or FCM_API_KEY) in the Edge Function settings',
       }, 500);
     }
 
-    /* ── 2) جلب البيانات ── */
-    const now = new Date();
-    const today = dayKey(now);
-
+    /* ── 4) data ── */
     const { data: profiles, error: profilesError } = await admin
       .from('profiles')
-      .select('id, email, full_name, fcm_token, notify_enabled, last_notification_at, created_at, timezone')
+      .select(
+        'id, email, full_name, fcm_token, notify_enabled, last_notification_at, created_at, timezone, notification_prefs, quiet_start, quiet_end',
+      )
       .not('fcm_token', 'is', null);
     if (profilesError) throw profilesError;
 
@@ -268,268 +132,229 @@ Deno.serve(async (req) => {
       .select('user_id, plan_date, task_id, subject, task_title, completed, completed_at');
     if (progressError) throw progressError;
 
-    const { data: recentFiles, error: recentFilesError } = await admin
-      .from('files')
-      .select('title, subject_id, created_at')
-      .gte('created_at', new Date(Date.now() - 24 * 3600 * 1000).toISOString())
-      .order('created_at', { ascending: false })
-      .limit(5);
-    if (recentFilesError) {
-      console.warn('[smart-engine] could not read recent files:', recentFilesError.message);
-    }
+    const { data: goals, error: goalsError } = await admin
+      .from('goals')
+      .select('user_id, title, completed, target_value, current_value, unit, deadline');
+    if (goalsError) console.warn('[smart-engine] no goals table:', goalsError.message);
 
-    // ⭐ v4.5.0 — نربط كل ملف بمادته (الاسم + slug) لبناء رابط المحتوى.
-    const recentSubjectIds: string[] = Array.from(new Set(
-      (recentFiles || []).map((f: any) => f.subject_id).filter(Boolean),
-    ));
+    // ⭐ الملفات الجديدة (آخر 48 ساعة) — سيناريو «محتوى» و«محتوى يخصّك».
+    const { data: recentFiles, error: filesError } = await admin
+      .from('files')
+      .select('id, title, subject_id, created_at')
+      .gte('created_at', new Date(Date.now() - 48 * 3600 * 1000).toISOString())
+      .order('created_at', { ascending: false })
+      .limit(8);
+    if (filesError) console.warn('[smart-engine] no files:', filesError.message);
+
+    const subjectIds = Array.from(
+      new Set((recentFiles || []).map((f: any) => f.subject_id).filter(Boolean)),
+    ) as string[];
     const subjectById = new Map<string, { id: string; name: string; slug: string }>();
-    if (recentSubjectIds.length) {
-      const { data: subjects, error: subjectsError } = await admin
+    if (subjectIds.length) {
+      const { data: subjects } = await admin
         .from('subjects')
         .select('id, name, slug')
-        .in('id', recentSubjectIds);
-      if (subjectsError) {
-        console.warn('[smart-engine] could not read recent subjects:', subjectsError.message);
-      }
-      for (const subject of subjects || []) {
-        subjectById.set(subject.id, subject as any);
-      }
+        .in('id', subjectIds);
+      for (const subject of subjects || []) subjectById.set(subject.id, subject as any);
     }
 
-    /* ── 3) حساب حالة كل مستخدم ── */
-    const byUser = new Map<string, any[]>();
-    for (const row of progress || []) {
-      const list = byUser.get(row.user_id) || [];
+    const filesByUser: FileContext[] = [];
+    for (const file of recentFiles || []) {
+      const subject = subjectById.get(file.subject_id);
+      if (!subject) continue;
+      filesByUser.push({
+        title: String(file.title || ''),
+        subjectId: subject.id,
+        subjectName: subject.name,
+        subjectSlug: subject.slug,
+        createdAt: String(file.created_at || ''),
+      });
+    }
+
+    /* ── 5) سجلّ الإشعارات السابقة (للمنع من التكرار + الكواب) ── */
+    const { data: recentLogs } = await admin
+      .from('notification_log')
+      .select('user_id, category, title, created_at')
+      .order('created_at', { ascending: false })
+      .limit(400);
+
+    const logsByUser = new Map<string, LogRow[]>();
+    for (const log of recentLogs || []) {
+      const list = logsByUser.get(log.user_id) || [];
+      list.push({
+        user_id: log.user_id,
+        category: log.category,
+        title: log.title,
+        created_at: log.created_at,
+      } as LogRow);
+      logsByUser.set(log.user_id, list);
+    }
+
+    /* ── 6) the loop ── */
+    const progressByUser = new Map<string, ProgressRow[]>();
+    for (const row of (progress || []) as ProgressRow[]) {
+      const list = progressByUser.get(row.user_id) || [];
       list.push(row);
-      byUser.set(row.user_id, list);
+      progressByUser.set(row.user_id, list);
     }
 
-    const streaks = computeStreaks(progress || []);
+    const goalsByUser = new Map<string, GoalRow[]>();
+    for (const goal of (goals || []) as GoalRow[]) {
+      const list = goalsByUser.get(goal.user_id) || [];
+      list.push(goal);
+      goalsByUser.set(goal.user_id, list);
+    }
 
     let sent = 0;
     let failed = 0;
     let skipped = 0;
     const logRows: any[] = [];
+    const previews: any[] = [];
 
     for (const profile of profiles || []) {
-      if (profile.notify_enabled === false) { skipped++; continue; }
+      const p = profile as unknown as ProfileRow;
+      const ctx = buildContext(
+        p,
+        progressByUser.get(p.id) || [],
+        goalsByUser.get(p.id) || [],
+        filesByUser,
+        logsByUser.get(p.id) || [],
+        now,
+      );
+      const userLogs = logsByUser.get(p.id) || [];
 
-      // ⭐⭐ v4.6.4 — Quiet Hours: بين 00:00 و 08:00 بالتوقيت المحلي
-      //   لا تتسرّب أي إشعارات ذكية (خطر السلسلة، المهام الفائتة، …).
-      const userHour = localHour(now, profile.timezone);
-      if (isQuietHour(userHour)) {
+      const selection = selectScenario(ctx, {
+        now,
+        logs: userLogs,
+        forceScenario: forcedScenario,
+        ignoreLimits: mode === 'preview' || mode === 'test',
+      });
+
+      if (!selection) {
         skipped++;
         continue;
       }
 
-      /* ⭐ خمول: لا نرسل أكثر من إشعار كل 4 ساعات */
-      if (profile.last_notification_at) {
-        // ⭐ v4.6.1 — TASK 1: حدّ إرسال 120 دقيقة (ساعتان) لكل مستخدم.
-        const minutesSince = (Date.now() - new Date(profile.last_notification_at).getTime()) / 60000;
-        if (minutesSince < 120) { skipped++; continue; }
-      }
+      const message = composeMessage(ctx, selection.scenario, selection.reason);
 
-      const rows = byUser.get(profile.id) || [];
-      const todayRows = rows.filter((r) => r.plan_date === today);
-      const todayDone = todayRows.filter((r) => r.completed).length;
-      const todayTotal = todayRows.length;
-      const missedCount = rows.filter((r) => r.plan_date && r.plan_date < today && !r.completed).length;
-      const totalDone = rows.filter((r) => r.completed).length;
-      const streak = streaks.get(profile.id) || 0;
+      // ⭐ أزرار الإجراء تُرسل ضمن البيانات (FCM v1 لا يدعمها في الإشعار).
+      const actions = selection.scenario.allowTaskAction && ctx.pendingTask
+        ? [
+            { title: 'تم الإنجاز', action: 'mark_done' },
+            { title: 'لاحقاً', action: 'later' },
+          ]
+        : undefined;
 
-      // ⭐ v4.5.1 — أول مهمة معلّقة (لزر «تم الإنجاز»).
-      const pendingTask = todayRows.find((r) => !r.completed) ||
-        rows.filter((r) => !r.completed && r.plan_date && r.plan_date <= today)
-          .sort((a, b) => String(a.plan_date).localeCompare(String(b.plan_date)))[0] ||
-        null;
-
-      const lastActive = rows.reduce<string | null>((acc, r) => {
-        if (!r.completed_at) return acc;
-        if (!acc || r.completed_at > acc) return r.completed_at;
-        return acc;
-      }, null);
-
-      const inactiveDays = lastActive
-        ? Math.floor((now.getTime() - new Date(lastActive).getTime()) / 86400000)
-        : Math.floor((now.getTime() - new Date(profile.created_at).getTime()) / 86400000);
-
-      const vars = {
-        name: firstName(profile.full_name, profile.email),
-        streak,
-        missed_count: missedCount,
-        task_count: todayTotal,
-        count: totalDone,
-        subject: '',
-        // ⭐ v4.6.0 — TASK 2: عدّاد «نصف الطريق».
-        completed_count: 0,
-        total_count: 0,
-      };
-
-      /* ── 4) اختيار الفئة — بالسيناريو فقط (لا إشعار بلا سبب) ── */
-      let category: keyof typeof TEMPLATES | null = null;
-      let contentSubject: { id: string; name: string; slug: string } | null = null;
-      let contentFileTitle = '';
-
-      if (totalDone === 0 && inactiveDays <= 1) {
-        // ⭐ مستخدم جديد: نرحّب به مرّة واحدة.
-        category = 'onboarding';
-      } else if (inactiveDays >= 2) {
-        // ⭐ v4.5.1 — Dormancy: غاب التطبيق يومين أو أكثر.
-        category = 'reengagement';
-      } else if (userHour >= 20 && todayDone === 0 && streak > 0) {
-        // ⭐ v4.6.0 — TASK 2: «Streak Risk» فقط لسلسلة نشطة ولا إنجاز اليوم.
-        category = 'streak';
-      } else {
-        // ⭐ v4.6.0 — TASK 2: «Halfway there!» لا تُرسل إلا لمن بدأ
-        //   (completed_count > 0) وأنجز نصف مهام اليوم بالضبط.
-        const completedCount = todayDone;
-        const totalCount = todayTotal;
-        const isHalfway = totalCount >= 2 &&
-          completedCount > 0 &&
-          completedCount === Math.floor(totalCount / 2);
-
-        if (isHalfway) {
-          category = 'halfway';
-          vars.completed_count = completedCount;
-          vars.total_count = totalCount;
-        } else if (missedCount > 0 && todayTotal > 0 && todayDone < todayTotal) {
-          // ⭐ v4.6.1 — TASK 1: سيناريو «مهام فائتة» (مستخدم نشط تأخّر).
-          category = 'missed';
-        } else if (todayTotal > 0 && todayDone >= todayTotal) {
-          // ⭐ أنهى كل مهام اليوم.
-          category = 'achievement';
-        } else if (todayTotal > 0 && todayDone < todayTotal && userHour >= 9 && userHour < 20) {
-          // ⭐ تذكير نهاري بالجدول (خارج نافذة التذكير الصباحي 8:00).
-          category = 'agenda';
-        } else if (recentFiles && recentFiles.length) {
-          const candidates = recentFiles.filter((f: any) => f.subject_id && subjectById.has(f.subject_id));
-          if (candidates.length) {
-            const file: any = pick(candidates);
-            contentSubject = subjectById.get(file.subject_id) || null;
-            contentFileTitle = String(file.title || '');
-            if (contentSubject) {
-              category = 'content';
-              vars.subject = contentSubject.name;
-            }
-          }
-        }
-      }
-
-      // ⭐ v4.6.1 — TASK 1: لا سيناريو = لا إشعار. لا نُرسل لمجرد
-      //   مرور ساعتين؛ نُخطّي المستخدم بهدوء.
-      if (!category) {
-        skipped++;
-        continue;
-      }
-
-      const templates = TEMPLATES[category];
-      let title = fill(pick(templates.titles), vars);
-      let body = fill(pick(templates.bodies), vars);
-
-      // ⭐ v4.5.0 — قنوات وإجراءات ذكية (TASK 3 + TASK 4).
-      let channelId = 'medapp_tasks';
-      const data: Record<string, string> = {
-        category,
-        action: 'tasks',
-        target: 'index.html',
-        url: 'index.html',
-        source: 'smart-engine',
-        channel: 'medapp_tasks',
-      };
-
-      // ⭐ v4.5.1 — TASK 4: أزرار الإجراء داخل إشعارات المهام.
-      const taskActions = [
-        { title: 'تم الإنجاز', action: 'mark_done' },
-        { title: 'لاحقاً', action: 'later' },
-      ];
-      let actions: typeof taskActions | undefined;
-
-      if (category === 'reengagement') {
-        body = `👋 اشتقنا لك يا ${vars.name}! طلاب الطب لا يستسلمون. عد لمهامك الآن.`;
-        data.action = 'tasks';
-        data.target = 'index.html#tasks';
-        data.url = 'index.html#tasks';
-        actions = taskActions;
-      } else if (category === 'content' && contentSubject) {
-        body = `📚 تمت إضافة ملخص جديد في مادة ${contentSubject.name}. ألقِ نظرة!`;
-        channelId = 'medapp_content';
-        data.action = 'content';
-        data.channel = 'medapp_content';
-        data.subject_id = contentSubject.id;
-        data.subject_name = contentSubject.name;
-        data.subject_slug = contentSubject.slug;
-        const subjectUrl = `subject.html?subject=${encodeURIComponent(contentSubject.slug)}`;
-        data.target = subjectUrl;
-        data.url = subjectUrl;
-        if (contentFileTitle) data.file_title = contentFileTitle;
-      } else if (category === 'streak') {
-        channelId = 'medapp_streak';
-        data.action = 'streak';
-        data.channel = 'medapp_streak';
-        data.target = 'index.html#streak';
-        data.url = 'index.html#streak';
-        actions = taskActions;
-      } else if (category === 'agenda' || category === 'onboarding' || category === 'halfway') {
-        actions = taskActions;
-      } else if (category === 'missed') {
-        // ⭐ v4.6.1 — TASK 1: المهام الفائتة → تفتح لوحة مهام اليوم.
-        data.target = 'index.html#tasks';
-        data.url = 'index.html#tasks';
-        actions = taskActions;
-      }
-
-      // ⭐ v4.5.1 — بيانات المهمة التي يُنجزها زر «تم الإنجاز».
-      if (actions && pendingTask) {
-        if (pendingTask.task_id) data.task_id = String(pendingTask.task_id);
-        if (pendingTask.plan_date) data.plan_date = String(pendingTask.plan_date);
-        if (pendingTask.subject) data.subject = String(pendingTask.subject);
-        if (pendingTask.task_title) data.task_title = String(pendingTask.task_title);
-      }
-
-      const message: FcmMessage = {
-        title,
-        body,
-        data,
-        channelId,
+      const fcmMessage: FcmMessage = {
+        title: message.title,
+        body: message.body,
+        data: message.data,
+        channelId: message.channel as ChannelId,
         ...(actions ? { actions } : {}),
       };
 
-      const result = await sendBatch(sender, [profile.fcm_token], message, 1);
+      if (mode === 'preview') {
+        previews.push({
+          user: p.email,
+          scenario: message.scenario,
+          channel: message.channel,
+          title: message.title,
+          body: message.body,
+          action: message.action,
+          url: message.url,
+          target: message.target,
+          reason: message.reason,
+          context: {
+            streak: ctx.streak,
+            todayDone: ctx.todayDone,
+            todayTotal: ctx.todayTotal,
+            missed: ctx.missedCount,
+            inactiveDays: ctx.inactiveDays,
+            localHour: ctx.localHour,
+            sentToday: ctx.sentToday,
+          },
+        });
+        continue;
+      }
+
+      if (mode === 'test') {
+        // ⭐ إرسال واحد إلى هذا الجهاز فقط.
+        if (!ctx.notificationsEnabled) {
+          skipped++;
+          continue;
+        }
+        const targetToken = String(payload.token || p.fcm_token || '');
+        if (!targetToken) {
+          skipped++;
+          continue;
+        }
+        const ok = await sendOne(sender!, targetToken, fcmMessage);
+        if (ok) sent++; else failed++;
+        logRows.push({
+          user_id: p.id,
+          category: message.scenario,
+          scenario: message.scenario,
+          channel: message.channel,
+          title: message.title,
+          body: message.body,
+          target: message.target,
+          payload: message.data,
+          reason: message.reason + ' (test)',
+          sent: ok,
+          error: ok ? null : 'failed',
+        });
+        if (ok) {
+          await admin
+            .from('profiles')
+            .update({ last_notification_at: new Date().toISOString() })
+            .eq('id', p.id);
+        }
+        continue;
+      }
+
+      /* ── 7) الإرسال الحقيقي ── */
+      const result = await sendBatch(sender!, [p.fcm_token!], fcmMessage, 1);
       sent += result.sent;
       failed += result.failed;
 
-      // ⭐ v4.5.2 — رموز لم تُسجَّل anymore → امسح رمز هذا المستخدم.
+      // ⭐ رموز لم تُسجَّل anymore → امسحها.
       try {
         const invalid = takeInvalidTokens();
-        if (invalid.includes(profile.fcm_token)) {
-          await admin.from('profiles').update({ fcm_token: null }).eq('id', profile.id);
-          console.warn('[smart-engine] cleared a stale FCM token for ' + profile.email);
+        if (invalid.includes(p.fcm_token!)) {
+          await admin.from('profiles').update({ fcm_token: null }).eq('id', p.id);
+          console.warn('[smart-engine] cleared a stale FCM token for ' + p.email);
         }
       } catch (e) {
         console.warn('[smart-engine] could not clear the stale token:', e);
       }
 
       logRows.push({
-        user_id: profile.id,
-        category,
-        title,
-        body,
-        target: category,
+        user_id: p.id,
+        category: message.scenario,
+        scenario: message.scenario,
+        channel: message.channel,
+        title: message.title,
+        body: message.body,
+        target: message.target,
+        payload: message.data,
+        reason: message.reason,
         sent: result.sent > 0,
         error: result.failed ? 'failed' : null,
       });
 
       if (result.sent > 0) {
         try {
-          await admin.from('profiles').update({ last_notification_at: new Date().toISOString() })
-            .eq('id', profile.id);
+          await admin
+            .from('profiles')
+            .update({ last_notification_at: new Date().toISOString() })
+            .eq('id', p.id);
         } catch (e) {
           console.warn('[smart-engine] could not update last_notification_at:', e);
         }
       }
     }
 
-    /* ── 5) السجلّ ── */
+    /* ── 8) السجلّ ── */
     if (logRows.length) {
       try {
         await admin.from('notification_log').insert(logRows);
@@ -538,7 +363,25 @@ Deno.serve(async (req) => {
       }
     }
 
-    return json({ ok: true, sent, failed, skipped, mode: sender.mode });
+    if (mode === 'preview') {
+      return json({
+        ok: true,
+        mode,
+        previews,
+        scenarios: scenarioCatalog(),
+        channels: CHANNEL_META,
+      });
+    }
+
+    return json({
+      ok: true,
+      mode,
+      sent,
+      failed,
+      skipped,
+      fcm: sender?.mode,
+      caps: { daily: DAILY_CAP, weekly: WEEKLY_CAP },
+    });
   } catch (e) {
     console.error('[smart-engine]', e);
     return json({ error: (e as Error).message || 'unexpected error' }, 500);
@@ -546,8 +389,28 @@ Deno.serve(async (req) => {
 });
 
 /* ══════════════════════════════════════════════════════════
-   4. دوال مساعدة
+   helpers
    ══════════════════════════════════════════════════════════ */
+
+const CHANNEL_META: { id: string; name: string; description: string }[] = [
+  { id: 'medapp_tasks', name: 'المهام اليومية', description: 'خطة اليوم والمهام الفائتة والتذكيرات' },
+  { id: 'medapp_streak', name: 'سلسلة الدراسة', description: 'حماية السلسلة والأوسمة والزخم' },
+  { id: 'medapp_content', name: 'محتوى ومركّز', description: 'ملفات جديدة، مراجعة المساء، ملخّص الأسبوع' },
+  { id: 'medapp_updates', name: 'تحديثات التطبيق', description: 'إصدارات جديدة وإعلانات مهمة' },
+];
+
+async function sendOne(
+  sender: { send: (token: string, message: FcmMessage) => Promise<boolean> },
+  token: string,
+  message: FcmMessage,
+): Promise<boolean> {
+  try {
+    return await sender.send(token, message);
+  } catch (e) {
+    console.warn('[smart-engine] the test send failed:', e);
+    return false;
+  }
+}
 
 /** ⭐ يقرأ سرّاً من Supabase Vault */
 async function readVaultSecret(admin: any, name: string): Promise<string | null> {
@@ -558,45 +421,4 @@ async function readVaultSecret(admin: any, name: string): Promise<string | null>
   } catch (e) {
     return null;
   }
-}
-
-/**
- * ⭐ يحسب السلسلة: عدد الأيام المتتالية التي أنجز فيها المستخدم مهمة
- * (تنتهي اليوم أو أمس).
- */
-function computeStreaks(rows: any[]): Map<string, number> {
-  const daysByUser = new Map<string, Set<string>>();
-  for (const row of rows) {
-    if (!row.completed || !row.user_id) continue;
-    const day = row.completed_at
-      ? dayKey(new Date(row.completed_at))
-      : (row.plan_date ? String(row.plan_date).slice(0, 10) : null);
-    if (!day) continue;
-    const set = daysByUser.get(row.user_id) || new Set<string>();
-    set.add(day);
-    daysByUser.set(row.user_id, set);
-  }
-
-  const streaks = new Map<string, number>();
-  const today = new Date();
-
-  for (const [userId, days] of daysByUser) {
-    let streak = 0;
-    // ⭐ نبدأ من اليوم، وإن لم يكن نشطاً اليوم نبدأ من أمس.
-    const cursor = new Date(today);
-    if (!days.has(dayKey(cursor))) {
-      cursor.setUTCDate(cursor.getUTCDate() - 1);
-      if (!days.has(dayKey(cursor))) {
-        streaks.set(userId, 0);
-        continue;
-      }
-    }
-    while (days.has(dayKey(cursor))) {
-      streak++;
-      cursor.setUTCDate(cursor.getUTCDate() - 1);
-    }
-    streaks.set(userId, streak);
-  }
-
-  return streaks;
 }

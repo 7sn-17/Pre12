@@ -1,5 +1,5 @@
 {
-  "latest_version": "5.0.0-beta.5",
+  "latest_version": "5.0.0-beta.6",
   "download_url": "https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk",
   "changelog": "إصلاح «الودجت لا يتغيّر»: كانت القراءة خارج الـcomposition، فكان Glance يعيد رسم أول حمولة للأبد. الآن تُقرأ البيانات داخل الـcomposition، فالتأشير يظهر في اللحظة نفسها.\nترتيب صارم للضغطة: قراءة prefs → تعليم المهمة → حفظ متزامن → إعادة رسم فورية → ثم المزامنة في الخلفية.\nإصلاح «التطبيق لا يحدّث الودجت»: الـSPA كان يحذف مستمعي widgets.js عند كل تنقّل، فيموت جسر الودجات. الآن يُعاد ربطه بعد كل تبديل للصفحة.\nقاتل الكاش: cache: 'no-store' في جلب الصفحات ونسخة SW جديدة (v5.0.0-beta.5) — صفحة الإعدادات لا تعلق على النسخة القديمة."
 }

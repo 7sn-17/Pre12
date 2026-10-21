@@ -1135,8 +1135,10 @@
 
     if (action === 'update') {
       // ⭐ TASK 3: نجلب أحدث إصدار من GitHub API دائماً (رابط APK ديناميكي)
+      // ⭐⭐ W10 — `silent: true` كان يمنع ظهور النافذة تماماً: الضغط على
+      //   إشعار التحديث لم يكن يفعل شيئاً. الآن النافذة تظهر.
       if (global.MedAppUpdate && typeof global.MedAppUpdate.check === 'function') {
-        Promise.resolve(global.MedAppUpdate.check({ silent: true })).catch(function () {
+        Promise.resolve(global.MedAppUpdate.check({ silent: false })).catch(function () {
           if (typeof global.showUpdateModal === 'function' && data.version) {
             global.showUpdateModal({
               version: data.version,
@@ -1236,6 +1238,160 @@
     });
   }
 
+
+  /* ══════════════════════════════════════════════════════════
+     Phase W10 — القنوات + معاينة المحرّك الذكي
+     ══════════════════════════════════════════════════════════ */
+
+  /**
+   * ⭐ W10 — تفضيلات القنوات: ما الذي يريد المستخدم أن يصلك؟
+   *   channels: { tasks, streak, content, updates } — تُحفظ في
+   *   profiles.notification_prefs ويقرؤها المحرّك الذكي قبل كل إرسال.
+   */
+  var CHANNEL_PREFS_KEY = 'medapp_notification_prefs';
+
+  function defaultChannelPrefs() {
+    return { tasks: true, streak: true, content: true, updates: true };
+  }
+
+  function readLocalChannelPrefs() {
+    try {
+      var raw = localStorage.getItem(CHANNEL_PREFS_KEY);
+      var parsed = raw ? JSON.parse(raw) : null;
+      if (!parsed || typeof parsed !== 'object') return defaultChannelPrefs();
+      var prefs = defaultChannelPrefs();
+      ['tasks', 'streak', 'content', 'updates'].forEach(function (key) {
+        if (typeof parsed[key] === 'boolean') prefs[key] = parsed[key];
+      });
+      return prefs;
+    } catch (e) {
+      return defaultChannelPrefs();
+    }
+  }
+
+  function writeLocalChannelPrefs(prefs) {
+    try { localStorage.setItem(CHANNEL_PREFS_KEY, JSON.stringify(prefs)); } catch (e) {}
+  }
+
+  function currentUserId() {
+    try {
+      if (typeof global.getAuthUser === 'function') {
+        var user = global.getAuthUser();
+        if (user && user.id) return Promise.resolve(user.id);
+      }
+    } catch (e) {}
+    var client = global.supabaseClient;
+    if (!client || !client.auth || typeof client.auth.getUser !== 'function') {
+      return Promise.resolve('');
+    }
+    try {
+      return client.auth.getUser()
+        .then(function (r) { return (r && r.data && r.data.user && r.data.user.id) || ''; })
+        .catch(function () { return ''; });
+    } catch (e) {
+      return Promise.resolve('');
+    }
+  }
+
+  /** يقرأ التفضيلات: من الخادم أولاً، ومن الجهاز احتياطاً. */
+  function getChannelPreferences() {
+    var client = global.supabaseClient;
+    return currentUserId().then(function (id) {
+      if (!id || !client || !client.from) return readLocalChannelPrefs();
+      return client.from('profiles')
+        .select('notification_prefs')
+        .eq('id', id)
+        .maybeSingle()
+        .then(function (result) {
+          var remote = result && result.data && result.data.notification_prefs;
+          if (!remote) return readLocalChannelPrefs();
+          var prefs = defaultChannelPrefs();
+          ['tasks', 'streak', 'content', 'updates'].forEach(function (key) {
+            if (typeof remote[key] === 'boolean') prefs[key] = remote[key];
+          });
+          writeLocalChannelPrefs(prefs);
+          return prefs;
+        })
+        .catch(function () { return readLocalChannelPrefs(); });
+    });
+  }
+
+  /** يبدّل قناة واحدة ويزامنها مع الخادم. */
+  function setChannelPreference(channel, enabled) {
+    var key = String(channel || '').trim();
+    if (['tasks', 'streak', 'content', 'updates'].indexOf(key) === -1) {
+      return Promise.resolve(readLocalChannelPrefs());
+    }
+    var prefs = readLocalChannelPrefs();
+    prefs[key] = !!enabled;
+    writeLocalChannelPrefs(prefs);
+
+    var client = global.supabaseClient;
+    return currentUserId().then(function (id) {
+      if (!id || !client || !client.from) return prefs;
+      return client.from('profiles')
+        .update({ notification_prefs: prefs })
+        .eq('id', id)
+        .then(function () { return prefs; })
+        .catch(function (e) {
+          console.warn('[notifications] could not save the channel prefs:', e);
+          return prefs;
+        });
+    });
+  }
+
+  /**
+   * ⭐ W10 — معاينة سيناريو من المحرّك الذكي **بدون** إرسال.
+   * تعيد الرسالة كما ستصل حرفياً + سبب اختيارها.
+   */
+  function previewNotificationScenario(scenarioId) {
+    var client = global.supabaseClient;
+    if (!client || typeof client.functions !== 'function') {
+      return Promise.reject(new Error('المحرّك الذكي متاح داخل التطبيق فقط'));
+    }
+    var body = { mode: 'preview' };
+    if (scenarioId) body.scenario = String(scenarioId);
+    return client.functions.invoke('smart-notifications-engine', { body: body })
+      .then(function (result) {
+        var data = result && result.data ? result.data : result;
+        if (!data || !data.ok) throw new Error((data && data.error) || 'تعذّرت المعاينة');
+        return data;
+      });
+  }
+
+  /**
+   * ⭐ W10 — إرسال *إشعار حقيقي* إلى هذا الجهاز عبر المحرّك.
+   *(mode: 'test' — يتجاهل السقوف ويهمل التوقيت، وهذا مقصود للاختبار)
+   */
+  function sendNotificationScenario(scenarioId) {
+    var client = global.supabaseClient;
+    if (!client || typeof client.functions !== 'function') {
+      return Promise.reject(new Error('المحرّك الذكي متاح داخل التطبيق فقط'));
+    }
+    var body = { mode: 'test' };
+    if (scenarioId) body.scenario = String(scenarioId);
+    return client.functions.invoke('smart-notifications-engine', { body: body })
+      .then(function (result) {
+        var data = result && result.data ? result.data : result;
+        if (!data || !data.ok) throw new Error((data && data.error) || 'تعذّر الإرسال');
+        return data;
+      });
+  }
+
+  /** ⭐ W10 — تشخيص: ماذا يعرف المحرّك عن حالة المستخدم الآن؟ */
+  function getNotificationDiagnostics() {
+    var client = global.supabaseClient;
+    return currentUserId().then(function (id) {
+      if (!id || !client || !client.from) return null;
+      return client.from('profiles')
+        .select('notification_prefs, last_notification_at, quiet_start, quiet_end, notify_enabled, fcm_token')
+        .eq('id', id)
+        .maybeSingle()
+        .then(function (result) { return (result && result.data) || null; })
+        .catch(function () { return null; });
+    });
+  }
+
   global.MedAppNotifications = {
     CATEGORIES: CATEGORIES,
     pick: pick,
@@ -1265,6 +1421,12 @@
     MORNING_REMINDER_HOUR: MORNING_REMINDER_HOUR,
     EVENING_REMINDER_HOUR: EVENING_REMINDER_HOUR,
     saveFcmToken: saveFcmToken,
-    readState: readState
+    readState: readState,
+    CHANNEL_PREFS_KEY: CHANNEL_PREFS_KEY,
+    getChannelPreferences: getChannelPreferences,
+    setChannelPreference: setChannelPreference,
+    previewNotificationScenario: previewNotificationScenario,
+    sendNotificationScenario: sendNotificationScenario,
+    getNotificationDiagnostics: getNotificationDiagnostics
   };
 })(window);
