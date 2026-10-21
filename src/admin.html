@@ -2912,9 +2912,15 @@ function renderUsers() {
     item.className = 'list-item';
     item.style.animationDelay = (i * 0.03) + 's';
 
+    // ⭐⭐⭐ Phase W17 — صورة المستخدم: profiles.avatar_url ← الحرف الأول.
+    const listAvatar = (typeof resolveAvatarUrl === 'function') ? resolveAvatarUrl(user, null) : (user.avatar_url || '');
+    const listAvatarMarkup = listAvatar
+      ? '<img src="' + escapeHtml(listAvatar) + '" alt="' + escapeHtml(displayName) + '" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.textContent=\'' + escapeHtml(displayName.charAt(0).toUpperCase()) + '\'">'
+      : escapeHtml(displayName.charAt(0).toUpperCase());
+
     item.innerHTML = `
-      <div class="item-icon" style="background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark)); color: white; font-weight: 900; font-size: 1.05rem;">
-        ${displayName.charAt(0).toUpperCase()}
+      <div class="item-icon" style="background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark)); color: white; font-weight: 900; font-size: 1.05rem; overflow: hidden;">
+        ${listAvatarMarkup}
       </div>
       <div class="item-content">
         <div class="item-title">
@@ -3098,9 +3104,15 @@ function renderProgressUsers() {
     link.className = 'list-item progress-user-link';
     link.href = 'admin-user.html?id=' + encodeURIComponent(user.id);
     link.style.animationDelay = (i * 0.03) + 's';
+    // ⭐⭐⭐ Phase W17 — صورة المستخدم في قائمة التقدّم أيضاً.
+    const progressAvatar = (typeof resolveAvatarUrl === 'function') ? resolveAvatarUrl(user, null) : (user.avatar_url || '');
+    const progressAvatarMarkup = progressAvatar
+      ? '<img src="' + escapeHtml(progressAvatar) + '" alt="' + escapeHtml(displayName) + '" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.textContent=\'' + escapeHtml(displayName.charAt(0).toUpperCase()) + '\'">'
+      : escapeHtml(displayName.charAt(0).toUpperCase());
+
     link.innerHTML =
-      '<div class="item-icon progress-user-avatar" style="font-weight:900;font-size:1.05rem;color:#fff;">' +
-        escapeHtml(displayName.charAt(0).toUpperCase()) +
+      '<div class="item-icon progress-user-avatar" style="font-weight:900;font-size:1.05rem;color:#fff;overflow:hidden;">' +
+        progressAvatarMarkup +
       '</div>' +
       '<div class="item-content">' +
         '<div class="item-title">' + escapeHtml(displayName) + '</div>' +

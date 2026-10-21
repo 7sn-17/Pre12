@@ -95,6 +95,18 @@ export interface UserContext {
   prefs: ChannelPrefs;
   notificationsEnabled: boolean;
 
+  /**
+   * ⭐⭐⭐ Phase W17 — طلب إضافة صورة إلى ألبوم (حدث فوري، لا cron).
+   *   موجود فقط في مسار `mode: "albumRequest"`؛ في المسار الذكيّ
+   *   المجدول يبقى null ⇒ لا يُختار هذا السيناريو أبداً بالصدفة ✓.
+   */
+  albumRequest?: {
+    requestId: string;
+    albumId: string;
+    albumName: string;
+    requesterName: string;
+  } | null;
+
   /** الفئات التي أُرسلت مؤخراً (لمنع التكرار). */
   recentCategories: string[];
   /** العناوين التي أُرسلت مؤخراً (لمنع تكرار نفس الجملة). */
@@ -1032,6 +1044,37 @@ export const SCENARIOS: Scenario[] = [
     action: 'tasks',
     target: tasksTarget,
     allowTaskAction: true,
+  },
+
+  /* ───────────── 22) ⭐⭐⭐ طلب إضافة صورة إلى ألبوم (حدث فوري) ─────────────
+     ⭐ Phase W17 — هذا السيناريو **لا يُختار في المسار الذكيّ المجدول**:
+       شرطه `ctx.albumRequest` غير موجود إلا في مسار الطلب الفوري.
+       تصل сооб��ة إلى **صاحب الألبوم** (لا إلى الطالب) ✓
+  */
+  {
+    id: 'albumRequest',
+    channel: 'medapp_content',
+    priority: 96,
+    cooldownHours: 0,
+    dailyCap: 8,
+    weight: 1,
+    // ⭐ لا تفضيلات ولا سقوف: الطلب حدث صريح من شخص آخر.
+    respectsPrefs: false,
+    when: (ctx) => !!ctx.albumRequest,
+    // ⭐⭐⭐ W17 — **نصّ واحد محدّد** (لا عشوائية): نصّ الطلب كما هو مطلوب
+    //   حرفياً ⇒ نفس الرسالة في كل مرة.
+    titles: ['📸 طلب جديد'],
+    bodies: ["📸 طلب جديد: يريد {requester} إضافة صورة إلى ألبومك '{album}'."],
+    vars: (ctx) => ({
+      requester: ctx.albumRequest?.requesterName || 'زميل',
+      album: ctx.albumRequest?.albumName || 'ألبومك',
+      name: ctx.name,
+    }),
+    action: 'lectures',
+    target: (ctx) =>
+      ctx.albumRequest && ctx.albumRequest.albumId
+        ? `my-lectures.html?album=${encodeURIComponent(ctx.albumRequest.albumId)}`
+        : 'my-lectures.html',
   },
 ];
 

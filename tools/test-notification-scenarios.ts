@@ -407,6 +407,47 @@ section('5) فحص الكتالوج');
   check('كل السيناريوهات لا تستخدم قناة التحديثات', !channels.has('medapp_updates'));
 }
 
+/* ─────────────────────────────────────────────
+   6) ⭐⭐⭐ Phase W17 — سيناريو «طلب الألبوم» (حدث فوري)
+   ───────────────────────────────────────────── */
+
+section('6) طلب الألبوم (Phase W17)');
+
+{
+  const album = SCENARIOS.find((s) => s.id === 'albumRequest');
+  check('السيناريو موجود', !!album);
+
+  if (album) {
+    check('لا يُختار في المسار المجدول (شرطه albumRequest)',
+      album.when(ctxOf({}, [row()])) === false);
+
+    const ctx = ctxOf({}, [row()]);
+    ctx.albumRequest = {
+      requestId: 'r1',
+      albumId: 'album-123',
+      albumName: 'ألبوس محاضراتي',
+      requesterName: 'حسن'
+    };
+
+    check('يُختار حين يوجد طلب', album.when(ctx) === true);
+
+    const msg = composeMessage(ctx, album, 'طلب إضافة صورة');
+    check('العنوان محدّد', msg.title === '📸 طلب جديد', msg.title);
+    check(
+      'النصّ كما هو مطلوب حرفياً',
+      msg.body === "📸 طلب جديد: يريد حسن إضافة صورة إلى ألبومك 'ألبوس محاضراتي'.",
+      msg.body
+    );
+    check('الوجهة = صفحة الألبوم', msg.target === 'my-lectures.html?album=album-123', msg.target);
+    check('الرابط العميق = pre12://lectures', msg.url === 'pre12://lectures', msg.url);
+    check('النصّ ثابت (لا عشوائية)',
+      composeMessage(ctx, album).body === msg.body);
+
+    // ⭐ لا متغيّرات فارغة
+    check('لا متغيّر متبقٍ في النصّ', !msg.body.includes('{') && !msg.title.includes('{'), msg.body);
+  }
+}
+
 console.log('\n' + '─'.repeat(52));
 console.log(`النتيجة: ${passed} ناجح · ${failed} فاشل`);
 if (failed > 0) process.exit(1);

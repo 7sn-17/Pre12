@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="5.0.8">
+<meta name="app-version" content="5.0.9">
 <title>السنة التحضيرية - المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -6660,7 +6660,7 @@ i.fab {
         <div class="settings-icon"><i data-lucide="info"></i></div>
         <div class="settings-text">
           <h4>حول التطبيق</h4>
-          <p id="aboutVersionText">الإصدار 5.0.8 • السنة التحضيرية</p>
+          <p id="aboutVersionText">الإصدار 5.0.9 • السنة التحضيرية</p>
         </div>
       </div>
       <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
@@ -7048,7 +7048,7 @@ i.fab {
 <script src="widgets.js"></script>
 
 
-  <script src="app.js?v=5.0.8"></script>
+  <script src="app.js?v=5.0.9"></script>
 <script>
 
     lucide.createIcons();
@@ -7745,7 +7745,33 @@ function openLastActivity() {
       appState.currentUser = session.user;
 
       // getProfile ترجع النسخة المخزَّنة تلقائياً عند عدم الاتصال.
-      const profile = await getProfile(session.user.id);
+      let profile = await getProfile(session.user.id);
+
+      // ⭐⭐⭐ Phase W17 — «الجلسة موجودة والملف الشخصي غائب»:
+      //   هذا هو ما كان يحدث لكل مستخدم جديد (Google): الـtrigger على
+      //   auth.users كان مفقوداً ⇒ لا صفّ في profiles ⇒ الواجهة تسقط إلى
+      //   بريد المستخدم (hnt317601) وتضيع صورة Google.
+      //   الآن ننشئ الصفّ فوراً من بيانات الجلسة (خطّ الدفاع الثاني).
+      if ((!profile || !profile.id || !String(profile.full_name || '').trim()) &&
+          typeof ensureProfileRow === 'function') {
+        const created = await ensureProfileRow(session.user);
+        if (created) {
+          profile = created;
+        } else {
+          // ⭐ ملف مؤقّت من بيانات الجلسة ⇒ الاسم والصورة صحيحان فوراً
+          //   حتى لو تعذّر الحفظ (بلا اتصال مثلاً).
+          const meta = session.user.user_metadata || {};
+          profile = {
+            id: session.user.id,
+            email: session.user.email || '',
+            full_name: meta.full_name || meta.name || String(session.user.email || '').split('@')[0],
+            avatar_url: (typeof resolveAvatarUrl === 'function')
+              ? resolveAvatarUrl(null, session.user)
+              : (meta.avatar_url || meta.picture || ''),
+            role: 'student'
+          };
+        }
+      }
       appState.currentProfile = profile;
 
       const displayName = profile?.full_name || session.user.email?.split('@')[0] || 'مستخدم';
@@ -8819,8 +8845,12 @@ function openLastActivity() {
       const displayName = profile?.full_name || user?.email?.split('@')[0] || 'مستخدم';
       const email = user?.email || profile?.email || '';
       // ⭐⭐ صورة Google (من profiles أو من بيانات المصادقة)
-      const avatarUrl = (profile?.avatar_url || '') ||
-                        ((user && user.user_metadata && (user.user_metadata.avatar_url || user.user_metadata.picture)) || '');
+      // ⭐⭐⭐ Phase W17 — سلسلة صورة واحدة: profiles.avatar_url ← بيانات
+      //   Google في الجلسة ← الحرف الأول. (نفسها في الملاحظات ولوحة المشرف.)
+      const avatarUrl = (typeof resolveAvatarUrl === 'function')
+        ? resolveAvatarUrl(profile, user)
+        : ((profile?.avatar_url || '') ||
+           ((user && user.user_metadata && (user.user_metadata.avatar_url || user.user_metadata.picture)) || ''));
       const role = profile?.role || 'student';
       const roleLabel = role === 'admin' ? 'مشرف' : role === 'moderator' ? 'مراقب' : 'طالب';
       const roleColor = role === 'admin' ? '#fbbf24' : role === 'moderator' ? '#60a5fa' : '#34d399';

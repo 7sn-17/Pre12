@@ -6541,7 +6541,33 @@ function openLastActivity() {
       appState.currentUser = session.user;
 
       // getProfile ترجع النسخة المخزَّنة تلقائياً عند عدم الاتصال.
-      const profile = await getProfile(session.user.id);
+      let profile = await getProfile(session.user.id);
+
+      // ⭐⭐⭐ Phase W17 — «الجلسة موجودة والملف الشخصي غائب»:
+      //   هذا هو ما كان يحدث لكل مستخدم جديد (Google): الـtrigger على
+      //   auth.users كان مفقوداً ⇒ لا صفّ في profiles ⇒ الواجهة تسقط إلى
+      //   بريد المستخدم (hnt317601) وتضيع صورة Google.
+      //   الآن ننشئ الصفّ فوراً من بيانات الجلسة (خطّ الدفاع الثاني).
+      if ((!profile || !profile.id || !String(profile.full_name || '').trim()) &&
+          typeof ensureProfileRow === 'function') {
+        const created = await ensureProfileRow(session.user);
+        if (created) {
+          profile = created;
+        } else {
+          // ⭐ ملف مؤقّت من بيانات الجلسة ⇒ الاسم والصورة صحيحان فوراً
+          //   حتى لو تعذّر الحفظ (بلا اتصال مثلاً).
+          const meta = session.user.user_metadata || {};
+          profile = {
+            id: session.user.id,
+            email: session.user.email || '',
+            full_name: meta.full_name || meta.name || String(session.user.email || '').split('@')[0],
+            avatar_url: (typeof resolveAvatarUrl === 'function')
+              ? resolveAvatarUrl(null, session.user)
+              : (meta.avatar_url || meta.picture || ''),
+            role: 'student'
+          };
+        }
+      }
       appState.currentProfile = profile;
 
       const displayName = profile?.full_name || session.user.email?.split('@')[0] || 'مستخدم';
@@ -7615,8 +7641,12 @@ function openLastActivity() {
       const displayName = profile?.full_name || user?.email?.split('@')[0] || 'مستخدم';
       const email = user?.email || profile?.email || '';
       // ⭐⭐ صورة Google (من profiles أو من بيانات المصادقة)
-      const avatarUrl = (profile?.avatar_url || '') ||
-                        ((user && user.user_metadata && (user.user_metadata.avatar_url || user.user_metadata.picture)) || '');
+      // ⭐⭐⭐ Phase W17 — سلسلة صورة واحدة: profiles.avatar_url ← بيانات
+      //   Google في الجلسة ← الحرف الأول. (نفسها في الملاحظات ولوحة المشرف.)
+      const avatarUrl = (typeof resolveAvatarUrl === 'function')
+        ? resolveAvatarUrl(profile, user)
+        : ((profile?.avatar_url || '') ||
+           ((user && user.user_metadata && (user.user_metadata.avatar_url || user.user_metadata.picture)) || ''));
       const role = profile?.role || 'student';
       const roleLabel = role === 'admin' ? 'مشرف' : role === 'moderator' ? 'مراقب' : 'طالب';
       const roleColor = role === 'admin' ? '#fbbf24' : role === 'moderator' ? '#60a5fa' : '#34d399';

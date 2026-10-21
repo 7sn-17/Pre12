@@ -138,6 +138,132 @@ Deno.serve(async (req) => {
       }, 500);
     }
 
+    /* ── 3.5) ⭐⭐⭐ Phase W17 — «طلب ألبوم»: حدث فوري (لا cron) ──
+       ⭐ يُستدعى من **trigger في القاعدة** (AFTER INSERT على album_requests)
+          عبر pg_net ⇒ تصل الرسالة إلى صاحب الألبوم في ثوانٍ.
+       ⭐ لا سقوف ولا ساعات صمت: الطلب حدث صريح من شخص آخر.          */
+    if (mode === 'albumRequest') {
+      const requestId = String(payload.request_id || '').trim();
+      if (!requestId) return json({ error: 'request_id is required' }, 400);
+
+      const { data: request, error: requestError } = await admin
+        .from('album_requests')
+        .select('id, album_id, album_owner_id, user_id, title, author_name, status')
+        .eq('id', requestId)
+        .maybeSingle();
+      if (requestError) return json({ error: requestError.message }, 400);
+      if (!request) {
+        return json({ ok: true, mode, sent: 0, failed: 0, skipped: 1, reason: 'the request no longer exists' });
+      }
+
+      const ownerId = String(request.album_owner_id || '');
+      const { data: ownerProfile } = await admin
+        .from('profiles')
+        .select(
+          'id, email, full_name, fcm_token, notify_enabled, last_notification_at, created_at, timezone, notification_prefs, quiet_start, quiet_end',
+        )
+        .eq('id', ownerId)
+        .maybeSingle();
+
+      if (!ownerProfile) {
+        return json({ ok: true, mode, sent: 0, failed: 0, skipped: 1, reason: 'the album owner has no profile' });
+      }
+      if (!ownerProfile.fcm_token) {
+        return json({ ok: true, mode, sent: 0, failed: 0, skipped: 1, reason: 'the album owner has no FCM token' });
+      }
+      if (ownerProfile.notify_enabled === false) {
+        return json({ ok: true, mode, sent: 0, failed: 0, skipped: 1, reason: 'the album owner disabled notifications' });
+      }
+
+      let albumName = 'ألبومك';
+      let albumId = String(request.album_id || '');
+      try {
+        const { data: album } = await admin
+          .from('lecture_albums')
+          .select('id, name, user_id')
+          .eq('id', albumId)
+          .maybeSingle();
+        if (album && album.name) albumName = String(album.name);
+        if (album && album.user_id) albumId = String(album.id);
+      } catch (e) {
+        console.warn('[smart-engine] the album could not be read:', e);
+      }
+
+      // ⭐ سياق مصغّر: هذا السيناريو لا يحتاج المهام أو الأهداف.
+      const ctx = buildContext(
+        ownerProfile as unknown as ProfileRow,
+        [],
+        [],
+        [],
+        [],
+        now,
+      );
+      ctx.albumRequest = {
+        requestId: String(request.id),
+        albumId,
+        albumName,
+        requesterName: String(request.author_name || 'زميل'),
+      };
+
+      const scenario = SCENARIOS.find((s) => s.id === 'albumRequest');
+      if (!scenario) return json({ error: 'the albumRequest scenario is missing' }, 500);
+
+      const message = composeMessage(ctx, scenario, 'طلب إضافة صورة إلى ألبومك');
+      const fcm: FcmMessage = {
+        title: message.title,
+        body: message.body,
+        data: { ...message.data, request_id: String(request.id), album_id: albumId },
+        channelId: message.channel,
+      };
+
+      const ok = await sendOne(sender!, ownerProfile.fcm_token, fcm);
+      try {
+        await admin.from('notification_log').insert({
+          user_id: ownerId,
+          category: 'albumRequest',
+          scenario: 'albumRequest',
+          channel: message.channel,
+          title: message.title,
+          body: message.body,
+          target: message.target,
+          payload: fcm.data,
+          reason: 'طلب إضافة صورة إلى ألبومك',
+          sent: ok,
+          error: ok ? null : 'failed',
+        });
+      } catch (e) {
+        console.warn('[smart-engine] could not write the log:', e);
+      }
+      if (ok) {
+        try {
+          await admin
+            .from('profiles')
+            .update({ last_notification_at: new Date().toISOString() })
+            .eq('id', ownerId);
+        } catch (e) {}
+      }
+
+      console.info(
+        '[smart-engine] albumRequest → ' + ownerId + ' · ' + (ok ? 'sent' : 'failed') +
+        ' · ' + message.title,
+      );
+      return json({
+        ok: true,
+        mode,
+        sent: ok ? 1 : 0,
+        failed: ok ? 0 : 1,
+        skipped: 0,
+        scenario: 'albumRequest',
+        channel: message.channel,
+        title: message.title,
+        body: message.body,
+        url: message.url,
+        target: message.target,
+        owner: ownerId,
+        fcm: sender?.mode,
+      });
+    }
+
     /* ── 4) data ── */
     const { data: profiles, error: profilesError } = await admin
       .from('profiles')
@@ -270,6 +396,13 @@ Deno.serve(async (req) => {
 
       // ⭐⭐ W14 — مع forceTest نرسل **دائماً**: إن لم ينطبق أي سيناريو
       //   نختار أقرب واحد (أو «agenda») بدل أن نردّ «skipped» بلا شيء.
+      // ⭐⭐⭐ W17 — «طلب الألبوم» حدث فوري (يصل من القاعدة) لا يُختبر هنا:
+      //   سياقه (اسم الطالب واسم الألبوم) غير موجود في هذا المسار.
+      if (forcedScenario === 'albumRequest') {
+        return json({
+          error: 'سيناريو طلب الألبوم يحدث من داخل التطبيق فقط (حدث فوري من القاعدة).',
+        }, 400);
+      }
       const chosen = ownSelection
         ? ownSelection.scenario
         : (forcedScenario ? SCENARIOS.find((s) => s.id === forcedScenario) : null) ||

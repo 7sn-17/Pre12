@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="5.0.8">
+<meta name="app-version" content="5.0.9">
 <title>ملف الطالب — لوحة التحكم</title>
 
 <!-- الخطوط -->
@@ -1849,8 +1849,13 @@ function renderProfile() {
   }, '');
   const subjectStats = buildSubjectStats();
 
-  const avatar = profile.avatar_url
-    ? '<img src="' + escapeHtml(profile.avatar_url) + '" alt="' + escapeHtml(displayName) + '">'
+  // ⭐⭐⭐ Phase W17 — سلسلة الصورة الموحّدة: profiles.avatar_url ←
+  //   بيانات Google في الجلسة ← الحرف الأول.
+  const avatarUrl = (typeof resolveAvatarUrl === 'function')
+    ? resolveAvatarUrl(profile, null)
+    : (profile.avatar_url || '');
+  const avatar = avatarUrl
+    ? '<img src="' + escapeHtml(avatarUrl) + '" alt="' + escapeHtml(displayName) + '" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'">'
     : escapeHtml(initial);
 
   const subjectsMarkup = subjectStats.map(function (item) {

@@ -535,8 +535,13 @@ function renderProfile() {
   }, '');
   const subjectStats = buildSubjectStats();
 
-  const avatar = profile.avatar_url
-    ? '<img src="' + escapeHtml(profile.avatar_url) + '" alt="' + escapeHtml(displayName) + '">'
+  // ⭐⭐⭐ Phase W17 — سلسلة الصورة الموحّدة: profiles.avatar_url ←
+  //   بيانات Google في الجلسة ← الحرف الأول.
+  const avatarUrl = (typeof resolveAvatarUrl === 'function')
+    ? resolveAvatarUrl(profile, null)
+    : (profile.avatar_url || '');
+  const avatar = avatarUrl
+    ? '<img src="' + escapeHtml(avatarUrl) + '" alt="' + escapeHtml(displayName) + '" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'">'
     : escapeHtml(initial);
 
   const subjectsMarkup = subjectStats.map(function (item) {

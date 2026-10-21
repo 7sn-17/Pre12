@@ -1017,6 +1017,22 @@
       if (typeof getProfile === 'function' && typeof cacheProfile === 'function') {
         try {
           var profile = await getProfile(userId);
+          // ⭐⭐⭐ Phase W17 — «الجلسة بلا صفّ ملف شخصي»:
+          //   كان الـtrigger على auth.users مفقوداً ⇒ كل مستخدم جديد يدخل
+          //   بلا صفّ ⇒ اسمه بريده وصورته غائبة. الآن ننشئ الصفّ فوراً
+          //   من بيانات الجلسة (Google) — في كل مزامنة، لا في الصفحة الأولى فقط.
+          if ((!profile || !String(profile.full_name || '').trim()) && typeof ensureProfileRow === 'function') {
+            try {
+              var liveUser = user || null;
+              if (!liveUser) {
+                var sessionForUser = await supabaseClient.auth.getSession();
+                liveUser = sessionForUser && sessionForUser.data && sessionForUser.data.session
+                  ? sessionForUser.data.session.user
+                  : null;
+              }
+              if (liveUser) profile = await ensureProfileRow(liveUser);
+            } catch (e) {}
+          }
           if (profile) {
             var profileEmail = '';
             try {

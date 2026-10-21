@@ -1181,7 +1181,10 @@
     }
 
     if (action === 'lectures') {
-      try { global.location.href = 'my-lectures.html'; } catch (e) {}
+      // ⭐⭐⭐ Phase W17 — «طلب ألبوم»: الرسالة تحمل هدفاً محدّداً
+      //   (my-lectures.html?album=<id>) ⇒ نفتح **الألبوم** مباشرةً.
+      var lectureTarget = safeInternalTarget(data.target || data.path);
+      try { global.location.href = lectureTarget || 'my-lectures.html'; } catch (e) {}
       return true;
     }
 

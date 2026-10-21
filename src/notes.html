@@ -503,6 +503,7 @@ headerTitle: الملاحظات
       width: 24px;
       height: 24px;
       border-radius: 50%;
+      overflow: hidden;   /* ⭐ W17 — تُقصّ الصورة داخل الدائرة */
       background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
       display: flex;
       align-items: center;
@@ -1309,6 +1310,8 @@ headerTitle: الملاحظات
       myNotes: [],
       sharedNotes: [],
       pendingNotes: [],
+      // ⭐⭐⭐ Phase W17 — صور أصحاب الملاحظات المشتركة (user_id → avatar_url).
+      authorAvatars: {},
       searchQuery: '',
       deletingId: null,
       isSaving: false,      // 🔒 منع الحفظ المزدوج
@@ -1528,6 +1531,8 @@ headerTitle: الملاحظات
           loadPendingNotes();
           updateMineCount();
           updateSharedCount();
+          // ⭐ W17 — صور المؤلّفين (بلا تعطيل للعرض ✓).
+          loadAuthorAvatars(state.sharedNotes).then(function () { renderNotes(); });
         }
         return;
       }
@@ -1543,8 +1548,42 @@ headerTitle: الملاحظات
         state.sharedNotes = data || [];
         saveToStorage(KEYS.SHARED_CACHE, state.sharedNotes);
         updateSharedCount();
+        loadAuthorAvatars(state.sharedNotes).then(function () { renderNotes(); });
       } catch (err) {
         console.error('loadSharedNotes error:', err);
+      }
+    }
+
+    /**
+     * ⭐⭐⭐ Phase W17 — صورة صاحب الملاحظة المشتركة.
+     *   جدول `notes` لا يحفظ صورةً ⇒ نقرأها من `profiles` (استعلام واحد
+     *   لكل المؤلّفين) ونخزّنها في الذاكرة. بلا شبكة ⇒ الحرف الأول ✓.
+     */
+    async function loadAuthorAvatars(notes) {
+      try {
+        const list = Array.isArray(notes) ? notes : [];
+        const ids = [];
+        list.forEach(function (note) {
+          if (note && note.user_id && ids.indexOf(note.user_id) === -1) ids.push(note.user_id);
+        });
+        if (!ids.length) return;
+        if (typeof supabaseClient === 'undefined' || !supabaseClient) return;
+
+        const { data, error } = await supabaseClient
+          .from('profiles')
+          .select('id, avatar_url, full_name')
+          .in('id', ids);
+        if (error || !data) return;
+
+        data.forEach(function (row) {
+          if (!row || !row.id) return;
+          state.authorAvatars[row.id] = {
+            avatar_url: row.avatar_url || '',
+            full_name: row.full_name || ''
+          };
+        });
+      } catch (e) {
+        // ⭐ غير حرج: الحرف الأول يكفي.
       }
     }
 
@@ -1740,6 +1779,23 @@ headerTitle: الملاحظات
       const typeIcon = note.is_shared ? 'users' : 'lock';
       const authorInitial = note.author_name ? note.author_name.charAt(0).toUpperCase() : '؟';
       const authorName = note.is_shared ? escapeHtml(note.author_name || 'مجهول') : 'أنت';
+
+      // ⭐⭐⭐ Phase W17 — صورة صاحب الملاحظة: من `profiles` (للمشارك) أو
+      //   من ملف المستخدم الحالي (لملاحظاته) ⇒ وإلا الحرف الأول.
+      let authorAvatarUrl = '';
+      try {
+        if (isMine) {
+          authorAvatarUrl = (typeof resolveAvatarUrl === 'function')
+            ? resolveAvatarUrl(state.currentProfile, state.currentUser)
+            : ((state.currentProfile && state.currentProfile.avatar_url) || '');
+        } else {
+          const entry = state.authorAvatars[note.user_id];
+          if (entry && entry.avatar_url) authorAvatarUrl = entry.avatar_url;
+        }
+      } catch (e) {}
+      const authorAvatarMarkup = authorAvatarUrl
+        ? '<img src="' + escapeHtml(authorAvatarUrl) + '" alt="' + escapeHtml(authorName) + '" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.textContent=\'' + escapeHtml(authorInitial) + '\'">'
+        : escapeHtml(authorInitial);
       
       const pendingHtml = isPending ? `
         <div class="note-meta-item pending">
@@ -1787,7 +1843,7 @@ headerTitle: الملاحظات
           </div>
           
           <div class="note-author">
-            <div class="note-author-avatar">${authorInitial}</div>
+            <div class="note-author-avatar">${authorAvatarMarkup}</div>
             <span class="note-author-name">${authorName}</span>
           </div>
         </div>

@@ -180,6 +180,125 @@ function extractAvatarUrl(user) {
 }
 
 /**
+ * ⭐⭐⭐ Phase W17 — «من أين تأتي الصورة؟» (تسلسل واحد لكل الواجهات)
+ *
+ *   1) `profiles.avatar_url`  ← ما خزّنه الـtrigger أو الـupsert
+ *   2) `auth.users.raw_user_meta_data.avatar_url` / `picture`
+ *      (بيانات Google في الجلسة) — مهما كان ما في الجدول
+ *   3) وأخيراً الحرف الأول (ترسمه الواجهة).
+ *
+ * @param {object} profile صفّ profiles (قد يكون null)
+ * @param {object} user   مستخدم المصادقة (قد يكون null)
+ * @returns {string} رابط الصورة أو ''.
+ */
+function resolveAvatarUrl(profile, user) {
+  try {
+    var fromProfile = (profile && profile.avatar_url) ? String(profile.avatar_url).trim() : '';
+    if (fromProfile && /^https?:\/\//i.test(fromProfile)) return fromProfile;
+  } catch (e) {}
+  var fromMeta = extractAvatarUrl(user);
+  if (fromMeta) return fromMeta;
+  try {
+    var meta = (user && user.user_metadata) ? user.user_metadata : {};
+    var picture = meta.picture || meta.avatar_url || '';
+    if (picture && /^https?:\/\//i.test(picture)) return picture;
+  } catch (e) {}
+  return '';
+}
+
+/**
+ * ⭐⭐⭐ Phase W17 — «إنشاء صفّ الملف الشخصي عند الحاجة».
+ *
+ * السبب الجذري لعطل «المستخدم الجديد لا يظهر»: الـtrigger على auth.users
+ * كان مفقوداً (أُعيد إنشاؤه في القاعدة) ⇒ المستخدم يدخل بلا صفّ ⇒
+ * الواجهة تسقط إلى بريده وتضيع صورته.
+ *
+ * ⭐ هذا هو خط الدفاع الثاني: إن غاب الصفّ لأي سبب (قاعدة قديمة، trigger
+ *   معطّل، استيراد بيانات) ⇒ ننشئه **فوراً** من بيانات الجلسة.
+ *
+ * @param {object} user مستخدم المصادقة
+ * @returns {Promise<object|null>} الصفّ بعد الحفظ.
+ */
+async function ensureProfileRow(user) {
+  try {
+    if (!user || !user.id) return null;
+    if (typeof supabaseClient === 'undefined' || !supabaseClient) return null;
+
+    var meta = user.user_metadata || {};
+    var metaName = String(
+      meta.full_name || meta.name || meta.user_name || ''
+    ).trim();
+    if (!metaName) {
+      metaName = String(user.email || '').split('@')[0] || 'مستخدم';
+    }
+    var avatar = extractAvatarUrl(user);
+
+    // ⭐⭐⭐ Phase W17 — «الاسم الذي اختاره المستخدم لا يُمحو»:
+    //   Google يعيد كتابة `raw_user_meta_data` في **كل** دخول ⇒ اسمه الأصلي
+    //   (مثل «HN T») يعود ⇒ وكنا ننسخه فوق الاسم المخصَّص ⇒ «الاسم يرجع».
+    //   لذلك: إن كان الصفّ موجوداً فنملأ **الفارغ فقط**، ولا نلمس الاسم.
+    var existing = null;
+    try {
+      var found = await supabaseClient
+        .from('profiles')
+        .select('id, email, full_name, avatar_url')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (found && !found.error && found.data) existing = found.data;
+    } catch (e) {}
+
+    var payload = { id: user.id };
+    if (user.email) payload.email = user.email;
+    if (!existing) {
+      payload.full_name = metaName;
+      if (avatar) payload.avatar_url = avatar;
+    } else {
+      // ⭐ صفٌّ موجود: نملأ ما هو فارغ فقط.
+      if (!String(existing.full_name || '').trim()) payload.full_name = metaName;
+      if (!String(existing.avatar_url || '').trim() && avatar) payload.avatar_url = avatar;
+      if (!Object.keys(payload).length) {
+        cacheProfile(existing, user.email);
+        return existing;
+      }
+    }
+
+    // ⭐ upsert: ينشئ الصفّ إن غاب، ويحدّثه إن وُجد (سياسة INSERT متاحة الآن).
+    var result = await supabaseClient
+      .from('profiles')
+      .upsert(payload, { onConflict: 'id' })
+      .select('*')
+      .maybeSingle();
+
+    if (result && result.error) {
+      console.warn('[auth] the profile row could not be created:', result.error.message);
+      // ⭐ خطة بديلة: UPDATE (يسمح به RLS دائماً) — يكفي لصفٍّ موجود.
+      try {
+        var upd = await supabaseClient
+          .from('profiles')
+          .update(payload)
+          .eq('id', user.id)
+          .select('*')
+          .maybeSingle();
+        if (upd && !upd.error && upd.data) {
+          cacheProfile(upd.data, user.email);
+          return upd.data;
+        }
+      } catch (e2) {}
+      return null;
+    }
+
+    if (result && result.data) {
+      cacheProfile(result.data, user.email);
+      return result.data;
+    }
+    return null;
+  } catch (err) {
+    console.warn('[auth] ensureProfileRow failed:', err);
+    return null;
+  }
+}
+
+/**
  * ⭐⭐ يحفظ صورة Google في profiles.avatar_url.
  * نستخدم upsert حتى يعمل حتى لو لم يكن هناك صفّ ملف شخصي بعد.
  */
@@ -197,18 +316,20 @@ async function syncProfileAvatar(user) {
 
     var payload = { id: userId, avatar_url: avatar };
     if (user && user.email) payload.email = user.email;
-    if (user && user.user_metadata && user.user_metadata.full_name) {
-      payload.full_name = user.user_metadata.full_name;
-    }
+    // ⭐⭐⭐ Phase W17 — **لا نكتب الاسم هنا إطلاقاً**:
+    //   مزامنة الصورة لا تملك حقّ تغيير الاسم، وبيانات Google تُعيد كتابة
+    //   الاسم الأصلي في كل دخول ⇒ كان الاسم المخصَّص يُمحى هنا («الاسم يرجع»).
+    //  وإن لم يكن هناك صفّ أصلاً فالـupsert ينشئه؛ والاسم يملؤه
+    //   `ensureProfileRow` (يُستدعى من المزامنة) لأن الاسم في العمود فارغ ✓.
 
-    // ⭐ v4.3.0 — update only. Profile rows are created by the
-    //   handle_new_user trigger (SECURITY DEFINER); a client-side upsert
-    //   needs an INSERT policy and logged "new row violates row-level
-    //   security policy for table profiles" on every login.
+    // ⭐⭐⭐ Phase W17 — became an UPSERT.
+    //   كان update فقط: إن كان الصفّ مفقوداً (وهو ما كان يحدث لأن الـtrigger
+    //   على auth.users كان مفقوداً) ⇒ صفر صفوف محدَّثة وبلا خطأ ⇒ الصورة
+    //   والاسم يضيعان. الآن الـupsert ينشئ الصفّ إن لم يكن موجوداً
+    //   (وسياسة INSERT على profiles موجودة الآن في القاعدة).
     var result = await supabaseClient
       .from('profiles')
-      .update(payload)
-      .eq('id', userId)
+      .upsert(payload, { onConflict: 'id' })
       .select('*')
       .maybeSingle();
 
