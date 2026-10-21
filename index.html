@@ -11529,6 +11529,16 @@ function showAbout() {
     /* ═══════════════════════════════════════════════════
        ⭐ المشاركة — Web Share API مع بديل نسخ
        ═══════════════════════════════════════════════════ */
+    /**
+     * ⭐⭐⭐ Phase W18 — «الرابط مرّة واحدة» (إصلاح التكرار).
+     *
+     * كان النصّ يحتوي رابط التطبيق **ورابطُ الحقل `url` يحتويه أيضاً** ⇒
+     * أندرويد يدمجهما ⇒ يظهر رابط التنزيل **مرّتين** في الرسالة المشتركة.
+     *
+     * ⭐ الحل: الرابط يُرسَل **في حقل `url` وحده** (يصير رابطاً قابلاً
+     *   للنقر ✓)، والنصّ يبقى رسالة نظيفة بلا رابط.
+     *   ( Fallback النسخ: يُضاف الرابط there — لا يوجد حقل url هناك ✓ )
+     */
     function streakShareText() {
       var data = streakState.data;
       var days = data ? Number(data.current || 0) : 0;
@@ -11538,10 +11548,14 @@ function showAbout() {
         ? 'سلسلة إنجازي: ' + days + ' ' + (days === 1 ? 'يوم' : (days === 2 ? 'يومان' : 'أيام')) + '.'
         : 'بدأت رحلتي اليوم — خطوتي الأولى!';
 
+      // ⭐ بلا رابط هنا — الرابط في حقل `url` (مرّة واحدة فقط ✓).
       return '🔥 أنا أذاكر الآن على المنصة الطبية!\n' +
-        streakLine + '\n' +
-        'لتحميل التطبيق:\n' +
-        APP_DOWNLOAD_URL;
+        streakLine;
+    }
+
+    /** ⭐ W18 — نصّ المشاركة مع الرابط (ل fallback النسخ فقط). */
+    function streakShareTextWithUrl() {
+      return streakShareText() + '\n\nلتحميل التطبيق:\n' + APP_DOWNLOAD_URL;
     }
 
     // ⭐⭐ رابط التحميل المباشر — نشاركه مع السلسلة
@@ -11566,7 +11580,8 @@ function showAbout() {
           // ⭐ إلغاء المستخدم لا يُعتبر خطأً
           if (err && (err.message === 'Share canceled' || err.code === 'CANCELLED')) return;
           console.warn('[share] the native share failed:', err);
-          copyStreakText(text);
+          // ⭐ W18 — عند النسخ لا يوجد حقل `url` ⇒ نضيف الرابط للنصّ.
+          copyStreakText(streakShareTextWithUrl());
           return;
         }
       }
@@ -11582,12 +11597,14 @@ function showAbout() {
           return;
         } catch (err) {
           if (err && err.name === 'AbortError') return;
-          copyStreakText(text);
+          // ⭐ W18 — عند النسخ لا يوجد حقل `url` ⇒ نضيف الرابط للنصّ.
+          copyStreakText(streakShareTextWithUrl());
           return;
         }
       }
 
-      copyStreakText(text);
+      // ⭐ W18 — النسخ هو البديل الوحيد بلا حقل `url` ⇒ الرابط يُضاف هنا.
+      copyStreakText(streakShareTextWithUrl());
     }
 
     function copyStreakText(text) {

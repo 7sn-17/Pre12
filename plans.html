@@ -1728,6 +1728,35 @@ header {
 .plan-lightbox-close i,
 .plan-lightbox-close svg { width: 20px; height: 20px; }
 
+/* ⭐⭐⭐ Phase W18 — زرّ «مشاركة» داخل معرض الصور فقط
+   (وليس في قائمة الخطط — تبقى القائمة نظيفة ✓). */
+.plan-lightbox-share {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-family: inherit;
+  transition: all var(--t);
+}
+
+.plan-lightbox-share:hover {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(52, 211, 153, 0.5);
+  color: #a7f3d0;
+}
+
+.plan-lightbox-share:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.plan-lightbox-share i,
+.plan-lightbox-share svg { width: 19px; height: 19px; }
+
 .plan-lightbox-stage {
   position: relative;
   z-index: 2;
@@ -2043,6 +2072,11 @@ header {
         <div class="plan-lightbox-title" id="planLightboxTitle">—</div>
         <div class="plan-lightbox-counter" id="planLightboxCounter">— / —</div>
       </div>
+      <!-- ⭐⭐⭐ W18 — المشاركة من داخل المعرض فقط (لا زرّ في القائمة ✓) -->
+      <button class="plan-lightbox-share" id="planShareBtn" type="button"
+              onclick="sharePlanImage()" aria-label="مشاركة صورة الخطة">
+        <i data-lucide="share-2"></i>
+      </button>
       <button class="plan-lightbox-close" type="button" onclick="closePlanLightbox()" aria-label="إغلاق">
         <i data-lucide="x"></i>
       </button>
@@ -2242,6 +2276,90 @@ if ('serviceWorker' in navigator) {
     // Cached images can finish before the handlers above are attached.
     if (image.complete) {
       planSetMissingStage(image.naturalWidth === 0);
+    }
+  }
+
+  /** ⭐ W18 — blob → base64 (نفس أسلوب my-lectures.html). */
+  function planBlobToBase64(blob) {
+    return new Promise(function (resolve, reject) {
+      try {
+        var reader = new FileReader();
+        reader.onload = function () {
+          var result = String(reader.result || '');
+          var comma = result.indexOf(',');
+          resolve(comma > -1 ? result.slice(comma + 1) : result);
+        };
+        reader.onerror = function () { reject(reader.error); };
+        reader.readAsDataURL(blob);
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+
+  /**
+   * ⭐⭐⭐ Phase W18 — «مشاركة صورة الخطة» — **من المعرض فقط**.
+   *
+   * السلوك مطابق تماماً لـ `my-lectures.html`:
+   *   1) ننزّل الصورة كـblob؛
+   *   2) نحفظها في ذاكرة التطبيق عبر Filesystem.writeFile؛
+   *   3) نشارك مسار الملف عبر Share.share({ url: fileUri }).
+   *
+   * ⭐ لا يوجد زرّ مشاركة في **قائمة** الخطط (تبقى القائمة نظيفة ✓).
+   */
+  async function sharePlanImage() {
+    var plan = PLANS[planViewer.index];
+    if (!plan) return;
+
+    var imageUrl = plan.image;
+    try { imageUrl = new URL(plan.image, document.baseURI).href; } catch (e) {}
+
+    var Share = (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Share) || null;
+    var Filesystem = (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) || null;
+
+    if (!Share || typeof Share.share !== 'function') {
+      // ⭐ على الويب: نفتح الصورة في تبويب (بديل المشاركة الوحيد).
+      try { window.open(imageUrl, '_blank', 'noopener'); } catch (e) {}
+      return;
+    }
+
+    var btn = planGetEl('planShareBtn');
+    if (btn) btn.disabled = true;
+
+    try {
+      var fileName = 'plan-' + (plan.key || Date.now()) + '.jpg';
+      var fileUri = '';
+
+      if (Filesystem && typeof Filesystem.writeFile === 'function') {
+        try {
+          var response = await fetch(plan.image);
+          var blob = await response.blob();
+          var base64 = await planBlobToBase64(blob);
+          var written = await Filesystem.writeFile({
+            path: fileName,
+            data: base64,
+            directory: 'CACHE'
+          });
+          fileUri = written && written.uri ? written.uri : '';
+        } catch (e) {
+          console.warn('[plans] the image could not be cached:', e);
+        }
+      }
+
+      await Share.share({
+        title: 'خطة ' + (plan.title || ''),
+        text: 'خطة ' + (plan.title || '') + ' — المنصة الطبية',
+        url: fileUri || imageUrl,
+        dialogTitle: 'مشاركة صورة الخطة'
+      });
+    } catch (err) {
+      if (err && (err.message === 'Share canceled' || err.code === 'CANCELLED')) return;
+      console.warn('[plans] the image share failed:', err);
+      if (typeof window.showCustomAlert === 'function') {
+        window.showCustomAlert('تعذّرت المشاركة', 'لم نتمكن من مشاركة صورة الخطة، حاول مرّة أخرى.');
+      }
+    } finally {
+      if (btn) btn.disabled = false;
     }
   }
 
@@ -2463,6 +2581,7 @@ if ('serviceWorker' in navigator) {
 </script>
 <script src="native.js"></script>
 <script src="notifications.js"></script>
+<script src="ui.js"></script>
 
 </body>
 </html>
