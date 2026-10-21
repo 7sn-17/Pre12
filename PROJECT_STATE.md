@@ -1021,3 +1021,94 @@ Production untouched: `releases/latest` is still **v4.6.7**, Supabase
 
 **Not verifiable without hardware:** the rendered pixels (the 3×2 crop, the
 32 dp rings, 1.3× font scale) and the real system pin dialog.
+
+---
+
+### Phase W10 Completion Log (2026-10-21) — "The Perfection Strike"
+
+**Goal:** take full ownership of the notification system — a context-aware engine,
+clean channels, correct deep links, real MCP testing, and a beta.6 release.
+
+#### What was designed
+
+**A. A new engine architecture** (`supabase/functions/_shared/scenarios.ts` +
+`smart-notifications-engine/index.ts`, deployed as v25):
+
+| Piece | What it does |
+|---|---|
+| `UserContext` | 30+ fields built from real data: streak + longest streak, 7-day momentum, per-subject completion, goals (target/current/unit/deadline), new content, inactivity, first-win date, the median hour the student actually works, and the pending task. |
+| 21 scenarios | Each with a priority, a cooldown, a daily cap, a channel, a deep-link action and Arabic copy that varies (3–4 variants each). |
+| Priority + weight | The highest-priority matching scenario wins; equal priorities are picked by weight, so two equally valid reasons still feel alive. |
+| Quiet hours | Fixed 00:00–07:00 **plus learned hours**: a student who never works at 04:00 is not woken at 04:00. |
+| Pacing | ≤3 notifications/day, ≤12/week, plus a per-scenario cooldown, plus a novelty filter that never repeats a headline from the last 12 sends. |
+| Channel prefs | `profiles.notification_prefs` — the student chooses what reaches them; the engine obeys. |
+| 3 modes | `run` (cron), `preview` (compose, don't send), `test` (a real push to your device), plus `catalog`. |
+
+**B. New creative scenarios invented in W10** (10 of the 21 are new):
+`firstWin` (celebrate the *first* win on the day it happens) · `freshStart`
+("ابدأ من الصفر — لا بأس" for an account that never started: no guilt) ·
+`streakMilestone` (7/14/21/30/50/100 with a named badge) · `momentum` (2 of the
+last 3 days active) · `morningPlan` (5–10 am) · **`nightOwl`** (23:00–02:00:
+"نومك جزء من أدائك" — a *sleep* nudge, not a study nudge) · **`comeback`**
+("سلسلتك ما زالت محفوظة" after 3+ days away) · `weeklyDigest` (your week in one
+line) · `subjectFocus` (your weakest subject) · `goalMilestone` / `goalDue`
+(70%+ or a deadline within 2 days).
+
+**C. Channels**: `medapp_tasks` · `medapp_streak` · `medapp_content` ·
+`medapp_updates` — each with a name, a description, a colour and a per-user
+switch in the app's diagnostics section.
+
+**D. Deep linking** (bugs found and fixed):
+- `update` notifications called `check({ silent: true })` → **the update dialog
+  never opened** (the tap looked broken). Fixed in `native.js` *and*
+  `notifications.js`.
+- The new `goals` action had no route → now opens `goals.html`.
+- Every notification now carries a `pre12://` URL and is routed through the
+  **same** deep-link engine the widgets use (`routePre12Link`), so a tap lands
+  on the exact sheet/page whether the app is open or cold-started.
+
+#### MCP tests that were actually run (all against the live project)
+
+1. **Deployed** the engine (v25) through the Supabase MCP deploy tool.
+2. **Preview run** (cron path via `net.http_post` with the Vault secret) →
+   the engine picked `firstWin` (priority 85) with the title *"أحسنت — خطوة
+   واحدة تفعل الفرق"* — a *different* variant from the previous send
+   (the novelty filter works).
+3. **Real push #1** (`mode: test`) → `{"sent":1,"failed":0,"fcm":"v1"}` — a real
+   FCM v1 message reached the registered device token.
+4. **Real push #2** (`scenario: agenda`) → sent, and the payload carried
+   `task_id: bio_01` + the task title so the "تم الإنجاز" button knows what to
+   complete.
+5. **Real push #3** (`scenario: contentForYou`) → sent to `medapp_content` with
+   the target `subject.html?subject=history` — the slug came from the live
+   `subjects` table, and the body named the student's strongest subject.
+6. **Cron-path run** → `{"sent":0,"skipped":1}` — the daily cap refused to send
+   because the old engine had already spammed 5 messages that day. **That is
+   the fix working.**
+7. **Channel-preference test**: set `streak:false` → the engine skipped
+   `firstWin` and chose `goalDue` (content) instead; the preference was then
+   restored.
+8. **Local suite** `tools/test-notification-scenarios.ts` — **36 assertions,
+   all green**. It caught three real bugs before deployment: a never-active
+   student receiving "we miss you", a "first win" celebration firing weeks
+   later, and the novelty filter comparing raw templates instead of the final
+   headline.
+
+#### Migrations
+`profiles.notification_prefs` + `quiet_start`/`quiet_end`; a richer
+`notification_log` (`scenario`, `channel`, `payload`, `reason`); helper RPCs
+(`recent_notification_titles`, `notification_counts`,
+`notification_diagnostics`); the cron moved from hourly to **every 30 minutes**
+(the engine's own pacing does the rest).
+
+#### Release
+`5.0.0-beta.6` / versionCode 43 — compile check **`39622112467` → success**,
+release build **`39623175049` → success**, prerelease `v5.0.0-beta.6` (tag on
+`2d005cc`), APK **15,058,205 bytes**, SHA-256
+`3a4870a311827f589472722b9c0f813aef02e06200d05a2e0123b1d028545f0a`.
+Production untouched: `releases/latest` is still **v4.6.7** and the Supabase
+`version.json` still reports 4.6.7.
+
+**Not verifiable without a device in hand:** that the *rendered* notification
+looks right on the vendor's launcher, and that a cold-started tap opens the
+right sheet on that specific ROM.
