@@ -2,50 +2,53 @@ package com.pre12.medical.widgets
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
-import androidx.glance.GlanceTheme
-import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalSize
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.provideContent
-import androidx.glance.color.ColorProviders
+import androidx.glance.background
 import androidx.glance.layout.Alignment
+import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
-import androidx.glance.layout.Spacer
+import androidx.glance.layout.fillMaxHeight
+import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
-import androidx.glance.layout.height
-import androidx.glance.layout.size
-import androidx.glance.layout.width
+import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
-import androidx.glance.text.TextStyle
+import androidx.glance.text.TextDecoration
 import com.pre12.medical.R
 
 /**
- * ⭐⭐ Phase W2/W5 — Notes & Goals, three picker variants.
+ * ⭐⭐ Phase W6 — «ملاحظاتي وأهدافي», sticky-note edition.
  *
- *   • [NotesWidget]      «ملاحظاتي وأهدافي» — goals and notes interleaved
- *   • [GoalsWidget]      «أهدافي»           — goals only
- *   • [NotesOnlyWidget]  «ملاحظاتي»         — notes only
+ * Three providers, chosen from the Android picker:
+ *   • [NotesWidget]      combined  — blue goals note + violet notes note;
+ *   • [GoalsWidget]      goals only — blue paper;
+ *   • [NotesOnlyWidget]  notes only — violet paper.
  *
- * Android's widget picker lists each provider separately, so the *variant is
- * chosen from the system dialog* — no configuration activity, no extra tap, and
- * the launcher keeps three independent instances the user can place side by side.
+ * Visual contract
+ * ───────────────
+ *   • real paper tints (#F0F9FF / #FAF5FF), 18 dp radius, tape drawn **inside**
+ *     the top edge (part of the drawable, so it never overflows the radius);
+ *   • title + circular "+" button (deep links to `pre12://add-goal` /
+ *     `pre12://add-note`);
+ *   • rows prefixed with ✦, one line each;
+ *   • goals print a percentage pill when they track a target.
  *
- * The JS payload carries up to six items interleaved (`goal, note, goal, …`), so
- * filtering here is enough for every variant to find its own top three. Combined
- * slices the interleaved list; the focused variants filter by kind.
+ * Combined is responsive: side-by-side when wide (4×2), stacked into two small
+ * notes when square (2×2). Both halves keep their own tape.
  *
- * The rows are passive by design (a stray tap can never edit a note); the header
- * and the empty-state CTA deep-link to `pre12://notes` or `pre12://goals`.
+ * Rows are passive; the card and the header open `pre12://goals|notes`.
  */
 enum class NotesVariant {
     COMBINED,
@@ -57,21 +60,14 @@ abstract class VariantNotesWidget(private val variant: NotesVariant) : GlanceApp
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val notes = WidgetBridge.readNotes(context)
-        provideContent {
-            GlanceTheme(colors = WidgetPalette.colors) {
-                NotesContent(notes, variant)
-            }
-        }
+        provideContent { NotesCard(notes, variant) }
     }
 }
 
-/** Combined variant — the one referenced by `notes_widget_info.xml`. */
 class NotesWidget : VariantNotesWidget(NotesVariant.COMBINED)
 
-/** Goals-only variant. */
 class GoalsWidget : VariantNotesWidget(NotesVariant.GOALS)
 
-/** Notes-only variant. */
 class NotesOnlyWidget : VariantNotesWidget(NotesVariant.NOTES)
 
 class NotesWidgetReceiver : GlanceAppWidgetReceiver() {
@@ -87,96 +83,202 @@ class NotesOnlyWidgetReceiver : GlanceAppWidgetReceiver() {
 }
 
 @Composable
-private fun NotesContent(notes: PinnedNotes, variant: NotesVariant) {
-    val colors = GlanceTheme.colors
-    val maxItems = if (LocalSize.current.height >= 150.dp) 3 else 2
+private fun NotesCard(notes: PinnedNotes, variant: NotesVariant) {
+    val size = LocalSize.current
+    val goals = notes.items.filter { it.kind == "goal" }
+    val plain = notes.items.filter { it.kind == "note" }
 
-    val items = when (variant) {
-        NotesVariant.COMBINED -> notes.items
-        NotesVariant.GOALS -> notes.items.filter { it.kind == "goal" }
-        NotesVariant.NOTES -> notes.items.filter { it.kind == "note" }
-    }.take(maxItems)
-
-    val title = when (variant) {
-        NotesVariant.COMBINED -> "ملاحظاتي وأهدافي"
-        NotesVariant.GOALS -> "أهدافي"
-        NotesVariant.NOTES -> "ملاحظاتي"
+    when (variant) {
+        NotesVariant.GOALS -> GoalsNote(goals, size.height)
+        NotesVariant.NOTES -> PlainNote(plain, size.height)
+        NotesVariant.COMBINED -> CombinedNotes(goals, plain, size.width, size.height)
     }
-    val iconRes = when (variant) {
-        NotesVariant.GOALS -> R.drawable.widget_ic_target
-        NotesVariant.NOTES -> R.drawable.widget_ic_note
-        NotesVariant.COMBINED -> R.drawable.widget_ic_pin
-    }
-    val path = if (variant == NotesVariant.GOALS) "goals" else "notes"
-    val openApp = openAppAction(path)
+}
 
-    GlassCard(padding = 14.dp) {
-        Row(
-            modifier = GlanceModifier
-                .fillMaxWidth()
-                .clickable(openApp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconBadge(
-                iconRes = iconRes,
-                size = 15.dp,
-                badgeSize = 30.dp,
-                background = colors.primaryContainer,
-                tint = colors.primary
+@Composable
+private fun GoalsNote(items: List<PinnedItem>, height: androidx.compose.ui.unit.Dp) {
+    StickyHalf(
+        title = "أهدافي",
+        paperRes = R.drawable.widget_bg_sticky_goal,
+        ink = WidgetSkin.GoalInk,
+        accent = WidgetSkin.GoalAccent,
+        items = items.take(maxRowsForSingle(height)),
+        addPath = "add-goal",
+        openPath = "goals",
+        showPercent = true,
+        compact = height < 150.dp,
+        modifier = GlanceModifier.fillMaxSize()
+    )
+}
+
+@Composable
+private fun PlainNote(items: List<PinnedItem>, height: androidx.compose.ui.unit.Dp) {
+    StickyHalf(
+        title = "ملاحظاتي",
+        paperRes = R.drawable.widget_bg_sticky_note,
+        ink = WidgetSkin.NoteInk,
+        accent = WidgetSkin.NoteAccent,
+        items = items.take(maxRowsForSingle(height)),
+        addPath = "add-note",
+        openPath = "notes",
+        showPercent = false,
+        showHint = true,
+        compact = height < 150.dp,
+        modifier = GlanceModifier.fillMaxSize()
+    )
+}
+
+@Composable
+private fun CombinedNotes(
+    goals: List<PinnedItem>,
+    notes: List<PinnedItem>,
+    width: androidx.compose.ui.unit.Dp,
+    height: androidx.compose.ui.unit.Dp
+) {
+    val sideBySide = width >= 230.dp
+    val compact = height < 150.dp
+    val rows = when {
+        !sideBySide -> when {
+            height >= 170.dp -> 2
+            height >= 130.dp -> 1
+            else -> 0
+        }
+        height >= 170.dp -> 3
+        else -> 2
+    }
+
+    if (sideBySide) {
+        Row(modifier = GlanceModifier.fillMaxSize()) {
+            StickyHalf(
+                title = "أهداف",
+                paperRes = R.drawable.widget_bg_sticky_goal,
+                ink = WidgetSkin.GoalInk,
+                accent = WidgetSkin.GoalAccent,
+                items = goals.take(rows),
+                addPath = "add-goal",
+                openPath = "goals",
+                showPercent = true,
+                showHint = true,
+                compact = compact,
+                modifier = GlanceModifier.defaultWeight().fillMaxHeight()
             )
+            HGap(8.dp)
+            StickyHalf(
+                title = "ملاحظات",
+                paperRes = R.drawable.widget_bg_sticky_note,
+                ink = WidgetSkin.NoteInk,
+                accent = WidgetSkin.NoteAccent,
+                items = notes.take(rows),
+                addPath = "add-note",
+                openPath = "notes",
+                showPercent = false,
+                showHint = true,
+                compact = compact,
+                modifier = GlanceModifier.defaultWeight().fillMaxHeight()
+            )
+        }
+    } else {
+        Column(modifier = GlanceModifier.fillMaxSize()) {
+            StickyHalf(
+                title = "أهداف",
+                paperRes = R.drawable.widget_bg_sticky_goal,
+                ink = WidgetSkin.GoalInk,
+                accent = WidgetSkin.GoalAccent,
+                items = goals.take(rows),
+                addPath = "add-goal",
+                openPath = "goals",
+                showPercent = true,
+                showHint = false,
+                compact = true,
+                modifier = GlanceModifier.defaultWeight().fillMaxWidth()
+            )
+            Gap(6.dp)
+            StickyHalf(
+                title = "ملاحظات",
+                paperRes = R.drawable.widget_bg_sticky_note,
+                ink = WidgetSkin.NoteInk,
+                accent = WidgetSkin.NoteAccent,
+                items = notes.take(rows),
+                addPath = "add-note",
+                openPath = "notes",
+                showPercent = false,
+                showHint = false,
+                compact = true,
+                modifier = GlanceModifier.defaultWeight().fillMaxWidth()
+            )
+        }
+    }
+}
 
-            Spacer(GlanceModifier.width(9.dp))
+private fun maxRowsForSingle(height: androidx.compose.ui.unit.Dp): Int = when {
+    height >= 220.dp -> 4
+    height >= 160.dp -> 3
+    else -> 2
+}
 
-            Column(modifier = GlanceModifier.defaultWeight()) {
+@Composable
+private fun StickyHalf(
+    title: String,
+    paperRes: Int,
+    ink: Color,
+    accent: Color,
+    items: List<PinnedItem>,
+    addPath: String,
+    openPath: String,
+    showPercent: Boolean,
+    showHint: Boolean,
+    compact: Boolean,
+    modifier: GlanceModifier
+) {
+    val open = openAppAction(openPath)
+    val plusDiameter = if (compact) 17.dp else 19.dp
+
+    Box(
+        modifier = modifier
+            .background(ImageProvider(paperRes))
+            // The tape lives inside the drawable: 18 dp clears it at small sizes.
+            .padding(
+                start = 9.dp,
+                end = 9.dp,
+                top = if (compact) 18.dp else 21.dp,
+                bottom = 8.dp
+            )
+            .clickable(open)
+    ) {
+        Column(modifier = GlanceModifier.fillMaxSize()) {
+            Row(
+                modifier = GlanceModifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
                     text = title,
-                    style = TextStyle(
-                        color = colors.onSurface,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Start
-                    ),
+                    modifier = GlanceModifier.defaultWeight(),
+                    style = wText(ink, if (compact) 10.sp else 11.sp, FontWeight.Bold),
                     maxLines = 1
                 )
-                Text(
-                    text = subtitle(variant, notes, items.size),
-                    style = TextStyle(
-                        color = colors.onSurfaceVariant,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Medium,
-                        textAlign = TextAlign.Start
-                    ),
-                    maxLines = 1
+                RoundIconButton(
+                    iconRes = R.drawable.widget_ic_plus,
+                    action = openAppAction(addPath),
+                    diameter = plusDiameter,
+                    background = accent.copy(alpha = 0.14f),
+                    tint = ink
                 )
             }
 
-            if (items.isNotEmpty()) {
-                Spacer(GlanceModifier.width(6.dp))
-                Chip(
-                    text = "${items.size}",
-                    background = colors.primaryContainer,
-                    foreground = colors.onPrimaryContainer
-                )
-            }
-        }
+            Gap(if (compact) 3.dp else 4.dp)
 
-        Spacer(GlanceModifier.height(7.dp))
-        Hairline()
-        Spacer(GlanceModifier.height(7.dp))
-
-        if (items.isEmpty()) {
-            WidgetEmptyState(
-                title = emptyTitle(variant),
-                message = emptyMessage(variant),
-                cta = if (variant == NotesVariant.GOALS) "أضف هدفاً" else "أضف الآن",
-                iconRes = iconRes,
-                path = path
-            )
-        } else {
-            items.forEachIndexed { index, item ->
-                NoteRow(item, colors)
-                if (index != items.lastIndex) {
-                    Spacer(GlanceModifier.height(5.dp))
+            if (items.isEmpty()) {
+                if (showHint) {
+                    Text(
+                        text = if (showPercent) "أضف هدفك الأول من +" else "دوّن فكرتك الأولى من +",
+                        style = wText(WidgetSkin.PaperMuted, 8.5.sp),
+                        maxLines = 2
+                    )
+                }
+            } else {
+                items.forEachIndexed { index, item ->
+                    StickyRow(item, ink, accent, showPercent, compact)
+                    if (index != items.lastIndex) Gap(3.dp)
                 }
             }
         }
@@ -184,59 +286,47 @@ private fun NotesContent(notes: PinnedNotes, variant: NotesVariant) {
 }
 
 @Composable
-private fun NoteRow(item: PinnedItem, colors: ColorProviders) {
+private fun StickyRow(
+    item: PinnedItem,
+    ink: Color,
+    accent: Color,
+    showPercent: Boolean,
+    compact: Boolean
+) {
     Row(
         modifier = GlanceModifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Image(
-            provider = ImageProvider(
-                if (item.kind == "goal") R.drawable.widget_ic_target else R.drawable.widget_ic_note
-            ),
-            contentDescription = null,
-            modifier = GlanceModifier.size(12.dp),
-            colorFilter = androidx.glance.ColorFilter.tint(colors.primary)
+        Text(
+            text = "✦",
+            style = wText(accent, 7.5.sp, FontWeight.Bold, TextAlign.Center),
+            maxLines = 1
         )
-
-        Spacer(GlanceModifier.width(7.dp))
-
+        HGap(3.dp)
         Text(
             text = item.text,
             modifier = GlanceModifier.defaultWeight(),
-            style = TextStyle(
-                color = if (item.kind == "goal") colors.onSurface else colors.onSurfaceVariant,
-                fontSize = 11.5.sp,
-                fontWeight = if (item.kind == "goal") FontWeight.Medium else FontWeight.Normal,
-                textAlign = TextAlign.Start
+            style = wText(
+                color = if (item.isDone) WidgetSkin.PaperMuted else WidgetSkin.PaperInk,
+                size = if (compact) 9.sp else 9.5.sp,
+                weight = FontWeight.Medium,
+                decoration = if (item.isDone) TextDecoration.LineThrough else null
             ),
             maxLines = 1
         )
-    }
-}
-
-private fun subtitle(variant: NotesVariant, notes: PinnedNotes, visible: Int): String {
-    if (visible == 0) {
-        return when (variant) {
-            NotesVariant.COMBINED -> "مساحة صغيرة لأفكارك"
-            NotesVariant.GOALS -> "حدّد ما تريد إنجازه"
-            NotesVariant.NOTES -> "أفكارك السريعة في مكان واحد"
+        if (showPercent) {
+            item.percent?.let { value ->
+                HGap(3.dp)
+                Badge(
+                    text = "$value%",
+                    background = accent.copy(alpha = 0.14f),
+                    foreground = ink,
+                    horizontal = 4.dp,
+                    vertical = 1.dp,
+                    corner = 5.dp,
+                    fontSize = 7.5.sp
+                )
+            }
         }
     }
-    return when (variant) {
-        NotesVariant.GOALS -> "$visible هدف قيد العمل"
-        NotesVariant.NOTES -> "$visible ملاحظة مثبّتة"
-        NotesVariant.COMBINED -> "${notes.total} عنصر محفوظ"
-    }
-}
-
-private fun emptyTitle(variant: NotesVariant): String = when (variant) {
-    NotesVariant.COMBINED -> "لا توجد ملاحظات بعد"
-    NotesVariant.GOALS -> "لا توجد أهداف بعد"
-    NotesVariant.NOTES -> "لا توجد ملاحظات بعد"
-}
-
-private fun emptyMessage(variant: NotesVariant): String = when (variant) {
-    NotesVariant.COMBINED -> "أضف هدفاً أو ملاحظة لتظهر هنا"
-    NotesVariant.GOALS -> "هدف واحد صغير يكفي للبدء"
-    NotesVariant.NOTES -> "اكتب فكرتك الأولى وثبّتها هنا"
 }

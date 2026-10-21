@@ -1,24 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  ⭐⭐ Phase W2 — «سلسلة الأيام» provider metadata.
+  Phase W6 — «سلسلة الأيام» (simple streak), 2×2.
 
-  4×2 cell on the launcher grid, 250×130 dp minimum so the hero number and the
-  stats footer never fight for space. Vertical resize only adds breathing room;
-  the layout itself is fixed and readable at 2 rows.
-
-  Corner radius (24 dp) is applied by `GlassCard` in Kotlin — the only place a
-  widget background can be clipped correctly.
+  The approved design is a square trophy card: flame + 58 pt number + seven
+  dots. 110 dp is the platform's 2-cell minimum; below that the widget drops
+  the dots and the flame instead of clipping (see SimpleStreakWidget.kt).
 -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_simple_streak_description"
     android:initialLayout="@layout/glance_default_loading_layout"
-    android:minWidth="250dp"
-    android:minHeight="130dp"
-    android:minResizeWidth="180dp"
-    android:minResizeHeight="130dp"
-    android:maxResizeWidth="420dp"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="110dp"
+    android:maxResizeWidth="300dp"
     android:maxResizeHeight="300dp"
-    android:targetCellWidth="4"
+    android:targetCellWidth="2"
     android:targetCellHeight="2"
     android:previewLayout="@layout/widget_simple_streak_preview"
     android:resizeMode="horizontal|vertical"

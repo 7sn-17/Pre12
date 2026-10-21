@@ -83,7 +83,7 @@ class MedWidgetsPlugin : Plugin() {
     // Publishing
     // -----------------------------------------------------------------------
 
-    /** One call, three payloads, one redraw per placed widget. */
+    /** One call, every payload, one redraw per placed widget. */
     @PluginMethod
     fun publishWidgets(call: PluginCall) {
         val ctx = context
@@ -99,6 +99,9 @@ class MedWidgetsPlugin : Plugin() {
         call.getString("notes")?.let {
             if (WidgetBridge.write(ctx, WidgetBridge.KEY_NOTES, it)) written++
         }
+        call.getString("lectures")?.let {
+            if (WidgetBridge.write(ctx, WidgetBridge.KEY_LECTURES, it)) written++
+        }
 
         // ⭐ Offline-first: the WorkManager job needs a JWT to upload a checkbox
         //    change while the WebView is gone. The session is refreshed by JS on
@@ -113,7 +116,8 @@ class MedWidgetsPlugin : Plugin() {
             DetailedStreakWidgetReceiver::class.java,
             NotesWidgetReceiver::class.java,
             GoalsWidgetReceiver::class.java,
-            NotesOnlyWidgetReceiver::class.java
+            NotesOnlyWidgetReceiver::class.java,
+            LecturesWidgetReceiver::class.java
         )
         call.resolve(JSObject().put("written", written))
     }
@@ -267,6 +271,7 @@ class MedWidgetsPlugin : Plugin() {
         "notes" -> NotesWidgetReceiver::class.java
         "goals" -> GoalsWidgetReceiver::class.java
         "notes_only", "notesOnly" -> NotesOnlyWidgetReceiver::class.java
+        "lectures", "lecture" -> LecturesWidgetReceiver::class.java
         else -> null
     }
 }

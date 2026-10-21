@@ -5,7 +5,7 @@
 > parses more reliably than Arabic in most toolchains. The product itself is
 > **Arabic-first RTL** — never let that slip.
 >
-> **Last updated:** 2026-10-21 · **App version:** 4.6.7 (versionCode 37)
+> **Last updated:** 2026-10-21 · **App version:** 5.0.0-beta.2 (versionCode 39)
 > **Branch:** `feature/home-screen-widgets` · **Stable tag:** `v4.6.7-stable`
 > **Read order:** §3 Golden Rules → §7 Widget Vision → the section you need.
 
@@ -750,7 +750,7 @@ android/app/src/main/res/
 | **W3 (done)** | `SimpleStreakWidget` + `DetailedStreakWidget` (done / missed / today halo / freeze) | Shipped with W2; pixel check still needs hardware |
 | **W4 (done)** | Deep links `pre12://{tasks,streak,notes,goals}` from every header/CTA; `widgets.js` lands on the card/page (`getLaunchUrl` + `appUrlOpen`) | CI `39573818995` asserts the scheme in the merged manifest |
 | **W5 (done)** | Offline-first `WidgetSyncWorker`, disappearing completed rows + AVD tick, notes/goals/notes-only variants, About cards, settings tiles ×6 | CI `39573818995` (debug) + `39574288079` (signed beta) green |
-| **W6 (pending)** | Merge to `main`, bump to `5.0.0`, production APK + version.json, widget section in the store listing | Shipped |
+| **W6 (done on branch)** | Approved designs (Tajawal, tasks/streak/notes), lectures widget, goals progress, instant refresh, single premium settings button, `5.0.0-beta.2` | CI green; **merge to `main` still pending** |
 
 **Version policy:** W1–W2 stayed on `4.6.7` (`versionCode 37`). The test branch
 now carries **`5.0.0-beta.1` (`versionCode 38`)** so the beta installs over the
@@ -885,3 +885,26 @@ matrices, 1.0/1.3 font scale, the system pin dialog, and a real Supabase write
 originating from a widget tap. Version stays **4.6.7**; users only see the widgets
 at the W6 release.
 
+---
+
+### Phase W6 Completion Log (2026-10-21)
+
+**Goal:** final widget design pass + goals progress + a beta.2 build, still on the branch.
+
+| Area | What landed |
+|---|---|
+| Typography | `res/font/tajawal_{regular,bold,extrabold}.ttf` bundled; every widget string goes through `WidgetUi.wText()` → `FontFamily("Tajawal")`. Glance 1.2 has no `FontFamily(@FontRes)`, so the launcher resolves by family name and falls back to the platform Arabic face when Tajawal is absent; the assets are already in the APK for the day that API lands. |
+| Tasks | Slate 135° gradient card, 28 dp radius, emerald `done/total` pill, animated tick ring, disappearing completed rows, rows budgeted from `LocalSize` (3 at 4×2, 6 at 4×4). |
+| Streak | `SimpleStreakWidget` 2×2: ember glow, flame, 58 sp number, 7 dots (hidden at 1×1). `DetailedStreakWidget` 4×2: 36/64 split with explicit dp widths (Glance 1.2 has no fractional weights), week map with done/today/missed/freeze markers. |
+| Notes & goals | Sticky-note paper (`#F0F9FF` goals / `#FAF5FF` notes), tape inside the top bounds, title + `+`, ✦ rows, percentage pill per tracked goal. Combined card is side-by-side at ≥230 dp and stacked below it. |
+| Lectures | New `LecturesWidget` (2×2, receiver + provider XML + picker preview) with bundled marine/teal art, bottom scrim, next lecture from `plans-data.json`; payload key `lectures.next`. |
+| Goals | `goals.html`: target/unit inputs, progress bar + % ring, `+5%` step, `+N unit` quick add, custom “update progress” modal, average-progress stats, auto-complete at 100%, `?add=1`, optimistic cloud upsert/delete to the new `public.goals` table. |
+| Refresh | `widgets.js` publishes on `hidden`/`pagehide` (before the WebView freezes) and queues one follow-up publish when a refresh is already in flight, so a burst of `+10` taps cannot be lost. |
+| Settings | `src/settings.html` (new, one premium button → `requestPinWidget('tasks')`) + `widgets.js` collapses the in-app six-tile grid to the same single premium card without touching `index.html`. |
+| Deep links | `pre12://add-goal` / `pre12://add-note` / `pre12://lectures` mapped in `widgets.js`; goals auto-opens its add sheet for `?add=1`. |
+| Version | `5.0.0-beta.2` / `versionCode 39` across `package.json`, `build.js`, `sw.js`, `build.gradle`, `version.json`. |
+
+**Known platform limits (honest):** Glance text cannot load a bundled TTF by
+resource id, so Tajawal applies only where the launcher exposes the family; and
+RemoteViews has no network image pipeline, so the lecture “cover” is bundled art.
+Both are documented in code.

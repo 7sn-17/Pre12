@@ -126,6 +126,19 @@
                 android:resource="@xml/notes_only_widget_info" />
         </receiver>
 
+        <!-- ⭐⭐ Phase W6 — «المحاضرة القادمة» (full-bleed lecture card). -->
+        <receiver
+            android:name=".widgets.LecturesWidgetReceiver"
+            android:exported="false"
+            android:label="@string/widget_lectures_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/lectures_widget_info" />
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

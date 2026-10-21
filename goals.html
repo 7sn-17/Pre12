@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="5.0.0-beta.1">
+<meta name="app-version" content="5.0.0-beta.2">
 <title>أهدافي - المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -1822,6 +1822,95 @@
     .modal-close:hover { background: rgba(239, 68, 68, 0.15); border-color: var(--danger); color: var(--danger); }
     .modal-close i { width: 18px; height: 18px; }
 
+    /* ⭐⭐ Phase W6 — هدف كمّي: شريط تقدم + نسبة مئوية */
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .form-hint {
+      font-size: 0.72rem;
+      color: var(--text-secondary, #94A3B8);
+      margin-top: 6px;
+      line-height: 1.6;
+    }
+
+    .goal-progress { margin-top: 12px; }
+    .gp-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 7px;
+    }
+    .gp-pct {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--accent-emerald);
+      letter-spacing: -0.02em;
+    }
+    .gp-count {
+      font-size: 0.72rem;
+      color: var(--text-secondary, #94A3B8);
+    }
+    .gp-track {
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+    }
+    [data-theme="light"] .gp-track { background: rgba(15, 23, 42, 0.08); }
+    .gp-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent-emerald), #34D399);
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.45);
+      transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .gp-foot { display: flex; gap: 8px; margin-top: 10px; }
+    .gp-add, .gp-edit {
+      font-family: inherit;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 7px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      border: 1px solid rgba(16, 185, 129, 0.32);
+      color: var(--accent-emerald);
+      background: rgba(16, 185, 129, 0.10);
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+    .gp-add:active, .gp-edit:active { transform: scale(0.96); }
+    .gp-edit {
+      border-color: var(--border-card);
+      color: var(--text-secondary, #94A3B8);
+      background: transparent;
+    }
+    .goal-card.completed .gp-fill {
+      background: linear-gradient(90deg, #34D399, #6EE7B7);
+    }
+
+    .goal-track-ring {
+      width: 46px;
+      height: 46px;
+      flex: 0 0 46px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 0.68rem;
+      font-weight: 800;
+      color: var(--accent-emerald);
+      background: conic-gradient(
+        var(--accent-emerald) calc(var(--p, 0) * 1%),
+        rgba(255, 255, 255, 0.10) 0
+      );
+      position: relative;
+    }
+    .goal-track-ring::after {
+      content: '';
+      position: absolute;
+      inset: 4px;
+      border-radius: 50%;
+      background: var(--bg-main);
+    }
+    .goal-track-ring span { position: relative; z-index: 1; }
+
     .form-group { margin-bottom: 16px; }
 
     .form-label {
@@ -2032,6 +2121,32 @@
         ></textarea>
       </div>
 
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="goalTarget">الهدف الرقمي (اختياري)</label>
+          <input
+            type="number"
+            id="goalTarget"
+            class="form-input"
+            inputmode="numeric"
+            min="1"
+            max="1000000"
+            placeholder="مثال: 500"
+          >
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="goalUnit">الوحدة</label>
+          <input
+            type="text"
+            id="goalUnit"
+            class="form-input"
+            maxlength="18"
+            placeholder="كلمة / صفحة / سؤال"
+          >
+        </div>
+      </div>
+      <p class="form-hint">اترك الحقلين فارغين إذا كان الهدف بسيطاً (يُنجز مرة واحدة). مع رقم ووحدة يتحوّل الهدف إلى شريط تقدّم بنسبة مئوية.</p>
+
       <div class="form-group">
         <label class="form-label">تاريخ الاستحقاق (اختياري)</label>
         <input 
@@ -2053,6 +2168,42 @@
     </div>
   </div>
 
+  <!-- Progress Modal (Phase W6) -->
+  <div class="modal-overlay" id="progressModal" onclick="closeProgressModalIfOutside(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i data-lucide="gauge"></i>
+          <span>تحديث التقدم</span>
+        </div>
+        <button class="modal-close" onclick="closeProgressModal()">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" id="progressGoalLabel">القيمة الحالية</label>
+        <input
+          type="number"
+          id="progressValue"
+          class="form-input"
+          inputmode="numeric"
+          min="0"
+          max="1000000"
+        >
+      </div>
+      <p class="form-hint" id="progressGoalHint"></p>
+
+      <div class="modal-actions">
+        <button class="btn primary" onclick="saveProgressValue()">
+          <i data-lucide="check"></i>
+          حفظ التقدم
+        </button>
+        <button class="btn secondary" onclick="closeProgressModal()">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts -->
 <script src="supabase-config.js"></script>
 <script src="auth.js"></script>
@@ -2062,7 +2213,7 @@
 <script src="widgets.js"></script>
 
 
-  <script src="app.js?v=5.0.0-beta.1"></script>
+  <script src="app.js?v=5.0.0-beta.2"></script>
 <script>
 
     lucide.createIcons();
@@ -2173,9 +2324,12 @@
 // ============================================
 function createGoalCard(goal, index) {
   const card = document.createElement('div');
-  card.className = 'goal-card' + (goal.completed ? ' completed' : '');
+  const percent = goalPercent(goal);
+  const isTracked = Number(goal.target_value) > 0;
+
+  card.className = 'goal-card' + (goal.completed ? ' completed' : '') + (isTracked ? ' tracked' : '');
   card.style.animationDelay = (index * 0.04) + 's';
-  
+
   // شريحة تاريخ الاستحقاق
   let deadlineHtml = '';
   if (goal.deadline) {
@@ -2187,29 +2341,61 @@ function createGoalCard(goal, index) {
       </div>
     `;
   }
-  
+
   // شارة الحالة
-  const statusHtml = goal.completed 
+  const statusHtml = goal.completed
     ? `<span class="goal-status completed">
          <i data-lucide="check-circle-2"></i>
          مكتمل
        </span>`
     : `<span class="goal-status">
          <i data-lucide="circle-dashed"></i>
-         قيد الإنجاز
+         ${isTracked ? 'قيد التقدم' : 'قيد الإنجاز'}
        </span>`;
-  
+
+  // الهدف الكمّي: حلقة نسبة + شريط تقدم + زر «+10 كلمة».
+  const trackHtml = isTracked ? `
+    <div class="goal-progress">
+      <div class="gp-head">
+        <span class="gp-pct">${percent}%</span>
+        <span class="gp-count">${formatGoalNumber(goal.current_value)} / ${formatGoalNumber(goal.target_value)} ${escapeHtml(goal.unit || '')}</span>
+      </div>
+      <div class="gp-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percent}">
+        <div class="gp-fill" style="width:${percent}%"></div>
+      </div>
+      <div class="gp-foot">
+        ${goal.completed ? '' : `
+          <button type="button" class="gp-add" onclick="event.stopPropagation(); addGoalProgress('${goal.id}')">
+            +${progressStep(goal)} ${escapeHtml(goal.unit || '')}
+          </button>
+        `}
+        <button type="button" class="gp-edit" onclick="event.stopPropagation(); openProgressModal('${goal.id}')">
+          تعديل التقدم
+        </button>
+      </div>
+    </div>
+  ` : '';
+
+  // الهدف البسيط يحتفظ بمربّع الاختيار؛ الهدف الكمّي يستبدله بحلقة النسبة.
+  const leadingHtml = isTracked ? `
+    <div class="goal-track-ring" style="--p:${percent}">
+      <span>${percent}%</span>
+    </div>
+  ` : `
+    <div class="goal-checkbox ${goal.completed ? 'checked' : ''}" 
+         onclick="toggleGoal('${goal.id}')"
+         title="${goal.completed ? 'إلغاء الإكمال' : 'تحديد كمكتمل'}">
+      <i data-lucide="check"></i>
+    </div>
+  `;
+
   card.innerHTML = `
   <button type="button" class="goal-delete" onclick="event.stopPropagation(); deleteGoal('${goal.id}')" title="حذف">
     <i data-lucide="trash-2"></i>
   </button>
     
     <div class="goal-main">
-      <div class="goal-checkbox ${goal.completed ? 'checked' : ''}" 
-           onclick="toggleGoal('${goal.id}')"
-           title="${goal.completed ? 'إلغاء الإكمال' : 'تحديد كمكتمل'}">
-        <i data-lucide="check"></i>
-      </div>
+      ${leadingHtml}
       <div class="goal-content">
         <div class="goal-text">${escapeHtml(goal.text)}</div>
         <div class="goal-meta">
@@ -2220,11 +2406,159 @@ function createGoalCard(goal, index) {
           </div>
           ${deadlineHtml}
         </div>
+        ${trackHtml}
       </div>
     </div>
   `;
   
   return card;
+}
+
+// ============================================
+// أهداف كمّية (Phase W6)
+// ============================================
+function goalPercent(goal) {
+  const target = Number(goal && goal.target_value) || 0;
+  if (target <= 0) return goal && goal.completed ? 100 : 0;
+  const current = Number(goal.current_value) || 0;
+  return Math.max(0, Math.min(100, Math.round((current / target) * 100)));
+}
+
+function progressStep(goal) {
+  const target = Number(goal && goal.target_value) || 0;
+  if (target <= 0) return 1;
+  return Math.max(1, Math.min(10, Math.round(target * 0.05)));
+}
+
+function formatGoalNumber(value) {
+  const number = Number(value) || 0;
+  return number.toLocaleString('ar-EG');
+}
+
+var progressGoalId = null;
+
+function addGoalProgress(goalId) {
+  const goal = goalsState.goals.find(g => g.id === goalId);
+  if (!goal) return;
+  const target = Number(goal.target_value) || 0;
+  if (target <= 0) return;
+
+  const step = progressStep(goal);
+  goal.current_value = Math.min(target, (Number(goal.current_value) || 0) + step);
+  goal.completed = goal.current_value >= target;
+  goal.updated_at = new Date().toISOString();
+
+  saveGoalsToStorage();
+  syncGoalToCloud(goal);
+  renderGoals();
+  updateProgress();
+
+  const unit = goal.unit ? ' ' + goal.unit : '';
+  if (goal.completed) {
+    showToast('أحسنت! أكملت الهدف 🎉');
+  } else {
+    showToast(`+${step}${unit} — تقدمك ${goalPercent(goal)}%`);
+  }
+}
+
+function openProgressModal(goalId) {
+  const goal = goalsState.goals.find(g => g.id === goalId);
+  if (!goal) return;
+  progressGoalId = goalId;
+
+  const target = Number(goal.target_value) || 0;
+  const input = document.getElementById('progressValue');
+  input.value = Number(goal.current_value) || 0;
+  input.max = target;
+
+  const unit = goal.unit ? ' ' + goal.unit : '';
+  document.getElementById('progressGoalLabel').textContent =
+    `القيمة الحالية من ${formatGoalNumber(target)}${unit}`;
+  document.getElementById('progressGoalHint').textContent =
+    `الهدف: ${goal.text}`;
+
+  document.getElementById('progressModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  lucide.createIcons();
+
+  setTimeout(() => input.focus(), 250);
+}
+
+function closeProgressModal() {
+  document.getElementById('progressModal').classList.remove('active');
+  document.body.style.overflow = '';
+  progressGoalId = null;
+}
+
+function closeProgressModalIfOutside(event) {
+  if (event.target.id === 'progressModal') closeProgressModal();
+}
+
+function saveProgressValue() {
+  const goal = goalsState.goals.find(g => g.id === progressGoalId);
+  if (!goal) return;
+
+  const target = Number(goal.target_value) || 0;
+  const raw = Number(document.getElementById('progressValue').value);
+  if (!Number.isFinite(raw) || raw < 0) {
+    showToast('أدخل قيمة صحيحة', 'error');
+    return;
+  }
+
+  goal.current_value = Math.min(target, Math.round(raw));
+  goal.completed = goal.current_value >= target;
+  goal.updated_at = new Date().toISOString();
+
+  saveGoalsToStorage();
+  syncGoalToCloud(goal);
+  closeProgressModal();
+  renderGoals();
+  updateProgress();
+
+  showToast(goal.completed ? 'أحسنت! أكملت الهدف 🎉' : `تقدمك الآن ${goalPercent(goal)}%`);
+}
+
+/**
+ * نسخة احتياطية سحابية غير معطِّلة للعمل دون اتصال.
+ * localStorage هو مصدر الحقيقة؛ هذا النداء fire-and-forget يحدّث جدول `goals`
+ * في Supabase إن وُجدت جلسة، ويفشل بصمت إن انقطع الشبكة.
+ */
+async function syncGoalToCloud(goal) {
+  try {
+    const client = window.supabaseClient;
+    if (!client || !client.from || !client.auth) return;
+    const result = await client.auth.getSession();
+    const session = result && result.data ? result.data.session : null;
+    if (!session || !session.user) return;
+
+    await client.from('goals').upsert({
+      user_id: session.user.id,
+      goal_id: String(goal.id),
+      title: goal.text,
+      completed: !!goal.completed,
+      target_value: goal.target_value == null ? null : Number(goal.target_value),
+      current_value: goal.current_value == null ? null : Number(goal.current_value),
+      unit: goal.unit || null,
+      deadline: goal.deadline || null,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id,goal_id' });
+  } catch (e) {
+    /* offline-first: the local write has already succeeded */
+  }
+}
+
+async function deleteGoalFromCloud(goalId) {
+  try {
+    const client = window.supabaseClient;
+    if (!client || !client.from || !client.auth) return;
+    const result = await client.auth.getSession();
+    const session = result && result.data ? result.data.session : null;
+    if (!session || !session.user) return;
+    await client.from('goals')
+      .delete()
+      .eq('user_id', session.user.id)
+      .eq('goal_id', String(goalId));
+  } catch (e) {}
 }
 
 // ============================================
@@ -2320,8 +2654,16 @@ function getDeadlineInfo(dateString) {
     // ============================================
     function updateProgress() {
       const total = goalsState.goals.length;
-      const completed = goalsState.goals.filter(g => g.completed).length;
-      const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
+
+      // متوسط التقدم: الهدف الكمّي يساهم بنسبته الحقيقية، والبسيط 0 أو 100.
+      // هذا أصدق من «عدد المكتمل / العدد الكلي» عندما تكون الأهداف جزئية.
+      const percent = total === 0
+        ? 0
+        : Math.round(
+            goalsState.goals.reduce((sum, goal) => sum + goalPercent(goal), 0) / total
+          );
+
+      const completed = goalsState.goals.filter(goal => goalPercent(goal) >= 100).length;
       
       // تحديث الدائرة
       const circle = document.getElementById('progressCircle');
@@ -2338,7 +2680,7 @@ function getDeadlineInfo(dateString) {
       } else if (completed === total) {
         subtitle.textContent = `أحسنت! أكملت جميع أهدافك (${total}/${total})`;
       } else {
-        subtitle.textContent = `أكملت ${completed} من ${total} أهداف`;
+        subtitle.textContent = `متوسط تقدمك ${percent}% — أكملت ${completed} من ${total} أهداف`;
       }
     }
 
@@ -2371,7 +2713,12 @@ function getDeadlineInfo(dateString) {
       if (!goal) return;
       
       goal.completed = !goal.completed;
+      if (Number(goal.target_value) > 0) {
+        goal.current_value = goal.completed ? Number(goal.target_value) : 0;
+      }
+      goal.updated_at = new Date().toISOString();
       saveGoalsToStorage();
+      syncGoalToCloud(goal);
       renderGoals();
       updateProgress();
       
@@ -2395,6 +2742,7 @@ function getDeadlineInfo(dateString) {
 
       goalsState.goals = goalsState.goals.filter(g => g.id !== goalId);
       saveGoalsToStorage();
+      deleteGoalFromCloud(goalId);
       renderGoals();
       updateProgress();
 
@@ -2407,6 +2755,10 @@ function getDeadlineInfo(dateString) {
     function openAddModal() {
       document.getElementById('goalText').value = '';
       document.getElementById('goalDeadline').value = '';
+      const targetInput = document.getElementById('goalTarget');
+      const unitInput = document.getElementById('goalUnit');
+      if (targetInput) targetInput.value = '';
+      if (unitInput) unitInput.value = '';
       
       document.getElementById('addModal').classList.add('active');
       document.body.style.overflow = 'hidden';
@@ -2433,26 +2785,36 @@ function getDeadlineInfo(dateString) {
     function saveGoal() {
       const text = document.getElementById('goalText').value.trim();
       const deadline = document.getElementById('goalDeadline').value;
-      
+      const targetRaw = Number(document.getElementById('goalTarget').value);
+      const unit = document.getElementById('goalUnit').value.trim();
+
       if (!text) {
         showToast('نص الهدف مطلوب', 'error');
         return;
       }
-      
+
+      const target = Number.isFinite(targetRaw) && targetRaw > 0
+        ? Math.round(Math.min(targetRaw, 1000000))
+        : null;
+
       const newGoal = {
         id: 'goal_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
         text: text,
         deadline: deadline || null,
         completed: false,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        target_value: target,
+        current_value: target ? 0 : null,
+        unit: target ? (unit || '') : null
       };
-      
+
       goalsState.goals.push(newGoal);
       saveGoalsToStorage();
-      
-      showToast('تم إضافة الهدف');
+      syncGoalToCloud(newGoal);
+
+      showToast(target ? 'تم إضافة الهدف — ابدأ بتسجيل تقدمك' : 'تم إضافة الهدف');
       closeAddModal();
-      
+
       renderGoals();
       updateProgress();
     }
@@ -2465,6 +2827,10 @@ function getDeadlineInfo(dateString) {
         const modal = document.getElementById('addModal');
         if (modal && modal.classList.contains('active')) {
           closeAddModal();
+        }
+        const progressModal = document.getElementById('progressModal');
+        if (progressModal && progressModal.classList.contains('active')) {
+          closeProgressModal();
         }
       }
     });
@@ -2481,7 +2847,15 @@ function getDeadlineInfo(dateString) {
       }
       
       loadGoals();
-      
+
+      // pre12://add-goal → goals.html?add=1 يفتح نافذة الإضافة تلقائياً.
+      try {
+        const params = new URLSearchParams(location.search || '');
+        if (params.get('add') === '1') {
+          setTimeout(openAddModal, 450);
+        }
+      } catch (e) {}
+
     }
 
     init();

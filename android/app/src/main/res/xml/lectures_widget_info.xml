@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Phase W6 — «المحاضرة القادمة» provider metadata.
+  2×2 cells: the full-bleed art needs a square-ish canvas; 110 dp minimum keeps
+  the title and the meta line above the bottom scrim.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_lectures_description"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="110dp"
+    android:maxResizeWidth="320dp"
+    android:maxResizeHeight="320dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:previewLayout="@layout/widget_lectures_preview"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="1800000"
+    android:widgetCategory="home_screen" />

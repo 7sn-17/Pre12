@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Phase W6 — blue sticky note: tape inside the bounds, soft paper edge. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#FFF0F9FF" />
+            <corners android:radius="18dp" />
+            <stroke
+                android:width="1dp"
+                android:color="#260EA5E9" />
+        </shape>
+    </item>
+    <item
+        android:width="34dp"
+        android:height="9dp"
+        android:gravity="top|center_horizontal"
+        android:top="7dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#330EA5E9" />
+            <corners android:radius="3dp" />
+        </shape>
+    </item>
+</layer-list>

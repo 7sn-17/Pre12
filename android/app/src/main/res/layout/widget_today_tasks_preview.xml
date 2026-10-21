@@ -1,158 +1,105 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  ⭐⭐ Phase W1 — picker preview for «مهام اليوم» (API 31+).
-
-  This layout is *not* the live widget (that is Glance/Kotlin); the launcher
-  shows it in the widget picker so the user sees the real design before
-  dropping the widget. It mirrors `TodayTasksWidget.kt`: 24 dp radius,
-  16 dp padding, emerald progress bar, 18 dp status circles, RTL order.
-
-  Only RemoteViews-safe views are used, and every colour matches the
-  `values/widget_colors.xml` light palette, so the preview never lies.
--->
+<!-- Phase W6 — picker preview for «مهام اليوم». Mirrors TodayTasksWidget.kt. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:layoutDirection="rtl"
-    android:background="@drawable/widget_preview_background"
+    android:background="@drawable/widget_bg_tasks"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="13dp">
 
-    <!-- Header: title + progress chip -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal">
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-medium"
-                android:text="@string/widget_today_tasks_label"
-                android:textColor="#FF0F172A"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:fontFamily="sans-serif-medium"
-                android:text="@string/widget_today_tasks_preview_subtitle"
-                android:textColor="#FF475569"
-                android:textSize="11sp" />
-        </LinearLayout>
-
+        <TextView
+        android:layout_width="0dp"
+        android:layout_height="wrap_content" android:layout_weight="1"
+        android:fontFamily="@font/tajawal_bold"
+        android:text="@string/widget_today_tasks_label"
+        android:textColor="#FFFFFFFF"
+        android:textSize="15sp" />
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:background="@drawable/widget_preview_chip"
-            android:fontFamily="sans-serif-medium"
-            android:paddingStart="10dp"
-            android:paddingTop="5dp"
-            android:paddingEnd="10dp"
-            android:paddingBottom="5dp"
+            android:background="@drawable/widget_preview_pill_green"
+            android:fontFamily="@font/tajawal_bold"
+            android:paddingStart="7dp"
+            android:paddingTop="2dp"
+            android:paddingEnd="7dp"
+            android:paddingBottom="2dp"
             android:text="@string/widget_today_tasks_preview_count"
-            android:textColor="#FF064E3B"
-            android:textSize="11sp"
-            android:textStyle="bold" />
+            android:textColor="#FF34D399"
+            android:textSize="10sp" />
     </LinearLayout>
 
-    <!-- Progress: 3 of 8 -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="4dp"
-        android:layout_marginTop="12dp"
-        android:orientation="horizontal">
-
-        <ImageView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="0.375"
-            android:background="@drawable/widget_preview_progress_fill" />
-
-        <ImageView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="0.625"
-            android:background="@drawable/widget_preview_progress_track" />
-    </LinearLayout>
-
-    <!-- Task 1 — completed -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="8dp"
         android:gravity="center_vertical"
         android:orientation="horizontal">
-
-        <ImageView
+        <FrameLayout
             android:layout_width="18dp"
             android:layout_height="18dp"
-            android:background="@drawable/widget_preview_circle_done" />
-
+            android:background="@drawable/widget_circle_done">
+            <ImageView
+                android:layout_width="11dp"
+                android:layout_height="11dp"
+                android:layout_gravity="center"
+                android:contentDescription="@null"
+                android:src="@drawable/widget_ic_check"
+                android:tint="#FFFFFFFF" />
+        </FrameLayout>
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
+            android:layout_marginStart="8dp"
             android:layout_weight="1"
+            android:fontFamily="@font/tajawal_regular"
             android:text="@string/widget_today_tasks_preview_task_done"
-            android:textColor="#FF64748B"
-            android:textSize="13sp" />
+            android:textColor="#FF94A3B8"
+            android:textSize="12sp" />
     </LinearLayout>
-
-    <!-- Task 2 — open -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="9dp"
+        android:layout_marginTop="5dp"
         android:gravity="center_vertical"
         android:orientation="horizontal">
-
         <ImageView
             android:layout_width="18dp"
             android:layout_height="18dp"
-            android:background="@drawable/widget_preview_circle_open" />
-
+            android:background="@drawable/widget_circle_empty" />
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
+            android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:fontFamily="sans-serif-medium"
+            android:fontFamily="@font/tajawal_bold"
             android:text="@string/widget_today_tasks_preview_task_open"
-            android:textColor="#FF0F172A"
-            android:textSize="13sp" />
+            android:textColor="#FFCBD5E1"
+            android:textSize="12sp" />
     </LinearLayout>
-
-    <!-- Task 3 — open -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="9dp"
+        android:layout_marginTop="5dp"
         android:gravity="center_vertical"
         android:orientation="horizontal">
-
         <ImageView
             android:layout_width="18dp"
             android:layout_height="18dp"
-            android:background="@drawable/widget_preview_circle_open" />
-
+            android:background="@drawable/widget_circle_empty" />
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
+            android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:fontFamily="sans-serif-medium"
+            android:fontFamily="@font/tajawal_bold"
             android:text="@string/widget_today_tasks_preview_task_open2"
-            android:textColor="#FF0F172A"
-            android:textSize="13sp" />
+            android:textColor="#FFCBD5E1"
+            android:textSize="12sp" />
     </LinearLayout>
 </LinearLayout>

@@ -1,86 +1,249 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- ⭐ Phase W2 — picker preview for «سلسلة الأيام · أسبوعي» (API 31+). -->
+<!-- Phase W6 — picker preview for «سلسلة الأيام · أسبوعي». Mirrors DetailedStreakWidget.kt. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:layoutDirection="rtl"
-    android:background="@drawable/widget_preview_background"
-    android:orientation="vertical"
+    android:background="@drawable/widget_bg_streak_detailed"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
     android:padding="14dp">
 
     <LinearLayout
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <ImageView
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:contentDescription="@null"
-            android:src="@drawable/widget_ic_flame"
-            android:tint="#FF059669" />
-
+        android:layout_weight="0.36"
+        android:gravity="center"
+        android:orientation="vertical">
         <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="9dp"
-            android:layout_weight="1"
-            android:fontFamily="sans-serif-medium"
-            android:text="@string/widget_detailed_streak_label"
-            android:textColor="#FF0F172A"
-            android:textSize="14sp"
-            android:textStyle="bold" />
-
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/tajawal_regular"
+        android:text="@string/widget_preview_flame"
+        android:textColor="#FFF97316"
+        android:textSize="16sp" />
         <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@drawable/widget_preview_chip"
-            android:paddingStart="8dp"
-            android:paddingTop="4dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="4dp"
-            android:text="@string/widget_preview_streak_best"
-            android:textColor="#FF064E3B"
-            android:textSize="10sp"
-            android:textStyle="bold" />
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/tajawal_bold"
+        android:text="@string/widget_preview_streak_number"
+        android:textColor="#FFFFFFFF"
+        android:textSize="40sp" />
+        <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/tajawal_regular"
+        android:text="@string/widget_preview_streak_label"
+        android:textColor="#FF94A3B8"
+        android:textSize="9sp" />
     </LinearLayout>
 
     <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_marginTop="10dp"
-        android:background="#1F10B981" />
+        android:layout_width="1dp"
+        android:layout_height="match_parent"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
+        android:background="#1FFFFFFF" />
 
     <LinearLayout
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <TextView style="@style/WidgetPreviewDay" android:text="@string/widget_preview_day_sat" />
-        <TextView style="@style/WidgetPreviewDay" android:text="@string/widget_preview_day_sun" />
-        <TextView style="@style/WidgetPreviewDay" android:text="@string/widget_preview_day_mon" />
-        <TextView style="@style/WidgetPreviewDay" android:text="@string/widget_preview_day_tue" />
-        <TextView style="@style/WidgetPreviewDay" android:text="@string/widget_preview_day_wed" />
-        <TextView style="@style/WidgetPreviewDay" android:text="@string/widget_preview_day_thu" />
-        <TextView style="@style/WidgetPreviewDay" android:text="@string/widget_preview_day_fri" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
+        android:layout_weight="0.64"
+        android:orientation="vertical">
+        <TextView
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <ImageView style="@style/WidgetPreviewDot" android:src="@drawable/widget_preview_circle_done" />
-        <ImageView style="@style/WidgetPreviewDot" android:src="@drawable/widget_preview_circle_done" />
-        <ImageView style="@style/WidgetPreviewDot" android:src="@drawable/widget_preview_circle_open" />
-        <ImageView style="@style/WidgetPreviewDot" android:src="@drawable/widget_preview_dot_today" />
-        <ImageView style="@style/WidgetPreviewDot" android:src="@drawable/widget_preview_circle_open" />
-        <ImageView style="@style/WidgetPreviewDot" android:src="@drawable/widget_preview_circle_done" />
-        <ImageView style="@style/WidgetPreviewDot" android:src="@drawable/widget_preview_circle_done" />
+        android:fontFamily="@font/tajawal_regular"
+        android:text="@string/widget_preview_week_title"
+        android:textColor="#FF94A3B8"
+        android:textSize="9sp" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="7dp"
+            android:orientation="horizontal">
+            <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/tajawal_regular"
+                android:text="س"
+                android:textColor="#FF64748B"
+                android:textSize="8sp" />
+            <FrameLayout
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginTop="3dp"
+                android:background="@drawable/widget_circle_missed">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:fontFamily="@font/tajawal_bold"
+                android:text="–"
+                android:textColor="#FF94A3B8"
+                android:textSize="9sp" />
+            </FrameLayout>
+        </LinearLayout><LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/tajawal_regular"
+                android:text="ح"
+                android:textColor="#FF64748B"
+                android:textSize="8sp" />
+            <FrameLayout
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginTop="3dp"
+                android:background="@drawable/widget_circle_done">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:fontFamily="@font/tajawal_bold"
+                android:text="✓"
+                android:textColor="#FFFFFFFF"
+                android:textSize="9sp" />
+            </FrameLayout>
+        </LinearLayout><LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/tajawal_regular"
+                android:text="ن"
+                android:textColor="#FF64748B"
+                android:textSize="8sp" />
+            <FrameLayout
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginTop="3dp"
+                android:background="@drawable/widget_circle_done">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:fontFamily="@font/tajawal_bold"
+                android:text="✓"
+                android:textColor="#FFFFFFFF"
+                android:textSize="9sp" />
+            </FrameLayout>
+        </LinearLayout><LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/tajawal_regular"
+                android:text="ث"
+                android:textColor="#FF64748B"
+                android:textSize="8sp" />
+            <FrameLayout
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginTop="3dp"
+                android:background="@drawable/widget_circle_today">
+            </FrameLayout>
+        </LinearLayout><LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/tajawal_regular"
+                android:text="ر"
+                android:textColor="#FF64748B"
+                android:textSize="8sp" />
+            <FrameLayout
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginTop="3dp"
+                android:background="@drawable/widget_circle_done">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:fontFamily="@font/tajawal_bold"
+                android:text="✓"
+                android:textColor="#FFFFFFFF"
+                android:textSize="9sp" />
+            </FrameLayout>
+        </LinearLayout><LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/tajawal_regular"
+                android:text="خ"
+                android:textColor="#FF64748B"
+                android:textSize="8sp" />
+            <FrameLayout
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginTop="3dp"
+                android:background="@drawable/widget_circle_missed">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:fontFamily="@font/tajawal_bold"
+                android:text="–"
+                android:textColor="#FF94A3B8"
+                android:textSize="9sp" />
+            </FrameLayout>
+        </LinearLayout><LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/tajawal_regular"
+                android:text="ج"
+                android:textColor="#FF64748B"
+                android:textSize="8sp" />
+            <FrameLayout
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginTop="3dp"
+                android:background="@drawable/widget_circle_missed">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:fontFamily="@font/tajawal_bold"
+                android:text="–"
+                android:textColor="#FF94A3B8"
+                android:textSize="9sp" />
+            </FrameLayout>
+        </LinearLayout>
+        </LinearLayout>
     </LinearLayout>
 </LinearLayout>

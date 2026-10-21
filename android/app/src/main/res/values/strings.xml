@@ -42,4 +42,16 @@
     <string name="widget_preview_note_1">إنهاء مراجعة التشريح — محاضرة 4</string>
     <string name="widget_preview_note_2">ملاحظة: أعِد قراءة جدول الأسبوع الأول</string>
     <string name="widget_preview_note_3">هدف: إنهاء 3 محاضرات كيمياء</string>
+    <string name="widget_preview_flame">🔥</string>
+    <string name="widget_preview_plus">+</string>
+    <string name="widget_preview_week_title">آخر ٧ أيام</string>
+    <string name="widget_preview_pct">70%</string>
+    <string name="widget_preview_pct2">40%</string>
+    <string name="widget_preview_pct3">85%</string>
+
+    <!-- Phase W6 — next-lecture widget -->
+    <string name="widget_lectures_label">المحاضرة القادمة</string>
+    <string name="widget_lectures_description">محاضرتك القادمة من خطتك — العنوان والمادة والوقت، بلمسة واحدة</string>
+    <string name="widget_lectures_preview_title">فسيولوجيا القلب — محاضرة 5</string>
+    <string name="widget_lectures_preview_meta">اليوم · الفسيولوجيا · MEDX</string>
 </resources>

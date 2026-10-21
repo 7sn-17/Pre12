@@ -1,0 +1,172 @@
+<!--@
+title: الودجات الذكية - المنصة الطبية
+libs: lucide
+sw: true
+backHref: index.html
+headerTitle: الودجات الذكية
+-->
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<!-- @include partials/head.html -->
+
+<style>
+    :root {
+      --bg-main: #06110d;
+      --accent-emerald: #10b981;
+      --accent-light: #34d399;
+      --accent-dark: #059669;
+      --accent-glow: rgba(16, 185, 129, 0.28);
+      --text-primary: #f0fdf4;
+      --text-secondary: #94a3b8;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { height: 100%; }
+
+    body {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+      color: var(--text-primary);
+      background:
+        radial-gradient(120% 80% at 50% 0%, rgba(16, 185, 129, 0.20) 0%, rgba(16, 185, 129, 0) 60%),
+        linear-gradient(165deg, #0f3327 0%, #0a2019 48%, #06110d 100%);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .settings-card {
+      width: 100%;
+      max-width: 400px;
+      padding: 30px 24px 26px;
+      border-radius: 28px;
+      text-align: center;
+      background: linear-gradient(165deg, rgba(17, 44, 34, 0.92), rgba(8, 25, 19, 0.94));
+      border: 1px solid rgba(52, 211, 153, 0.24);
+      box-shadow:
+        0 40px 90px -30px rgba(0, 0, 0, 0.85),
+        0 0 70px -26px var(--accent-glow);
+    }
+
+    .settings-icon {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 16px;
+      border-radius: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #d1fae5;
+      background: linear-gradient(140deg, rgba(52, 211, 153, 0.28), rgba(5, 150, 105, 0.12));
+      border: 1px solid rgba(52, 211, 153, 0.45);
+      box-shadow:
+        0 0 0 6px rgba(16, 185, 129, 0.07),
+        0 0 34px -8px rgba(52, 211, 153, 0.6);
+    }
+
+    .settings-icon i { width: 32px; height: 32px; }
+
+    .settings-title {
+      margin: 0 0 6px;
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+    }
+
+    .settings-sub {
+      margin: 0 0 22px;
+      font-size: 0.82rem;
+      line-height: 1.9;
+      color: var(--text-secondary);
+    }
+
+    /* ⭐ الزرّ الوحيد في هذه الصفحة — «إضافة ودجت للشاشة» */
+    .widget-cta {
+      width: 100%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 16px 20px;
+      border: none;
+      border-radius: 18px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: #ffffff;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--accent-light), var(--accent-emerald) 46%, var(--accent-dark));
+      box-shadow:
+        0 16px 36px -14px rgba(16, 185, 129, 0.95),
+        inset 0 1px 0 rgba(255, 255, 255, 0.24);
+      transition: transform 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    .widget-cta:active {
+      transform: scale(0.98);
+      box-shadow: 0 8px 22px -12px rgba(16, 185, 129, 0.9);
+    }
+
+    .widget-cta i { width: 19px; height: 19px; }
+
+    .settings-status {
+      min-height: 20px;
+      margin: 14px 0 0;
+      font-size: 0.74rem;
+      font-weight: 600;
+      line-height: 1.7;
+      color: var(--text-secondary);
+    }
+</style>
+</head>
+<body>
+  <main class="settings-card">
+    <div class="settings-icon" aria-hidden="true">
+      <i data-lucide="layout-grid"></i>
+    </div>
+    <h1 class="settings-title">الودجات الذكية</h1>
+    <p class="settings-sub">مهامك وسلسلتك وأهدافك على شاشتك الرئيسية — تُحدَّث فوراً وتعمل بدون إنترنت.</p>
+
+    <button type="button" class="widget-cta" id="addWidgetBtn">
+      <i data-lucide="plus-circle"></i>
+      <span>إضافة ودجت للشاشة</span>
+    </button>
+
+    <p class="settings-status" id="settingsStatus" aria-live="polite"></p>
+  </main>
+
+  <script>
+    lucide.createIcons();
+
+    function setStatus(text) {
+      var el = document.getElementById('settingsStatus');
+      if (el) el.textContent = text || '';
+    }
+
+    async function addWidget() {
+      var cap = window.Capacitor;
+      var api = cap && cap.Plugins ? cap.Plugins.MedWidgets : null;
+      if (!api) {
+        setStatus('إضافة الودجات متاحة داخل تطبيق أندرويد فقط.');
+        return;
+      }
+      try {
+        var result = await api.requestPinWidget({ kind: 'tasks' });
+        if (result && result.requested === false) {
+          setStatus('لا يدعم المُشغّل نافذة الإضافة — اضغط مطوّلاً على الشاشة الرئيسية ثم «الودجات».');
+        } else {
+          setStatus('تم فتح نافذة الإضافة — اختر «مهام اليوم» أو أي ودجت آخر.');
+        }
+      } catch (e) {
+        setStatus('تعذّر فتح نافذة الإضافة — حاول من الشاشة الرئيسية.');
+      }
+    }
+
+    document.getElementById('addWidgetBtn').addEventListener('click', addWidget);
+  </script>
+</body>
+</html>

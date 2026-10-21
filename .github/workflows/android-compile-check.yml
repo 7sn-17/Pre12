@@ -87,7 +87,7 @@ jobs:
           # The receiver and its provider metadata must survive manifest merging.
           AAPT2="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" 2>/dev/null | sort -V | tail -1)/aapt2"
           if [ -x "$AAPT2" ] && "$AAPT2" dump xmltree "$APK" --file AndroidManifest.xml > /tmp/manifest.txt 2>/dev/null; then
-            for receiver in TodayTasksWidgetReceiver SimpleStreakWidgetReceiver DetailedStreakWidgetReceiver NotesWidgetReceiver GoalsWidgetReceiver NotesOnlyWidgetReceiver; do
+            for receiver in TodayTasksWidgetReceiver SimpleStreakWidgetReceiver DetailedStreakWidgetReceiver NotesWidgetReceiver GoalsWidgetReceiver NotesOnlyWidgetReceiver LecturesWidgetReceiver; do
               if grep -q "$receiver" /tmp/manifest.txt; then
                 echo "✅ $receiver is registered in the merged manifest"
               else

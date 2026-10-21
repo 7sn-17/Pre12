@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Phase W6 — picker preview for «المحاضرة القادمة». Mirrors LecturesWidget.kt. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layoutDirection="rtl"
+    android:background="@drawable/widget_bg_lecture">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        android:layout_marginStart="14dp"
+        android:layout_marginTop="14dp"
+        android:background="#33000000"
+        android:fontFamily="@font/tajawal_bold"
+        android:paddingStart="7dp"
+        android:paddingTop="2dp"
+        android:paddingEnd="7dp"
+        android:paddingBottom="2dp"
+        android:text="@string/widget_lectures_label"
+        android:textColor="#FFFFFFFF"
+        android:textSize="8sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:padding="14dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/tajawal_bold"
+            android:maxLines="2"
+            android:text="@string/widget_lectures_preview_title"
+            android:textColor="#FFFFFFFF"
+            android:textSize="13.5sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:fontFamily="@font/tajawal_regular"
+            android:maxLines="1"
+            android:text="@string/widget_lectures_preview_meta"
+            android:textColor="#FFCBD5E1"
+            android:textSize="8.5sp" />
+    </LinearLayout>
+</FrameLayout>

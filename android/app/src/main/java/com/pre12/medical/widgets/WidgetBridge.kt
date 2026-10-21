@@ -121,7 +121,13 @@ data class PinnedItem(
     val id: String,
     val text: String,
     val kind: String,        // "goal" | "note"
-    val isDone: Boolean
+    val isDone: Boolean,
+    /**
+     * Goal progress, 0..100, computed by `widgets.js` from
+     * `current_value / target_value`. Null for notes and for simple goals, so
+     * the sticky note only prints a badge when there is a real number to print.
+     */
+    val percent: Int? = null
 )
 
 data class PinnedNotes(
@@ -131,6 +137,21 @@ data class PinnedNotes(
 ) {
     val isEmpty: Boolean
         get() = items.isEmpty()
+}
+
+// ---------------------------------------------------------------------------
+// Next lecture
+// ---------------------------------------------------------------------------
+
+data class NextLecture(
+    val title: String = "",
+    val subject: String = "",
+    val instructor: String = "",
+    val whenText: String = "",
+    val updatedAt: String = ""
+) {
+    val isEmpty: Boolean
+        get() = title.isBlank()
 }
 
 // ---------------------------------------------------------------------------
@@ -171,6 +192,7 @@ object WidgetBridge {
     const val KEY_TASKS_TODAY = "tasks.today"
     const val KEY_STREAK = "streak.summary"
     const val KEY_NOTES = "notes.pinned"
+    const val KEY_LECTURES = "lectures.next"
     const val KEY_PENDING = "pending.tasks"
     const val KEY_SESSION = "sync.session"
 
@@ -378,7 +400,12 @@ object WidgetBridge {
                     id = obj.optString("id", "note-$index"),
                     text = text,
                     kind = obj.optString("kind", "note"),
-                    isDone = obj.optBoolean("done", false)
+                    isDone = obj.optBoolean("done", false),
+                    percent = if (obj.has("percent") && !obj.isNull("percent")) {
+                        obj.optInt("percent", 0).coerceIn(0, 100)
+                    } else {
+                        null
+                    }
                 )
             }
             PinnedNotes(
@@ -388,6 +415,27 @@ object WidgetBridge {
             )
         } catch (_: Exception) {
             PinnedNotes()
+        }
+    }
+
+    // -- next lecture ---------------------------------------------------------
+
+    fun readLecture(context: Context): NextLecture =
+        parseLecture(prefs(context).getString(KEY_LECTURES, null))
+
+    fun parseLecture(raw: String?): NextLecture {
+        if (raw.isNullOrBlank()) return NextLecture()
+        return try {
+            val root = JSONObject(raw)
+            NextLecture(
+                title = root.optString("title", "").trim(),
+                subject = root.optString("subject", "").trim(),
+                instructor = root.optString("instructor", "").trim(),
+                whenText = root.optString("when", "").trim(),
+                updatedAt = root.optString("updatedAt", "")
+            )
+        } catch (_: Exception) {
+            NextLecture()
         }
     }
 

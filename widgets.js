@@ -9,7 +9,8 @@
 //
 //   tasks.today    ← plans-data.json + task_<date>_<id> keys
 //   streak.summary ← MedAppStreakCore over the same completion keys
-//   notes.pinned   ← medfav_goals + medfav_my_notes_v3
+//   notes.pinned   ← medfav_goals (with progress %) + medfav_my_notes_v3
+//   lectures.next  ← the next lecture in plans-data.json
 //   pending.tasks  → drained here, then written through setTaskCompleted()
 //
 // Everything is best-effort: on the web (no native plugin) every entry point is
@@ -28,6 +29,7 @@
 
   var planPromise = null;
   var refreshing = null;
+  var refreshQueued = false;
 
   // ----------------------------------------------------------
   // Environment
@@ -332,11 +334,17 @@
       })
       .slice(0, MAX_PER_KIND)
       .map(function (goal, index) {
+        var target = Number(goal.target_value) || 0;
+        var current = Number(goal.current_value) || 0;
+        var percent = target > 0
+          ? Math.max(0, Math.min(100, Math.round((current / target) * 100)))
+          : null;
         return {
           id: String(goal.id || ('goal-' + index)),
           text: String(goal.text).replace(/\s+/g, ' ').trim().slice(0, 90),
           kind: 'goal',
-          done: !!goal.completed
+          done: !!goal.completed,
+          percent: percent
         };
       });
 
@@ -367,6 +375,63 @@
     return {
       items: items.slice(0, MAX_NOTES),
       total: goals.length + notes.length,
+      updatedAt: new Date().toISOString()
+    };
+  }
+
+  /**
+   * The next lecture: today's plan first, otherwise the first upcoming day that
+   * has one. The widget only needs a title, a subject, an instructor and a
+   * human date — everything else would be noise on a 2×2 card.
+   */
+  function buildLecturesPayload(plan) {
+    var today = todayKey();
+    var dates = Object.keys(plan || {})
+      .filter(function (key) { return /^\d{4}-\d{2}-\d{2}$/.test(key); })
+      .sort();
+
+    var pickDate = '';
+    if (Array.isArray(plan && plan[today]) && plan[today].length) {
+      pickDate = today;
+    } else {
+      for (var i = 0; i < dates.length; i++) {
+        if (dates[i] > today && Array.isArray(plan[dates[i]]) && plan[dates[i]].length) {
+          pickDate = dates[i];
+          break;
+        }
+      }
+    }
+
+    if (!pickDate) {
+      return { title: '', updatedAt: new Date().toISOString() };
+    }
+
+    var list = (plan[pickDate] || []).filter(function (task) {
+      return task && (task.task || task.subject);
+    });
+    if (!list.length) {
+      return { title: '', updatedAt: new Date().toISOString() };
+    }
+
+    var lecture = list[0];
+    var when = pickDate === today ? 'اليوم' : pickDate;
+    try {
+      var d = new Date(today + 'T00:00:00');
+      d.setDate(d.getDate() + 1);
+      var tomorrow = d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+      if (pickDate === tomorrow) when = 'غداً';
+    } catch (e) {}
+    var time = lecture.time || lecture.start_time || '';
+    if (time) when += ' · ' + String(time);
+
+    return {
+      title: String(lecture.task || lecture.subject || '').replace(/\s+/g, ' ').trim().slice(0, 90),
+      subject: String(lecture.subject || ''),
+      instructor: String(lecture.instructor || ''),
+      when: when,
+      date: pickDate,
       updatedAt: new Date().toISOString()
     };
   }
@@ -443,9 +508,11 @@
     var api = plugin();
     if (!api) return false;
 
+    var plan = await loadPlan();
     var tasks = await buildTasksPayload(pending);
     var streak = buildStreakPayload();
     var notes = buildNotesPayload();
+    var lectures = buildLecturesPayload(plan);
     var session = await readSession();
 
     try {
@@ -453,6 +520,7 @@
         tasks: JSON.stringify(tasks),
         streak: JSON.stringify(streak),
         notes: JSON.stringify(notes),
+        lectures: JSON.stringify(lectures),
         session: session,
         source: reason || 'auto'
       });
@@ -469,7 +537,13 @@
    */
   function refresh(reason) {
     if (!plugin()) return Promise.resolve(false);
-    if (refreshing) return refreshing;
+
+    // A burst of edits (e.g. three «+10» taps) must not be collapsed into the
+    // first snapshot: keep the in-flight run and schedule exactly one more.
+    if (refreshing) {
+      refreshQueued = true;
+      return refreshing;
+    }
 
     refreshing = (async function () {
       try {
@@ -479,10 +553,14 @@
       } catch (e) {
         console.warn('[widgets] refresh failed:', e && e.message ? e.message : e);
         return false;
-      } finally {
-        refreshing = null;
       }
-    })();
+    })().finally(function () {
+      refreshing = null;
+      if (refreshQueued) {
+        refreshQueued = false;
+        setTimeout(function () { refresh('queued'); }, 80);
+      }
+    });
 
     return refreshing;
   }
@@ -517,6 +595,71 @@
       console.warn('[widgets] pin failed:', e);
       toast('تعذّر فتح نافذة الإضافة — حاول من الشاشة الرئيسية', 'error');
     }
+  }
+
+  /**
+   * ⭐⭐ Phase W6 — one premium button instead of six tiny tiles.
+   *
+   * The prompt locks the settings surface to a single action («إضافة ودجت
+   * للشاشة»), while `src/index.html` may not be touched in this phase. The
+   * transformation therefore happens here, once, at boot: the section keeps its
+   * heading and the six tiles become one tall, emerald card that pins the main
+   * tasks widget (the other variants remain available from the system picker).
+   */
+  function renderPremiumSettings() {
+    var group = document.getElementById('homeWidgetsGroup');
+    if (!group) return;
+
+    var grid = group.querySelector('.widget-grid');
+    if (!grid) return;
+    if (grid.getAttribute('data-premium') === '1') return;
+    grid.setAttribute('data-premium', '1');
+
+    if (!document.getElementById('wpbStyles')) {
+      var style = document.createElement('style');
+      style.id = 'wpbStyles';
+      style.textContent = [
+        '.widget-grid[data-premium="1"]{display:block!important;grid-template-columns:none!important}',
+        '.widget-premium-btn{display:flex;align-items:center;gap:14px;width:100%;padding:16px 18px;',
+        'border-radius:20px;border:1px solid rgba(16,185,129,.30);',
+        'background:linear-gradient(135deg,rgba(16,185,129,.20),rgba(5,150,105,.06));',
+        'color:#ECFDF5;font-family:inherit;text-align:start;cursor:pointer;',
+        'box-shadow:0 12px 30px rgba(0,0,0,.20);transition:transform .16s ease,box-shadow .16s ease}',
+        '.widget-premium-btn:active{transform:scale(.985);box-shadow:0 6px 18px rgba(0,0,0,.22)}',
+        '.wpb-icon{width:46px;height:46px;flex:0 0 auto;border-radius:15px;display:flex;',
+        'align-items:center;justify-content:center;color:#fff;',
+        'background:linear-gradient(135deg,#10B981,#047857);',
+        'box-shadow:0 6px 16px rgba(16,185,129,.35)}',
+        '.wpb-copy{display:flex;flex-direction:column;min-width:0}',
+        '.wpb-title{font-weight:700;font-size:15px;line-height:1.3}',
+        '.wpb-sub{font-size:11.5px;line-height:1.5;opacity:.72;margin-top:2px}'
+      ].join('');
+      document.head.appendChild(style);
+    }
+
+    grid.innerHTML = '';
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'widget-premium-btn';
+    button.innerHTML =
+      '<span class="wpb-icon">' +
+        '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+        'stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1.6"/>' +
+        '<rect x="14" y="3" width="7" height="7" rx="1.6"/><rect x="3" y="14" width="7" height="7" ' +
+        'rx="1.6"/><rect x="14" y="14" width="7" height="7" rx="1.6"/></svg>' +
+      '</span>' +
+      '<span class="wpb-copy">' +
+        '<span class="wpb-title">إضافة ودجت للشاشة</span>' +
+        '<span class="wpb-sub">مهامك وسلسلتك وأهدافك — بلمسة واحدة</span>' +
+      '</span>';
+    button.addEventListener('click', function () { addHomeWidget('tasks'); });
+    grid.appendChild(button);
+
+    // The legacy hero + hint duplicated the button copy; one card is the spec.
+    var hero = group.querySelector('.widget-hero');
+    if (hero) hero.style.display = 'none';
+    var hint = document.getElementById('widgetHint');
+    if (hint) hint.style.display = 'none';
   }
 
   /**
@@ -639,6 +782,28 @@
       return true;
     }
 
+    // The sticky-note "+" buttons: land on the page **with its add sheet open**.
+    if (target === 'add-goal') {
+      if (here === 'goals.html') {
+        setTimeout(function () {
+          try { if (typeof global.openAddModal === 'function') global.openAddModal(); } catch (e) {}
+        }, 450);
+      } else {
+        navigateTo('goals.html?add=1');
+      }
+      return true;
+    }
+
+    if (target === 'add-note') {
+      if (here !== 'notes.html') navigateTo('notes.html?add=1');
+      return true;
+    }
+
+    if (target === 'lectures' || target === 'lecture') {
+      if (here !== 'my-lectures.html') navigateTo('my-lectures.html');
+      return true;
+    }
+
     return false;
   }
 
@@ -682,6 +847,7 @@
   // ----------------------------------------------------------
 
   function boot() {
+    renderPremiumSettings();
     syncDiscoveryUi();
     // The Capacitor bridge can finish registering a beat after DOMContentLoaded.
     setTimeout(syncDiscoveryUi, 1500);
@@ -694,8 +860,14 @@
     refresh('boot');
     primeDeepLinks();
 
+    // Publish *before* the WebView is frozen: the launcher repaints as soon as
+    // the user reaches the home screen, so a goals/notes edit must already be in
+    // prefs. `visible` stays for the reverse direction and for missed publishes.
     document.addEventListener('visibilitychange', function () {
-      if (!document.hidden) refresh('visible');
+      refresh(document.hidden ? 'hidden' : 'visible');
+    });
+    global.addEventListener('pagehide', function () {
+      refresh('pagehide');
     });
 
     global.addEventListener('taskUpdated', function () {
@@ -725,6 +897,7 @@
     buildTasksPayload: buildTasksPayload,
     buildStreakPayload: buildStreakPayload,
     buildNotesPayload: buildNotesPayload,
+    buildLecturesPayload: buildLecturesPayload,
     handleDeepLink: handleDeepLink,
     isAvailable: function () { return !!plugin(); },
     isNativeAndroid: isNativeAndroid
