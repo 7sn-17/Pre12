@@ -1241,3 +1241,50 @@ no WorkManager).
   `caps:{daily:6,weekly:30}` and `sent:0, skipped:1` — i.e. **no event, no
   notification** (event-driven ✓); the test mode without a user JWT now
   answers with a precise, actionable error.
+
+---
+
+### Phase W15 Completion Log (2026-10-21) — **v5.0.7** (the cache killer)
+
+**Release:** `v5.0.7` (versionCode 46) — GitHub **Latest**, live on Supabase
+Storage, `version.json` = 5.0.7. APK **15,076,531 bytes**, SHA-256
+`b5c3b5310cb0fcf5fe2f5e31ccdd3a8c10458ca52b3edbfb401f60253c3e2430`
+(re-downloaded and re-hashed independently ✓).
+
+#### The bulletproof cache killer
+| Layer | What it does |
+|---|---|
+| `sw.js` | `CACHE_VERSION = 'v5.0.7-clean'`; **activate** now deletes **every** cache (`caches.keys()` → `caches.delete` for all names, whatever they are). The old code only removed `medfav-*`, so a renamed or leftover cache kept serving the previous UI. |
+| `native.js` | `runCacheKiller()` compares the installed version (`App.getInfo`, falling back to the `app-version` meta tag — normalised) with `localStorage.app_version`. On a mismatch it: unregisters **all** service workers → deletes **all** caches → busts the HTTP cache → wipes the stale `localStorage` artifacts → forces `location.reload(true)`. |
+| once, never a loop | The new version is written **before** the reload, so the wipe runs exactly once per bump. An interrupted wipe is detected by a timestamp marker (`app_version_wiping`) and completed on the next start **without** a second reload. |
+| `MainActivity.java` | The WebView's own HTTP cache — the thing that actually served the old page — is cleared natively on a version change, once (the version is stored before the wipe ⇒ no loop). |
+| data safety | The user's own work data (notes, goals, task queue) is now protected from the wipe. |
+
+#### The rest of W15
+- **The Smart Lab talks to the engine for real**: `notifications.js` no longer
+  depends on `client.functions.invoke`; it calls the Edge Function with `fetch`
+  (+ the user's JWT), so a missing SDK method can no longer masquerade as
+  “the engine is only available in the app”, and **the exact server error** is
+  shown (403/400/…).
+- **`forceTest`** in the engine (v30): ignores every condition, the caps and
+  the quiet hours, and pushes immediately — to the requesting device only in the
+  test mode.
+- **The widget checkbox repaints in the same millisecond**:
+  save → `WidgetRefreshSignal.bump()` → `GlanceAppWidget.update()` (synchronously,
+  before anything else), with `updateAll(context)` as a safety net, and
+  `MedWidgetsToggle` logcat lines for manual verification.
+- **The notes mapping is explicit**: line 1 = title (15 sp bold), line 2 =
+  content (13 sp grey, ≤2 lines), in every layout.
+- **`NOTIFICATION_TESTING_MANUAL.md`**: the mandatory manual — every scenario
+  with its trigger condition, the expected delay, the step-by-step test and its
+  channel.
+
+#### MCP verification (live project)
+- `{"mode":"run","forceTest":true,"scenario":"streakRisk"}` →
+  **`{"ok":true,"sent":2,"failed":0,"forced":true}`** — two real FCM pushes
+  delivered to the two registered devices ✓ and logged with the scenario,
+  channel, title, body and reason ✓.
+- The cron path: `{"ok":true,"sent":0,"skipped":1,"caps":{"daily":6,"weekly":30}}`
+  — **no event ⇒ no notification** (event-driven ✓).
+- Compile check **`39656520280` → success** (it caught a real error: the missing
+  Glance `updateAll` import), release build **`39657595021` → success**.
