@@ -16,14 +16,19 @@ import kotlinx.coroutines.delay
  * Runs inside the widget's own broadcast receiver, with **no WebView** in the
  * picture. The sequence is deliberately optimistic and survives process death:
  *
- *   1. flip the bit inside `tasks.today` + stamp `doneAt` (`commit()`);
- *   2. append the change to `pending.tasks` (with its title) → durable queue;
- *   3. `update(...)` **immediately** → tick (animated vector) + strike-through;
- *   4. broadcast to a *running* app → the WebView/JS applies the tap locally
- *      and repaints the open screen (`widgetTaskToggled` + `taskUpdated`);
- *   5. schedule a WorkManager upload → Supabase syncs with the app closed;
+ *   1. read the `tasks.today` payload from SharedPreferences;
+ *   2. mark the task as done inside the JSON (+ stamp `doneAt`);
+ *   3. save it with `commit()` — the value is on disk before anything else;
+ *   4. `update(...)` **immediately** → tick (animated vector) + strike-through;
+ *   5. broadcast to a *running* app → the WebView/JS applies the tap locally
+ *      and repaints the open screen (`widgetTaskToggled` + `taskUpdated`), and
+ *      schedule a WorkManager upload → Supabase syncs with the app closed;
  *   6. `delay(900)` + `update(...)` → the completed row leaves the list and the
  *      next pending task takes its place.
+ *
+ * Step 4 only works because the widget reads its payload **inside** the
+ * composition (see `TodayTasksWidget.kt`): Glance keeps the composition alive
+ * and would otherwise redraw the very first payload forever.
  *
  * Step 6 is the honest version of "fade out and slide up": RemoteViews cannot
  * animate layout, so the row is removed on a second frame. The visible motion is
@@ -46,25 +51,46 @@ class ToggleTaskAction : ActionCallback {
         val title = parameters[TitleKey] ?: ""
         val subject = parameters[SubjectKey] ?: ""
 
-        // ── 1) LOCAL FIRST (Phase W7) ────────────────────────────────────────
-        // prefs are written with `commit()`, so the next line reads the new
-        // value from disk. Nothing below may run before the redraw: WorkManager
-        // enqueueing and the WebView broadcast are side effects, not the UI.
-        WidgetBridge.applyTaskToggle(context, taskId, done)
+        // ══════════════════════════════════════════════════════════════════
+        // ⭐⭐⭐ Phase W9 — the exact sequence, synchronously.
+        //
+        //   1. read the SharedPreferences payload
+        //   2. mark the task as done inside the JSON
+        //   3. save it (commit — the value is on disk when the redraw reads it)
+        //   4. redraw the widget IMMEDIATELY
+        //   5. only then: the background sync
+        //
+        // Nothing between 3 and 4 may touch the network, the WorkManager or the
+        // WebView: the whole point is that the tick is visible at once.
+        // ══════════════════════════════════════════════════════════════════
 
-        // 2) Durable queue. Also a synchronous prefs commit, and the toggle must
-        //    survive process death even if the very next frame kills us.
+        // ── 1) READ ─────────────────────────────────────────────────────────
+        val payload = WidgetBridge.readTasksJson(context)
+
+        // ── 2) MARK the task as done (inside the JSON) ──────────────────────
+        val updated = payload?.let { WidgetBridge.markTaskDone(it, taskId, done) }
+
+        // ── 3) SAVE (synchronous) ───────────────────────────────────────────
+        if (updated != null) {
+            WidgetBridge.writeTasksJson(context, updated)
+        }
+
+        // Durable queue: also a synchronous prefs commit, and the toggle must
+        // survive process death even if the very next frame kills us.
         WidgetBridge.queuePendingToggle(context, taskId, date, done, title, subject)
 
-        // 3) FIRST FRAME NOW — tick + strike-through, straight from prefs.
+        // ── 4) REDRAW NOW ──────────────────────────────────────────────────
+        // The composition re-reads the payload on every recomposition (see
+        // TodayTasksWidget.kt), so this frame already shows the new state.
         try {
             TodayTasksWidget().update(context, glanceId)
         } catch (_: Throwable) {
-            return
+            // A dead launcher must not stop the sync below.
         }
 
-        // 4) Wake a running app (JS drains the queue + syncs Supabase). This is
-        //    fired *after* the redraw: a slow WebView can never delay the tick.
+        // ── 5) BACKGROUND SYNC ──────────────────────────────────────────────
+        // Wake a running app (JS drains the queue + syncs Supabase). Fired
+        // *after* the redraw: a slow WebView can never delay the tick.
         context.sendBroadcast(
             Intent(ACTION_TASK_TOGGLED)
                 .setPackage(context.packageName)
@@ -74,10 +100,10 @@ class ToggleTaskAction : ActionCallback {
                 .putExtra(EXTRA_TITLE, title)
         )
 
-        // 5) Offline upload — network-constrained WorkManager, no UI dependency.
+        // Offline upload — network-constrained WorkManager, no UI dependency.
         WidgetSync.schedule(context)
 
-        // 6) Second frame: the completed row disappears, the list reflows.
+        // Second frame: the completed row disappears, the list reflows.
         if (!done) return
         delay(VANISH_DELAY_MS)
         try {

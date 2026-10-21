@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#06110d">
 <!-- ⭐ TASK 3 (v4.1.2): إصدار التطبيق متاح لـ app-update.js كاحتياطي -->
-<meta name="app-version" content="5.0.0-beta.4">
+<meta name="app-version" content="5.0.0-beta.5">
 <title>السنة التحضيرية - المنصة الطبية</title>
 
 <!-- الخطوط -->
@@ -4847,6 +4847,22 @@ i.fab {
       color: var(--text-secondary);
     }
 
+    /* ⭐⭐ Phase W9 — في الوضع النهاري لا بدّ أن تبقى البطاقة ظاهرة فوق
+       خلفية بيضاء: خضراء فاتحة بنصّ داكن، لا شفافية تختفي بها. */
+    [data-theme="light"] .widget-hero {
+      background: linear-gradient(135deg, #e8f5e9 0%, #f2f9f3 100%);
+      border-color: rgba(27, 94, 32, 0.18);
+      box-shadow: 0 12px 28px -18px rgba(27, 94, 32, 0.55);
+    }
+
+    [data-theme="light"] .widget-hero-copy h4 { color: #1b5e20; }
+
+    [data-theme="light"] .widget-hero-copy p { color: #33691e; }
+
+    [data-theme="light"] .widget-hero-glow { opacity: 0.5; }
+
+    [data-theme="light"] .widget-hero:active { transform: scale(0.99); }
+
     .widget-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -6644,7 +6660,7 @@ i.fab {
         <div class="settings-icon"><i data-lucide="info"></i></div>
         <div class="settings-text">
           <h4>حول التطبيق</h4>
-          <p id="aboutVersionText">الإصدار 5.0.0-beta.4 • السنة التحضيرية</p>
+          <p id="aboutVersionText">الإصدار 5.0.0-beta.5 • السنة التحضيرية</p>
         </div>
       </div>
       <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px;"></i>
@@ -6743,102 +6759,19 @@ i.fab {
       <span>الشاشة الرئيسية</span>
     </div>
 
-    <div class="widget-hero">
+    <div class="widget-hero" id="addWidgetHeroBtn" onclick="triggerAddWidget()" style="cursor: pointer;">
       <span class="widget-hero-glow" aria-hidden="true"></span>
-      <div class="widget-hero-icon"><i data-lucide="grip"></i></div>
+      <div class="widget-hero-icon"><i data-lucide="layout-grid"></i></div>
       <div class="widget-hero-copy">
         <h4>إضافة ودجت للشاشة الرئيسية</h4>
         <p>تابع مهامك وسلسلتك وملاحظاتك دون فتح التطبيق</p>
       </div>
+      <i data-lucide="chevron-left" class="settings-arrow" style="width: 18px; margin-right: auto;"></i>
     </div>
-
-    <div class="widget-grid">
-      <button type="button" class="widget-tile" data-widget="tasks" onclick="addHomeWidget('tasks')">
-        <span class="widget-tile-preview preview-tasks" aria-hidden="true">
-          <span class="pt-head"><span class="pt-title"></span><span class="pt-chip"></span></span>
-          <span class="pt-bar"><span></span></span>
-          <span class="pt-row"><span class="pt-dot done"></span><span class="pt-line"></span></span>
-          <span class="pt-row"><span class="pt-dot"></span><span class="pt-line short"></span></span>
-        </span>
-        <span class="widget-tile-foot">
-          <span class="widget-tile-label">مهام اليوم</span>
-          <span class="widget-tile-add"><i data-lucide="plus"></i></span>
-        </span>
-      </button>
-
-      <button type="button" class="widget-tile" data-widget="streak" onclick="addHomeWidget('streak')">
-        <span class="widget-tile-preview preview-streak" aria-hidden="true">
-          <span class="ps-flame"><i data-lucide="flame"></i></span>
-          <span class="ps-copy">
-            <span class="ps-number">12</span>
-            <span class="ps-label">يوم متتالي</span>
-          </span>
-        </span>
-        <span class="widget-tile-foot">
-          <span class="widget-tile-label">سلسلة الأيام</span>
-          <span class="widget-tile-add"><i data-lucide="plus"></i></span>
-        </span>
-      </button>
-
-      <button type="button" class="widget-tile" data-widget="streak_detail" onclick="addHomeWidget('streak_detail')">
-        <span class="widget-tile-preview preview-detail" aria-hidden="true">
-          <span class="pd-head"><span class="pd-title"></span><span class="pd-chip"></span></span>
-          <span class="pd-days">
-            <span class="pd-day"><b>س</b><span class="pd-dot done"></span></span>
-            <span class="pd-day"><b>ح</b><span class="pd-dot done"></span></span>
-            <span class="pd-day"><b>ن</b><span class="pd-dot"></span></span>
-            <span class="pd-day"><b>ث</b><span class="pd-dot today"></span></span>
-            <span class="pd-day"><b>ر</b><span class="pd-dot"></span></span>
-            <span class="pd-day"><b>خ</b><span class="pd-dot done"></span></span>
-            <span class="pd-day"><b>ج</b><span class="pd-dot done"></span></span>
-          </span>
-        </span>
-        <span class="widget-tile-foot">
-          <span class="widget-tile-label">سلسلة · أسبوعي</span>
-          <span class="widget-tile-add"><i data-lucide="plus"></i></span>
-        </span>
-      </button>
-
-      <button type="button" class="widget-tile" data-widget="notes" onclick="addHomeWidget('notes')">
-        <span class="widget-tile-preview preview-notes" aria-hidden="true">
-          <span class="pn-head"><i data-lucide="pin"></i><span></span></span>
-          <span class="pn-row"><i data-lucide="pin"></i><span></span></span>
-          <span class="pn-row"><i data-lucide="pin"></i><span class="short"></span></span>
-        </span>
-        <span class="widget-tile-foot">
-          <span class="widget-tile-label">ملاحظاتي وأهدافي</span>
-          <span class="widget-tile-add"><i data-lucide="plus"></i></span>
-        </span>
-      </button>
-
-      <button type="button" class="widget-tile" data-widget="goals" onclick="addHomeWidget('goals')">
-        <span class="widget-tile-preview preview-notes" aria-hidden="true">
-          <span class="pn-head"><i data-lucide="target"></i><span></span></span>
-          <span class="pn-row"><i data-lucide="target"></i><span></span></span>
-          <span class="pn-row"><i data-lucide="target"></i><span class="short"></span></span>
-        </span>
-        <span class="widget-tile-foot">
-          <span class="widget-tile-label">أهدافي فقط</span>
-          <span class="widget-tile-add"><i data-lucide="plus"></i></span>
-        </span>
-      </button>
-
-      <button type="button" class="widget-tile" data-widget="notes_only" onclick="addHomeWidget('notes_only')">
-        <span class="widget-tile-preview preview-notes" aria-hidden="true">
-          <span class="pn-head"><i data-lucide="notebook-pen"></i><span></span></span>
-          <span class="pn-row"><i data-lucide="notebook-pen"></i><span></span></span>
-          <span class="pn-row"><i data-lucide="notebook-pen"></i><span class="short"></span></span>
-        </span>
-        <span class="widget-tile-foot">
-          <span class="widget-tile-label">ملاحظاتي فقط</span>
-          <span class="widget-tile-add"><i data-lucide="plus"></i></span>
-        </span>
-      </button>
-    </div>
-
-    <p class="widget-hint" id="widgetHint">
-      اضغط «+» لتثبيت الودجت مباشرة على شاشتك الرئيسية، أو اضغط مطوّلاً على الشاشة الرئيسية ثم «الودجات».
+    <p class="widget-hint" style="margin-top: 10px; font-size: 0.72rem; color: var(--text-muted);">
+      إذا لم تعمل القائمة، يمكنك إضافة الودجت بالضغط المطول على شاشتك الرئيسية ثم اختيار «التطبيقات المصغرة».
     </p>
+
   </div>
 
   <!-- ⭐⭐ 6) منطقة الخطر -->
@@ -7054,7 +6987,7 @@ i.fab {
 <script src="widgets.js"></script>
 
 
-  <script src="app.js?v=5.0.0-beta.4"></script>
+  <script src="app.js?v=5.0.0-beta.5"></script>
 <script>
 
     lucide.createIcons();
@@ -7482,6 +7415,48 @@ function openLastActivity() {
     // ============================================
     // Toast
     // ============================================
+    /**
+     * ⭐⭐ Phase W9 — «إضافة ودجت للشاشة الرئيسية» (the single premium button).
+     *
+     * The order is deliberate:
+     *   1) `openWidgetPicker()` — the launcher's own widget picker, which lists
+     *      every widget of the app;
+     *   2) `requestPinWidget()` — the documented system "add to home screen"
+     *      dialog, when the launcher exposes no picker;
+     *   3) the legacy helper (the same two steps, in the shared bridge).
+     *
+     * Nothing here waits for the network: the whole point is that the button
+     * opens *something* on the first tap.
+     */
+    async function triggerAddWidget() {
+      var cap = window.Capacitor;
+      var api = cap && cap.Plugins ? cap.Plugins.MedWidgets : null;
+      if (!api) {
+        showToast('إضافة الودجات متاحة داخل تطبيق أندرويد فقط', 'info');
+        return;
+      }
+
+      try {
+        if (typeof api.openWidgetPicker === 'function') {
+          var picked = await api.openWidgetPicker();
+          if (picked && picked.opened) return;
+        }
+
+        if (typeof api.requestPinWidget === 'function') {
+          var pinned = await api.requestPinWidget({ kind: 'tasks' });
+          if (pinned && pinned.requested === false) {
+            showToast('اضغط مطوّلاً على الشاشة الرئيسية ثم اختر «التطبيقات المصغرة»', 'info');
+          }
+          return;
+        }
+
+        if (typeof addHomeWidget === 'function') addHomeWidget('tasks');
+      } catch (e) {
+        console.warn('[index] add widget failed:', e);
+        showToast('تعذّر فتح نافذة الإضافة — جرّب من الشاشة الرئيسية', 'error');
+      }
+    }
+
     function showToast(message, type = 'success') {
       const existing = document.querySelector('.toast');
       if (existing) existing.remove();

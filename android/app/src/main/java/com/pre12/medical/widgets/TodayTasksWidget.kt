@@ -9,6 +9,7 @@ import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.ImageProvider
+import androidx.glance.LocalContext
 import androidx.glance.LocalSize
 import androidx.glance.action.Action
 import androidx.glance.action.clickable
@@ -20,34 +21,33 @@ import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
+import androidx.glance.layout.ColumnScope
 import androidx.glance.layout.Row
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
-import androidx.glance.layout.height
 import androidx.glance.layout.padding
-import androidx.glance.layout.width
+import androidx.glance.layout.size
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
+import androidx.glance.text.TextAlign
 import androidx.glance.text.TextDecoration
 import androidx.glance.unit.ColorProvider
 import com.pre12.medical.R
 
 /**
- * ⭐⭐ Phase W8 — «مهام اليوم» is a **wide 3×2** card (250×120 dp minimum).
- *
- * The user asked for landscape: the title, the counter and the task rows now
- * share one wide column instead of a tall stack, and the row budget comes from
- * [LocalSize] so a resize never draws outside the RemoteViews bounds.
+ * ⭐⭐ Phase W9 — «مهام اليوم», wide 3×2 (250×120 dp minimum).
  *
  * Reference dimensions (`widget_reference_final.html`):
  *   • `linear-gradient(145deg, #1e293b, #0f172a)`, 28 dp radius, 16 dp padding;
  *   • title 20 sp / 800, task text 16 sp / 500.
  *
- * The card keeps two layouts:
- *   • **wide** (≥230 dp) — title + pill + counter on a single header line, then
- *     full-width rows with a 16 sp task title;
- *   • **narrow** (a 2×3 card the user may still resize to) — the title on its
- *     own line and the pill underneath, so nothing is ever clipped.
+ * Phase W9 changes:
+ *   • the title is **centred** and a hairline separates the header from the list;
+ *   • the rows **stretch** to fill the card (`defaultWeight()`), so a short list
+ *     never leaves a dead gap at the bottom;
+ *   • the payload is read **inside the composition** — Glance keeps the
+ *     composition alive, so a value captured before `provideContent` would be
+ *     redrawn forever (that was the "the checkbox does nothing" bug).
  *
  * Interaction is split so a mis-tap can never change data: the status ring
  * toggles; the text and the header deep-link to `pre12://tasks`.
@@ -55,9 +55,18 @@ import com.pre12.medical.R
 class TodayTasksWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        // Read before composing: prefs I/O must never run inside a composition.
-        val state = WidgetBridge.readTodayTasks(context)
-        provideContent { TodayTasksCard(state) }
+        // ⭐⭐⭐ Phase W9 — the payload is read INSIDE the composition.
+        //
+        // Glance 1.x keeps the composition alive in a session for ~45 s and
+        // `update()` only asks that session to recompose. A value read *before*
+        // `provideContent` is captured by the closure forever, so every redraw
+        // re-used the payload from the first composition — the checkbox moved,
+        // the screen did not. Reading on each recomposition is what makes the
+        // tap visible in the same second.
+        provideContent {
+            val ctx = LocalContext.current
+            TodayTasksCard(WidgetBridge.readTodayTasks(ctx))
+        }
     }
 }
 
@@ -73,8 +82,10 @@ private fun TodayTasksCard(state: TodayTasks) {
 
     val pad = if (tight) 12.dp else 16.dp
     val headerLine = 28.dp
-    val rowHeight = if (tight) 28.dp else 30.dp
-    val baseGap = if (tight) 5.dp else 6.dp
+    val metaLine = 17.dp
+    val hairlineGap = if (tight) 5.dp else 7.dp
+    val rowGap = if (tight) 4.dp else 6.dp
+    val minRow = if (tight) 22.dp else 24.dp
     val circle = if (tight) 20.dp else 22.dp
     val rowText = 16.sp
 
@@ -88,21 +99,11 @@ private fun TodayTasksCard(state: TodayTasks) {
             (item.doneAt > 0 && now - item.doneAt < ToggleTaskAction.VANISH_DELAY_MS)
     }
 
-    val chrome = pad * 2 + headerLine + baseGap
-    val capacity = (((size.height - chrome) + baseGap) / (rowHeight + baseGap))
-        .toInt()
-        .coerceIn(1, 6)
+    val headerHeight = if (wide) headerLine else headerLine + metaLine
+    val chrome = pad * 2 + headerHeight + hairlineGap + 1.dp + hairlineGap
+    val available = (size.height - chrome).coerceAtLeast(0.dp)
+    val capacity = (((available + rowGap) / (minRow + rowGap)).toInt()).coerceIn(1, 6)
     val rows = visible.take(capacity)
-
-    // No "massive empty gap": the leftover height is shared between the rows as
-    // a little more air, and only what is really left stays empty.
-    val gaps = baseGap * (rows.size - 1).coerceAtLeast(0)
-    val leftover = size.height - chrome - rowHeight * rows.size - gaps
-    val rowGap = if (rows.size > 1) {
-        baseGap + (leftover / rows.size).coerceIn(0.dp, 8.dp)
-    } else {
-        baseGap
-    }
 
     Box(
         modifier = GlanceModifier
@@ -117,7 +118,11 @@ private fun TodayTasksCard(state: TodayTasks) {
                 NarrowHeader(state, openApp, tight)
             }
 
-            Gap(baseGap)
+            Gap(hairlineGap)
+
+            Hairline(WidgetSkin.Hairline, 1.dp)
+
+            Gap(hairlineGap)
 
             when {
                 state.isEmpty -> EmptyDay(openApp)
@@ -126,7 +131,6 @@ private fun TodayTasksCard(state: TodayTasks) {
                     rows = rows,
                     date = state.date,
                     openApp = openApp,
-                    rowHeight = rowHeight,
                     rowGap = rowGap,
                     circle = circle,
                     textSize = rowText
@@ -136,7 +140,7 @@ private fun TodayTasksCard(state: TodayTasks) {
     }
 }
 
-/** Wide layout: title, pill and counter share one line. */
+/** Wide layout: the title is centred between the pill and the counter. */
 @Composable
 private fun WideHeader(state: TodayTasks, openApp: Action) {
     Row(
@@ -145,47 +149,54 @@ private fun WideHeader(state: TodayTasks, openApp: Action) {
             .clickable(openApp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = "مهام اليوم",
-            style = wText(WidgetSkin.White, 20.sp, FontWeight.Bold),
-            maxLines = 1
-        )
-
-        HGap(10.dp)
-
-        if (!state.isEmpty) {
-            Badge(
-                text = "${state.completedCount}/${state.totalCount}",
-                background = WidgetSkin.EmeraldSoft,
-                foreground = WidgetSkin.EmeraldBright,
-                horizontal = 7.dp,
-                vertical = 2.dp,
-                corner = 7.dp,
-                fontSize = 10.sp
-            )
+        Box(
+            modifier = GlanceModifier.defaultWeight(),
+            contentAlignment = Alignment.Start
+        ) {
+            if (!state.isEmpty) {
+                Badge(
+                    text = "${state.completedCount}/${state.totalCount}",
+                    background = WidgetSkin.EmeraldSoft,
+                    foreground = WidgetSkin.EmeraldBright,
+                    horizontal = 7.dp,
+                    vertical = 2.dp,
+                    corner = 7.dp,
+                    fontSize = 10.sp
+                )
+            }
         }
 
-        HGap(8.dp)
-
         Text(
-            text = if (state.allDone) {
-                "أنجزت كل مهام اليوم"
-            } else if (state.isEmpty) {
-                "لا مهام لهذا اليوم"
-            } else {
-                "مكتملة اليوم"
-            },
-            style = wText(
-                if (state.allDone) WidgetSkin.EmeraldBright else WidgetSkin.Slate400,
-                10.sp,
-                FontWeight.Medium
-            ),
+            text = "مهام اليوم",
+            style = wText(WidgetSkin.White, 20.sp, FontWeight.Bold, TextAlign.Center),
             maxLines = 1
         )
+
+        Box(
+            modifier = GlanceModifier.defaultWeight(),
+            contentAlignment = Alignment.End
+        ) {
+            Text(
+                text = if (state.allDone) {
+                    "أنجزت كل مهام اليوم"
+                } else if (state.isEmpty) {
+                    "لا مهام لهذا اليوم"
+                } else {
+                    "مكتملة اليوم"
+                },
+                style = wText(
+                    if (state.allDone) WidgetSkin.EmeraldBright else WidgetSkin.Slate400,
+                    10.sp,
+                    FontWeight.Medium,
+                    TextAlign.End
+                ),
+                maxLines = 1
+            )
+        }
     }
 }
 
-/** Narrow layout (2×3): the pill gets its own line under the title. */
+/** Narrow layout (2×3): the title is centred on its own line. */
 @Composable
 private fun NarrowHeader(state: TodayTasks, openApp: Action, tight: Boolean) {
     Column(
@@ -195,7 +206,8 @@ private fun NarrowHeader(state: TodayTasks, openApp: Action, tight: Boolean) {
     ) {
         Text(
             text = "مهام اليوم",
-            style = wText(WidgetSkin.White, 20.sp, FontWeight.Bold),
+            modifier = GlanceModifier.fillMaxWidth(),
+            style = wText(WidgetSkin.White, 20.sp, FontWeight.Bold, TextAlign.Center),
             maxLines = 1
         )
 
@@ -236,18 +248,31 @@ private fun NarrowHeader(state: TodayTasks, openApp: Action, tight: Boolean) {
     }
 }
 
+/**
+ * The task list.
+ *
+ * Every row carries `defaultWeight()`, so the rows share the height that is
+ * left under the header: a card with two tasks and a card with four both look
+ * full instead of leaving a dead gap at the bottom.
+ */
 @Composable
-private fun TaskList(
+private fun ColumnScope.TaskList(
     rows: List<TaskItem>,
     date: String,
     openApp: Action,
-    rowHeight: Dp,
     rowGap: Dp,
     circle: Dp,
     textSize: TextUnit
 ) {
     rows.forEachIndexed { index, item ->
-        TaskRow(item, date, openApp, rowHeight, circle, textSize)
+        TaskRow(
+            item = item,
+            date = date,
+            openApp = openApp,
+            circle = circle,
+            textSize = textSize,
+            modifier = GlanceModifier.fillMaxWidth().defaultWeight()
+        )
         if (index != rows.lastIndex) Gap(rowGap)
     }
 }
@@ -257,9 +282,9 @@ private fun TaskRow(
     item: TaskItem,
     date: String,
     openApp: Action,
-    rowHeight: Dp,
     circle: Dp,
-    textSize: TextUnit
+    textSize: TextUnit,
+    modifier: GlanceModifier
 ) {
     val toggle = ToggleTaskAction.action(
         taskId = item.id,
@@ -272,26 +297,24 @@ private fun TaskRow(
         System.currentTimeMillis() - item.doneAt < ToggleTaskAction.VANISH_DELAY_MS
 
     Row(
-        modifier = GlanceModifier.fillMaxWidth().height(rowHeight),
+        modifier = modifier,
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Tall hit box around a small ring: easy to hit, visually quiet.
         Box(
             modifier = GlanceModifier
-                .width(rowHeight + 4.dp)
-                .height(rowHeight)
+                .size(circle + 10.dp)
                 .clickable(toggle),
             contentAlignment = Alignment.Center
         ) {
             StatusCircle(completed = item.isCompleted, justCompleted = justCompleted, size = circle)
         }
 
-        HGap(4.dp)
+        HGap(2.dp)
 
         Box(
             modifier = GlanceModifier
                 .defaultWeight()
-                .height(rowHeight)
                 .clickable(openApp),
             contentAlignment = Alignment.CenterStart
         ) {

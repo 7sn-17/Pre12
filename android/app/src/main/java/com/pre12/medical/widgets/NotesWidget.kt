@@ -8,6 +8,7 @@ import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.ImageProvider
+import androidx.glance.LocalContext
 import androidx.glance.LocalSize
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
@@ -59,8 +60,11 @@ enum class NotesVariant {
 abstract class VariantNotesWidget(private val variant: NotesVariant) : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val notes = WidgetBridge.readNotes(context)
-        provideContent { NotesCard(notes, variant) }
+        // ⭐ W9 — read inside the composition (see TodayTasksWidget.kt).
+        provideContent {
+            val ctx = LocalContext.current
+            NotesCard(WidgetBridge.readNotes(ctx), variant)
+        }
     }
 }
 
@@ -231,7 +235,8 @@ private fun CombinedNotes(
  */
 private fun maxRowsForSingle(height: androidx.compose.ui.unit.Dp, twoLines: Boolean): Int {
     val chrome = 50.dp
-    val row = if (twoLines) 40.dp else 20.dp
+    // A row with a content line under the title is twice as tall.
+    val row = if (twoLines) 42.dp else 22.dp
     val gap = 3.dp
     return (((height - chrome + gap) / (row + gap)).toInt()).coerceIn(1, 4)
 }
@@ -306,6 +311,15 @@ private fun StickyHalf(
     }
 }
 
+/**
+ * ⭐⭐ Phase W9 — a sticky row is a *headline* plus a *body*:
+ *
+ *   ✦ {title}      ← 15 sp bold, the first line
+ *     {content}    ← 13 sp, the second line (only when there is room)
+ *
+ * Both strings are cut in `widgets.js` with a real ellipsis, because
+ * RemoteViews cannot ellipsize by itself.
+ */
 @Composable
 private fun StickyRow(
     item: PinnedItem,
@@ -314,9 +328,12 @@ private fun StickyRow(
     showPercent: Boolean,
     twoLines: Boolean
 ) {
+    val title = item.title.ifBlank { item.text }
+    val body = item.text
+
     Row(
         modifier = GlanceModifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.Top
     ) {
         Text(
             text = "✦",
@@ -324,18 +341,33 @@ private fun StickyRow(
             maxLines = 1
         )
         HGap(3.dp)
-        Text(
-            text = item.text,
-            modifier = GlanceModifier.defaultWeight(),
-            style = wText(
-                color = if (item.isDone) WidgetSkin.PaperMuted else WidgetSkin.PaperInk,
-                size = 15.sp,
-                weight = FontWeight.Medium,
-                decoration = if (item.isDone) TextDecoration.LineThrough else null
-            ),
-            // ⭐ W8 — two lines of the note itself, not just its title.
-            maxLines = if (twoLines) 2 else 1
-        )
+
+        Column(modifier = GlanceModifier.defaultWeight()) {
+            Text(
+                text = title,
+                style = wText(
+                    color = if (item.isDone) WidgetSkin.PaperMuted else ink,
+                    size = 15.sp,
+                    weight = FontWeight.Bold,
+                    decoration = if (item.isDone) TextDecoration.LineThrough else null
+                ),
+                maxLines = 1
+            )
+
+            if (twoLines && body.isNotBlank() && body != title) {
+                Text(
+                    text = body,
+                    style = wText(
+                        color = if (item.isDone) WidgetSkin.PaperMuted else WidgetSkin.PaperInk,
+                        size = 13.sp,
+                        weight = FontWeight.Medium,
+                        decoration = if (item.isDone) TextDecoration.LineThrough else null
+                    ),
+                    maxLines = 2
+                )
+            }
+        }
+
         if (showPercent) {
             item.percent?.let { value ->
                 HGap(3.dp)

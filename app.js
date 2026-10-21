@@ -365,11 +365,21 @@
     return isAppUrl(u.href);
   }
 
-  function fetchWithTimeout(url, ms) {
-    if (typeof AbortController === 'undefined') return fetch(url, { credentials: 'same-origin' });
+  /**
+   * ⭐⭐⭐ W9 — «قاتل الكاش».
+   *
+   * A page fetched by the shell must never come from the HTTP cache: after an
+   * app update the WebView still holds the previous HTML, and the user would
+   * keep seeing the old settings page. `cache: 'no-store'` forces the network.
+   */
+  function fetchWithTimeout(url, ms, noStore) {
+    var init = { credentials: 'same-origin' };
+    if (noStore) init.cache = 'no-store';
+    if (typeof AbortController === 'undefined') return fetch(url, init);
     var ctrl = new AbortController();
     var timer = setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, ms);
-    return fetch(url, { credentials: 'same-origin', signal: ctrl.signal })
+    init.signal = ctrl.signal;
+    return fetch(url, init)
       .then(function (r) { clearTimeout(timer); return r; },
             function (e) { clearTimeout(timer); throw e; });
   }
@@ -408,7 +418,7 @@
     document.documentElement.classList.add('medapp-navigating');
     showLoader();
 
-    return fetchWithTimeout(url, 15000)
+    return fetchWithTimeout(url, 15000, true)
       .then(function (res) {
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return res.text();
@@ -437,6 +447,9 @@
             jumpScroll(0);
           }
           runViewScripts();
+          // ⭐ W9 — a deep link that navigated here must still be honoured:
+          //    the new view's scripts are already running at this point.
+          try { deepLinkFromLocation(); } catch (e) {}
           // Page scripts may normalise the URL (e.g. my-lectures strips a
           // deep-link query with replaceState) — track the final URL.
           viewKey = location.pathname + location.search;
@@ -702,6 +715,67 @@
   }
 
   // --------------------------------------------------------------------------
+  // ⭐⭐⭐ Phase W9 — deep links (pre12://…)
+  // --------------------------------------------------------------------------
+  // A notification tap (or a widget action) opens the app with a `pre12://`
+  // URL. The shell owns the Capacitor listener so that *every* page reacts —
+  // not only the ones that load widgets.js — and it re-dispatches the target
+  // after an SPA swap, so a link that had to navigate to another page is not
+  // lost on the way.
+  var deepLinksBound = false;
+
+  function dispatchDeepLink(url) {
+    if (!url) return;
+    try {
+      document.dispatchEvent(new CustomEvent('medapp:deeplink', {
+        detail: { url: String(url) }
+      }));
+    } catch (e) {}
+  }
+
+  /**
+   * Reads `?deep=<target>` from the URL, removes it (so a reload does not
+   * fire the same target twice) and dispatches the link.
+   */
+  function deepLinkFromLocation() {
+    try {
+      var params = new URLSearchParams(location.search || '');
+      var deep = params.get('deep');
+      if (!deep) return;
+      params.delete('deep');
+      var query = params.toString();
+      try {
+        history.replaceState(history.state, '',
+          location.pathname + (query ? '?' + query : '') + (location.hash || ''));
+      } catch (e) {}
+      dispatchDeepLink('pre12://' + deep);
+    } catch (e) {}
+  }
+
+  function bindDeepLinks() {
+    if (deepLinksBound) return;
+    deepLinksBound = true;
+    try {
+      var cap = window.Capacitor;
+      var app = cap && cap.Plugins ? cap.Plugins.App : null;
+      if (!app) return;
+      if (typeof app.getLaunchUrl === 'function') {
+        Promise.resolve(app.getLaunchUrl()).then(function (launch) {
+          if (launch && launch.url) {
+            setTimeout(function () { dispatchDeepLink(launch.url); }, 500);
+          }
+        }).catch(function () {});
+      }
+      if (typeof app.addListener === 'function') {
+        var handle = app.addListener('appUrlOpen', function (data) {
+          if (data && data.url) dispatchDeepLink(data.url);
+        });
+        if (handle && typeof handle.catch === 'function') handle.catch(function () {});
+      }
+    } catch (e) {}
+  }
+
+  // --------------------------------------------------------------------------
   // Install shell listeners, THEN start recording the page's own listeners
   // --------------------------------------------------------------------------
   // Save the scroll position continuously (debounced) so Back/Forward also
@@ -763,6 +837,11 @@
   });
 
   recording = true;
+
+  // ⭐ W9 — the deep-link listener lives in the shell, so it survives every
+  //    body swap (an external script's listeners would not).
+  bindDeepLinks();
+  try { deepLinkFromLocation(); } catch (e) {}
 
   // ⭐ راقب تبديل الثيم لإضافة انتقال ناعم في كل الصفحات.
   watchThemeChanges();

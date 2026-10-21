@@ -97,7 +97,10 @@ enum class StreakDayState {
 
 data class StreakDay(
     val date: String = "",
+    /** One-letter Arabic initial (س، ح، ن…) — the compact fallback. */
     val label: String = "",
+    /** The full Arabic day name (السبت، الأحد…) — Phase W9. */
+    val name: String = "",
     val state: StreakDayState = StreakDayState.MISSED
 )
 
@@ -119,9 +122,15 @@ data class StreakSummary(
 
 data class PinnedItem(
     val id: String,
+    /** The body of the note (or the goal text when there is no body). */
     val text: String,
     val kind: String,        // "goal" | "note"
     val isDone: Boolean,
+    /**
+     * The headline of the note — Phase W9 shows it on the first line, with the
+     * body underneath. Falls back to [text] when the payload has no title.
+     */
+    val title: String = "",
     /**
      * Goal progress, 0..100, computed by `widgets.js` from
      * `current_value / target_value`. Null for notes and for simple goals, so
@@ -212,14 +221,25 @@ object WidgetBridge {
         parseTodayTasks(prefs(context).getString(KEY_TASKS_TODAY, null))
 
     /**
-     * Applies an optimistic checkbox change inside the stored payload.
-     * Returns the new state of the task, or null when it is not in the payload.
+     * ⭐⭐ Phase W9 — the three steps of a checkbox tap, exposed separately so
+     * the action can run them in the exact order the widget needs:
+     * read → mark → save. Everything is synchronous (`commit`), so the redraw
+     * that follows always reads the new state.
      */
-    @Synchronized
-    fun applyTaskToggle(context: Context, taskId: String, done: Boolean): Boolean? {
-        val raw = prefs(context).getString(KEY_TASKS_TODAY, null) ?: return null
+    fun readTasksJson(context: Context): String? =
+        prefs(context).getString(KEY_TASKS_TODAY, null)
+
+    /** Saves the tasks payload. `commit()` — never `apply()`. */
+    fun writeTasksJson(context: Context, json: String): Boolean =
+        prefs(context).edit().putString(KEY_TASKS_TODAY, json).commit()
+
+    /**
+     * Marks one task as done inside a payload and returns the **new** JSON,
+     * or null when the task is not part of the payload.
+     */
+    fun markTaskDone(tasksJson: String, taskId: String, done: Boolean): String? {
         return try {
-            val root = JSONObject(raw)
+            val root = JSONObject(tasksJson)
             val array = root.optJSONArray("items") ?: return null
             var found = false
             var completed = 0
@@ -239,11 +259,22 @@ object WidgetBridge {
             root.put("done", completed)
             root.put("total", array.length())
             root.put("updatedAt", isoNow())
-            prefs(context).edit().putString(KEY_TASKS_TODAY, root.toString()).commit()
-            done
+            root.toString()
         } catch (_: Exception) {
             null
         }
+    }
+
+    /**
+     * Applies an optimistic checkbox change inside the stored payload.
+     * Returns the new state of the task, or null when it is not in the payload.
+     */
+    @Synchronized
+    fun applyTaskToggle(context: Context, taskId: String, done: Boolean): Boolean? {
+        val raw = readTasksJson(context) ?: return null
+        val updated = markTaskDone(raw, taskId, done) ?: return null
+        writeTasksJson(context, updated)
+        return done
     }
 
     /**
@@ -349,6 +380,7 @@ object WidgetBridge {
                 days += StreakDay(
                     date = obj.optString("date", ""),
                     label = obj.optString("label", ""),
+                    name = obj.optString("name", ""),
                     state = StreakDayState.from(obj.optString("state", "missed"))
                 )
             }
@@ -386,6 +418,7 @@ object WidgetBridge {
                     text = text,
                     kind = obj.optString("kind", "note"),
                     isDone = obj.optBoolean("done", false),
+                    title = obj.optString("title", "").trim().ifEmpty { text },
                     percent = if (obj.has("percent") && !obj.isNull("percent")) {
                         obj.optInt("percent", 0).coerceIn(0, 100)
                     } else {

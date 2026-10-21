@@ -9,6 +9,7 @@ import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
+import androidx.glance.LocalContext
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
@@ -42,8 +43,12 @@ import com.pre12.medical.R
 class SimpleStreakWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val streak = WidgetBridge.readStreak(context)
-        provideContent { SimpleStreakCard(streak) }
+        // ⭐ W9 — read inside the composition so every recomposition (and not
+        // only the first one) shows the current streak.
+        provideContent {
+            val ctx = LocalContext.current
+            SimpleStreakCard(WidgetBridge.readStreak(ctx))
+        }
     }
 }
 

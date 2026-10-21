@@ -305,7 +305,10 @@
 
       return {
         date: day.key,
+        // ⭐ W9 — the full Arabic name (السبت، الأحد…) plus the one-letter
+        //    initial as a fallback for a payload from an older build.
         label: initialOf(day.weekday),
+        name: String(day.weekday || ''),
         state: state
       };
     });
@@ -318,6 +321,19 @@
       days: days,
       updatedAt: new Date().toISOString()
     };
+  }
+
+  /**
+   * Cuts a string and adds a real ellipsis.
+   *
+   * RemoteViews cannot ellipsize by itself, so the widget would show a hard
+   * cut. Cutting here keeps the last line readable.
+   */
+  function cutText(value, limit) {
+    var text = String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
+    var max = Math.max(8, Number(limit) || 60);
+    if (text.length <= max) return text;
+    return text.slice(0, max - 1) + '…';
   }
 
   function buildNotesPayload() {
@@ -341,9 +357,16 @@
         var percent = target > 0
           ? Math.max(0, Math.min(100, Math.round((current / target) * 100)))
           : null;
+        var title = String(goal.text || '').replace(/\s+/g, ' ').trim();
+        // ⭐ W9 — the second line of a goal is its progress: «12 / 50 صفحة».
+        var unit = String(goal.unit || '').trim();
+        var progress = target > 0
+          ? (current + ' / ' + target + (unit ? ' ' + unit : ''))
+          : '';
         return {
           id: String(goal.id || ('goal-' + index)),
-          text: String(goal.text).replace(/\s+/g, ' ').trim().slice(0, 90),
+          title: cutText(title, 46),
+          text: cutText(progress || title, 90),
           kind: 'goal',
           done: !!goal.completed,
           percent: percent
@@ -359,19 +382,17 @@
       })
       .slice(0, MAX_PER_KIND)
       .map(function (note, index) {
-        // ⭐⭐ Phase W8 — the widget shows the *content* of the note, not only
-        // its title. The title stays as the fallback for a note that has no
-        // body yet, and the text is cut with a real ellipsis because
-        // RemoteViews cannot ellipsize by itself.
+        // ⭐⭐ Phase W9 — the widget shows the **title** on the first line and
+        // the **content** underneath. Both are cut with a real ellipsis,
+        // because RemoteViews cannot ellipsize by itself.
         var body = String(note.content || note.body || note.text || '')
           .replace(/\s+/g, ' ')
           .trim();
         var title = String(note.title || '').replace(/\s+/g, ' ').trim();
-        var text = body || title;
-        if (text.length > 110) text = text.slice(0, 109) + '…';
         return {
           id: String(note.id || ('note-' + index)),
-          text: text,
+          title: cutText(title || body, 46),
+          text: cutText(body || title, 110),
           kind: 'note',
           done: false
         };
@@ -607,6 +628,11 @@
     var group = document.getElementById('homeWidgetsGroup');
     if (!group) return;
 
+    // ⭐⭐ Phase W9 — `index.html` now carries the final single premium button
+    // (#addWidgetHeroBtn + the helper text). There is nothing to inject, and
+    // the hero must NOT be hidden any more: it *is* the button.
+    if (document.getElementById('addWidgetHeroBtn')) return;
+
     var grid = group.querySelector('.widget-grid');
     if (!grid) return;
     if (grid.getAttribute('data-premium') === '1') return;
@@ -676,10 +702,13 @@
 
     try {
       api.isPinWidgetSupported().then(function (result) {
-        var hint = document.getElementById('widgetHint');
-        if (!hint) return;
+        // ⭐ W9 — the hint lives inside the hero block now (no id), so the
+        //    launcher support is reported with a toast instead.
         if (result && result.supported === false) {
-          hint.textContent = 'مُشغّلك لا يدعم الإضافة السريعة — اضغط مطوّلاً على الشاشة الرئيسية ثم «الودجات».';
+          var hint = document.getElementById('widgetHint');
+          if (hint) {
+            hint.textContent = 'مُشغّلك لا يدعم الإضافة السريعة — اضغط مطوّلاً على الشاشة الرئيسية ثم «التطبيقات المصغرة».';
+          }
         }
       }).catch(function () {});
     } catch (e) {}
@@ -796,6 +825,20 @@
       return true;
     }
 
+    // ⭐ W9 — the update notifications land on the update dialog.
+    if (target === 'updates' || target === 'update') {
+      if (here === 'index.html') {
+        setTimeout(function () {
+          try {
+            if (typeof global.checkForAppUpdate === 'function') global.checkForAppUpdate();
+          } catch (e) {}
+        }, 450);
+      } else {
+        navigateTo('index.html?deep=updates');
+      }
+      return true;
+    }
+
     if (target === 'lectures' || target === 'lecture') {
       if (here !== 'my-lectures.html') navigateTo('my-lectures.html');
       return true;
@@ -830,7 +873,10 @@
           setTimeout(function () { handleDeepLink(pendingDeepLink); }, 800);
         }
       }
-      if (typeof app.addListener === 'function') {
+      // ⭐ W9 — when the shell (app.js) is present it owns the Capacitor
+      //    listener and re-dispatches every link as a 'medapp:deeplink' DOM
+      //    event (also after an SPA swap). Two owners would navigate twice.
+      if (!global.MedApp && typeof app.addListener === 'function') {
         var handle = app.addListener('appUrlOpen', function (data) {
           if (data && data.url) handleDeepLink(data.url);
         });
@@ -843,40 +889,75 @@
   // Boot
   // ----------------------------------------------------------
 
-  function boot() {
-    renderPremiumSettings();
-    syncDiscoveryUi();
-    // The Capacitor bridge can finish registering a beat after DOMContentLoaded.
-    setTimeout(syncDiscoveryUi, 1500);
-    document.addEventListener('deviceready', syncDiscoveryUi);
-    if (!plugin()) {
-      primeDeepLinks();
-      return;
-    }
+  /**
+   * ⭐⭐⭐ Phase W9 — the bridge listeners must survive an SPA navigation.
+   *
+   * The shell (`app.js`) removes every window/document listener of the view it
+   * replaces — and `widgets.js` is an *external* script, so it is never
+   * executed again. Without this fix the whole widget bridge died after the
+   * first navigation: tapping a task in the app updated nothing on the home
+   * screen.
+   *
+   * `bindBridge()` is idempotent (it detaches the previous handlers first), so
+   * it can be called again whenever the body is swapped.
+   */
+  var bridgeHandlers = null;
 
-    refresh('boot');
-    primeDeepLinks();
+  function unbindBridge() {
+    if (!bridgeHandlers) return;
+    var h = bridgeHandlers;
+    bridgeHandlers = null;
+    try { global.removeEventListener('taskUpdated', h.taskUpdated); } catch (e) {}
+    try { global.removeEventListener('online', h.online); } catch (e) {}
+    try { document.removeEventListener('medapp:deeplink', h.deepLink); } catch (e) {}
+    try { global.removeEventListener('visibilitychange', h.visibility); } catch (e) {}
+    try { global.removeEventListener('pagehide', h.pagehide); } catch (e) {}
+    if (h.pluginTask && typeof h.pluginTask.remove === 'function') {
+      try { h.pluginTask.remove(); } catch (e) {}
+    }
+    if (h.pluginUpdate && typeof h.pluginUpdate.remove === 'function') {
+      try { h.pluginUpdate.remove(); } catch (e) {}
+    }
+  }
+
+  function bindBridge() {
+    unbindBridge();
+
+    var handlers = {};
 
     // Publish *before* the WebView is frozen: the launcher repaints as soon as
     // the user reaches the home screen, so a goals/notes edit must already be in
     // prefs. `visible` stays for the reverse direction and for missed publishes.
-    document.addEventListener('visibilitychange', function () {
+    handlers.visibility = function () {
       refresh(document.hidden ? 'hidden' : 'visible');
-    });
-    global.addEventListener('pagehide', function () {
-      refresh('pagehide');
-    });
+    };
+    document.addEventListener('visibilitychange', handlers.visibility);
 
-    global.addEventListener('taskUpdated', function () {
+    handlers.pagehide = function () {
+      refresh('pagehide');
+    };
+    global.addEventListener('pagehide', handlers.pagehide);
+
+    handlers.taskUpdated = function () {
       // ⭐ W8 — repaint the card first (no network), then let the full
       //    publish catch up with the streak and the notes.
       pushTasksNow();
       setTimeout(function () { refresh('task'); }, 350);
-    });
+    };
+    global.addEventListener('taskUpdated', handlers.taskUpdated);
 
-    global.addEventListener('online', function () {
+    handlers.online = function () {
       setTimeout(function () { refresh('online'); }, 1200);
-    });
+    };
+    global.addEventListener('online', handlers.online);
+
+    // ⭐ W9 — the shell (app.js) owns the Capacitor deep-link listener and
+    //    re-dispatches it as a DOM event, also after an SPA swap.
+    handlers.deepLink = function (event) {
+      var url = event && event.detail ? event.detail.url : '';
+      if (url) handleDeepLink(url);
+    };
+    document.addEventListener('medapp:deeplink', handlers.deepLink);
 
     try {
       var api = plugin();
@@ -884,21 +965,59 @@
         // ⭐ W8 — a widget tap is applied to the app *now*: the pending queue
         //    is drained locally, `setTaskCompleted` writes the local state and
         //    dispatches 'taskUpdated', so the open screen repaints at once.
-        var registration = api.addListener('widgetTaskToggled', function () {
+        handlers.pluginTask = api.addListener('widgetTaskToggled', function () {
           refresh('widget-toggle');
         });
-        if (registration && typeof registration.catch === 'function') {
-          registration.catch(function () {});
+        if (handlers.pluginTask && typeof handlers.pluginTask.catch === 'function') {
+          handlers.pluginTask.catch(function () {});
         }
 
-        var taskRegistration = api.addListener('taskUpdated', function () {
+        handlers.pluginUpdate = api.addListener('taskUpdated', function () {
           refresh('widget-task');
         });
-        if (taskRegistration && typeof taskRegistration.catch === 'function') {
-          taskRegistration.catch(function () {});
+        if (handlers.pluginUpdate && typeof handlers.pluginUpdate.catch === 'function') {
+          handlers.pluginUpdate.catch(function () {});
         }
       }
     } catch (e) {}
+
+    bridgeHandlers = handlers;
+  }
+
+  /**
+   * Re-binds the bridge after every body swap.
+   *
+   * A `MutationObserver` is not a DOM listener, so the shell cannot remove it
+   * when it replaces the view — it is the only reliable "the page changed"
+   * signal an external script can get.
+   */
+  function watchViewSwaps() {
+    if (typeof global.MutationObserver !== 'function') return;
+    if (!document.body) return;
+    try {
+      var observer = new MutationObserver(function () {
+        // The shell swaps the whole body in one go; a microtask is enough.
+        setTimeout(function () { bindBridge(); }, 0);
+      });
+      observer.observe(document.body, { childList: true });
+    } catch (e) {}
+  }
+
+  function boot() {
+    renderPremiumSettings();
+    syncDiscoveryUi();
+    // The Capacitor bridge can finish registering a beat after DOMContentLoaded.
+    setTimeout(syncDiscoveryUi, 1500);
+    document.addEventListener('deviceready', syncDiscoveryUi);
+    bindBridge();
+    watchViewSwaps();
+    if (!plugin()) {
+      primeDeepLinks();
+      return;
+    }
+
+    refresh('boot');
+    primeDeepLinks();
   }
 
   global.MedAppWidgets = {

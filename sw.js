@@ -3,7 +3,7 @@
 // Version 4.1.0 — SPA shell + network-first HTML + cache-first JSON
 // ============================================
 
-const CACHE_VERSION = 'v5.0.0-beta.4';
+const CACHE_VERSION = 'v5.0.0-beta.5';
 const STATIC_CACHE  = `medfav-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `medfav-runtime-${CACHE_VERSION}`;
 const PDF_CACHE     = `medfav-pdf-${CACHE_VERSION}`;
@@ -49,7 +49,7 @@ const PRECACHE_URLS = [
   '/ui.js',
   '/search.js',
   '/app.js',
-  '/app.js?v=5.0.0-beta.4',
+  '/app.js?v=5.0.0-beta.5',
   '/widgets.js',
   '/streak.js',
   '/native.js',
@@ -254,9 +254,14 @@ async function handleJSONRequest(request) {
 }
 
 // صفحات HTML — Network First (تحديث فوري بعد كل نشر)
+//
+// ⭐⭐⭐ W9 — «قاتل الكاش»:
+//   fetch العادي قد يخدم نسخة *قديمة* من ذاكرة WebView (HTTP cache) بعد
+//   تحديث التطبيق، فتبقى صفحة الودجات على واجهتها القديمة. `cache: 'no-store'`
+//   يجبر الطلب على الشبكة، و `reload` يتجاوز ذاكرة الوسيط.
 async function handleHTMLRequest(request) {
   try {
-    const network = await fetch(request);
+    const network = await fetch(new Request(request, { cache: 'no-store' }));
     if (network && network.status === 200) {
       const cache = await caches.open(STATIC_CACHE);
       cache.put(request, network.clone());
@@ -284,8 +289,11 @@ async function handleLocalRequest(request) {
     //    فتخلط الصفحة الجديدة (HTML) مع JavaScript قديم ✗
     //    فيظهر التطبيق مكسوراً بعد التحديث.
     const isVersioned = /[?&]v=/.test(request.url);
+    // ⭐ W9 — a caller that asks for "no-store" (the shell) always wants the
+    //    network, never the cache.
+    const forceNetwork = request.cache === 'no-store';
 
-    if (!isVersioned) {
+    if (!isVersioned && !forceNetwork) {
       let cached = await caches.match(request);
       if (cached) {
         updateCacheInBackground(request);
@@ -300,7 +308,9 @@ async function handleLocalRequest(request) {
       }
     }
 
-    const network = await fetch(request);
+    const network = await fetch(
+      forceNetwork ? new Request(request, { cache: 'no-store' }) : request
+    );
     if (network && network.status === 200) {
       const cache = await caches.open(STATIC_CACHE);
       cache.put(request, network.clone());

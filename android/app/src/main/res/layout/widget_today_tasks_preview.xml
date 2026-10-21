@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Phase W8 — picker preview for «مهام اليوم» at 3×2 (wide). Mirrors TodayTasksWidget.kt. -->
+<!-- Phase W9 — picker preview for «مهام اليوم» at 3×2 (wide). Mirrors TodayTasksWidget.kt. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -15,6 +15,17 @@
         android:orientation="horizontal">
 
         <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:fontFamily="@font/tajawal_bold"
+            android:gravity="start"
+            android:maxLines="1"
+            android:text="@string/widget_today_tasks_preview_count"
+            android:textColor="#FF34D399"
+            android:textSize="10sp" />
+
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:fontFamily="@font/tajawal_extrabold"
@@ -24,34 +35,28 @@
             android:textSize="20sp" />
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
-            android:background="@drawable/widget_preview_pill_green"
-            android:fontFamily="@font/tajawal_bold"
-            android:paddingStart="7dp"
-            android:paddingTop="2dp"
-            android:paddingEnd="7dp"
-            android:paddingBottom="2dp"
-            android:text="@string/widget_today_tasks_preview_count"
-            android:textColor="#FF34D399"
-            android:textSize="10sp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
+            android:layout_weight="1"
             android:fontFamily="@font/tajawal_regular"
+            android:gravity="end"
             android:maxLines="1"
             android:text="مكتملة اليوم"
             android:textColor="#FF94A3B8"
             android:textSize="10sp" />
     </LinearLayout>
 
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="7dp"
+        android:background="#1FFFFFFF" />
+
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="30dp"
-        android:layout_marginTop="6dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="7dp"
+        android:layout_weight="1"
         android:gravity="center_vertical"
         android:orientation="horizontal">
         <FrameLayout
@@ -80,8 +85,8 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="30dp"
-        android:layout_marginTop="6dp"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:gravity="center_vertical"
         android:orientation="horizontal">
         <ImageView
@@ -102,8 +107,8 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="30dp"
-        android:layout_marginTop="6dp"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:gravity="center_vertical"
         android:orientation="horizontal">
         <ImageView
