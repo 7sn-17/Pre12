@@ -1314,10 +1314,32 @@ function medappFileExtension(meta, record) {
   return 'pdf';
 }
 
+/**
+ * ⭐ v5.1.2 — اسم ملف نظيف من العنوان العربي الأصلي.
+ *   يمنع أن يظهر للمستخدم اسم عشوائي (UUID) عند المشاركة أو الفتح.
+ *   • المسافات → _
+ *   • يُحذف كل ما لا يصلح في أسماء الملفات (\\ / : * ? " < > | والرموز المخفية)
+ *   • علامات الاتجاه (RTL/LTR) تُحذف لأنها تُربك بعض التطبيقات
+ *   • الامتداد يُضاف دائماً (pdf افتراضياً)
+ */
+function medappSanitizeFileName(value) {
+  var raw = String(value == null ? '' : value)
+    .replace(/[\u0000-\u001f\u007f]/g, '')
+    .replace(/[\\/:*?"<>|]/g, '')
+    .replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, '')
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^[._]+|[._]+$/g, '')
+    .slice(0, 80);
+  return raw.trim();
+}
+
 function medappDownloadFileName(meta, record) {
-  // اسم لاتيني قصير وآمن (بعض القارئات لا تتعامل جيداً مع أسماء عربية داخل file://)
-  return 'medapp-file-' + String(meta.id).replace(/[^a-zA-Z0-9_-]/g, '') +
-    '.' + medappFileExtension(meta, record);
+  var ext = medappFileExtension(meta, record);
+  var base = medappSanitizeFileName(meta && meta.title);
+  if (!base) base = 'ملف_' + String((meta && meta.id) || Date.now());
+  if (!base.toLowerCase().endsWith('.' + ext)) base += '.' + ext;
+  return base;
 }
 
 async function medappFindDownloaded(fileId) {
@@ -1450,5 +1472,215 @@ async function openDownloadedFileExternally(fileId) {
     console.warn('[files] openDownloadedFileExternally failed:', err);
     medappToast('تعذّر فتح الملف — تأكد من وجود تطبيق يدعم هذا النوع', 'error');
     return false;
+  }
+}
+
+// ============================================
+// 23. تنزيل حقيقي مع نسبة تقدّم + إشعار محلي
+// ============================================
+// ⭐ v5.1.2 — على أندرويد نستخدم @capacitor/file-transfer:
+//   • التنزيل يتم في الخلفية (لا يتوقّف عند إخفاء الواجهة).
+//   • progress حقيقي بالبايتات ⇒ نعرض النسبة على الزرّ.
+//   • إشعار محلي يتحدّث بالنسبة ويُزال عند الانتهاء.
+//   • على الويب (أو إن فشلت الإضافة) نرجع إلى fetch في db.js.
+
+var MEDAPP_DL_NOTIF_ID = 90210;
+var medappDlNotif = { shown: false, pct: -1, title: '' };
+var medappActiveDownloadUrl = '';
+
+function medappBase64ToBlob(base64, mime) {
+  var clean = String(base64 || '').replace(/^data:[^,]*,/, '');
+  var binary;
+  try {
+    binary = atob(clean);
+  } catch (e) {
+    binary = '';
+  }
+  var len = binary.length;
+  var bytes = new Uint8Array(len);
+  for (var i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mime || 'application/pdf' });
+}
+
+/**
+ * ⭐ يحدّث/يُنشئ/يزيل إشعار التنزيل. صامت تماماً على الويب.
+ */
+async function medappDownloadNotify(fileInfo, pct, finished) {
+  if (!medappIsNative()) return;
+  var LocalNotifications = medappPlugin('LocalNotifications');
+  if (!LocalNotifications || typeof LocalNotifications.schedule !== 'function') return;
+
+  var title = (fileInfo && fileInfo.title) ? String(fileInfo.title) : 'ملف';
+  var value = Math.max(0, Math.min(100, Number(pct) || 0));
+
+  try {
+    if (finished) {
+      if (typeof LocalNotifications.cancel === 'function') {
+        await LocalNotifications.cancel({ notifications: [{ id: MEDAPP_DL_NOTIF_ID }] });
+      }
+      medappDlNotif = { shown: false, pct: -1, title: '' };
+      return;
+    }
+
+    // ⭐ لا نُغرق نظام الإشعارات: تحديث عند كل 5% أو تغيّر الملف.
+    if (medappDlNotif.shown && medappDlNotif.title === title &&
+        value < 100 && Math.abs(value - medappDlNotif.pct) < 5) {
+      return;
+    }
+
+    try {
+      if (typeof LocalNotifications.requestPermissions === 'function') {
+        LocalNotifications.requestPermissions();
+      }
+    } catch (e) {}
+
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: MEDAPP_DL_NOTIF_ID,
+        title: 'جارٍ تحميل ' + title + '…',
+        body: value > 0 ? value + '%' : 'جارٍ البدء…',
+        channelId: 'medapp_content',
+        smallIcon: 'ic_stat_icon',
+        ongoing: true,
+        autoCancel: false
+      }]
+    });
+
+    medappDlNotif = { shown: true, pct: value, title: title };
+  } catch (err) {
+    // صلاحية الإشعارات قد تكون مرفوضة — التنزيل يستمرّ بلا إشعار.
+    console.warn('[files] download notification skipped:', err);
+  }
+}
+
+/**
+ * ⭐ تنزيل عبر FileTransfer إلى الكاش ثم قراءته كـ Blob وحفظه في IndexedDB.
+ * @returns {Promise<object|null>} null إذا كانت الإضافة غير متاحة.
+ */
+async function medappDownloadViaFileTransfer(fileInfo, onProgress) {
+  var Filesystem = medappPlugin('Filesystem');
+  var FileTransfer = medappPlugin('FileTransfer');
+  var url = fileInfo && (fileInfo.file_url || fileInfo.external_url);
+  if (!Filesystem || !FileTransfer || !url) return null;
+
+  var name = medappDownloadFileName(fileInfo, null);
+  var uri = null;
+  try {
+    var got = await Filesystem.getUri({ path: name, directory: 'CACHE' });
+    uri = got && got.uri;
+  } catch (e) { /* نجرّب الاسم وحده */ }
+  if (!uri) uri = name;
+
+  var handle = null;
+  var active = true;
+  var lastPct = 0;
+
+  try {
+    if (typeof FileTransfer.addListener === 'function') {
+      var sub = FileTransfer.addListener('progress', function (p) {
+        if (!active || !p || p.type !== 'download') return;
+        // ⭐ نتجاهل تنزيلاً آخر يعمل بالتوازي (المستمع عام للإضافة).
+        if (p.url && medappActiveDownloadUrl && p.url !== medappActiveDownloadUrl) {
+          var sameUrl = false;
+          try {
+            sameUrl = decodeURIComponent(p.url) === decodeURIComponent(medappActiveDownloadUrl);
+          } catch (e) { sameUrl = false; }
+          if (!sameUrl) return;
+        }
+        var total = Number(p.contentLength) || 0;
+        var bytes = Number(p.bytes) || 0;
+        var pct = total > 0
+          ? Math.max(1, Math.min(99, Math.round((bytes / total) * 100)))
+          : 0;
+
+        if (pct && pct !== lastPct) {
+          lastPct = pct;
+          if (typeof onProgress === 'function') {
+            try { onProgress(pct, bytes, total); } catch (e) {}
+          }
+          medappDownloadNotify(fileInfo, pct, false);
+        }
+      });
+      handle = (sub && typeof sub.then === 'function') ? await sub : sub;
+    }
+
+    medappActiveDownloadUrl = url;
+    await medappDownloadNotify(fileInfo, 0, false);
+
+    var result = await FileTransfer.downloadFile({ url: url, path: uri, progress: true });
+
+    var mime = (fileInfo && fileInfo.mime_type) ||
+      (fileInfo && fileInfo.category === 'image' ? 'image/jpeg' : 'application/pdf');
+    var blob = null;
+
+    if (result && result.blob) {
+      blob = result.blob;                        // الويب
+    } else {
+      var file = await Filesystem.readFile({ path: name, directory: 'CACHE' });
+      blob = medappBase64ToBlob(file && file.data, mime);
+    }
+
+    if (!blob || !blob.size) throw new Error('الملف المُنزَّل فارغ');
+
+    var saved = typeof saveDownloadedFile === 'function'
+      ? await saveDownloadedFile(fileInfo, blob)
+      : false;
+    if (!saved) throw new Error('فشل الحفظ في الجهاز');
+
+    try {
+      await Filesystem.deleteFile({ path: name, directory: 'CACHE' });
+    } catch (e) { /* نسخة مؤقتة — تجاهل */ }
+
+    if (typeof onProgress === 'function') {
+      try { onProgress(100, blob.size, blob.size); } catch (e) {}
+    }
+    medappDownloadNotify(fileInfo, 100, true);
+
+    return { success: true, blob: blob, size: blob.size, native: true };
+  } finally {
+    active = false;
+    medappActiveDownloadUrl = '';
+    if (handle && typeof handle.remove === 'function') {
+      try { handle.remove(); } catch (e) {}
+    }
+    medappDownloadNotify(fileInfo, 0, true);
+  }
+}
+
+/**
+ * ⭐ نقطة الدخول الموحّدة للتنزيل مع تقدّم.
+ *   • أندرويد: FileTransfer (خلفية + نسبة حقيقية + إشعار).
+ *   • الويب/الفشل: downloadAndSaveFile في db.js (fetch + حفظ + تنزيل).
+ */
+async function medappDownloadFile(fileInfo, onProgress) {
+  if (!fileInfo || !(fileInfo.file_url || fileInfo.external_url)) {
+    return { success: false, error: 'رابط الملف غير متوفر' };
+  }
+
+  if (medappIsNative() && medappPlugin('FileTransfer') && medappPlugin('Filesystem')) {
+    try {
+      var nativeResult = await medappDownloadViaFileTransfer(fileInfo, onProgress);
+      if (nativeResult) return nativeResult;
+    } catch (err) {
+      console.warn('[files] FileTransfer failed — falling back to fetch:', err);
+    }
+  }
+
+  if (typeof downloadAndSaveFile === 'function') {
+    return await downloadAndSaveFile(fileInfo, onProgress);
+  }
+
+  // احتياط أخير (صفحة بلا db.js)
+  try {
+    var res = await fetch(fileInfo.file_url || fileInfo.external_url);
+    if (!res.ok) throw new Error('فشل التحميل (' + res.status + ')');
+    var fallbackBlob = await res.blob();
+    if (typeof saveDownloadedFile === 'function') {
+      await saveDownloadedFile(fileInfo, fallbackBlob);
+    }
+    if (typeof onProgress === 'function') onProgress(100, fallbackBlob.size, fallbackBlob.size);
+    return { success: true, blob: fallbackBlob, size: fallbackBlob.size };
+  } catch (err) {
+    return { success: false, error: err.message || 'تعذّر التحميل' };
   }
 }

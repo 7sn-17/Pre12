@@ -1742,6 +1742,7 @@ function searchDocument(term) {
   if (!q) {
     state.searchMatches = [];
     state.searchMatchIndex = -1;
+    clearSearchHighlights();
     renderSearchResults();
     updateSearchStatus();
     updateSearchNav();
@@ -1840,13 +1841,17 @@ function renderSearchResults() {
     item.addEventListener('click', () => {
       const index = parseInt(item.dataset.index, 10);
       if (isNaN(index)) return;
+
+      // ⭐⭐⭐ v5.1.2 — الجذر الحقيقي للعطل:
+      //   كان closeSearch() يُفرّغ state.searchMatches قبل قراءة النتيجة،
+      //   فتُمرَّر undefined إلى jumpToMatch() التي ترجع فوراً ⇒ «لا شيء يحدث».
+      //   الحل: نقرأ النتيجة أولاً، وcloseSearch() صارت تُخفي فقط.
+      const match = state.searchMatches[index];
+      if (!match) return;
+
       state.searchMatchIndex = index;
-      // ⭐⭐ v4.6.5 — STEP 1: إغلاق نافذة البحث فوراً.
-      closeSearch();
-      // ⭐ STEP 2: ثم القفز إلى الموضع الدقيق + التظليل.
-      jumpToMatch(state.searchMatches[index]);
-      renderSearchResults();
       updateSearchNav();
+      jumpToMatch(match);
     });
   });
   };
@@ -1869,66 +1874,135 @@ function updateSearchNav() {
   if (els.searchNextBtn) els.searchNextBtn.disabled = total < 1;
 }
 
+/* ═══════════════════════════════════════════════════════
+   ⭐⭐⭐ v5.1.2 — TASK 4: قفزة بحث PDF موثوقة
+   ------------------------------------------------------------
+   المشاكل التي كانت موجودة فعلياً في الكود:
+   1) نقر النتيجة كان يفرّغ state.searchMatches قبل قراءتها.
+   2) closeSearch() كان يمسح searchTerm ⇒ highlightMatch ترجع فوراً.
+   3) ثلاثة أوامر تمرير smooth متزامنة (scrollIntoView + viewer.scrollTo
+      + window.scrollTo) تتسابق، فيفوز آخرها ويضيع الموضع.
+   4) قياس موضع الكلمة قبل استقرار ارتفاع الصفحات (virtualization).
+   الحل: إخفاء بلا مسح + انتظار عنصر النصّ فعلياً + تمريرة واحدة
+   على حاوية العرض الصحيحة + تصحيح ذاتي بعد استقرار التخطيط.
+   ═══════════════════════════════════════════════════════ */
+
+/** ⭐ إطار رسم واحد */
+function nextFrame() {
+  return new Promise(function (resolve) {
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(function () { resolve(); });
+    } else {
+      setTimeout(resolve, 16);
+    }
+  });
+}
+
+/** ⭐ سقف زمني لأي وعد (حتى لا يتجمّد النقر أبداً) */
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise(function (resolve) { setTimeout(function () { resolve(false); }, ms); })
+  ]);
+}
+
+/** ⭐ ينتظر ظهور حاوية الصفحة (بعد createPlaceholders) */
+function waitForPageElement(pageNum, timeoutMs) {
+  return new Promise(function (resolve) {
+    var started = Date.now();
+    var limit = timeoutMs || 3000;
+    (function check() {
+      var el = document.querySelector('.pdf-page[data-page-num="' + pageNum + '"]');
+      if (el) { resolve(el); return; }
+      if (Date.now() - started > limit) { resolve(null); return; }
+      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(check);
+      else setTimeout(check, 60);
+    })();
+  });
+}
+
+/**
+ * ⭐⭐ التمرير الصحيح: نحرّك حاوية العرض (els.viewer) وحدها.
+ *   (كان الكود يحرّك window أيضاً؛ window غير قابل للتمرير هنا،
+ *    وكانت الحركات الثلاث تتنافس.)
+ */
+function scrollViewerTo(node, offset, behavior) {
+  if (!node || !els.viewer) return;
+  var vRect = els.viewer.getBoundingClientRect();
+  var nRect = node.getBoundingClientRect();
+  var delta = nRect.top - vRect.top;
+  var max = Math.max(0, els.viewer.scrollHeight - els.viewer.clientHeight);
+  var top = Math.max(0, Math.min(max, els.viewer.scrollTop + delta - (offset || 0)));
+  try {
+    els.viewer.scrollTo({ top: top, behavior: behavior || 'auto' });
+  } catch (e) {
+    els.viewer.scrollTop = top;
+  }
+}
+
+/** ⭐ تصحيح ذاتي بعد أن تُرسم صفحات أخرى وتتغيّر الارتفاعات */
+function correctScrollFor(node, offset, tolerance) {
+  if (!node || !node.isConnected || !els.viewer) return;
+  var vRect = els.viewer.getBoundingClientRect();
+  var nRect = node.getBoundingClientRect();
+  var delta = nRect.top - vRect.top;
+  if (Math.abs(delta - offset) <= (tolerance || 24)) return;
+  scrollViewerTo(node, offset, 'auto');
+}
+
 /**
  * ⭐ القفز إلى المطابقة: الصفحة + الموضع Y الدقيق + التظليل.
+ * @param {object} match  { page, offset, itemIdx }
+ * @param {object} [options] { keepOverlay, term }
  */
-async function jumpToMatch(match) {
-  if (!match) return;
-  const pageNum = match.page;
+async function jumpToMatch(match, options) {
+  if (!match) return false;
+  options = options || {};
 
-  // ⭐⭐ v4.6.6 — STEP 1: إغلاق نافذة البحث فوراً.
-  closeSearch();
+  const pageNum = Number(match.page) || 1;
+  const term = state.searchTerm || options.term || '';
 
-  // ⭐ STEP 2: إجبار العارض على الانتقال إلى الصفحة الهدف
-  //   (الـvirtualized renderer يتطلّب ذلك قبل أن تُرسم).
-  var el = document.querySelector('.pdf-page[data-page-num="' + pageNum + '"]');
-  if (!el) return;
+  // STEP 0 — إخفاء النافذة فقط (بلا مسح النتائج أو الكلمة).
+  if (!options.keepOverlay) hideSearchOverlay();
 
+  // STEP 1 — حاوية الصفحة موجودة دائماً بعد createPlaceholders.
+  const el = await waitForPageElement(pageNum, 3000);
+  if (!el) return false;
+
+  // STEP 2 — أعِد الصفحة إلى منطقة العرض قبل الرسم.
   if (state.singlePage) {
     setCurrentPage(pageNum, true);
   } else {
-    // ⭐ نضع الصفحة في مكانها الصحيح داخل العمود المرئي.
-    el.scrollIntoView({ behavior: 'auto', block: 'start' });
+    scrollViewerTo(el, 8, 'auto');
   }
 
-  // ⭐ STEP 3: انتظار رسم الصفحة + ظهور عنصر النصّ (المشكلة: الت	virtualization
-  //   يحذف محتوى الصفحات البعيدة، فننتظر ظهور العنصر فعلياً).
-  await ensurePageRendered(pageNum);
-  var span = await waitForTextElement(pageNum, match.itemIdx, 3000);
+  // STEP 3 — انتظر الرسم وطبقة النصّ (rAF حتى 3 ثوان، مع سقف زمني).
+  await withTimeout(ensurePageRendered(pageNum), 3000);
+  const span = await waitForTextElement(pageNum, match.itemIdx, 3000, term);
 
-  el = document.querySelector('.pdf-page[data-page-num="' + pageNum + '"]');
-  if (!el) return;
+  // STEP 4 — انتظر استقرار التخطيط ثم تمريرة واحدة ناعمة.
+  await nextFrame();
+  await nextFrame();
 
-  // ⭐ STEP 4: التمرير إلى الموضع الدقيق (إزاحة 100px لأعلى centré).
+  const offset = Math.round(Math.min(160, Math.max(70, (els.viewer.clientHeight || 600) * 0.3)));
+  scrollViewerTo(span || el, offset, 'smooth');
+
+  // STEP 5 — تصحيح ذاتي (الصفحات فوق الهدف تتغيّر ارتفاعاتها عند رسمها).
   if (span) {
-    var viewerRect = els.viewer.getBoundingClientRect();
-    var spanRect = span.getBoundingClientRect();
-    var targetTop = els.viewer.scrollTop + (spanRect.top - viewerRect.top) - 100;
-    if (typeof els.viewer.scrollTo === 'function') {
-      els.viewer.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
-    }
-    if (typeof span.scrollIntoView === 'function') {
-      span.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-    // ⭐ احتياط: إن كان التمرير على النافذة itself.
-    var doc = document.scrollingElement || document.documentElement;
-    if (doc && doc.scrollHeight > els.viewer.scrollHeight + 4) {
-      window.scrollTo({ top: Math.max(0, spanRect.top + window.scrollY - 100), behavior: 'smooth' });
-    }
-  } else {
-    // ⭐ احتياط: الصفحة نفسها (لم يُبنَ طبقة النصّ).
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(function () { correctScrollFor(span, offset, 18); }, 420);
+    setTimeout(function () { correctScrollFor(span, offset, 18); }, 820);
   }
 
-  // ⭐ التظليل (بعد الوصول للصفحة).
-  highlightMatch(match);
+  // STEP 6 — التظليل فوق الكلمة (z-index 999 داخل حاوية الصفحة).
+  highlightMatch(match, term);
 
   if (els.pageHud) {
     els.pageHud.textContent = 'الصفحة ' + pageNum + ' من ' + state.totalPages;
     els.pageHud.classList.add('show');
     clearTimeout(hudTimer);
-    hudTimer = setTimeout(() => els.pageHud.classList.remove('show'), 1400);
+    hudTimer = setTimeout(function () { els.pageHud.classList.remove('show'); }, 1400);
   }
+  return true;
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -2233,50 +2307,92 @@ function bindFabDrag() {
  * ⭐⭐⭐ v4.6.7 — ننتظر ظهور عنصر النصّ في الـDOM.
  *   (الصفحات مُvirtualized: قد يكون محتواها حُذف، فنستدعيه وننتظر.)
  */
-function waitForTextElement(pageNum, itemIdx, timeoutMs) {
+function waitForTextElement(pageNum, itemIdx, timeoutMs, term) {
   return new Promise(function (resolve) {
     const started = Date.now();
     const limit = timeoutMs || 3000;
-    function check() {
+    const needle = arabicFold(term || state.searchTerm || '');
+
+    function find() {
       const el = document.querySelector('.pdf-page[data-page-num="' + pageNum + '"]');
-      const span = el ? el.querySelector('.text-layer span[data-idx="' + itemIdx + '"]') : null;
+      if (!el) return null;
+
+      // 1) العنصر المطابق لرقم النصّ الأصلي (المسار السريع).
+      const byIdx = el.querySelector('.text-layer span[data-idx="' + itemIdx + '"]');
+      if (byIdx) return byIdx;
+
+      // 2) احتياط: أي span يحتوي الكلمة (بعد التطبيع العربي).
+      if (needle) {
+        const spans = el.querySelectorAll('.text-layer span');
+        for (let i = 0; i < spans.length; i++) {
+          if (arabicFold(spans[i].textContent || '').indexOf(needle) > -1) return spans[i];
+        }
+      }
+      return null;
+    }
+
+    function check() {
+      const span = find();
       if (span) { resolve(span); return; }
-      if (Date.now() - started > limit) { resolve(null); return; }
+
+      // ⭐ لا نعتمد على IntersectionObserver وحده: نطلب الرسم بأنفسنا.
+      const el = document.querySelector('.pdf-page[data-page-num="' + pageNum + '"]');
+      if (el && !state.renderedPages.has(pageNum) && !state.renderingPages.has(pageNum)) {
+        renderPage(el);
+      }
+
+      if (Date.now() - started > limit) { resolve(find()); return; }
       if (typeof requestAnimationFrame === 'function') requestAnimationFrame(check);
       else setTimeout(check, 60);
     }
+
     check();
   });
 }
 
-/** ⭐ تظليل كل مطابقات الصفحة + المطابقة الحالية بلون أقوى */
-function highlightMatch(match) {
+/** ⭐ إزالة كل التظليلات (نصّ + صندوق) */
+function clearSearchHighlights() {
   document.querySelectorAll('.text-layer span.hit, .text-layer span.current')
-    .forEach((s) => s.classList.remove('hit', 'current'));
+    .forEach(function (s) { s.classList.remove('hit', 'current'); });
   document.querySelectorAll('.pdf-highlight-box')
-    .forEach((box) => box.remove());
+    .forEach(function (box) { box.remove(); });
+}
+
+/**
+ * ⭐ تظليل كل مطابقات الصفحة + المطابقة الحالية بلون أقوى.
+ *   ⭐ v5.1.2 — نقارن النصّ **المطبَّع** (foldArabic) مع الكلمة المطبَّعة،
+ *   لأن state.searchTerm محفوظ الآن ولا يعود فارغاً بعد إغلاق النافذة.
+ */
+function highlightMatch(match, term) {
+  clearSearchHighlights();
+  if (!match) return;
 
   const el = document.querySelector('.pdf-page[data-page-num="' + match.page + '"]');
   if (!el) return;
-  const term = state.searchTerm.toLowerCase();
-  if (!term) return;
+
+  const needle = arabicFold(term || state.searchTerm || '');
+  if (!needle) return;
 
   el.querySelectorAll('.text-layer span').forEach((span) => {
-    if (String(span.textContent || '').toLowerCase().includes(term)) {
+    if (arabicFold(span.textContent || '').indexOf(needle) > -1) {
       span.classList.add('hit');
     }
   });
 
-  const current = el.querySelector('.text-layer span[data-idx="' + match.itemIdx + '"]');
+  let current = el.querySelector('.text-layer span[data-idx="' + match.itemIdx + '"]');
+  if (!current) {
+    const hits = el.querySelectorAll('.text-layer span.hit');
+    if (hits.length) current = hits[0];
+  }
   if (current) {
     current.classList.add('current');
     setTimeout(() => current.classList.remove('current'), 2600);
   }
-
-  // ⭐⭐ v4.6.6 — TASK 3: صندوق تظليل صريح داخل حاوية الصفحة،
-  //   بموضع محسوب ديناميكياً فوق الـcanvas (z-index: 10).
   if (!current) return;
 
+  // ⭐ المواضع تُقاس بالبكسل على الشاشة ⇒ نقسم على التكبير
+  //   لأن الصندوق يُوضع داخل صفحة مصغّرة/مكبّرة بـtransform.
+  const scale = state.zoom || 1;
   const pageRect = el.getBoundingClientRect();
   const spanRect = current.getBoundingClientRect();
   if (!pageRect.width || !spanRect.width) return;
@@ -2284,11 +2400,11 @@ function highlightMatch(match) {
   const box = document.createElement('div');
   box.className = 'pdf-highlight-box';
   box.style.position = 'absolute';
-  box.style.left = (spanRect.left - pageRect.left - 2) + 'px';
-  box.style.top = (spanRect.top - pageRect.top - 2) + 'px';
-  box.style.width = (spanRect.width + 4) + 'px';
-  box.style.height = (spanRect.height + 4) + 'px';
-  // ⭐ v4.6.7 — أصفر ساطع + z-index 999 (فوق الـcanvas وطبقة النصّ)
+  box.style.left = ((spanRect.left - pageRect.left) / scale - 2) + 'px';
+  box.style.top = ((spanRect.top - pageRect.top) / scale - 2) + 'px';
+  box.style.width = (spanRect.width / scale + 4) + 'px';
+  box.style.height = (spanRect.height / scale + 4) + 'px';
+  // ⭐ أصفر ساطع + z-index 999 (فوق الـcanvas وطبقة النصّ)
   box.style.backgroundColor = 'rgba(255, 235, 59, 0.8)';
   box.style.zIndex = '999';
   box.style.pointerEvents = 'none';
@@ -2310,9 +2426,12 @@ function stepMatch(delta) {
   if (index < 0) index = total - 1;
   if (index >= total) index = 0;
   state.searchMatchIndex = index;
-  jumpToMatch(state.searchMatches[index]);
+  const match = state.searchMatches[index];
+  jumpToMatch(match);
   renderSearchResults();
   updateSearchNav();
+  // ⭐ v5.1.2 — تأكيد بصري لأن النافذة تُغلق بعد القفز.
+  showToast('نتيجة ' + (index + 1) + ' من ' + total + ' — الصفحة ' + match.page, 'info');
 }
 
 /** ⭐ تنفيذ البحث (يُستدعى من input/Enter) */
@@ -2348,22 +2467,44 @@ function openSearch() {
   } catch (e) {
     setTimeout(() => els.searchInput.focus(), 50);
   }
-  updateSearchStatus();
+  // ⭐ v5.1.2 — استعادة آخر بحث ونتائجه عند إعادة فتح النافذة
+  if (state.searchTerm && state.searchMatches.length) {
+    renderSearchResults();
+    updateSearchNav();
+  } else {
+    updateSearchStatus();
+  }
   if (!state.indexing && state.indexedPages.size < state.totalPages) {
     buildSearchIndex();
   }
 }
 
-function closeSearch() {
+/**
+ * ⭐⭐⭐ v5.1.2 — إخفاء النافذة فقط، بلا مسح النتائج.
+ *   هذا هو إصلاح الجذر: المسح هنا كان يجعل النقر على النتيجة يمرّر
+ *   undefined إلى jumpToMatch() ⇒ «لا شيء يحدث».
+ *   إعادة فتح النافذة تستعيد آخر بحث ونتائجه.
+ */
+function hideSearchOverlay() {
+  if (!els.searchOverlay) return;
   els.searchOverlay.classList.remove('visible');
-  els.searchInput.value = '';
+}
+
+function closeSearch() {
+  hideSearchOverlay();
+}
+
+/** ⭐ مسح كامل (عند تفريغ حقل البحث أو بدء مستند جديد) */
+function resetSearchState() {
   state.searchTerm = '';
   state.searchMatches = [];
   state.searchMatchIndex = -1;
-  els.searchResults.innerHTML = '<div class="search-hint">اكتب كلمة للبحث في جميع الصفحات</div>';
+  if (els.searchInput) els.searchInput.value = '';
+  clearSearchHighlights();
+  if (els.searchResults) {
+    els.searchResults.innerHTML = '<div class="search-hint">اكتب كلمة للبحث في جميع الصفحات</div>';
+  }
   updateSearchNav();
-  document.querySelectorAll('.text-layer span.hit, .text-layer span.current')
-    .forEach((s) => s.classList.remove('hit', 'current'));
 }
 
 /* ═══ خطأ ═══ */

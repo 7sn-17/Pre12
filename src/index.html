@@ -3309,6 +3309,22 @@ i.fab {
       gap: 10px;
     }
 
+    /* ⭐ v5.1.2 — إصلاح قصّ أول بطاقة في «الملفات المحمّلة»:
+       كانت تلتصق بالهيدر الثابت فتظهر مقصوصة من الأعلى.
+       • مسافة أعلى المحتوى + هامش للبطاقة الأولى.
+       • scroll-margin-top يضمن أن القسم لا يختفي تحت الهيدر عند التمرير إليه. */
+    #downloadedSection {
+      scroll-margin-top: calc(var(--app-header-h, 60px) + 14px);
+    }
+
+    #downloadedSection .collapsible-content-inner {
+      padding-top: 8px;
+    }
+
+    #downloadedSection .mini-file-card:first-child {
+      margin-top: 4px;
+    }
+
 /* ═══ بطاقات الملفات — التصميم الجديد ═══ */
 .mini-file-card {
   background: var(--bg-card);
@@ -6169,6 +6185,7 @@ function loadLastActivity() {
         </div>
       </div>
       <button class="mini-icon-btn ${isLink ? 'link-action' : ''}"
+              id="lastActivityActionBtn"
               onclick="event.stopPropagation(); ${actionCall}"
               title="${actionLabel}"
               aria-label="${actionLabel}">
@@ -6226,8 +6243,13 @@ async function downloadActivityFile() {
     showToast('هذا رابط خارجي — انسخ الرابط بدل التنزيل', 'info');
     return;
   }
+  const btn = document.getElementById('lastActivityActionBtn');
   try {
-    const result = await downloadAndSaveFile({
+    const downloader = (typeof medappDownloadFile === 'function')
+      ? medappDownloadFile
+      : downloadAndSaveFile;
+
+    const result = await downloader({
       id: activity.id,
       title: activity.title,
       subject_name: activity.subject || '',
@@ -6237,12 +6259,26 @@ async function downloadActivityFile() {
       file_url: activity.file_url,
       file_path: activity.file_path,
       created_at: activity.created_at
+    }, function (pct) {
+      // ⭐ v5.1.2 — نسبة تقدّم حقيقية على الزرّ
+      if (!btn) return;
+      btn.innerHTML = '<span style="font-size:0.58rem;font-weight:800;">' + pct + '%</span>';
     });
+
     if (!result.success) throw new Error(result.error || 'فشل التحميل');
     incrementFileDownloads(activity.id);
+    if (btn) {
+      btn.classList.add('downloaded');
+      btn.innerHTML = '<i data-lucide="check"></i>';
+      if (window.lucide) lucide.createIcons();
+    }
     showToast('تم التحميل والحفظ بنجاح');
   } catch (err) {
     console.error('downloadActivityFile error:', err);
+    if (btn) {
+      btn.innerHTML = '<i data-lucide="download"></i>';
+      if (window.lucide) lucide.createIcons();
+    }
     showToast('تعذّر التحميل', 'error');
   }
 }
@@ -8192,7 +8228,11 @@ function openRecentFile(fileId) {
         btn.innerHTML = '<i data-lucide="loader-2" class="spin" style="width: 13px; height: 13px;"></i>';
         lucide.createIcons();
         
-        const result = await downloadAndSaveFile({
+        const downloader = (typeof medappDownloadFile === 'function')
+          ? medappDownloadFile
+          : downloadAndSaveFile;
+
+        const result = await downloader({
           id: file.id,
           title: file.title,
           subject_name: file.subjects?.name || '',
@@ -8202,6 +8242,9 @@ function openRecentFile(fileId) {
           file_url: file.file_url,
           file_path: file.file_path,
           created_at: file.created_at
+        }, function (pct) {
+          // ⭐ v5.1.2 — نسبة تقدّم حقيقية داخل الزرّ
+          btn.innerHTML = '<span style="font-size:0.58rem;font-weight:800;">' + pct + '%</span>';
         });
         
         if (!result.success) throw new Error(result.error || 'فشل التحميل');
