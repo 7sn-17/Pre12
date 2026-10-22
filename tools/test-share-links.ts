@@ -28,8 +28,8 @@ function check(label: string, condition: boolean, extra = '') {
   }
 }
 
-const index = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-const plans = readFileSync(new URL('../plans.html', import.meta.url), 'utf8');
+const index = readFileSync(new URL('../dist/index.html', import.meta.url), 'utf8');
+const plans = readFileSync(new URL('../dist/plans.html', import.meta.url), 'utf8');
 
 console.log('\n▶ Phase W18 — روابط المشاركة\n');
 

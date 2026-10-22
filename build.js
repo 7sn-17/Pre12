@@ -3,13 +3,16 @@
  * build.js — static site generator for the medical platform.
  *
  * Source of truth:  src/*.html   (+ partials/*.html)
- * Output:           ./*.html     (so the repo root is directly servable)
- *                   dist/*.html  (deployment output — vercel.json points here)
+ * Output:           dist/*.html  ONLY (the repo root stays clean)
  *
- * The root pages are written as fully-expanded HTML on purpose. Serving the
- * project root must never expose the raw `<!-- @include -->` templates: doing
- * so drops <meta charset>, the viewport, fonts/icons and the shared scripts,
- * which makes Arabic look broken and leaves the pages stuck on loaders.
+ * ⭐ v5.1.1 — dist-only build. The generated pages live in `dist/` only; the
+ * project root no longer carries build output. `dist/` is therefore the single
+ * serve/deploy target: `npm run build && npx serve dist`.
+ *
+ * The pages are written as fully-expanded HTML on purpose. Serving the raw
+ * `<!-- @include -->` templates would drop <meta charset>, the viewport,
+ * fonts/icons and the shared scripts, which makes Arabic look broken and
+ * leaves the pages stuck on loaders.
  *
  * SPA integration (app pages only):
  *   • app.js is injected after the shared libs and before the page script.
@@ -32,7 +35,7 @@ const DIST = path.join(ROOT, 'dist');
 
 // Bumped whenever app.js changes. The query string is what makes returning
 // visitors pick up the new router even though static JS is served immutable.
-const APP_VERSION = '5.1.0';
+const APP_VERSION = '5.1.1';
 const APP_JS = `app.js?v=${APP_VERSION}`;
 
 // ⭐ v4.2.0 — Supabase Storage: ملف APK ثابت الاسم يُستبدل عند كل إصدار.
@@ -331,6 +334,7 @@ const EXCLUDE_TOP = new Set([
   '.git', '.gitignore',
   // Documentation (kept in the repo, not shipped to users)
   'README.md', 'ARCHITECTURE.md',
+  'PROJECT_STATE.md', 'CHANGELOG.md', 'NOTIFICATION_TESTING_MANUAL.md',
   // Database migrations — applied from the Supabase SQL editor
   'supabase',
   // The visual baseline used during development
@@ -502,7 +506,7 @@ function main() {
     const out = renderPage(path.join(SRC, page));
     const isApp = APP_PAGES.has(page);
 
-    fs.writeFileSync(path.join(ROOT, page), out, 'utf8');
+    // ⭐ dist-only: the root must stay free of generated HTML.
     fs.writeFileSync(path.join(DIST, page), out, 'utf8');
 
     const errs = validatePage(page, out, isApp);
@@ -517,7 +521,6 @@ function main() {
   // Determinism / sanity: every source page must have been written.
   pages.forEach((p) => {
     if (!fs.existsSync(path.join(DIST, p))) problems.push(`${p}: not written to dist/`);
-    if (!fs.existsSync(path.join(ROOT, p))) problems.push(`${p}: not written to root`);
   });
 
   // ⭐ version.json must exist in both the root and dist/ (fixed updater URL).
@@ -531,7 +534,7 @@ function main() {
     `✅ version.json → ${versionInfo.latest_version} (${versionInfo.changelog.split('\n').length} bullets)`
   );
 
-  console.log(`✅ Built ${pages.length} HTML pages (root + dist) + copied ${assets} asset entries (${Date.now() - t0}ms)`);
+  console.log(`✅ Built ${pages.length} HTML pages (dist/ only) + copied ${assets} asset entries (${Date.now() - t0}ms)`);
   if (problems.length) {
     console.error('❌ Validation failed:');
     problems.forEach((p) => console.error('   - ' + p));

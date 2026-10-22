@@ -112,7 +112,9 @@ section('1) اختيار السيناريو لكل حالة مستخدم');
 
 {
   // أول إنجاز ⇒ firstWin
-  const ctx = ctxOf({}, [row({ completed: true, completed_at: '2026-10-21T10:00:00Z' })]);
+  // ⭐ firstWin يقارن يوم الإنجاز بـ«اليوم الحقيقي» (new Date) لا بـNOW،
+  //    لذا نستخدم تاريخاً حقيقياً حتى لا يتحوّل الاختبار إلى قنبلة زمنية.
+  const ctx = ctxOf({}, [row({ completed: true, completed_at: new Date().toISOString() })]);
   const sel = selectScenario(ctx, { now: NOW, logs: [] });
   check('أول إنجاز ⇒ firstWin', !!sel && sel.scenario.id === 'firstWin', sel?.scenario.id);
 }

@@ -56,19 +56,20 @@
 
 - **Source templates** live in `src/*.html`; shared fragments live in
   `partials/`. The head, header and footer are no longer duplicated.
-- **`build.js`** renders every template into **two identical copies**:
-  the project **root** (so the root is directly servable) and **`dist/`**
-  (used by Vercel).
+- **`build.js`** renders every template into **`dist/` only** (v5.1.1). The
+  project **root** stays free of generated HTML — `dist/` is the single
+  serve/package target.
 - **`app.js`** adds an SPA-style shell for 11 pages. Shared libraries,
   Supabase client, auth session, IndexedDB, theme and icons stay alive between
   page swaps.
 - **`sw.js`** is now **network-first for HTML** (with cache/index/offline
   fallbacks) and uses versioned caches, so a new deployment is picked up
   immediately.
-- **`vercel.json`** builds with `npm run build` and publishes `dist/`.
-- The root `*.html` files are now **build output**, not source. The old broken
-  state (serving raw `<!-- @include partials/head.html -->` templates) is
-  impossible after a build.
+- **There is no web hosting.** The product ships as an Android APK; `dist/` is
+  the WebView bundle that `npx cap sync android` copies into the app.
+- Generated `*.html` files live **only in `dist/`** and are untracked by git
+  (`.gitignore` → `/*.html`). The old broken state (serving raw
+  `<!-- @include partials/head.html -->` templates) is impossible after a build.
 
 ### 1.3 What is identical, and what is new
 
@@ -126,7 +127,7 @@
 
 ```text
 Pre12/
-├── src/                     # ✅ EDIT PAGE SOURCE HERE (22 templates)
+├── src/                     # ✅ EDIT PAGE SOURCE HERE (21 templates)
 │   ├── index.html
 │   ├── subject.html
 │   ├── viewer.html
@@ -134,7 +135,6 @@ Pre12/
 │   ├── goals.html
 │   ├── my-lectures.html
 │   ├── all-files.html
-│   ├── tools.html
 │   ├── gpa.html
 │   ├── admin.html
 │   ├── admin-user.html
@@ -157,8 +157,8 @@ Pre12/
 │   ├── scripts.html         # emits <script src> tags from front-matter "scripts:"
 │   ├── sw-register.html     # service-worker registration (data-shell)
 │   └── perf.html            # feature flag for no-VT browsers (data-shell)
-├── dist/                    # ⛔ GENERATED deployment output (never edit)
-├── *.html                   # ⛔ GENERATED root pages (never edit)
+├── dist/                    # ⛔ GENERATED pages + assets — the only serve target (never edit)
+├── widget_reference_final.html # ✅ design reference for the widgets (not generated)
 ├── app.js                   # ✅ SPA router (shared, loaded once)
 ├── build.js                 # ✅ build system
 ├── sw.js                    # ✅ service worker
@@ -173,11 +173,9 @@ Pre12/
 ├── plans/                   # ✅ plan images (chem.jpg, bio.jpg, phys.jpg, eng.jpg, zero.jpg)
 ├── manifest.json            # ✅ PWA manifest
 ├── icon-512.png             # ✅ app icon
-├── icons/                   # ✅ small icons (drbaraa, flipclock, forest, notion)
 ├── *.png                    # ✅ illustrations (copied to dist)
 ├── package.json             # ✅ scripts + acorn dependency
 ├── package-lock.json        # ✅ pinned install
-├── vercel.json              # ✅ deployment config
 ├── README.md                # ✅ project readme (excluded from dist)
 ├── ARCHITECTURE.md          # this file (excluded from dist)
 ├── prompt*.txt              # task/tooling notes (excluded from dist)
@@ -201,19 +199,18 @@ Pre12/
 | SPA navigation behaviour | `app.js` (+ version bump, see §7) |
 | Offline caching | `sw.js` (+ `CACHE_VERSION` bump) |
 | Build logic, libs registry, front-matter defaults | `build.js` |
-| Deployment / cache headers | `vercel.json` |
-| Icons, images, manifest | `icons/`, `icon-512.png`, `*.png`, `manifest.json` |
+| Icons, images, manifest | `icon-512.png`, `*.png`, `manifest.json` |
 | Database schema | `supabase/migrations/*.sql` (applied via the Supabase SQL editor) |
 
 ### 2.2 Important
 
-- **The root `*.html` files are generated.** Editing them appears to work until
-  the next `npm run build`, then your edit is overwritten.
+- **The root has no generated `*.html` files any more (v5.1.1).** Every page is
+  written straight to `dist/`; editing a page means editing `src/`.
 - **`dist/` is deleted and recreated on every build.** Never store anything
   there by hand.
 - **`src/` and `partials/` are not servable pages.** Opening `src/index.html`
   in a browser shows raw templates.
-- **Serve the root or `dist/`.** For Vercel, only `dist/` is published.
+- **Serve `dist/` only:** `npm run build && npx serve dist`.
 
 ---
 
@@ -245,7 +242,7 @@ npm run dev
 server. Use any static server (see §8.3).
 
 Requirements: **Node.js ≥ 18**. `acorn` is a production dependency, so
-`npm install --omit=dev` also works on Vercel.
+`npm install --omit=dev` also works for a build-only environment.
 
 ### 3.2 What the build does (exact pipeline)
 
@@ -259,12 +256,12 @@ Requirements: **Node.js ≥ 18**. `acorn` is a production dependency, so
 6. Expands `{{#if key}}…{{/if}}` and `{{#unless key}}…{{/unless}}`.
 7. Replaces `{{token}}` with values (unknown tokens become empty).
 8. **On SPA pages only:** injects
-   `<script src="app.js?v=5.0.0-beta.1"></script>` before the first inline body
+   `<script src="app.js?v=5.1.1"></script>` before the first inline body
    script and rewrites top-level `const`/`let`/`class` to `var`.
-9. Writes the finished HTML to **`./<page>.html`** and **`dist/<page>.html`**
-   (identical copies).
+9. Writes the finished HTML to **`dist/<page>.html` only** — never to the root.
 10. Copies assets (everything at the root except sources/tooling) into `dist/`.
     Top-level `*.html` are skipped here because they were rendered in step 9.
+    `version.json` is written to the root (the CI uploads it) and copied here.
 11. Validates every page:
     - charset present **and first** in `<head>`;
     - hardened viewport present;
@@ -322,9 +319,8 @@ headerTitle: صفحة جديدة
 
 > **`sw:` is not read by the build.** It is metadata/legacy. The actual
 > service-worker registration is enabled by including
-> `<!-- @include partials/sw-register.html -->`. Pages `tools.html` and
-> `gpa.html` deliberately do not include it; `offline.html` and
-> `onboarding.html` do not either. If a service worker is already active for
+> `<!-- @include partials/sw-register.html -->`. Pages `gpa.html`,
+> `offline.html` and `onboarding.html` deliberately do not include it. If a service worker is already active for
 > the origin, those pages are still controlled by it — they just do not
 > register/update it themselves.
 
@@ -388,15 +384,16 @@ Everything at the project root is copied recursively **except** the entries in
 dist, node_modules,          ← build output & dependencies
 src, partials,               ← sources (compiled into the pages)
 tools,                       ← the visual baseline
-build.js, package.json, package-lock.json, vercel.json,
+build.js, package.json, package-lock.json,
 .git, .gitignore,
-README.md, ARCHITECTURE.md,  ← documentation
+README.md, ARCHITECTURE.md,  ← documentation (never shipped)
+PROJECT_STATE.md, CHANGELOG.md, NOTIFICATION_TESTING_MANUAL.md,
 supabase,                    ← database migrations
 master.test.js               ← test files
 ```
 
 - Top-level `*.html` are rendered separately and are not copied.
-- Images, `icons/`, `manifest.json`, shared JS and `sw.js` are copied.
+- Images, `manifest.json`, shared JS and `sw.js` are copied.
 - **`prompt*.txt` and `*.test.js` / `*.spec.js` are excluded by a separate
   pattern** (`EXCLUDE_FILE`), so new working notes or test files never need a
   build change.
@@ -410,7 +407,7 @@ master.test.js               ← test files
 - Pages are read in sorted order.
 - No timestamps or random values are written.
 - Running the build twice produces identical files.
-- Root and `dist/` are byte-identical copies of the generated HTML.
+- The generated HTML exists in `dist/` only; the root never receives a copy.
 
 ---
 
@@ -686,7 +683,7 @@ MedApp.onViewCleanup(fn);                  // release view-owned non-DOM resourc
 
 | Mode | Pages | Why |
 |---|---|---|
-| **SPA (fast)** | `index.html`, `subject.html`, `viewer.html`, `notes.html`, `goals.html`, `my-lectures.html`, `all-files.html`, `tools.html`, `gpa.html`, `admin.html`, `plans.html`, `progress.html` | Browsing/reading/tools that benefit from instant navigation and a shared Supabase session. They are safe to re-initialise in a shared shell. |
+| **SPA (fast)** | `index.html`, `subject.html`, `viewer.html`, `notes.html`, `goals.html`, `my-lectures.html`, `all-files.html`, `gpa.html`, `admin.html`, `plans.html`, `progress.html` | Browsing/reading/tools that benefit from instant navigation and a shared Supabase session. They are safe to re-initialise in a shared shell. |
 | **Full load** | `upload.html`, `admin-user.html`, `login.html`, `confirm.html`, `about.html`, `privacy.html`, `terms.html`, `reset-password.html`, `onboarding.html`, `offline.html` | Auth/OAuth/email links, the standalone admin student profile, file-upload forms, first-run redirects, legal pages, and the offline page. A clean document is safer and simpler; these are rare navigation targets. |
 
 - `upload.html` is intentionally a **full load**. Its upload/auth script is
@@ -937,8 +934,8 @@ offline  → loadLocalData()  →  render          (ZERO network requests)
 
 ### 6.5 Add an asset / icon / image
 
-1. Put the file at the project root (or inside `icons/`).
-2. Reference it relatively (`icons/foo.png`, `my-image.png`).
+1. Put the file at the project root (or in a root sub-folder such as `plans/`).
+2. Reference it relatively (`plans/foo.jpg`, `my-image.png`).
 3. `npm run build` copies it to `dist/`.
 4. If it must work offline, add it to `sw.js` `PRECACHE_URLS` and bump
    `CACHE_VERSION`.
@@ -1020,43 +1017,43 @@ offline  → loadLocalData()  →  render          (ZERO network requests)
 | `sw.js` logic or `PRECACHE_URLS` | `CACHE_VERSION` | `sw.js` |
 | Any HTML/CSS/JS deployment | Recommended: `CACHE_VERSION` | `sw.js` |
 
-**Version bump checklist (current: 2.0.1):**
+**Version bump checklist (current: 5.1.1):**
 
-1. `build.js`: `const APP_VERSION = '2.0.1';`
-2. `sw.js`: `const CACHE_VERSION = 'v2.0.1';`
-3. `sw.js`: `'/app.js?v=2.0.1',` in `PRECACHE_URLS`
-4. `sw.js`: update the version comments/logs (optional but useful)
-5. `npm run build`
+1. `build.js`: `const APP_VERSION = '5.1.1';`
+2. `sw.js`: `const CACHE_VERSION = 'v5.1.1-clean';`
+3. `sw.js`: `'/app.js?v=5.1.1',` in `PRECACHE_URLS`
+4. `package.json` / `package-lock.json`: `"version": "5.1.1"`
+5. `android/app/build.gradle`: `versionCode` (+1) and `versionName`
+6. `CHANGELOG.md`: a new `## ✨ v5.1.1 — …` section (feeds `version.json`)
+7. `npm run build` + `npx cap sync android`
 
 **Why:** `app.js` is served with a long-lived immutable cache. The query string
 is what forces returning visitors to fetch the new router. HTML is
 network-first, so the new HTML references the new `?v=` automatically.
 
-### 7.2 Vercel
+### 7.2 Packaging (no web hosting)
 
-`vercel.json`:
+This project is **APK-only** (v5.1.1): there is no Vercel/Netlify deployment
+and no `vercel.json`.
 
-- `buildCommand`: `npm run build`
-- `outputDirectory`: `dist`
-- `dist/` is generated during the Vercel build.
-- Cache headers:
-  - static assets (css/js/images/fonts): `public, max-age=31536000, immutable`;
-  - HTML: `public, max-age=0, must-revalidate`;
-  - `sw.js` and mutable local JS: `must-revalidate`.
+- `npm run build` writes everything to `dist/` (and refreshes `version.json`).
+- `npx cap sync android` copies `dist/` into
+  `android/app/src/main/assets/public/`, which is what Gradle packages.
+- CI (`.github/workflows/build-apk.yml`) builds, signs, uploads the APK +
+  `version.json` to Supabase Storage, and creates the GitHub Release.
 
 `package.json` keeps `acorn` in `dependencies`, so the build works even with
 production-only installs.
 
 ### 7.3 Local serving
 
-Use any static file server, from the **root** or from **dist/**:
+Serve **`dist/`** (the root no longer contains generated HTML):
 
 ```bash
-# root (generated pages + assets)
-python3 -m http.server 8000
-
-# or a Node static server
-npx serve .
+npm run build
+npx serve dist
+# or
+python3 -m http.server 8000 --directory dist
 ```
 
 Then open `http://localhost:8000/`.
@@ -1086,8 +1083,9 @@ from `file://`, but SPA navigation falls back to full loads.
 ### 8.1 Build
 
 - [ ] `npm run build` exits 0.
-- [ ] Output says `Built 22 HTML pages (root + dist)` and
+- [ ] Output says `Built 21 HTML pages (dist/ only)` and
       `Head/meta validation passed`.
+- [ ] The project root contains **no generated `*.html`**.
 - [ ] Root and `dist/` are identical for HTML/JS.
 - [ ] `dist/` contains **only** production files — no prompts, no tests,
       no `src/`, `partials/`, `tools/`, `supabase/` or docs.
@@ -1476,7 +1474,7 @@ browser cannot do.
 | `native.js` | root (loaded on every page) | the native bridge — a **no-op on the web** |
 | `android/` | root | the Android project (sources only; build outputs are ignored) |
 | `assets/` | root | 1024×1024 sources for the app icon + splash |
-| `tools/generate-android-assets.js` | tools | generates every Android resource **without dependencies** |
+| `tools/generate-app-icon.js` | tools | generates the adaptive Android icon **without dependencies** |
 | `.github/workflows/build-apk.yml` | GitHub Actions | builds the APK and publishes a Release |
 
 ### `native.js` — what it does natively
@@ -1498,7 +1496,7 @@ both environments.
 the assets are generated by our own dependency-free tool:
 
 ```bash
-node tools/generate-android-assets.js
+node tools/generate-app-icon.js
 ```
 
 It decodes `icon-512.png` (a pure-JS PNG decoder), resizes it with bilinear
@@ -2498,12 +2496,12 @@ npm run dev        # build + hint (no server)
 
 # native (Android)
 npx cap sync android                          # copy the web build into the app
-node tools/generate-android-assets.js          # icons + splash (no dependencies)
+node tools/generate-app-icon.js                # adaptive icon (no dependencies)
 
-# serve locally (root or dist)
-python3 -m http.server 8000
+# serve locally (dist only)
+npm run build && npx serve dist
 # or
-npx serve .
+python3 -m http.server 8000 --directory dist
 ```
 
 ### Files you normally edit
@@ -2525,8 +2523,8 @@ shared JS                auth.js / db.js / sync.js / files.js / streak.js / supa
 ### Files you never edit
 
 ```text
-./*.html                 generated (overwritten by build)
 dist/**                  generated (deleted and recreated by build)
+*.html in the root       not generated any more — nothing to edit there
 tools/_orig/**           read-only visual baseline
 src/** or partials/**    never serve directly
 ```

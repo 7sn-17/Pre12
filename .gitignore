@@ -15,8 +15,13 @@ node_modules/
 .yarn-integrity
 
 # ── مخرجات البناء ─────────────────────────────────────────
-# dist/ يُبنى على خادم Vercel تلقائياً عبر "npm run build"
+# dist/ هو مخرَج البناء الوحيد (يُبنى بـ "npm run build").
 dist/
+
+# ⭐ v5.1.1 — صفحات HTML المولَّدة تعيش في dist/ فقط.
+#    الجذر يبقى نظيفاً: لا ملفات مبنية ولا نسخ شبح.
+/*.html
+!widget_reference_final.html
 build/
 .cache/
 .temp/

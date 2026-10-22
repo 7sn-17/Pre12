@@ -5,8 +5,10 @@
 > parses more reliably than Arabic in most toolchains. The product itself is
 > **Arabic-first RTL** — never let that slip.
 >
-> **Last updated:** 2026-10-21 · **App version:** 5.0.0-beta.2 (versionCode 39)
-> **Branch:** `feature/home-screen-widgets` · **Stable tag:** `v4.6.7-stable`
+> **Last updated:** 2026-10-22 · **App version:** 5.1.1 (versionCode 50)
+> **Branch:** `main` · **Latest release:** `v5.1.1` (GitHub Latest)
+> **Scope:** **Android APK only** — there is no web hosting; `dist/` is the
+> WebView bundle that `npx cap sync` injects into the app.
 > **Read order:** §3 Golden Rules → §7 Widget Vision → the section you need.
 
 ---
@@ -34,13 +36,16 @@ study platform for first-year (pre-medical) students. It combines a document
 library, a PDF reader, task/progress tracking, a day streak, notes, goals,
 lecture albums, and a study-plan gallery.
 
-It ships as **three surfaces from one codebase**:
+It ships as **one surface from one codebase** — a signed Android APK — plus
+launcher widgets:
 
 | Surface | What it is | Where it runs |
 |---|---|---|
-| **PWA / website** | The full product, service-worker cached, offline-first | Vercel (`dist/`) |
-| **Android app** | Capacitor 8 WebView shell around the same web app + native plugins | Play Store / direct APK |
-| **Home screen widgets** | *Planned* native Android widgets (Glance) | Android launcher |
+| **Android APK** | The full product (service-worker cached, offline-first) inside a Capacitor 8 WebView + native plugins | GitHub Releases / Supabase Storage → installed on the phone |
+| **Home screen widgets** | Native Android widgets (Jetpack Glance) fed by the app | Android launcher |
+
+> `dist/` is **not** a deployment target: it is the web bundle that
+> `npx cap sync android` copies into `android/app/src/main/assets/public/`.
 
 **Product identity**
 
@@ -116,10 +121,15 @@ Never reuse a version tag: CI creates `vX.Y.Z` from `package.json`.
 ### 3.3 Build sequence
 
 ```bash
-npm run build        # regenerates root + dist HTML, version.json
-npx cap sync android # copies web assets + plugins into the native project
-git add .            # root HTML files are committed too (they are outputs, but tracked)
+npm run build        # regenerates dist/ (only) + version.json
+npx cap sync android # copies dist/ + plugins into the native project
+git add .            # source + docs; dist/ and the root HTML are git-ignored
 ```
+
+> ⭐ **v5.1.1 — dist-only build.** `build.js` writes every page to `dist/`
+> only. The root has **no generated `*.html`** and they are untracked
+> (`.gitignore` → `/*.html`), so a local build can never conflict with git.
+> **To test locally:** `npm run build` then `npx serve dist`.
 
 CI does the same on a clean checkout, so **anything not committed does not
 ship**.
@@ -173,8 +183,8 @@ Pre12/
 ├── search.js                 # ⭐ canonical search engine + bindSearchInput
 ├── auth.js db.js sync.js files.js notifications.js native.js ui.js streak.js
 ├── sw.js                     # service worker (CACHE_VERSION)
-├── *.html                    # ⚠️ generated build output (committed)
-├── dist/                     # ⚠️ deployment output (Vercel)
+├── dist/                     # ⚠️ the ONLY build output (pages + assets; injected by cap sync)
+├── widget_reference_final.html  # ✅ widget design reference (not generated)
 ├── android/                  # Capacitor native project (committed)
 │   └── app/src/main/
 │       ├── java/com/pre12/medical/MainActivity.java
@@ -364,9 +374,12 @@ All live in `supabase/functions/<name>/index.ts` (Deno). Deployed to project
 ### 8.1 Local build
 ```bash
 npm install            # only when deps change
-npm run build          # build.js → root *.html + dist/ + version.json
-npx cap sync android   # web assets + plugin registration into android/
+npm run build          # build.js → dist/ ONLY + version.json
+npx cap sync android   # dist/ + plugin registration into android/
 ```
+
+**To test locally:** `npm run build` then `npx serve dist` (never serve the
+project root — it has no generated pages any more).
 
 `build.js` also: injects `app.js?v=APP_VERSION`, rewrites top-level
 `const/let/class` → `var` in app pages (SPA re-execution safety), validates
@@ -391,9 +404,11 @@ npx cap sync android   # web assets + plugin registration into android/
 - Metadata: `.../releases/version.json`
 
 ### 8.3 Current release
-`v4.6.7` · versionCode 37 · APK 10,163,666 B ·
-SHA-256 `cbe594984e4cb28e860c8dc40c7d3f970794227e89b9c6fd8cb0e2cfffa8ddf7` ·
-CI run `39520979443` → success · update push sent.
+`v5.1.1` · versionCode 50 · dist-only build · GitHub release **v5.1.1 = Latest**
+(APK details are filled in after the CI run in §11).
+
+**Previous:** `v5.1.0` · versionCode 49 · APK 15,095,903 B ·
+SHA-256 `e7e0ea088f099361603826f12605f3f969944c61318c2b1e3e327229008d0b53`.
 
 ---
 
@@ -407,9 +422,10 @@ composing. Therefore the binder listens to `compositionupdate`/`compositionend`
 second declaration silently overrides the first (this exact bug shipped once).
 
 ### 9.2 Generated files
-Root `*.html`, `dist/*`, `android/app/src/main/assets/public/*`,
-`version.json` are outputs. They change on every build and are committed to
-keep the repo servable — expected diff noise.
+`dist/*`, `android/app/src/main/assets/public/*` and `version.json` are
+outputs. Since **v5.1.1** the root has **no generated `*.html`**: `dist/` is
+the only build output and it is git-ignored (`dist/`). `version.json` stays
+tracked because the CI uploads it to Supabase Storage.
 
 ### 9.3 Notifications
 Android notification **channels are immutable** after creation. `res/raw/beep.wav`
@@ -1415,3 +1431,27 @@ avatar) → and the name could not be saved because there was no row to save it 
 - CI: the compile check **39677737022** ✅ and the release build ✅ · local
   suites: 47 + 10 + 14 + 16 = **87 assertions green** · 31 inline scripts
   syntax-checked ✅.
+
+---
+
+### Phase W19 Completion Log (2026-10-22) — **v5.1.1** (the clean repository)
+
+**Theme:** remove every generated/duplicate artefact, make `dist/` the single
+build output, and retire the old feature branch.
+
+#### What changed
+| Area | Change |
+|---|---|
+| Git | `feature/home-screen-widgets` deleted **locally and on the remote** (already merged into `main`). |
+| Build | `build.js` writes pages to **`dist/` only**; the root existence check was removed, validation kept. |
+| Git hygiene | Root `*.html` untracked (`git rm --cached`) and deleted from disk; `.gitignore` now has `/*.html` + `!widget_reference_final.html`. |
+| Dead files | `g2.aar` (an HTML error page, not an AAR) · `vercel.json` · `send-test.js` (carried a live FCM token and shipped inside the APK) · 54 old `prompt` notes. |
+| Packaging | `PROJECT_STATE.md` · `CHANGELOG.md` · `NOTIFICATION_TESTING_MANUAL.md` added to `EXCLUDE_TOP` → no longer inside `dist/` or the APK. |
+| Tests | `tools/test-share-links.ts` reads `dist/`; the `firstWin` fixture no longer uses a hardcoded date (it was a time bomb). |
+
+#### Verification
+- `npm run build` → **exit 0** · `21 HTML pages (dist/ only)` · validation passed.
+- `npx cap sync android` → **exit 0** · 21 pages inside the APK assets.
+- Root contains only `widget_reference_final.html` (a design reference).
+- Local suites: **111 assertions green** (15 + 9 + 47 + 10 + 14 + 16) ·
+  15 inline scripts syntax-checked.
