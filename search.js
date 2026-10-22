@@ -270,16 +270,17 @@
   }
 
   /**
-   * ⭐⭐⭐⭐ v4.6.7 — «الضربة النهائية»: ربط حقل البحث بدون أي مرشّح.
+   * ⭐⭐⭐⭐ v5.1.2 — ربط حقل البحث بلا أي مرشّح وبلا isComposing.
    *
    *   القاعدة الذهبية: **لا نفحص** e.isComposing ولا inputType ولا
-   *   أي شرط آخر — ولا نؤجّل البحث خلف مؤقّت. نقرأ قيمة الحقل فوراً
-   *   ونبحث. هكذا ينفّذ البحث عند **كل حرف** (عربي أو إنجليزي).
+   *   أي شرط آخر — نقرأ قيمة الحقل من الـDOM ونمرّرها للمعالج.
    *
-   *   الأحداث التي نربطها (كلها تستدعي نفس المعالج):
-   *     input · compositionupdate · compositionend · keyup
-   *   (لوحة المفاتيح العربية قد تحجب 'input' أثناء التكوين، وkeyup
-   *    يضمن الاستجابة مهما كان سلوك الـIME).
+   *   الأحداث التي نربطها فقط:
+   *     input · compositionupdate · compositionend
+   *
+   *   لا keydown ولا keyup: البحث لا ينتظر Enter ولا حذفاً ولا نهاية
+   *   تكوين الـIME. الـdebounce (100ms) مسؤولية الصفحة المستدعية، حتى
+   *   تبقى كل صفحة حرّة في ضبطه (عارض الـPDF يستخدم 100ms).
    *
    * @param {HTMLInputElement} input
    * @param {function} handler  (value, event) => void
@@ -298,48 +299,14 @@
       input.__medappSearchHandlers = null;
     }
 
-    // ⭐⭐⭐ v5.1.2 — الجذر الحقيقي لمشكلة العربية (IME composition):
-    // ------------------------------------------------------------
-    // كان الكود يعيد بناء القيمة كـ (baseValue + event.data). بعض لوحات
-    // المفاتيح (Gboard/Samsung) تُدخل أوّل حرف في الـDOM **قبل** حدث
-    // compositionstart، فيحتوي baseValue على الحرف نفسه ثم نضيفه مرّة
-    // أخرى ⇒ نصّ مكرّر ⇒ لا نتيجة حتى يضغط المستخدم Enter (وهو المسار
-    // الوحيد الذي كان يقرأ input.value مباشرة).
-    //
-    // القاعدة الآن: **قيمة الحقل في الـDOM هي الحقيقة دائماً**. نستخدم
-    // event.data فقط كاحتياط عندما يتأخّر الـDOM فعلاً عن مخزن الـIME.
-    // ولا نفحص isComposing إطلاقاً، ولا نؤجّل التنفيذ.
     function readDomValue() {
       try { return input.value || ''; } catch (e) { return ''; }
     }
 
-    function computeValue(event) {
-      var value = readDomValue();
-      var data = (event && typeof event.data === 'string') ? event.data : '';
-
-      // لا يوجد مخزن IME ⇒ القيمة الظاهرة هي الصحيحة.
-      if (!data) return value;
-      if (!value) return data;
-
-      // الـDOM يحتوي الجزء المُركَّب بالفعل ⇒ لا نكرّره أبداً.
-      if (value.indexOf(data) !== -1) return value;
-
-      // الـDOM متأخّر والمخزن يحتوي النصّ الكامل حتى الآن (data تراكمي).
-      if (data.indexOf(value) === 0) return data;
-
-      // الـDOM متأخّر عن المخزن (بعض WebViews): نُدرج الجزء الجديد.
-      var caret = -1;
-      try { caret = input.selectionStart; } catch (e) {}
-      if (caret >= 0 && caret <= value.length) {
-        return value.slice(0, caret) + data + value.slice(caret);
-      }
-      return value + data;
-    }
-
-    // ⭐ المعالج: بلا شروط وبلا تأخير — يقرأ الحقل ويبحث فوراً.
+    // ⭐ قيمة الـDOM هي الحقيقة دائماً — لا نعيد بناء النصّ من event.data
+    //   (وهو ما كان يكرّر أوّل حرف عربي في بعض لوحات المفاتيح).
     var handleSearchInput = function (event) {
-      var value = computeValue(event);
-      handler(String(value === undefined || value === null ? '' : value), event);
+      handler(String(readDomValue()), event);
     };
 
     var handleCompositionEnd = function (event) {
@@ -354,8 +321,7 @@
     var handlers = {
       input: handleSearchInput,
       compositionupdate: handleSearchInput,
-      compositionend: handleCompositionEnd,
-      keyup: handleSearchInput
+      compositionend: handleCompositionEnd
     };
     input.__medappSearchHandlers = handlers;
     Object.keys(handlers).forEach(function (type) {

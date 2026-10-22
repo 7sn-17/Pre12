@@ -1133,8 +1133,12 @@ async function downloadPdf(fileId, fileUrl) {
 /* ═══ تحميل PDF تدريجي (Range requests) ═══ */
 function buildViewerPdfConfig(extra) {
   return Object.assign({
-    cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+    // ⭐⭐⭐ v5.1.2 — TASK 1: CMaps ضرورية لفكّ ترميز الخطوط العربية
+    //   (Identity-H / CID). بدونها يعيد pdf.js الحروف مبعثرة أو ناقصة.
+    cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
     cMapPacked: true,
+    // ⭐ لا نعطّل تجميع العناصر: نحتاج كل عنصر لموضعه الدقيق في الفهرس.
+    disableCombineTextItems: false,
   }, extra || {});
 }
 
@@ -1395,18 +1399,276 @@ function setCurrentPage(num, force) {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   ⭐⭐⭐ v5.1.2 — TASK 1: تطبيع نصّ الـPDF العربي (Deep Fix)
+   ---------------------------------------------------------------
+   المشكلة (ثلاث طبقات متراكبة):
+     1) غياب CMaps ⇒ pdf.js لا يفكّ Identity-H/CID ⇒ حروف ناقصة.
+     2) pdf.js يعيد الحروف بترتيب «الرسم» (visual) وبأشكال عرض
+        (Presentation Forms U+FE70–U+FEFF) ⇒ «ﺍﻟﻌﺮﺑﻴﺔ» لا تطابق
+        «العربية» في البحث، وبعض الملفات تعيد الكلمة معكوسة.
+     3) العناصر تُجمع بـjoin(' ') حتى لو كانت حروفاً منفصلة
+        («ا ل ع ر ب ي ة») ⇒ كلمات مقطّعة لا يمكن البحث فيها.
+
+   الحل في هذه الدالة:
+     • NFKC يحوّل أشكال العرض والروابط إلى حروف عربية أساسية.
+     • إزالة محارف التحكّم/Bidi/العرض الخاص/التطويل.
+     • لمّ الحروف المفردة المتباعدة بمسافات.
+     • قلب النصّ تلقائياً إذا كان مكتوباً بالترتيب البصري المعكوس.
+     • إعادة بناء السطور هندسياً (Y) وترتيب العناصر حسب اتجاه السطر
+       (RTL: من اليمين لليسار) بدل الاعتماد على ترتيب stream.
+     • إدخال مسافة فقط عند وجود فراغ حقيقي بين العنصرين (لا بين
+       حروف الكلمة الواحدة).
+   ═══════════════════════════════════════════════════════════════ */
+var PDF_TEXT_JUNK_RE = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2060-\u2069\uFEFF\uFFFD\uE000-\uF8FF]/g;
+// التشكيل والتطويل — تُزال من الفهرس **قبل** حساب المواضع حتى تبقى
+// أرقام الحروف متطابقة بين النصّ وكلمة البحث.
+var PDF_ARABIC_MARKS_RE = /[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u08D3-\u08FF\u0640]/g;
+var ARABIC_LETTER_RE = /[\u0621-\u063A\u0641-\u064A\u0671-\u06D3\u06FA-\u06FF]/;
+var ARABIC_WORD_RE = /[\u0621-\u063A\u0641-\u064A\u0671-\u06D3\u06FA-\u06FF]+/g;
+
+// ⭐ كلمات شائعة — تُستخدم فقط لتمييز اتجاه السطر/العنصر.
+var PDF_COMMON_WORDS = Object.create(null);
+('من في على عن إلى الى أن ان إن التي الذي هذا هذه ذلك تلك كان كانت يكون تكون مع كل بعد قبل بين حتى قد لا ما هو هي هم نحن أنت انت أو او ثم لكن كما عند غير يوم شهر سنة سنوات دراسة كتاب ملف الطب طب علم جسم خلية خلايا دم قلب جهاز عضلة عظم مرض علاج دواء بحث محاضرة فصل الفصل الوحدة وحدة مقدمة تعريف أنواع انواع خصائص وظائف أهمية تركيب').split(/\s+/).forEach(function (word) {
+  if (word) PDF_COMMON_WORDS[word] = 1;
+});
+// ⭐ المفاتيح مطبَّعة (ألف/همزة/تاء مربوطة) لتطابق ناتج arabicFold.
+Object.keys(PDF_COMMON_WORDS).forEach(function (word) {
+  PDF_COMMON_WORDS[arabicFold(word)] = 1;
+});
+
+/** ⭐ عكس نصّ مع إبقاء الأرقام واللاتينية مقروءة. */
+function pdfReverseChunk(value) {
+  var chars = String(value || '');
+  return (typeof Array.from === 'function' ? Array.from(chars) : chars.split('')).reverse().join('');
+}
+
+function pdfReverseVisualText(value) {
+  var reversed = pdfReverseChunk(value);
+  // الأرقام/اللاتينية كانت مقلوبة أيضاً بعد عكس السطر ⇒ نعيدها.
+  return reversed.replace(/[A-Za-z0-9][A-Za-z0-9.,:%+\-\/]*/g, function (token) {
+    return pdfReverseChunk(token);
+  });
+}
+
+/**
+ * ⭐ لمّ الحروف المفردة: «ا ل ع ر ب ي ة» ⇒ «العربية».
+ *   نلمّ فقط 3 أحرف مفردة متتالية أو أكثر، حتى لا نلمّ «و من» أو
+ *   كلمات قصيرة حقيقية.
+ */
+function pdfJoinSpacedLetters(value) {
+  return String(value || '').replace(
+    /(^|\s)((?:[\u0621-\u064A]\s+){2,}[\u0621-\u064A])(?=\s|$)/g,
+    function (_, lead, run) {
+      return lead + run.replace(/\s+/g, '');
+    }
+  );
+}
+
+/** ⭐ تقييم «طبيعية» ترتيب النصّ العربي (أعلى = أقرب للترتيب المنطقي). */
+function pdfArabicOrderScore(value) {
+  // ⭐ لا نستخدم arabicFold هنا: يحوّل ة→ه وى→ي، فنفقد إشارات
+  //   الاتجاه المهمّة (التاء المربوطة لا تبدأ كلمة).
+  var text = String(value == null ? '' : value)
+    .replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]/g, '')
+    .toLowerCase();
+  var words = text.match(ARABIC_WORD_RE) || [];
+  var score = 0;
+
+  words.forEach(function (word) {
+    // «ال» في البداية طبيعي، و«لا» في النهاية أثر قويّ على نصّ معكوس.
+    if (word.length >= 3 && word.slice(0, 2) === 'ال') score += 2;
+    if (word.length > 3 && word.slice(-2) === 'لا') score -= 2;
+
+    // الكلمات الشائعة دليل قويّ (المفاتيح مطبَّعة).
+    if (PDF_COMMON_WORDS[arabicFold(word)]) score += 3;
+
+    if (word.length > 4) {
+      var suffix = word.slice(-2);
+      if (suffix === 'ية' || suffix === 'ات' || suffix === 'ون' ||
+          suffix === 'ين' || suffix === 'ها') score += 1;
+      // بداية الكلمة بـ«ات/ون/ين» غير طبيعية عربياً.
+      if (word.slice(0, 2) === 'ات' || word.slice(0, 2) === 'ون' ||
+          word.slice(0, 2) === 'ين') score -= 1;
+    }
+
+    // التاء المربوطة لا تبدأ كلمة أبداً؛ ووجودها في النهاية طبيعي.
+    if (word.charAt(0) === 'ة' || word.charAt(0) === 'ى') score -= 2;
+    if (word.length > 2 && word.slice(-1) === 'ة') score += 1;
+  });
+
+  return score;
+}
+
+/** ⭐ يقلب العنصر فقط إذا كان معكوساً بدرجة واضحة — لا يلمس النصّ السليم. */
+function pdfFixItemDirection(value) {
+  var text = String(value || '');
+  if (!text) return text;
+
+  // ⭐ كلمات قصيرة (حرفان): نعكسها فقط إذا كانت المعكوسة كلمة شائعة.
+  if (text.length < 3) {
+    var shortReverse = pdfReverseVisualText(text);
+    if (PDF_COMMON_WORDS[arabicFold(shortReverse)] &&
+        !PDF_COMMON_WORDS[arabicFold(text)]) return shortReverse;
+    return text;
+  }
+
+  // ⭐ ثلاثيّات مثل «بلا» قد تنقلب خطأً إلى «الب» ⇒ لا نلمسها.
+  if (text.length < 4) return text;
+
+  var arabic = (text.match(ARABIC_WORD_RE) || []).join('');
+  var stripped = text.replace(/\s+/g, '');
+  if (!arabic.length || arabic.length / Math.max(1, stripped.length) < 0.5) return text;
+
+  var reversed = pdfReverseVisualText(text);
+  var normalScore = pdfArabicOrderScore(text);
+  var reversedScore = pdfArabicOrderScore(reversed);
+
+  // ⭐ هامش 2 يمنع قلب الكلمات السليمة القصيرة (كتاب، أحمد…).
+  return reversedScore >= normalScore + 2 ? reversed : text;
+}
+
+/** ⭐ تنظيف شامل لعنصر نصّ واحد (قبل تجميع الصفحة). */
+function pdfNormalizeItemText(value) {
+  var text = String(value == null ? '' : value);
+
+  try { text = text.normalize('NFKC'); } catch (e) {}
+
+  text = text
+    .replace(PDF_TEXT_JUNK_RE, '')
+    .replace(/\u00A0/g, ' ')
+    .replace(PDF_ARABIC_MARKS_RE, '')   // التشكيل + التطويل
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  text = pdfJoinSpacedLetters(text);
+  text = pdfFixItemDirection(text);
+  return text;
+}
+
+/** ⭐ اتجاه السطر: عربي إذا كانت حروفه العربية ≥ اللاتينية. */
+function pdfLineIsRtl(items) {
+  var arabic = 0;
+  var latin = 0;
+  items.forEach(function (item) {
+    var ar = item.str.match(ARABIC_WORD_RE);
+    if (ar) arabic += ar.join('').length;
+    var en = item.str.match(/[A-Za-z]/g);
+    if (en) latin += en.length;
+    if (item.dir === 'rtl') arabic += 1;
+  });
+  return arabic > 0 && arabic >= latin;
+}
+
+/**
+ * ⭐⭐⭐ مصدر الحقيقة الوحيد لفهرس الصفحة (تستخدمه طبقة النصّ والفهرس).
+ * @returns {{text:string, items:Array}}
+ */
+function pdfBuildPageIndex(textContent) {
+  var entries = [];
+
+  (textContent.items || []).forEach(function (item, idx) {
+    if (!item || typeof item.str !== 'string') return;
+    var str = pdfNormalizeItemText(item.str);
+    if (!str) return;
+
+    var transform = item.transform || [1, 0, 0, 1, 0, 0];
+    var height = Math.abs(Number(transform[3])) || Math.abs(Number(item.height)) || 10;
+    var width = Number(item.width);
+    if (!isFinite(width) || width <= 0) {
+      var chars = typeof Array.from === 'function' ? Array.from(str) : str.split('');
+      width = chars.length * height * 0.45;
+    }
+
+    entries.push({
+      idx: idx,
+      str: str,
+      x: Number(transform[4]) || 0,
+      y: Number(transform[5]) || 0,
+      w: width,
+      h: height,
+      transform: transform,
+      dir: item.dir || ''
+    });
+  });
+
+  // 1) تجميع العناصر في سطور حسب إحداثي Y.
+  var lines = [];
+  entries.forEach(function (entry) {
+    var best = null;
+    var bestDistance = Infinity;
+    for (var i = 0; i < lines.length; i++) {
+      var distance = Math.abs(lines[i].y - entry.y);
+      var tolerance = Math.max(2, Math.max(lines[i].h, entry.h) * 0.45);
+      if (distance <= tolerance && distance < bestDistance) {
+        best = lines[i];
+        bestDistance = distance;
+      }
+    }
+    if (!best) {
+      lines.push({ y: entry.y, h: entry.h, items: [entry] });
+    } else {
+      best.items.push(entry);
+      if (entry.h > best.h) best.h = entry.h;
+    }
+  });
+
+  // 2) السطور من أعلى الصفحة إلى أسفلها.
+  lines.sort(function (a, b) { return b.y - a.y; });
+
+  var items = [];
+  var text = '';
+
+  lines.forEach(function (line) {
+    var rtl = pdfLineIsRtl(line.items);
+    line.items.sort(function (a, b) { return a.x - b.x; });
+    var ordered = rtl ? line.items.slice().reverse() : line.items;
+
+    if (text) text += ' ';
+
+    ordered.forEach(function (entry, index) {
+      if (index > 0) {
+        var prev = ordered[index - 1];
+        var font = Math.max(prev.h, entry.h, 8);
+        // الفراغ الحقيقي بين الصندوقين حسب اتجاه القراءة.
+        var gap = rtl
+          ? (prev.x - (entry.x + entry.w))
+          : (entry.x - (prev.x + prev.w));
+        // ⭐ مسافة فقط عند فراغ واضح (> 0.22em). الحروف المتلاصقة
+        //   (gap ≈ 0) تُلمّ مباشرة بلا مسافة.
+        if (gap > font * 0.22) text += ' ';
+      }
+
+      var start = text.length;
+      text += entry.str;
+      items.push({
+        idx: entry.idx,
+        str: entry.str,
+        start: start,
+        end: text.length,
+        x: entry.x,
+        y: entry.y,
+        w: entry.w,
+        h: entry.h,
+        transform: entry.transform
+      });
+    });
+  });
+
+  return { text: text, items: items };
+}
+
 /* ═══ طبقة النصّ (مواضع دقيقة) ═══
    * ⭐ v4.6.2 — نبني طبقة النصّ بأنفسنا بدل pdfjsLib.renderTextLayer
    *   (غير متوفّرة في نسخة CDN المضغوطة) — وبها نعرف الموضع الدقيق
-   *   لكل كلمة لنقفز إليها ونظلّلها. */
+   *   لكل كلمة لنقفز إليها ونظلّلها.
+   * ⭐ v5.1.2 — النصّ المعروض في الطبقة صار مطبَّعاً (NFKC + ترتيب
+   *   منطقي) ⇒ التحديد والنسخ والبحث تعمل بالعربية الصحيحة. */
 function buildTextLayer(container, textContent, viewport, pageNum) {
+  var index = pdfBuildPageIndex(textContent);
   var frag = document.createDocumentFragment();
-  var items = [];
-  var offset = 0;
 
-  (textContent.items || []).forEach(function (item, idx) {
-    if (typeof item.str !== 'string' || !item.str.length) return;
-
+  index.items.forEach(function (item) {
     var tx;
     try {
       tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
@@ -1424,21 +1686,17 @@ function buildTextLayer(container, textContent, viewport, pageNum) {
     span.style.top = y + 'px';
     span.style.fontSize = fontHeight + 'px';
     span.style.fontFamily = 'sans-serif';
-    span.dataset.idx = String(idx);
+    span.dataset.idx = String(item.idx);
     span.dataset.x = String(x);
     span.dataset.y = String(y);
     frag.appendChild(span);
-
-    items.push({ idx: idx, str: item.str, start: offset, end: offset + item.str.length });
-    offset += item.str.length + 1;   // مسافة بين العناصر (كما في join)
   });
 
   container.appendChild(frag);
 
-  // ⭐ الفهرس: نصّ الصفحة + حدود كل عنصر
-  var text = items.map(function (i) { return i.str; }).join(' ');
-  state.textIndex.set(pageNum, { text: text, items: items });
-  state.pageTextCache.set(pageNum, text);
+  // ⭐ الفهرس: نصّ الصفحة + حدود كل عنصر (نفس المصدر تماماً).
+  state.textIndex.set(pageNum, index);
+  state.pageTextCache.set(pageNum, index.text);
   state.indexedPages.add(pageNum);
 }
 
@@ -1672,16 +1930,10 @@ async function buildSearchIndex() {
     try {
       const page = await state.pdfDoc.getPage(i);
       const tc = await page.getTextContent();
-      const items = [];
-      let offset = 0;
-      (tc.items || []).forEach((item, idx) => {
-        if (typeof item.str !== 'string' || !item.str.length) return;
-        items.push({ idx: idx, str: item.str, start: offset, end: offset + item.str.length });
-        offset += item.str.length + 1;
-      });
-      const text = items.map((it) => it.str).join(' ');
-      state.textIndex.set(i, { text: text, items: items });
-      state.pageTextCache.set(i, text);
+      // ⭐ v5.1.2 — نفس دالة طبقة النصّ: تطبيع + ترتيب هندسي + لمّ الحروف.
+      const index = pdfBuildPageIndex(tc);
+      state.textIndex.set(i, index);
+      state.pageTextCache.set(i, index.text);
       state.indexedPages.add(i);
     } catch (e) {
       /* صفحة بلا نصّ */
@@ -1736,7 +1988,8 @@ function arabicFold(value) {
 }
 
 function searchDocument(term) {
-  const q = arabicFold(String(term || '').trim());
+  // ⭐ الفهرس مخزَّن بلا تشكيل ⇒ نزيل التشكيل من الاستعلام أيضاً.
+  const q = arabicFold(String(term || '').replace(PDF_ARABIC_MARKS_RE, '').trim());
   state.searchTerm = q;
 
   if (!q) {
@@ -1768,7 +2021,12 @@ function searchDocument(term) {
         if (idx >= it.start && idx < it.end) { item = it; break; }
         if (it.start > idx) break;
       }
-      matches.push({ page: page, offset: idx, itemIdx: item ? item.idx : 0 });
+      matches.push({
+        page: page,
+        offset: idx,
+        length: q.length,
+        itemIdx: item ? item.idx : 0
+      });
       idx = hay.indexOf(q, idx + q.length);
       guard++;
     }
@@ -2303,6 +2561,34 @@ function bindFabDrag() {
   }, true);
 }
 
+/** ⭐ v5.1.2 — مطابقة نصّ عنصر مع كلمة البحث (عادي أو معكوس). */
+function pdfTextMatches(haystack, needle) {
+  if (!needle) return false;
+  var text = String(haystack == null ? '' : haystack);
+  if (arabicFold(text).indexOf(needle) > -1) return true;
+  // بعض عناصر pdf.js تبقى بالترتيب البصري المعكوس.
+  return arabicFold(pdfReverseVisualText(text)).indexOf(needle) > -1;
+}
+
+/**
+ * ⭐ v5.1.2 — كل عناصر الفهرس التي تغطّي المطابقة.
+ *   الكلمة قد تكون موزّعة على عدّة spans (حروف منفصلة) ⇒ نُظلّل
+ *   المجموعة كلها بدل حرف واحد.
+ */
+function pdfMatchItems(match, term) {
+  if (!match) return [];
+  var entry = state.textIndex.get(match.page);
+  if (!entry || !entry.items) return [];
+
+  var start = Number(match.offset) || 0;
+  var length = Number(match.length) || String(term || '').length || 1;
+  var end = start + length;
+
+  return entry.items.filter(function (item) {
+    return item.end > start && item.start < end;
+  });
+}
+
 /**
  * ⭐⭐⭐ v4.6.7 — ننتظر ظهور عنصر النصّ في الـDOM.
  *   (الصفحات مُvirtualized: قد يكون محتواها حُذف، فنستدعيه وننتظر.)
@@ -2325,7 +2611,7 @@ function waitForTextElement(pageNum, itemIdx, timeoutMs, term) {
       if (needle) {
         const spans = el.querySelectorAll('.text-layer span');
         for (let i = 0; i < spans.length; i++) {
-          if (arabicFold(spans[i].textContent || '').indexOf(needle) > -1) return spans[i];
+          if (pdfTextMatches(spans[i].textContent || '', needle)) return spans[i];
         }
       }
       return null;
@@ -2373,37 +2659,65 @@ function highlightMatch(match, term) {
   const needle = arabicFold(term || state.searchTerm || '');
   if (!needle) return;
 
-  el.querySelectorAll('.text-layer span').forEach((span) => {
-    if (arabicFold(span.textContent || '').indexOf(needle) > -1) {
-      span.classList.add('hit');
-    }
+  // ⭐ v5.1.2 — قد تكون الكلمة موزّعة على عدّة spans (حروف منفصلة في
+  //   الـPDF). نُظلّل كل العناصر التي تغطّي المطابقة، ثم نرسم صندوقاً
+  //   واحداً يحيط بها جميعاً (بدل تظليل حرف واحد).
+  const targets = pdfMatchItems(match, needle);
+  const spans = [];
+  targets.forEach((item) => {
+    const span = el.querySelector('.text-layer span[data-idx="' + item.idx + '"]');
+    if (span) spans.push(span);
   });
 
-  let current = el.querySelector('.text-layer span[data-idx="' + match.itemIdx + '"]');
-  if (!current) {
-    const hits = el.querySelectorAll('.text-layer span.hit');
-    if (hits.length) current = hits[0];
+  // احتياط: عنصر نصّي يحتوي الكلمة (عادي أو معكوس).
+  if (!spans.length) {
+    el.querySelectorAll('.text-layer span').forEach((span) => {
+      if (pdfTextMatches(span.textContent || '', needle)) spans.push(span);
+    });
   }
-  if (current) {
-    current.classList.add('current');
-    setTimeout(() => current.classList.remove('current'), 2600);
+
+  // احتياط أخير: العنصر المحفوظ في المطابقة.
+  if (!spans.length) {
+    const byIdx = el.querySelector('.text-layer span[data-idx="' + match.itemIdx + '"]');
+    if (byIdx) spans.push(byIdx);
   }
-  if (!current) return;
+  if (!spans.length) return;
+
+  spans.forEach((span) => span.classList.add('hit', 'current'));
+  setTimeout(() => {
+    spans.forEach((span) => span.classList.remove('current'));
+  }, 2600);
 
   // ⭐ المواضع تُقاس بالبكسل على الشاشة ⇒ نقسم على التكبير
   //   لأن الصندوق يُوضع داخل صفحة مصغّرة/مكبّرة بـtransform.
   const scale = state.zoom || 1;
   const pageRect = el.getBoundingClientRect();
-  const spanRect = current.getBoundingClientRect();
-  if (!pageRect.width || !spanRect.width) return;
+  let minLeft = Infinity;
+  let minTop = Infinity;
+  let maxRight = -Infinity;
+  let maxBottom = -Infinity;
+
+  spans.forEach((span) => {
+    const rect = span.getBoundingClientRect();
+    if (!rect.width && !rect.height) return;
+    minLeft = Math.min(minLeft, rect.left);
+    minTop = Math.min(minTop, rect.top);
+    maxRight = Math.max(maxRight, rect.right);
+    maxBottom = Math.max(maxBottom, rect.bottom);
+  });
+
+  if (!isFinite(minLeft) || !pageRect.width) return;
+
+  const width = Math.max(4, maxRight - minLeft);
+  const height = Math.max(4, maxBottom - minTop);
 
   const box = document.createElement('div');
   box.className = 'pdf-highlight-box';
   box.style.position = 'absolute';
-  box.style.left = ((spanRect.left - pageRect.left) / scale - 2) + 'px';
-  box.style.top = ((spanRect.top - pageRect.top) / scale - 2) + 'px';
-  box.style.width = (spanRect.width / scale + 4) + 'px';
-  box.style.height = (spanRect.height / scale + 4) + 'px';
+  box.style.left = ((minLeft - pageRect.left) / scale - 2) + 'px';
+  box.style.top = ((minTop - pageRect.top) / scale - 2) + 'px';
+  box.style.width = (width / scale + 4) + 'px';
+  box.style.height = (height / scale + 4) + 'px';
   // ⭐ أصفر ساطع + z-index 999 (فوق الـcanvas وطبقة النصّ)
   box.style.backgroundColor = 'rgba(255, 235, 59, 0.8)';
   box.style.zIndex = '999';
@@ -2434,28 +2748,16 @@ function stepMatch(delta) {
   showToast('نتيجة ' + (index + 1) + ' من ' + total + ' — الصفحة ' + match.page, 'info');
 }
 
-/** ⭐ تنفيذ البحث (يُستدعى من input/Enter) */
+/** ⭐ تنفيذ البحث (يُستدعى من input / compositionupdate / compositionend) */
 function performSearch(query) {
   const q = String(query || '').trim();
   if (!q) {
     searchDocument('');
     return;
   }
-  // ⭐ فهرسة فورية للصفحة الأولى ثم بحث
+  // ⭐ بحث فوري في الفهرس المتاح (يكتمل أثناء الفهرسة الخلفية).
   searchDocument(q);
   updateSearchStatus();
-}
-
-/** ⭐ Enter: الانتقال إلى أول نتيجة */
-function runSearchNow() {
-  const value = els.searchInput.value;
-  performSearch(value);
-  if (state.searchMatches.length) {
-    state.searchMatchIndex = 0;
-    jumpToMatch(state.searchMatches[0]);
-    renderSearchResults();
-    updateSearchNav();
-  }
 }
 
 function openSearch() {
@@ -2672,34 +2974,40 @@ els.searchOverlay.addEventListener('click', (e) => {
   if (e.target === els.searchOverlay) closeSearch();
 });
 
-// ⭐⭐⭐ v4.6.5 — TASK 1: تدمير وإعادة بناء مستمعي الحقل.
-//   • 'input' واحد فقط، بلا أي شرط (يشمل insertText/deleteContentBackward).
-//   • 'compositionend' لالتقاط الكلمة العربية بعد انتهاء التكوين.
-//   لا keydown ولا keyup ولا change على حقل البحث.
-let searchTimeout = null;
+// ⭐⭐⭐ v5.1.2 — TASK 2: بحث عربي فوري من أول حرف (100ms debounce).
+//   • الحقل يربط فقط: input · compositionupdate · compositionend.
+//   • لا isComposing، ولا keydown/keyup، ولا انتظار Enter/Delete.
+//   • الـdebounce 100ms يقرأ input.value **لحظة التنفيذ** (لا لحظة
+//     الحدث) حتى يلتقط آخر حرف ثبّته الـIME في الـDOM.
+let viewerSearchTimer = null;
+
+function scheduleViewerSearch() {
+  if (viewerSearchTimer) clearTimeout(viewerSearchTimer);
+  viewerSearchTimer = setTimeout(() => {
+    viewerSearchTimer = null;
+    performSearch(els.searchInput ? els.searchInput.value : '');
+  }, 100);
+}
 
 function bindViewerSearchInput() {
   const input = els.searchInput;
   if (!input) return;
 
-  // ⭐⭐⭐ v4.6.7 — البحث فوراً عند كل حرف: لا مؤقّت ولا شرط.
   const engine = window.MedAppSearch;
   if (engine && typeof engine.bindSearchInput === 'function') {
-    engine.bindSearchInput(input, (value) => {
-      performSearch(value);
+    engine.bindSearchInput(input, function () {
+      scheduleViewerSearch();
     });
     return;
   }
 
-  // ⭐ احتياط: نفس السلوك بدون المحرّك.
-  const onChange = (event) => {
-    const value = event.target.value;
-    performSearch(value);
+  // ⭐ احتياط: نفس السلوك بدون المحرّك (ثلاثة أحداث فقط).
+  const onChange = function () {
+    scheduleViewerSearch();
   };
   input.addEventListener('input', onChange);
   input.addEventListener('compositionupdate', onChange);
   input.addEventListener('compositionend', onChange);
-  input.addEventListener('keyup', onChange);
 }
 
 bindViewerSearchInput();

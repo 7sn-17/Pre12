@@ -8784,13 +8784,12 @@ async function openFileInViewer(fileId) {
         });
       } else {
         // ⭐ احتياط: نفس السلوك بدون المحرّك (يشمل تكوين لوحة المفاتيح العربية).
-        var onChange = function (event) {
-          handleGlobalSearch(event.target.value);
+        var onChange = function () {
+          handleGlobalSearch(input.value);
         };
         input.addEventListener('input', onChange);
         input.addEventListener('compositionupdate', onChange);
         input.addEventListener('compositionend', onChange);
-        input.addEventListener('keyup', onChange);
       }
     }
 
