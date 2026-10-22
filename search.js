@@ -16,8 +16,9 @@
 (function (global) {
   'use strict';
 
-  // ⭐ v4.6.4 — تأخير صارم واحد لكل شيء.
-  var DEBOUNCE_MS = 250;
+  // ⭐ v5.1.2 — تأخير أقصر (150ms) ليظهر البحث أثناء الكتابة العربية
+  //   بلا إحساس بالتجمّد، مع إلغاء الطلبات القديمة كما كان.
+  var DEBOUNCE_MS = 150;
   var MAX_FILES = 40;
   var MAX_SUBJECTS = 12;
   // ⭐ حدّ النتائج المعروضة — يمنع تجميد الواجهة مع الملفات الكبيرة.
@@ -229,7 +230,7 @@
    * @param {function} onLoading () => void
    * @param {object} options     { cache, onLocal }
    *
-   * ⭐ v4.6.4: التأخير صارم 250ms، والنتائج المحلية تظهر فوراً
+   * ⭐ v4.6.4: التأخير صارم 150ms (v5.1.2)، والنتائج المحلية تظهر فوراً
    *   (بلا شبكة) فلا يضطر المستخدم للانتظار.
    */
   function debounced(query, onResult, onLoading, options) {
@@ -297,20 +298,17 @@
       input.__medappSearchHandlers = null;
     }
 
-    // ⭐⭐⭐ Phase W16 — «الIME العربي»: لماذا كانت الحروف لا تُلتقط؟
-    // ---------------------------------------------------------------
-    // لوحة المفاتيح العربية (Gboard/Samsung) تُنتج **تكويناً** (composition):
-    // أثناء التكوين قد يُطلَق حدث `input` بينما قيمة الحقل في الـDOM
-    // **متأخّرة** عن مخزن الـIME ⇒ كان البحث يقرأ قيمة قديمة ⇒
-    // «لا شيء يحدث» حتى Enter أو حذف حرف (وهما يطلقان حدث input حقيقياً).
+    // ⭐⭐⭐ v5.1.2 — الجذر الحقيقي لمشكلة العربية (IME composition):
+    // ------------------------------------------------------------
+    // كان الكود يعيد بناء القيمة كـ (baseValue + event.data). بعض لوحات
+    // المفاتيح (Gboard/Samsung) تُدخل أوّل حرف في الـDOM **قبل** حدث
+    // compositionstart، فيحتوي baseValue على الحرف نفسه ثم نضيفه مرّة
+    // أخرى ⇒ نصّ مكرّر ⇒ لا نتيجة حتى يضغط المستخدم Enter (وهو المسار
+    // الوحيد الذي كان يقرأ input.value مباشرة).
     //
-    // الحل: أثناء التكوين يكون **مخزن الـIME هو الحقيقة**:
-    //   القيمة = (نصّ ما قبل التكوين) + (الجزء المُركَّب الآن)
-    // وهذا صحيح في كل المتصفّحات: في Chromium الـDOM يسبق المخزن،
-    // وفي بعض WebViews يتأخّر عن المخزن — والحساب نفسه يصحّ في الحالتين.
-    var composing = false;
-    var baseValue = '';
-
+    // القاعدة الآن: **قيمة الحقل في الـDOM هي الحقيقة دائماً**. نستخدم
+    // event.data فقط كاحتياط عندما يتأخّر الـDOM فعلاً عن مخزن الـIME.
+    // ولا نفحص isComposing إطلاقاً، ولا نؤجّل التنفيذ.
     function readDomValue() {
       try { return input.value || ''; } catch (e) { return ''; }
     }
@@ -319,43 +317,42 @@
       var value = readDomValue();
       var data = (event && typeof event.data === 'string') ? event.data : '';
 
-      if (composing && data) {
-        // ⭐ أثناء التكوين: المخزن + ما قبله.
-        return baseValue + data;
+      // لا يوجد مخزن IME ⇒ القيمة الظاهرة هي الصحيحة.
+      if (!data) return value;
+      if (!value) return data;
+
+      // الـDOM يحتوي الجزء المُركَّب بالفعل ⇒ لا نكرّره أبداً.
+      if (value.indexOf(data) !== -1) return value;
+
+      // الـDOM متأخّر والمخزن يحتوي النصّ الكامل حتى الآن (data تراكمي).
+      if (data.indexOf(value) === 0) return data;
+
+      // الـDOM متأخّر عن المخزن (بعض WebViews): نُدرج الجزء الجديد.
+      var caret = -1;
+      try { caret = input.selectionStart; } catch (e) {}
+      if (caret >= 0 && caret <= value.length) {
+        return value.slice(0, caret) + data + value.slice(caret);
       }
-      if (data && value && value.indexOf(data) === -1) {
-        // ⭐ الـDOM متأخّر عن المخزن: نُلحق الجزء الجديد.
-        var caret = -1;
-        try { caret = input.selectionStart; } catch (e) {}
-        if (caret >= 0 && caret <= value.length) {
-          return value.slice(0, caret) + data + value.slice(caret);
-        }
-        return value + data;
-      }
-      return value || data || '';
+      return value + data;
     }
 
-    // ⭐ المعالج: لا شروط، لا تأخير — القيمة الخام للحقل فوراً.
+    // ⭐ المعالج: بلا شروط وبلا تأخير — يقرأ الحقل ويبحث فوراً.
     var handleSearchInput = function (event) {
       var value = computeValue(event);
       handler(String(value === undefined || value === null ? '' : value), event);
     };
 
-    var handleCompositionStart = function () {
-      composing = true;
-      baseValue = readDomValue();
-    };
-
     var handleCompositionEnd = function (event) {
-      // ⭐ نحسب **قبل** إيقاف التكوين (المخزن هو الحقيقة في هذه اللحظة).
       handleSearchInput(event);
-      composing = false;
-      baseValue = '';
+      // ⭐ بعض WebViews تُثبّت القيمة النهائية **بعد** الحدث — قراءة أخيرة
+      //   في المهمّة التالية تضمن ألّا يضيع آخر حرف عربي.
+      setTimeout(function () {
+        handler(readDomValue(), event);
+      }, 0);
     };
 
     var handlers = {
       input: handleSearchInput,
-      compositionstart: handleCompositionStart,
       compositionupdate: handleSearchInput,
       compositionend: handleCompositionEnd,
       keyup: handleSearchInput

@@ -1248,6 +1248,19 @@ sw: true
       background: rgba(255, 255, 255, 0.11);
       border: 1px solid rgba(255, 255, 255, 0.14);
       backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      /* ⭐ v5.1.2 — TASK 3: قصّ الضباب/الوهج داخل الحواف المستديرة
+         (كان يظهر كمربّع على Android WebView)، مع ظهور متتالٍ ناعم
+         عند تمدّد بطاقة المهام لعرض كل المهام. */
+      overflow: hidden;
+      isolation: isolate;
+      animation: todayTaskIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+      animation-delay: calc(var(--i, 0) * 35ms);
+    }
+
+    @keyframes todayTaskIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: none; }
     }
 
     .today-preview-task.done { opacity: 0.68; }
@@ -1292,22 +1305,7 @@ sw: true
 
     .today-preview-done svg { width: 11px; height: 11px; }
 
-    .today-preview-more {
-      align-self: flex-start;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      margin-top: 1px;
-      padding: 3px 9px;
-      border-radius: 99px;
-      font-size: 0.67rem;
-      font-weight: 800;
-      color: rgba(255, 255, 255, 0.84);
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      -webkit-backdrop-filter: blur(6px);
-      backdrop-filter: blur(6px);
-    }
+    /* ⭐ v5.1.2 — حُذف زر «+X مهام أخرى»: البطاقة تعرض كل المهام وتتمدّد. */
 
     .today-card-footer {
       display: flex;
@@ -4873,6 +4871,43 @@ i.fab {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+    /* ══════════════════════════════════════════════════════════════
+       ⭐ v5.1.2 — TASK 3: تنقية الحواف والوهج (UI polish)
+       --------------------------------------------------------------
+       1) الحاويات الزجاجية ذات الحواف المستديرة تقصّ أبناءها وتعزل
+          طبقاتها، فلا يظهر الضباب/الوهج الداخلي كمربّع خارج الزوايا
+          على Android WebView.
+       2) على الشاشات اللمسية يبقى :hover معلّقاً بعد النقر، فتبقى
+          البطاقات مرفوعة وظلالها متراكبة فوق بعضها. نُلغي الرفع
+          والوهج الإضافي للمس فقط، مع إبقاء الظل الأساسي.
+       ══════════════════════════════════════════════════════════════ */
+    .search-modal-container,
+    .last-activity-card {
+      overflow: hidden;
+      isolation: isolate;
+    }
+
+    @media (hover: none) {
+      .subject-card:hover,
+      .file-mini-card:hover,
+      .mini-file-card:hover,
+      .last-activity-card:hover,
+      .quick-access-btn:hover,
+      .study-card:hover {
+        transform: none;
+      }
+
+      /* البطاقات التي لا ظلّ أساسي لها: لا نترك وهجاً معلّقاً بعد اللمس. */
+      .subject-card:hover,
+      .file-mini-card:hover,
+      .mini-file-card:hover,
+      .quick-access-btn:hover {
+        box-shadow: none;
+      }
+
+      .last-activity-card:hover { box-shadow: var(--card-shadow-soft); }
+    }
 
   </style>
 </head>
@@ -8748,12 +8783,14 @@ async function openFileInViewer(fileId) {
           handleGlobalSearch(value);
         });
       } else {
-        // ⭐ احتياط: نفس السلوك بدون المحرّك.
+        // ⭐ احتياط: نفس السلوك بدون المحرّك (يشمل تكوين لوحة المفاتيح العربية).
         var onChange = function (event) {
           handleGlobalSearch(event.target.value);
         };
         input.addEventListener('input', onChange);
+        input.addEventListener('compositionupdate', onChange);
         input.addEventListener('compositionend', onChange);
+        input.addEventListener('keyup', onChange);
       }
     }
 
@@ -9443,11 +9480,14 @@ function showAbout() {
         sub.textContent = 'لديك مهام فائتة بانتظارك';
       }
 
+      // ⭐ v5.1.2 — TASK 2: نعرض **كل** مهام اليوم بدل قصّها عند اثنتين
+      //   وزر «+X مهام أخرى». البطاقة تتمدّد تلقائياً (height:auto).
       var previewSource = todayTotal > 0 ? todayPlanState.todayTasks : todayMissedPendingTasks();
-      var preview = previewSource.slice(0, 2).map(function (task) {
+      var preview = previewSource.map(function (task, index) {
         var meta = todayGetSubjectMeta(task.subject);
         var isDone = todayIsTaskDone(task);
-        return '<div class="today-preview-task' + (isDone ? ' done' : '') + '">' +
+        return '<div class="today-preview-task' + (isDone ? ' done' : '') + '"' +
+          ' style="--i:' + index + ';">' +
           '<span class="today-preview-icon" style="--task-accent:' + meta.color + ';">' +
             '<i data-lucide="' + meta.icon + '"></i>' +
           '</span>' +
@@ -9457,11 +9497,6 @@ function showAbout() {
             : '') +
         '</div>';
       }).join('');
-
-      if (previewSource.length > 2) {
-        preview += '<div class="today-preview-more">+' + (previewSource.length - 2) +
-          (todayTotal > 0 ? ' مهام أخرى' : ' مهام فائتة أخرى') + '</div>';
-      }
 
       var missedAlert = '';
       if (missedPending > 0 && todayTotal > 0) {

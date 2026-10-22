@@ -31,7 +31,7 @@
   ],
   "2026-10-23": [
     { "id": "zero_04", "subject": "تاريخ الطب", "instructor": "د. أسامة بركات", "task": "مشاهدة الفيديو رقم 4 (الخطة زيرو)", "type": "video" },
-    { "id": "bio_03", "subject": "البيولوجيا", "instructor": "د. توفيق القطان", "task": "السكاريد", "type": "lecture" },
+    { "id": "bio_03", "subject": "البيولوجيا", "instructor": "د. توفيق القطان", "task": "السكاكر", "type": "lecture" },
     { "id": "eng_02", "subject": "الإنجليزية", "instructor": "د. معاذ خطاب", "task": "Week 2: Grammar 1a (question formation) + Grammar 1b (auxiliary verbs)", "type": "lecture" }
   ],
   "2026-10-24": [
