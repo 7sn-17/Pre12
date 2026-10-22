@@ -2548,6 +2548,19 @@ sw: true
   color: var(--medapp-blue, #60a5fa);
 }
 
+/* ⭐ v5.1.2 — أزرار المشاركة والفتح الخارجي داخل بطاقة الملف المحمّل */
+.mini-file-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.mini-file-actions .mini-icon-btn svg {
+  width: 14px !important;
+  height: 14px !important;
+}
+
 /* ═══════════════════════════════════════════════════ */
 /* بطاقات الملفات العادية (mini-file-card)           */
 /* ═══════════════════════════════════════════════════ */
@@ -8464,13 +8477,26 @@ async function loadDownloadedFiles() {
           <span>${formatFileSize(file.file_size)}</span>
         </div>
       </div>
-      <button class="mini-file-delete" onclick="event.stopPropagation(); removeDownloaded('${file.id}')" title="حذف">
-        <i class="fa-solid fa-trash"></i>
-      </button>
+      <div class="mini-file-actions">
+        <button class="mini-icon-btn" onclick="event.stopPropagation(); shareDownloadedFile('${file.id}')"
+                title="مشاركة الملف" aria-label="مشاركة الملف">
+          <i data-lucide="share-2"></i>
+        </button>
+        <button class="mini-icon-btn" onclick="event.stopPropagation(); openDownloadedFileExternally('${file.id}')"
+                title="فتح في تطبيق آخر" aria-label="فتح في تطبيق آخر">
+          <i data-lucide="external-link"></i>
+        </button>
+        <button class="mini-file-delete" onclick="event.stopPropagation(); removeDownloaded('${file.id}')" title="حذف">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </div>
     `;
 
     list.appendChild(card);
   });
+
+  // ⭐ v5.1.2 — تحويل أيقونات Lucide بعد إدخال الأزرار الجديدة
+  if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
 
   updateSectionHeight('downloadedSection');
 }

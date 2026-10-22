@@ -1245,3 +1245,210 @@ async function copyFileLink(file) {
 function getHostInfo(url) {
   return detectFileHost(url);
 }
+
+// ============================================
+// 22. مشاركة ملف محمّل (نظام المشاركة الأصلي)
+//     + فتحه في تطبيق خارجي (Open With)
+// ============================================
+// ⭐ v5.1.2 — الملفات المحمّلة محفوظة كـ Blob داخل IndexedDB (db.js).
+//    لكي يراها تطبيق آخر يجب أن يكون لها مسار حقيقي على الجهاز، لذلك نكتب
+//    نسخة مؤقتة في Directory.Cache ثم نمرّر الـ file:// URI إلى المشاركة
+//    أو إلى FileOpener.
+
+function medappIsNative() {
+  return !!(
+    window.Capacitor &&
+    typeof window.Capacitor.isNativePlatform === 'function' &&
+    window.Capacitor.isNativePlatform()
+  );
+}
+
+function medappPlugin(name) {
+  return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins[name]) || null;
+}
+
+function medappToast(message, type) {
+  if (typeof showToast === 'function') {
+    showToast(message, type || 'info');
+  } else {
+    console.warn('[files]', message);
+  }
+}
+
+function medappBlobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    try {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = String(reader.result || '');
+        const comma = result.indexOf(',');
+        resolve(comma > -1 ? result.slice(comma + 1) : result);
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+function medappFileExtension(meta, record) {
+  const mime = String((record && record.type) || (meta && meta.mime_type) || '').toLowerCase();
+  const url = String((meta && (meta.file_url || meta.external_url)) || '').toLowerCase();
+  const byMime = {
+    'application/pdf': 'pdf',
+    'application/msword': 'doc',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+    'application/vnd.ms-powerpoint': 'ppt',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+    'application/vnd.ms-excel': 'xls',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+    'text/plain': 'txt'
+  };
+  if (byMime[mime]) return byMime[mime];
+  const match = url.match(/\.([a-z0-9]{2,5})(?:\?|#|$)/i);
+  if (match) return match[1].toLowerCase();
+  return 'pdf';
+}
+
+function medappDownloadFileName(meta, record) {
+  // اسم لاتيني قصير وآمن (بعض القارئات لا تتعامل جيداً مع أسماء عربية داخل file://)
+  return 'medapp-file-' + String(meta.id).replace(/[^a-zA-Z0-9_-]/g, '') +
+    '.' + medappFileExtension(meta, record);
+}
+
+async function medappFindDownloaded(fileId) {
+  const all = typeof getAllDownloadedFiles === 'function' ? await getAllDownloadedFiles() : [];
+  const meta = all.find((f) => String(f.id) === String(fileId)) || null;
+  const record = meta && typeof getDownloadedFile === 'function'
+    ? await getDownloadedFile(fileId)
+    : null;
+  return { meta, record };
+}
+
+async function medappCacheDownloaded(fileId) {
+  const { meta, record } = await medappFindDownloaded(fileId);
+  if (!meta) return { error: 'missing' };
+  if (!record || !record.blob) return { error: 'no-blob', meta };
+
+  const Filesystem = medappPlugin('Filesystem');
+  if (!Filesystem || typeof Filesystem.writeFile !== 'function') {
+    return { error: 'no-filesystem', meta, record };
+  }
+
+  const base64 = await medappBlobToBase64(record.blob);
+  const written = await Filesystem.writeFile({
+    path: medappDownloadFileName(meta, record),
+    data: base64,
+    directory: 'CACHE',
+    recursive: true
+  });
+
+  if (!written || !written.uri) return { error: 'write-failed', meta, record };
+  return { meta, record, uri: written.uri };
+}
+
+/**
+ * ⭐ مشاركة ملف محمّل مع أي تطبيق (واتساب، تلغرام، بريد…).
+ * • على أندرويد: نكتب نسخة مؤقتة في الكاش ونشارك الـ file:// URI.
+ * • على الويب: نشارك الرابط، أو ننسخه إن لم يدعم المتصفح المشاركة.
+ */
+async function shareDownloadedFile(fileId) {
+  const { meta } = await medappFindDownloaded(fileId);
+  if (!meta) {
+    medappToast('الملف غير موجود في التنزيلات', 'error');
+    return false;
+  }
+
+  const Share = medappPlugin('Share');
+  const url = meta.external_url || meta.file_url || '';
+  const title = meta.title || 'ملف من المنصة الطبية';
+
+  try {
+    if (medappIsNative() && Share && typeof Share.share === 'function') {
+      const cached = await medappCacheDownloaded(fileId);
+      const target = cached.uri || url;
+
+      if (!target) {
+        medappToast('تعذّرت مشاركة الملف', 'error');
+        return false;
+      }
+
+      await Share.share({
+        title: title,
+        text: title,
+        url: target,
+        dialogTitle: 'مشاركة الملف'
+      });
+      return true;
+    }
+
+    // ── الويب ──
+    if (url && navigator.share) {
+      await navigator.share({ title: title, url: url });
+      return true;
+    }
+    if (url && typeof copyFileLink === 'function' && await copyFileLink(meta)) {
+      medappToast('تم نسخ رابط الملف', 'success');
+      return true;
+    }
+    medappToast('المشاركة غير مدعومة على هذا الجهاز', 'error');
+    return false;
+  } catch (err) {
+    if (err && (err.message === 'Share canceled' || err.code === 'CANCELLED')) return false;
+    console.warn('[files] shareDownloadedFile failed:', err);
+    medappToast('تعذّرت مشاركة الملف', 'error');
+    return false;
+  }
+}
+
+/**
+ * ⭐ فتح ملف محمّل في تطبيق خارجي (قارئ PDF، عارض صور…).
+ * • على أندرويد: FileOpener.open({ filePath, contentType }).
+ * • على الويب: نفتح الملف في تبويب (أو في العارض الداخلي).
+ */
+async function openDownloadedFileExternally(fileId) {
+  const { meta, record } = await medappFindDownloaded(fileId);
+  if (!meta) {
+    medappToast('الملف غير موجود في التنزيلات', 'error');
+    return false;
+  }
+
+  const FileOpener = medappPlugin('FileOpener');
+  const contentType = (record && record.type) || meta.mime_type || 'application/pdf';
+  const url = meta.external_url || meta.file_url || '';
+
+  try {
+    if (medappIsNative() && FileOpener && typeof FileOpener.open === 'function') {
+      const cached = await medappCacheDownloaded(fileId);
+      if (!cached.uri) {
+        medappToast('تعذّر تجهيز الملف للفتح', 'error');
+        return false;
+      }
+
+      await FileOpener.open({
+        filePath: cached.uri,
+        contentType: contentType
+      });
+      return true;
+    }
+
+    // ── الويب ──
+    if (typeof openExternal === 'function' && url) {
+      openExternal(url);
+      return true;
+    }
+    if (typeof openFileSmart === 'function' && url) {
+      return await openFileSmart(meta, meta.subject_name || '');
+    }
+    medappToast('لا يوجد تطبيق خارجي لفتح هذا الملف', 'error');
+    return false;
+  } catch (err) {
+    console.warn('[files] openDownloadedFileExternally failed:', err);
+    medappToast('تعذّر فتح الملف — تأكد من وجود تطبيق يدعم هذا النوع', 'error');
+    return false;
+  }
+}
