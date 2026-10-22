@@ -7,18 +7,7 @@
 ⬇️ [تحميل الإصدار المستقر v4.6.7](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
 
 ## ✨ v5.1.1 — «مستودع نظيف»: بناءٌ إلى `dist/` وحده
-
-- **⭐ الجذر نظيف نهائياً**: `build.js` صار يكتب الصفحات في `dist/` **فقط**
-  (لا نسخ مبنية في الجذر)، وأُخرجت صفحات الجذر من تتبّع git وأُضيفت إلى
-  `.gitignore` ⇒ لا تعارض بين مصدر ومخرَج، ولا نسخ شبح بعد أي بناء ✓.
-- **حذف الملفات الميتة**: `g2.aar` (كان صفحة HTML محفوظة لا ملف AAR) ·
-  `vercel.json` (المشروع APK فقط) · `send-test.js` (كان يحمل توكن FCM حقيقياً
-  ويُشحن داخل الـ APK) · 54 ملف ملاحظات `prompt` قديمة.
-- **التوثيق خارج التطبيق**: `PROJECT_STATE` · `CHANGELOG` ·
-  `NOTIFICATION_TESTING_MANUAL` لم تعد تُنسخ إلى `dist/` ولا داخل الـ APK.
-- **تقليم git**: حُذف فرع `feature/home-screen-widgets` محلياً وبعيداً بعد
-  دمجه بالكامل في `main`.
-
+تحديث غير ضروري لا يوجد اي تغييرات للمستخدم
 ## ✨ v5.1.0 — «عاد الاتصال…» كل بضع ثوانٍ: الحلقة الصامتة
 
 - **⭐ الجذر الحقيقي للحلقة (فُحص بـMCP)**: إضافة Capacitor (`@capacitor/network`)
