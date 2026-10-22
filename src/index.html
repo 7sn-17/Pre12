@@ -1311,17 +1311,28 @@ sw: true
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
+      gap: 10px;
       margin-top: 12px;
       font-size: 0.71rem;
       font-weight: 700;
       color: rgba(255, 255, 255, 0.74);
     }
 
+    /* ⭐ v5.1.2 — النصّ الجديد أطول («… وتتبع الأهداف»): نسمح له بالانكماش
+       مع «…» بدل أن يزاحم زر «فتح القائمة» أو يتداخل معه. */
+    #todayCardFooterText {
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     .today-card-open {
       display: inline-flex;
       align-items: center;
       gap: 4px;
+      flex-shrink: 0;
       color: #fff;
       white-space: nowrap;
     }
@@ -1703,7 +1714,7 @@ sw: true
     .today-task {
       display: flex;
       align-items: flex-start;
-      gap: 12px;
+      gap: 10px;
       padding: 13px 13px;
       border-radius: 16px;
       background: var(--bg-card);
@@ -1712,6 +1723,128 @@ sw: true
       transition: border-color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
       position: relative;
     }
+
+    /* ⭐ v5.1.2 — الحقول التفاعلية داخل label، وزر الهدف خارجه حتى لا
+       يؤدّي النقر عليه إلى تعليم المهمة بالخطأ. */
+    .today-task-main {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      flex: 1;
+      min-width: 0;
+      cursor: pointer;
+    }
+
+    /* ⭐ v5.1.2 — زر تحويل المهمة إلى هدف / حلقة التقدّم (24×24). */
+    .today-goal-btn {
+      position: relative;
+      width: 24px;
+      height: 24px;
+      min-width: 24px;
+      margin-top: 3px;
+      padding: 0;
+      border-radius: 50%;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      background: rgba(148, 163, 184, 0.08);
+      color: rgba(148, 163, 184, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.16s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .today-goal-btn:hover {
+      border-color: rgba(52, 211, 153, 0.65);
+      color: #6ee7b7;
+      background: rgba(52, 211, 153, 0.12);
+    }
+
+    .today-goal-btn:active { transform: scale(0.88); }
+
+    .today-goal-btn:focus-visible {
+      outline: 2px solid var(--accent-light);
+      outline-offset: 2px;
+    }
+
+    .today-goal-target { width: 13px; height: 13px; }
+
+    .today-goal-ring {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+      overflow: visible;
+    }
+
+    .today-goal-ring-track { stroke: rgba(148, 163, 184, 0.28); }
+    .today-goal-ring-fill {
+      stroke: #34d399;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.32s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.2s ease;
+    }
+
+    .today-goal-label {
+      position: relative;
+      z-index: 1;
+      font-size: 6.5px;
+      line-height: 1;
+      font-weight: 900;
+      letter-spacing: -0.45px;
+      color: #d1fae5;
+      font-family: inherit;
+    }
+
+    .today-goal-btn.has-goal {
+      border-color: rgba(52, 211, 153, 0.28);
+      background: rgba(6, 78, 59, 0.28);
+      color: #6ee7b7;
+    }
+
+    .today-goal-btn.is-complete {
+      border-color: rgba(52, 211, 153, 0.7);
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(5, 150, 105, 0.95));
+      color: #ecfdf5;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    .today-goal-complete {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+    }
+
+    .today-goal-complete svg { width: 12px; height: 12px; }
+
+    @keyframes todayGoalPop {
+      0%   { transform: scale(1); }
+      45%  { transform: scale(1.22); }
+      100% { transform: scale(1); }
+    }
+
+    .today-goal-btn.goal-pop {
+      animation: todayGoalPop 0.34s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    [data-theme="light"] .today-goal-btn {
+      border-color: rgba(100, 116, 139, 0.35);
+      background: rgba(100, 116, 139, 0.06);
+      color: #64748b;
+    }
+
+    [data-theme="light"] .today-goal-btn.has-goal {
+      background: rgba(16, 185, 129, 0.08);
+      color: #059669;
+    }
+
+    [data-theme="light"] .today-goal-btn.is-complete { color: #fff; }
+    [data-theme="light"] .today-goal-label { color: #065f46; }
+    [data-theme="light"] .today-goal-ring-track { stroke: rgba(100, 116, 139, 0.25); }
 
     .today-task.is-missed {
       border-inline-start: 3px solid rgba(251, 191, 36, 0.55);
@@ -9159,6 +9292,289 @@ function showAbout() {
       }
     }
 
+    /* ═══════════════════════════════════════════════════════════════
+       ⭐⭐⭐ v5.1.2 — FEATURE: المهمة → الهدف (نقرة واحدة، بلا نوافذ)
+       ---------------------------------------------------------------
+       • الهدف يُخزَّن في نفس مفتاح صفحة الأهداف (medfav_goals) ⇒ يظهر
+         فيها فوراً (وتحفظ صفحة الأهداف الحقول الإضافية كما هي).
+       • Target = 100، Unit = '%'، Current يبدأ من 10 ويزيد 10 لكل نقرة.
+       • عند 100% تُعلَّم المهمة مكتملة عبر toggleTodayTask نفسها.
+       • pushNotesNow يكتب حمولة الودجت في prefs ويعيد رسمه في نفس اللحظة.
+       • زر الهدف يقرأ الأهداف من localStorage عند كل رسم ⇒ إذا حذف
+         المستخدم الهدف من صفحة الأهداف يعود الزر إلى الحالة 0 تلقائياً.
+       ═══════════════════════════════════════════════════════════════ */
+    var TODAY_GOALS_KEY = 'medfav_goals';
+
+    function todayReadGoals() {
+      try {
+        var raw = localStorage.getItem(TODAY_GOALS_KEY);
+        var goals = raw ? JSON.parse(raw) : [];
+        return Array.isArray(goals) ? goals.filter(function (goal) { return goal && typeof goal === 'object'; }) : [];
+      } catch (e) {
+        console.warn('[today] تعذّر قراءة الأهداف:', e);
+        return [];
+      }
+    }
+
+    function todaySaveGoals(goals) {
+      try {
+        localStorage.setItem(TODAY_GOALS_KEY, JSON.stringify(goals));
+      } catch (e) {
+        console.warn('[today] تعذّر حفظ الأهداف:', e);
+      }
+      // ⭐ الودجت فوراً — بلا شبكة.
+      todayPushGoalsToWidget();
+    }
+
+    function todayTaskGoalPercent(goal) {
+      var target = Number(goal && goal.target_value) || 0;
+      if (target <= 0) return goal && goal.completed ? 100 : 0;
+      var current = Number(goal && goal.current_value) || 0;
+      return Math.max(0, Math.min(100, Math.round((current / target) * 100)));
+    }
+
+    function todayTaskGoalId(task) {
+      var date = String(task.date || todayPlanState.dateKey || '');
+      return 'goal_task_' + date + '_' + String(task.id || '');
+    }
+
+    function todayFindTaskGoal(task, list) {
+      var goals = Array.isArray(list) ? list : todayReadGoals();
+      var id = todayTaskGoalId(task);
+      var taskId = String(task.id || '');
+      var date = String(task.date || todayPlanState.dateKey || '');
+
+      for (var i = 0; i < goals.length; i++) {
+        var goal = goals[i];
+        if (!goal) continue;
+        if (String(goal.id) === id) return goal;
+        // ⭐ احتياط: أهداف أُنشئت بنسخة أقدم أو عُدّل معرّفها.
+        if (goal.source === 'task' &&
+            String(goal.task_id == null ? '' : goal.task_id) === taskId &&
+            String(goal.task_date == null ? '' : goal.task_date) === date) {
+          return goal;
+        }
+      }
+      return null;
+    }
+
+    function todayGoalButtonInner(goal) {
+      if (!goal) {
+        return '<svg class="today-goal-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+          '<circle cx="12" cy="12" r="7.5"></circle>' +
+          '<circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"></circle>' +
+        '</svg>';
+      }
+
+      var pct = todayTaskGoalPercent(goal);
+      if (goal.completed || pct >= 100) {
+        return '<span class="today-goal-complete">' +
+          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+            '<polyline points="20 6 9 17 4 12"/>' +
+          '</svg>' +
+        '</span>';
+      }
+
+      // ⭐ محيط الدائرة الحقيقي (r=9.5) بدل الاعتماد على pathLength،
+      //   لضمان ظهور الحلقة صحيحة على كل إصدارات WebView.
+      var circumference = 2 * Math.PI * 9.5;
+      var offset = (circumference * (1 - pct / 100)).toFixed(2);
+
+      return '<svg class="today-goal-ring" viewBox="0 0 24 24" aria-hidden="true">' +
+        '<circle class="today-goal-ring-track" cx="12" cy="12" r="9.5" fill="none" stroke-width="2.4"></circle>' +
+        '<circle class="today-goal-ring-fill" cx="12" cy="12" r="9.5" fill="none" stroke-width="2.4" ' +
+          'stroke-dasharray="' + circumference.toFixed(2) + '" stroke-dashoffset="' + offset + '"></circle>' +
+      '</svg>' +
+      '<span class="today-goal-label">' + pct + '%</span>';
+    }
+
+    function todayGoalButtonTitle(goal) {
+      if (!goal) return 'تحويل المهمة إلى هدف — +10%';
+      if (goal.completed) return 'الهدف مكتمل — 100%';
+      return 'تقدم الهدف ' + todayTaskGoalPercent(goal) + '% — اضغط لـ+10%';
+    }
+
+    function todayGoalButtonMarkup(task) {
+      var goal = todayFindTaskGoal(task);
+      var complete = !!(goal && (goal.completed || todayTaskGoalPercent(goal) >= 100));
+      var title = todayGoalButtonTitle(goal);
+      var date = String(task.date || todayPlanState.dateKey || '');
+
+      return '<button type="button" class="today-goal-btn' +
+          (goal ? ' has-goal' : '') + (complete ? ' is-complete' : '') + '"' +
+          ' data-goal-task-id="' + todayEscapeHtml(task.id) + '"' +
+          ' data-goal-task-date="' + todayEscapeHtml(date) + '"' +
+          ' title="' + todayEscapeHtml(title) + '"' +
+          ' aria-label="' + todayEscapeHtml(title) + '">' +
+          todayGoalButtonInner(goal) +
+        '</button>';
+    }
+
+    function todayUpdateGoalButton(task, goal) {
+      var buttons = document.querySelectorAll('.today-goal-btn');
+      var taskId = String(task.id || '');
+      var date = String(task.date || todayPlanState.dateKey || '');
+      var complete = !!(goal && (goal.completed || todayTaskGoalPercent(goal) >= 100));
+      var title = todayGoalButtonTitle(goal);
+
+      for (var i = 0; i < buttons.length; i++) {
+        var button = buttons[i];
+        if (String(button.getAttribute('data-goal-task-id')) !== taskId) continue;
+        if (String(button.getAttribute('data-goal-task-date')) !== date) continue;
+
+        button.className = 'today-goal-btn' + (goal ? ' has-goal' : '') +
+          (complete ? ' is-complete' : '');
+        button.innerHTML = todayGoalButtonInner(goal);
+        button.title = title;
+        button.setAttribute('aria-label', title);
+        // ⭐ إعادة تشغيل النبضة في كل نقرة (حتى لو بقيت الحلقة ظاهرة).
+        void button.offsetWidth;
+        button.classList.add('goal-pop');
+        break;
+      }
+    }
+
+    function todayPushGoalsToWidget() {
+      try {
+        if (window.MedAppWidgets) {
+          if (typeof window.MedAppWidgets.pushNotesNow === 'function') {
+            window.MedAppWidgets.pushNotesNow();
+            return;
+          }
+          if (typeof window.MedAppWidgets.refresh === 'function') {
+            window.MedAppWidgets.refresh('goals');
+          }
+        }
+      } catch (e) {
+        console.warn('[today] widget goals push failed:', e);
+      }
+    }
+
+    /**
+     * ⭐ نسخة سحابية fire-and-forget (localStorage يبقى مصدر الحقيقة).
+     *   نفس أعمدة جدول goals التي تستخدمها صفحة الأهداف.
+     */
+    async function todaySyncTaskGoalToCloud(goal) {
+      try {
+        var client = window.supabaseClient;
+        if (!client || !client.from || !client.auth || !goal) return;
+        var result = await client.auth.getSession();
+        var session = result && result.data ? result.data.session : null;
+        if (!session || !session.user) return;
+
+        await client.from('goals').upsert({
+          user_id: session.user.id,
+          goal_id: String(goal.id),
+          title: goal.text,
+          completed: !!goal.completed,
+          target_value: goal.target_value == null ? null : Number(goal.target_value),
+          current_value: goal.current_value == null ? null : Number(goal.current_value),
+          unit: goal.unit || null,
+          deadline: goal.deadline || null,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id,goal_id' });
+      } catch (e) {
+        /* offline-first: الحفظ المحلي succeeded already */
+      }
+    }
+
+    /**
+     * ⭐ النقرة الواحدة: إنشاء الهدف (10%) أو +10%، وعند 100% إكمال المهمة.
+     */
+    function todayAdvanceTaskGoal(taskId, taskDate) {
+      var allTasks = (todayPlanState.todayTasks || []).concat(todayPlanState.missedTasks || []);
+      var task = allTasks.find(function (item) {
+        return String(item.id) === String(taskId) &&
+          (!taskDate || String(item.date || todayPlanState.dateKey) === String(taskDate));
+      });
+      if (!task) return null;
+
+      var goals = todayReadGoals();
+      var goal = todayFindTaskGoal(task, goals);
+      var now = new Date().toISOString();
+      var isNew = false;
+
+      if (!goal) {
+        goal = {
+          id: todayTaskGoalId(task),
+          text: String(task.task || task.subject || 'هدف'),
+          deadline: null,
+          completed: false,
+          created_at: now,
+          updated_at: now,
+          target_value: 100,
+          current_value: 10,
+          unit: '%',
+          source: 'task',
+          task_id: String(task.id),
+          task_date: String(task.date || todayPlanState.dateKey || '')
+        };
+        goals.push(goal);
+        isNew = true;
+      } else {
+        // هدف مكتمل مسبقاً: لا نزيد فوق 100، ونضمن بقاء المهمة معلّمة.
+        if (goal.completed || todayTaskGoalPercent(goal) >= 100) {
+          if (!todayIsTaskDone(task) && typeof toggleTodayTask === 'function') {
+            toggleTodayTask(task.id, task.date, true);
+          }
+          if (typeof showToast === 'function') {
+            showToast('هذا الهدف مكتمل بالفعل — 100%', 'info');
+          }
+          return goal;
+        }
+
+        var target = Number(goal.target_value) || 100;
+        goal.target_value = target;
+        goal.unit = goal.unit || '%';
+        goal.current_value = Math.min(target, (Number(goal.current_value) || 0) + 10);
+        goal.completed = goal.current_value >= target;
+        goal.updated_at = now;
+      }
+
+      todaySaveGoals(goals);
+      todayUpdateGoalButton(task, goal);
+      todaySyncTaskGoalToCloud(goal);
+
+      var percent = todayTaskGoalPercent(goal);
+
+      if (goal.completed) {
+        // ⭐ المهمة نفسها تُعلَّم مكتملة (خطّ + علامة) بنفس آلية الصفحة.
+        if (!todayIsTaskDone(task) && typeof toggleTodayTask === 'function') {
+          toggleTodayTask(task.id, task.date, true);
+        }
+        if (typeof showToast === 'function') {
+          showToast('🎉 اكتمل الهدف — وأُنجزت المهمة!', 'success');
+        }
+        try { if (typeof todayCelebrate === 'function') todayCelebrate(); } catch (e) {}
+      } else if (typeof showToast === 'function') {
+        showToast(isNew ? 'تم تحويل المهمة إلى هدف — 10%' : 'تقدم الهدف ' + percent + '%', 'success');
+      }
+
+      return goal;
+    }
+
+    // ⭐ Edge case: حُذف الهدف من صفحة الأهداف (أو عُدّل) في تبويب/عودة
+    //   أخرى ⇒ نعيد رسم القائمة المفتوحة فتتحوّل الأزرار إلى الحالة 0.
+    //   الحرس يمنع تكرار المستمعات عند تنقّل SPA يعيد تنفيذ السكربت.
+    if (!window.__todayGoalSyncBound) {
+      window.__todayGoalSyncBound = true;
+
+      window.addEventListener('storage', function (event) {
+        if (event.key !== TODAY_GOALS_KEY || !todayPlanState.open) return;
+        try { renderTodaySheet(); } catch (e) {}
+      });
+
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden || !todayPlanState.open) return;
+        try { renderTodaySheet(); } catch (e) {}
+      });
+
+      window.addEventListener('pageshow', function () {
+        if (!todayPlanState.open) return;
+        try { renderTodaySheet(); } catch (e) {}
+      });
+    }
+
     /**
      * ⭐⭐ Phase W8 — app → widget, instantly.
      *
@@ -9514,7 +9930,7 @@ function showAbout() {
         if (fill) fill.style.width = Math.round((todayDone / todayTotal) * 100) + '%';
         footer.textContent = allTodayDone
           ? (missedPending > 0 ? 'أنجزت مهام اليوم — بقيت مهام فائتة' : 'أنجزت كل مهام اليوم')
-          : (todayDone > 0 ? todayDone + ' من ' + todayTotal + ' مكتملة' : 'اضغط لعرض المهام');
+          : (todayDone > 0 ? todayDone + ' من ' + todayTotal + ' مكتملة' : 'اضغط لعرض المهام وتتبع الأهداف');
       } else {
         footer.textContent = 'اضغط لمراجعة المهام الفائتة';
       }
@@ -9531,28 +9947,34 @@ function showAbout() {
             todayEscapeHtml(todayFormatTaskDate(task.date)) + '</span>'
         : '';
 
-      return '<label class="today-task' + (isMissed ? ' is-missed' : '') + '">' +
-        '<input type="checkbox" class="today-task-input" data-task-id="' +
-          todayEscapeHtml(task.id) + '" data-task-date="' + todayEscapeHtml(task.date || todayPlanState.dateKey) + '"' +
-          (isDone ? ' checked' : '') + '>' +
-        '<span class="today-task-check">' +
-          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' +
-        '</span>' +
-        '<span class="today-task-content">' +
-          '<span class="today-task-text"><span class="today-task-text-inner">' + todayEscapeHtml(task.task) + '</span></span>' +
-          '<span class="today-task-meta">' +
-            '<span class="today-task-subject" style="--task-accent:' + meta.color + ';">' +
-              '<i data-lucide="' + meta.icon + '"></i>' +
-              todayEscapeHtml(task.subject || 'غير محدد') +
-            '</span>' +
-            (task.instructor
-              ? '<span class="today-task-dot">•</span><span>' + todayEscapeHtml(task.instructor) + '</span>'
-              : '') +
-            '<span class="today-task-type">' + typeLabel + '</span>' +
-            dateChip +
+      // ⭐ v5.1.2 — المهمة صارت صفّاً يضمّ label (المربّع + النصّ) وزر
+      //   الهدف المستقل على اليسار. الزر خارج الـlabel حتى لا يعلّم
+      //   المهمة عند تحويلها إلى هدف.
+      return '<div class="today-task' + (isMissed ? ' is-missed' : '') + '">' +
+        '<label class="today-task-main">' +
+          '<input type="checkbox" class="today-task-input" data-task-id="' +
+            todayEscapeHtml(task.id) + '" data-task-date="' + todayEscapeHtml(task.date || todayPlanState.dateKey) + '"' +
+            (isDone ? ' checked' : '') + '>' +
+          '<span class="today-task-check">' +
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' +
           '</span>' +
-        '</span>' +
-      '</label>';
+          '<span class="today-task-content">' +
+            '<span class="today-task-text"><span class="today-task-text-inner">' + todayEscapeHtml(task.task) + '</span></span>' +
+            '<span class="today-task-meta">' +
+              '<span class="today-task-subject" style="--task-accent:' + meta.color + ';">' +
+                '<i data-lucide="' + meta.icon + '"></i>' +
+                todayEscapeHtml(task.subject || 'غير محدد') +
+              '</span>' +
+              (task.instructor
+                ? '<span class="today-task-dot">•</span><span>' + todayEscapeHtml(task.instructor) + '</span>'
+                : '') +
+              '<span class="today-task-type">' + typeLabel + '</span>' +
+              dateChip +
+            '</span>' +
+          '</span>' +
+        '</label>' +
+        todayGoalButtonMarkup(task) +
+      '</div>';
     }
 
     function todayTaskListMarkup(tasks, isMissed) {
@@ -9568,6 +9990,18 @@ function showAbout() {
             this.getAttribute('data-task-id'),
             this.getAttribute('data-task-date'),
             this.checked
+          );
+        });
+      });
+
+      // ⭐ v5.1.2 — زر «مهمة → هدف»: نقرة واحدة = +10% بلا نوافذ.
+      body.querySelectorAll('.today-goal-btn').forEach(function (button) {
+        button.addEventListener('click', function (event) {
+          event.preventDefault();
+          event.stopPropagation();
+          todayAdvanceTaskGoal(
+            this.getAttribute('data-goal-task-id'),
+            this.getAttribute('data-goal-task-date')
           );
         });
       });
