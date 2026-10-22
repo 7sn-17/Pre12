@@ -404,8 +404,15 @@ project root — it has no generated pages any more).
 - Metadata: `.../releases/version.json`
 
 ### 8.3 Current release
-`v5.1.1` · versionCode 50 · dist-only build · GitHub release **v5.1.1 = Latest**
-(APK details are filled in after the CI run in §11).
+`v5.1.1` · versionCode 50 · dist-only build · APK **15,041,211 B** ·
+SHA-256 `0491dc17df29eb9c91fdf324c690921c17cf58ac7c599a56a814e7e8f1c9494e` ·
+GitHub release **v5.1.1 = Latest** · production `version.json` = `5.1.1` ·
+CI runs `39837081192` (main) and `39837126333` (tag) → success ·
+update notification sent (`notification_log`: `update` · `sent = true`).
+
+> ℹ️ The main-push and tag-push workflows each build a separately-signed APK,
+> so their bytes differ. The GitHub asset was re-pointed to the **exact
+> production binary**, making the published SHA-256 match the Storage copy.
 
 **Previous:** `v5.1.0` · versionCode 49 · APK 15,095,903 B ·
 SHA-256 `e7e0ea088f099361603826f12605f3f969944c61318c2b1e3e327229008d0b53`.
