@@ -5,8 +5,8 @@
 > parses more reliably than Arabic in most toolchains. The product itself is
 > **Arabic-first RTL** — never let that slip.
 >
-> **Last updated:** 2026-10-22 · **App version:** 5.1.1 (versionCode 50)
-> **Branch:** `main` · **Latest release:** `v5.1.1` (GitHub Latest)
+> **Last updated:** 2026-10-22 · **App version:** 5.1.2 (versionCode 51)
+> **Branch:** `main` · **Latest release:** `v5.1.2` (GitHub Latest)
 > **Scope:** **Android APK only** — there is no web hosting; `dist/` is the
 > WebView bundle that `npx cap sync` injects into the app.
 > **Read order:** §3 Golden Rules → §7 Widget Vision → the section you need.
@@ -256,6 +256,15 @@ Pre12/
   schedule gallery (`schedule_images`), likes/saves
   (`schedule_image_likes`, `schedule_image_saves`) with triggers keeping
   counters in sync; `album_requests` for contributions.
+- **⭐ v5.1.2 — مشاركة وفتح الملفات المحمّلة**: كل بطاقة في «الملفات
+  المحمّلة» (`src/index.html`) فيها زرّا `share-2` و`external-link`.
+  الملف محفوظ كـ Blob في IndexedDB، و`files.js` يكتب نسخة مؤقتة في
+  `Directory.Cache` ثم:
+  - `shareDownloadedFile(fileId)` → `Share.share({ url: fileUri })`
+    (واتساب/تلغرام/أي تطبيق)؛ على الويب مشاركة الرابط أو نسخه.
+  - `openDownloadedFileExternally(fileId)` →
+    `FileOpener.open({ filePath, contentType })` عبر
+    `@capacitor-community/file-opener` (قارئ PDF خارجي…).
 
 ### 5.6 Live search (v4.6.7 — Phase 37)
 - **One canonical binder:** `MedAppSearch.bindSearchInput(input, handler)`.
@@ -302,6 +311,10 @@ Pre12/
   revalidate for assets; `manifest.json` with maskable icon.
 - Offline page (`offline.html`), cached library metadata, in-app update banner
   driven by `version.json` (`latest_version`, `apk_url`, notes).
+- **⭐ v5.1.2 — «ما الجديد» بلغة المستخدم**: `build.js` يحوّل أول قسم في
+  `CHANGELOG.md` إلى 3–4 نقاط نظيفة داخل `version.json`، و`app-update.js`
+  يعرضها كما هي (بلا Markdown). لذلك تُكتب ملاحظات الإصدار بلغة بسيطة
+  بلا مصطلحات تقنية.
 
 ### 5.9 Design system (app)
 - Light: `--bg-main #f8fafb`, card `#ffffff`, accent `#059669` /
@@ -404,15 +417,20 @@ project root — it has no generated pages any more).
 - Metadata: `.../releases/version.json`
 
 ### 8.3 Current release
-`v5.1.1` · versionCode 50 · dist-only build · APK **15,041,211 B** ·
-SHA-256 `0491dc17df29eb9c91fdf324c690921c17cf58ac7c599a56a814e7e8f1c9494e` ·
-GitHub release **v5.1.1 = Latest** · production `version.json` = `5.1.1` ·
-CI runs `39837081192` (main) and `39837126333` (tag) → success ·
-update notification sent (`notification_log`: `update` · `sent = true`).
+`v5.1.2` · versionCode 51 · *external share/open + friendly changelog* ·
+APK **15,044,276 B** ·
+SHA-256 `5de0855f0e2b24415678b52f2362d80cd9c9d18fac6a99d68347a26a76c465e1` ·
+GitHub release **v5.1.2 = Latest** · production `version.json` = `5.1.2`
+(4 friendly bullets) · CI runs `39845496583` (main) and `39845502862` (tag)
+→ success · update notification sent (`notification_log`: `update` ·
+`sent = true`).
 
-> ℹ️ The main-push and tag-push workflows each build a separately-signed APK,
-> so their bytes differ. The GitHub asset was re-pointed to the **exact
-> production binary**, making the published SHA-256 match the Storage copy.
+**Previous:** `v5.1.1` · versionCode 50 · APK 15,041,211 B ·
+SHA-256 `0491dc17df29eb9c91fdf324c690921c17cf58ac7c599a56a814e7e8f1c9494e`.
+
+> ℹ️ The main-push and tag-push workflows each build a separately-signed APK.
+> If their bytes differ, the GitHub asset is re-pointed to the **exact
+> production binary** so the published SHA-256 always matches Storage.
 
 **Previous:** `v5.1.0` · versionCode 49 · APK 15,095,903 B ·
 SHA-256 `e7e0ea088f099361603826f12605f3f969944c61318c2b1e3e327229008d0b53`.
@@ -1462,3 +1480,27 @@ build output, and retire the old feature branch.
 - Root contains only `widget_reference_final.html` (a design reference).
 - Local suites: **111 assertions green** (15 + 9 + 47 + 10 + 14 + 16) ·
   15 inline scripts syntax-checked.
+
+---
+
+### Phase W20 Completion Log (2026-10-22) — **v5.1.2** (external sharing & UX)
+
+**Theme:** let a downloaded file leave the app (share / open with), and turn the
+release notes into plain user-facing Arabic.
+
+#### What changed
+| Area | Change |
+|---|---|
+| Native plugin | `@capacitor-community/file-opener@^8.0.1` (the registry name `@capacitor/file-opener` does not exist). Registered as `FileOpener` → **15 plugins** in `capacitor.plugins.json`. |
+| Files | `files.js` §22: `shareDownloadedFile()` · `openDownloadedFileExternally()` — both write a temporary copy to `Directory.Cache` first, because downloads live as Blobs in IndexedDB. Web fallback: `navigator.share` / copy link / `openExternal`. |
+| UI | `src/index.html`: each card in **الملفات المحمّلة** gained `mini-icon-btn` buttons (Lucide `share-2`, `external-link`) beside delete; `lucide.createIcons()` runs after the list is rebuilt. |
+| Changelog | `CHANGELOG.md`: a friendly v5.1.2 section (4 bullets, no technical jargon) → `build.js` puts them in `version.json` → `app-update.js` shows them verbatim. |
+| Version | `APP_VERSION 5.1.2` · `CACHE_VERSION v5.1.2-clean` · `app.js?v=5.1.2` · versionCode 51 · package/lock 5.1.2. |
+
+#### Verification
+- `npm run build` → **exit 0** · `version.json → 5.1.2 (4 bullets)` · validation passed.
+- `npx cap sync android` → **exit 0** · `@capacitor-community/file-opener` present in the plugin manifest.
+- APK contains the two buttons and `app.js?v=5.1.2`; no docs/prompt files inside.
+- Local suites: **111 assertions green** · 5 inline scripts in `dist/index.html` clean.
+- Release **v5.1.2 = Latest** · APK **15,044,276 B** · SHA-256 matches Storage byte-for-byte.
+- CI `39845496583` (main) + `39845502862` (tag) → success · update notification sent.

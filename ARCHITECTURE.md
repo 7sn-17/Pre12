@@ -56,7 +56,7 @@
 
 - **Source templates** live in `src/*.html`; shared fragments live in
   `partials/`. The head, header and footer are no longer duplicated.
-- **`build.js`** renders every template into **`dist/` only** (v5.1.1). The
+- **`build.js`** renders every template into **`dist/` only** (v5.1.1+). The
   project **root** stays free of generated HTML — `dist/` is the single
   serve/package target.
 - **`app.js`** adds an SPA-style shell for 11 pages. Shared libraries,
@@ -204,7 +204,7 @@ Pre12/
 
 ### 2.2 Important
 
-- **The root has no generated `*.html` files any more (v5.1.1).** Every page is
+- **The root has no generated `*.html` files any more (v5.1.1+).** Every page is
   written straight to `dist/`; editing a page means editing `src/`.
 - **`dist/` is deleted and recreated on every build.** Never store anything
   there by hand.
@@ -256,7 +256,7 @@ Requirements: **Node.js ≥ 18**. `acorn` is a production dependency, so
 6. Expands `{{#if key}}…{{/if}}` and `{{#unless key}}…{{/unless}}`.
 7. Replaces `{{token}}` with values (unknown tokens become empty).
 8. **On SPA pages only:** injects
-   `<script src="app.js?v=5.1.1"></script>` before the first inline body
+   `<script src="app.js?v=5.1.2"></script>` before the first inline body
    script and rewrites top-level `const`/`let`/`class` to `var`.
 9. Writes the finished HTML to **`dist/<page>.html` only** — never to the root.
 10. Copies assets (everything at the root except sources/tooling) into `dist/`.
@@ -1017,14 +1017,14 @@ offline  → loadLocalData()  →  render          (ZERO network requests)
 | `sw.js` logic or `PRECACHE_URLS` | `CACHE_VERSION` | `sw.js` |
 | Any HTML/CSS/JS deployment | Recommended: `CACHE_VERSION` | `sw.js` |
 
-**Version bump checklist (current: 5.1.1):**
+**Version bump checklist (current: 5.1.2):**
 
-1. `build.js`: `const APP_VERSION = '5.1.1';`
-2. `sw.js`: `const CACHE_VERSION = 'v5.1.1-clean';`
-3. `sw.js`: `'/app.js?v=5.1.1',` in `PRECACHE_URLS`
-4. `package.json` / `package-lock.json`: `"version": "5.1.1"`
+1. `build.js`: `const APP_VERSION = '5.1.2';`
+2. `sw.js`: `const CACHE_VERSION = 'v5.1.2-clean';`
+3. `sw.js`: `'/app.js?v=5.1.2',` in `PRECACHE_URLS`
+4. `package.json` / `package-lock.json`: `"version": "5.1.2"`
 5. `android/app/build.gradle`: `versionCode` (+1) and `versionName`
-6. `CHANGELOG.md`: a new `## ✨ v5.1.1 — …` section (feeds `version.json`)
+6. `CHANGELOG.md`: a new `## ✨ v5.1.2 — …` section (feeds `version.json`)
 7. `npm run build` + `npx cap sync android`
 
 **Why:** `app.js` is served with a long-lived immutable cache. The query string
@@ -1033,7 +1033,7 @@ network-first, so the new HTML references the new `?v=` automatically.
 
 ### 7.2 Packaging (no web hosting)
 
-This project is **APK-only** (v5.1.1): there is no Vercel/Netlify deployment
+This project is **APK-only** (v5.1.2): there is no Vercel/Netlify deployment
 and no `vercel.json`.
 
 - `npm run build` writes everything to `dist/` (and refreshes `version.json`).
@@ -1475,6 +1475,7 @@ browser cannot do.
 | `android/` | root | the Android project (sources only; build outputs are ignored) |
 | `assets/` | root | 1024×1024 sources for the app icon + splash |
 | `tools/generate-app-icon.js` | tools | generates the adaptive Android icon **without dependencies** |
+| `@capacitor-community/file-opener` | native plugin | opens a downloaded file in an external app (`FileOpener.open`) |
 | `.github/workflows/build-apk.yml` | GitHub Actions | builds the APK and publishes a Release |
 
 ### `native.js` — what it does natively
@@ -1489,6 +1490,22 @@ browser cannot do.
 
 On the web every one of these is a silent no-op, so the same code runs in
 both environments.
+
+### External sharing & Open With (v5.1.2)
+
+Downloaded files live as **Blobs in IndexedDB** (`db.js`), so they have no
+device path by themselves. `files.js` writes a temporary copy to
+`Directory.Cache` and then uses the URI:
+
+| Action | API | Where |
+|---|---|---|
+| **Share** a downloaded file | `Filesystem.writeFile({ directory: 'CACHE' })` → `Share.share({ url: fileUri })` | `shareDownloadedFile(fileId)` in `files.js` |
+| **Open With** an external app | `Filesystem.writeFile(...)` → `FileOpener.open({ filePath, contentType })` | `openDownloadedFileExternally(fileId)` in `files.js` |
+| Web fallback | `navigator.share({ url })`, else copy the link | same functions |
+
+The two buttons (`mini-icon-btn` · Lucide `share-2` / `external-link`) sit in
+each card of the **الملفات المحمّلة** section (`src/index.html`), next to the
+delete button, and inherit the light/dark theme tokens.
 
 ### The icon pipeline
 
@@ -1997,8 +2014,9 @@ render transparent). The placeholder is now *"ابحث هنا..."*.
 | the streak | `Share.share({ title, text, url })` with the message *"🔥 حماسي يشتعل! أنا في سلسلة إنجاز لمدة {days} أيام على المنصة الطبية 📚."* and the direct APK link `https://github.com/7sn-17/Pre12/releases/latest/download/Medical_Platform_v3.0.0.apk` |
 | the images (محاضراتي) | `fetch` → `blob` → `Filesystem.writeFile({ directory: 'CACHE' })` → `Share.share({ url: fileUri })` — a new **مشاركة** button in the gallery toolbar |
 
-`@capacitor/share`, `@capacitor/filesystem` and `@capacitor/browser`
-are now part of the app (13 plugins in total).
+`@capacitor/share`, `@capacitor/filesystem`, `@capacitor/browser` and
+`@capacitor-community/file-opener` are now part of the app
+(**15 plugins** in `capacitor.plugins.json`).
 
 #### The progressive PDF viewer
 
