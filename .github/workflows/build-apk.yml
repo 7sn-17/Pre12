@@ -66,8 +66,6 @@ jobs:
         run: npx cap sync android
 
       - name: 🖼️ Verify the web assets
-        # ⭐ نتأكّد أن أصول الويب الأساسية موجودة فعلاً داخل مجلد
-        #    الأصول الذي سينتقل إلى الـ APK.
         run: |
           echo "── the main pages ──"
           ls android/app/src/main/assets/public/*.html
@@ -110,13 +108,8 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
-          # ⭐ printf وليس echo: echo يضيف سطراً جديداً إلى المخرجات،
-          #    وهذا ما يُفسد بنية ملف التوقيع (ASN.1) فيحسبه keytool
-          #    ملفاً مبتوراً (java.io.EOFException).
           printf "%s" "$KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
 
-          # ⭐ بديل احتياطي: لو كان الترميز base64 الآمن (URL-safe)
-          #    (أي - و _ بدل + و /) فسيرفض keytool الملف — فنجرّب الشكل الآخر.
           if ! keytool -list -keystore android/app/release.keystore -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" > /dev/null 2>&1; then
             echo "::warning::The standard base64 form was rejected — trying the URL-safe form."
             printf "%s" "$KEYSTORE_BASE64" | tr -- '-_' '+/' | base64 -d > android/app/release.keystore.alt || true
@@ -140,8 +133,6 @@ jobs:
           keytool -list -keystore android/app/release.keystore -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" | head -6
 
       - name: 🩹 Self-heal an unusable base64 secret
-        # يعمل حتى لو فشلت خطوة الفك — يجرّب صيغ base64 الأخرى ثم
-        # يتحقق من كل واحدة بمفتاح keytool.
         if: always()
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -210,8 +201,6 @@ jobs:
             exit 1
           fi
           echo "APK size: $(stat -c %s "$APK") bytes"
-          # ⭐ apksigner هو الأداة الرسمية — يدعم مخطّطي التوقيع v2/v3
-          #    (بينما jarsigner يرى توقيع JAR v1 فقط فيقول "unsigned" خطأً).
           APKSIGNER=$(ls -1 "${ANDROID_HOME:-$ANDROID_SDK_ROOT}/build-tools/"*/apksigner 2>/dev/null | sort -V | tail -1)
           if [ -n "$APKSIGNER" ]; then
             echo "using $APKSIGNER"
@@ -228,8 +217,6 @@ jobs:
           fi
 
       - name: 🧪 Inspect the APK structure
-        # ⭐ قبل النشر: نثبت أن الـ APK سليم البنية (اسم الحزمة،
-        #    النشاط الرئيسي، الأصول، ومكتبات المعماريات).
         run: |
           APK="android/app/build/outputs/apk/release/app-release.apk"
           BUILD_TOOLS="${ANDROID_HOME:-$ANDROID_SDK_ROOT}/build-tools"
@@ -266,7 +253,6 @@ jobs:
           echo "✅ the APK structure is complete"
 
       - name: 🏷️ Rename the APK for production
-        # ⭐ الاسم النهائي للنشر: Medical_Platform_v<version>.apk
         run: |
           cd android/app/build/outputs/apk/release
           NEW_NAME="Medical_Platform_v${{ steps.version.outputs.version }}.apk"
@@ -275,8 +261,6 @@ jobs:
           echo "::notice::the APK is published as $NEW_NAME"
 
       - name: 🔐 Publish the SHA-256 checksum
-        # ⭐ lets the user verify their download (a truncated download
-        #    is the usual cause of "there is a problem parsing the package").
         run: |
           cd android/app/build/outputs/apk/release
           NEW_NAME="Medical_Platform_v${{ steps.version.outputs.version }}.apk"
@@ -284,82 +268,10 @@ jobs:
           echo "APK_SHA256=$(cut -d' ' -f1 "$NEW_NAME.sha256")" >> "$GITHUB_ENV"
 
       - name: 📝 Prepare the release notes (latest version only)
-        # ⭐ TASK 4: ننشر قسم الإصدار الحالي فقط من CHANGELOG.md
-        #    (بدل التاريخ الكامل) حتى تعرض نافذة التحديث 3–4 نقاط.
         run: |
           awk '/^## /{c++} c==1' CHANGELOG.md > release-notes.md
           echo "── release-notes.md ──"
           cat release-notes.md
-
-      - name: ☁️ Upload the APK + version.json to Supabase Storage
-        # ⭐⭐ beta channel: a `-` in the version (5.0.0-beta.1) means this is a
-        #    test build. It must NOT overwrite Medical_Platform_Latest.apk or
-        #    version.json — otherwise every stable user would be offered a beta.
-        if: ${{ !contains(steps.version.outputs.version, '-') }}
-        # ⭐ TASK 2 (v4.2.0): اسم ثابت Medical_Platform_Latest.apk يُستبدل
-        #    عند كل إصدار، مع version.json لنظام التحديث داخل التطبيق.
-        env:
-          SUPABASE_URL: https://pfjpeqhevegivjmyjvux.supabase.co
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: |
-          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
-            echo "::error::SUPABASE_SERVICE_ROLE_KEY is missing — cannot upload the release."
-            exit 1
-          fi
-
-          APK="android/app/build/outputs/apk/release/Medical_Platform_v${{ steps.version.outputs.version }}.apk"
-          test -f "$APK" || { echo "::error::APK not found: $APK"; exit 1; }
-          test -f version.json || { echo "::error::version.json not found"; exit 1; }
-
-          upload() {
-            local file="$1" remote="$2" type="$3" cache="$4"
-            local status
-            status=$(curl -sS -o /tmp/storage-upload.json -w "%{http_code}" \
-              -X POST "$SUPABASE_URL/storage/v1/object/releases/$remote" \
-              -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-              -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
-              -H "Content-Type: $type" \
-              -H "cache-control: $cache" \
-              -H "x-upsert: true" \
-              --data-binary @"$file" --max-time 300) || status=000
-            echo "⬆️  $remote → HTTP $status"
-            head -c 400 /tmp/storage-upload.json 2>/dev/null || true
-            echo
-            [ "$status" = "200" ] || [ "$status" = "201" ]
-          }
-
-          upload "$APK" "Medical_Platform_Latest.apk" "application/vnd.android.package-archive" "max-age=60"
-          upload "version.json" "version.json" "application/json" "no-cache"
-
-      - name: 🌍 Verify the Supabase release URLs
-        if: ${{ !contains(steps.version.outputs.version, '-') }}
-        run: |
-          BASE="https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases"
-          echo "── version.json ──"
-          curl -fsS "$BASE/version.json?t=$(date +%s)" -o /tmp/remote-version.json
-          cat /tmp/remote-version.json
-          echo
-
-          cat > /tmp/check-version.js <<'JS'
-          const fs = require('fs');
-          const remote = JSON.parse(fs.readFileSync('/tmp/remote-version.json', 'utf8'));
-          const expected = require(process.cwd() + '/package.json').version;
-          if (String(remote.latest_version) !== expected) {
-            console.error('::error::version.json says ' + remote.latest_version + ' but package.json is ' + expected);
-            process.exit(1);
-          }
-          if (!remote.download_url || !remote.download_url.endsWith('Medical_Platform_Latest.apk')) {
-            console.error('::error::invalid download_url in version.json');
-            process.exit(1);
-          }
-          console.log('✅ version.json is live and correct');
-          JS
-          node /tmp/check-version.js
-
-          echo "── APK ──"
-          curl -fsS -r 0-0 -o /dev/null -D - "$BASE/Medical_Platform_Latest.apk?t=$(date +%s)" \
-            | grep -iE "^HTTP/|^content-length:|^content-type:|^cache-control:"
-          echo "✅ the fixed APK URL is live"
 
       - name: 📤 Upload the APK artifact
         uses: actions/upload-artifact@v4
@@ -371,32 +283,19 @@ jobs:
       - name: 🚀 Publish the GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          # ⭐ الـ Release يحتاج تاجاً — ننشئه من رقم الإصدار في package.json
-          #    (وإن كان موجوداً، يُحدَّث الـ Release ويُستبدل الملف).
           tag_name: v${{ steps.version.outputs.version }}
-          # ⭐⭐ The tag must point at the commit that was actually built. Without
-          #    this, a workflow_dispatch run on a feature branch tags the
-          #    **default branch** HEAD and the release's source archive is wrong
-          #    (the APK itself is always built from the dispatched ref).
           target_commitish: ${{ github.sha }}
           files: |
             android/app/build/outputs/apk/release/Medical_Platform_v${{ steps.version.outputs.version }}.apk
             android/app/build/outputs/apk/release/Medical_Platform_v${{ steps.version.outputs.version }}.apk.sha256
           name: المنصة الطبية — v${{ steps.version.outputs.version }}
-          # ⭐ جسم الإصدار: قسم الإصدار الحالي فقط (TASK 4)
           body_path: ./release-notes.md
           fail_on_unmatched_files: true
           draft: false
-          # ⭐⭐ beta: `prerelease` + `make_latest: false` keeps the stable
-          #    release as "Latest" and the beta downloadable only by link.
           prerelease: ${{ contains(steps.version.outputs.version, '-') }}
           make_latest: ${{ !contains(steps.version.outputs.version, '-') }}
 
       - name: 🔔 Send the update notification to all users
-        # ⭐ TASK 6 — بعد نشر الإصدار بنجاح، نستدعي دالة
-        #    send-update-notification بمفتاح service_role لإرسال
-        #    إشعار Push لكل الأجهزة التي حفظت رمز FCM.
-        # ⭐⭐ beta: never announce a test build to production devices.
         if: ${{ !contains(steps.version.outputs.version, '-') }}
         continue-on-error: true
         env:
@@ -434,7 +333,6 @@ jobs:
           fi
 
       - name: 🌐 Verify the published asset
-        # ⭐ نتأكّد أن الملف المنشور على GitHub مطابق تماماً للملف المبني.
         continue-on-error: true
         run: |
           sleep 15
@@ -448,4 +346,3 @@ jobs:
           else
             echo "::warning::the published file does not match the build (a CDN cache issue?)"
           fi
-
