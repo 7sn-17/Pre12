@@ -18,7 +18,7 @@
 
 <br>
 
-### ⬇️ [**تحميل أحدث نسخة (APK)**](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+### ⬇️ [**تحميل أحدث نسخة (APK)**](https://github.com/7sn-17/Pre12/releases/latest)
 
 <sub>كل الإصدارات السابقة: [GitHub Releases](https://github.com/7sn-17/Pre12/releases)</sub>
 
