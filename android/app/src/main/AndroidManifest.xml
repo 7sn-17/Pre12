@@ -169,6 +169,12 @@
     <!-- ⭐ Android 13+ : إذن عرض الإشعارات (يُطلب من المستخدم) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- ⭐ إعادة تشغيل الاستقبال بعد إعادة تشغيل الجهاز (FCM) -->
+    <!-- ⭐⭐ v5.1.2 — التذكيرات اليومية 8:00ص / 8:00م بدقّة عبر AlarmManager.
+         USE_EXACT_ALARM يمنح الإذن تلقائياً على Android 13+ حتى لا يتحوّل
+         التذكير إلى Alarm غير دقيق قد يتأخّر ساعات أثناء Doze. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+
+    <!-- ⭐ إعادة تشغيل الاستقبال/التذكيرات بعد إعادة تشغيل الجهاز -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 </manifest>

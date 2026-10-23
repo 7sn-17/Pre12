@@ -720,6 +720,40 @@
   }
 
   /**
+   * ⭐⭐ v5.1.2 — يضمن إذن الإشعارات قبل جدولة التذكيرات اليومية.
+   *   بدون هذا الطلب كان schedule() يرفض على Android 13+ إذا لم يكن
+   *   POST_NOTIFICATIONS ممنوحاً، فيبدو التذكير اليومي «مكسوراً».
+   */
+  function notificationPermissionState(status) {
+    return (status && (status.display || status.receive || status.status)) || '';
+  }
+
+  function ensureLocalNotificationPermission(LocalNotifications) {
+    if (!LocalNotifications || typeof LocalNotifications.checkPermissions !== 'function') {
+      return Promise.resolve('');
+    }
+
+    return Promise.resolve(LocalNotifications.checkPermissions())
+      .then(function (status) {
+        var state = notificationPermissionState(status);
+        if (state === 'granted' || typeof LocalNotifications.requestPermissions !== 'function') {
+          return state;
+        }
+        return Promise.resolve()
+          .then(function () { return LocalNotifications.requestPermissions(); })
+          .then(function (next) { return notificationPermissionState(next) || state; })
+          .catch(function (err) {
+            console.warn('[notifications] could not request notification permission:', err);
+            return state;
+          });
+      })
+      .catch(function (err) {
+        console.warn('[notifications] could not check notification permission:', err);
+        return '';
+      });
+  }
+
+  /**
    * ⭐ يجدول إشعاراً محلياً (في التطبيق) — صامت بلا أثر على الويب.
    */
   function schedule(state, delayMinutes) {
@@ -1011,7 +1045,14 @@
             smallIcon: 'ic_stat_icon',
             channelId: 'medapp_tasks',
             sound: 'default',
-            schedule: { on: { hour: EVENING_REMINDER_HOUR, minute: 0 }, every: 'day' },
+            // ⭐ v5.1.2 — حافظ على دقّة 8:00م وAllowWhileIdle عند تحديث النصّ.
+            isExactNotification: true,
+            isExactMandatory: true,
+            schedule: {
+              on: { hour: EVENING_REMINDER_HOUR, minute: 0 },
+              every: 'day',
+              allowWhileIdle: true
+            },
             extra: { action: 'tasks' }
           }]
         })).then(function () { return true; })
@@ -1039,22 +1080,26 @@
       localStorage.setItem(DAILY_REMINDER_KEY, enabled ? '1' : '0');
     } catch (e) {}
 
-    // ⭐ نلغي التذكيرات القديمة أولاً
+    // ⭐ v5.1.2 — لا نجدول قبل انتهاء الإلغاء فعلياً؛ كان الـcancel
+    //   غير المنتظر يسمح له بحذف التذكيرات الجديدة في بعض الأجهزة.
+    var cancelExisting = Promise.resolve();
     try {
       if (typeof LocalNotifications.cancel === 'function') {
-        LocalNotifications.cancel({
+        cancelExisting = Promise.resolve(LocalNotifications.cancel({
           notifications: [
             { id: DAILY_REMINDER_ID },
             { id: MORNING_REMINDER_ID },
             { id: EVENING_REMINDER_ID }
           ]
+        })).catch(function (err) {
+          console.warn('[notifications] could not cancel old daily reminders:', err);
         });
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('[notifications] could not cancel old daily reminders:', e);
+    }
 
-    if (!enabled) return Promise.resolve(true);
-
-    ensureChannel();
+    if (!enabled) return cancelExisting.then(function () { return true; });
 
     var morning = {
       id: MORNING_REMINDER_ID,
@@ -1063,7 +1108,13 @@
       smallIcon: 'ic_stat_icon',
       channelId: 'medapp_tasks',
       sound: 'default',
-      schedule: { on: { hour: MORNING_REMINDER_HOUR, minute: 0 }, every: 'day' },
+      isExactNotification: true,
+      isExactMandatory: true,
+      schedule: {
+        on: { hour: MORNING_REMINDER_HOUR, minute: 0 },
+        every: 'day',
+        allowWhileIdle: true
+      },
       extra: { action: 'tasks', phase: 'morning' }
     };
 
@@ -1074,25 +1125,42 @@
       smallIcon: 'ic_stat_icon',
       channelId: 'medapp_tasks',
       sound: 'default',
-      schedule: { on: { hour: EVENING_REMINDER_HOUR, minute: 0 }, every: 'day' },
+      isExactNotification: true,
+      isExactMandatory: true,
+      schedule: {
+        on: { hour: EVENING_REMINDER_HOUR, minute: 0 },
+        every: 'day',
+        allowWhileIdle: true
+      },
       extra: { action: 'tasks', phase: 'evening' }
     };
 
-    return LocalNotifications.schedule({
-      notifications: [morning, evening]
-    }).then(function () {
-      writeState({
-        dailyReminder: true,
-        dailyReminderAt: EVENING_REMINDER_HOUR,
-        dailyReminderMorningAt: MORNING_REMINDER_HOUR,
-        dailyReminderEveningAt: EVENING_REMINDER_HOUR
+    return cancelExisting
+      .then(function () { return ensureChannel(); })
+      .then(function () { return ensureLocalNotificationPermission(LocalNotifications); })
+      .then(function (permission) {
+        if (permission && permission !== 'granted') {
+          console.warn('[notifications] notification permission is ' + permission + '; the daily reminder will be scheduled but may not be visible until it is granted.');
+        }
+        return LocalNotifications.schedule({ notifications: [morning, evening] });
+      })
+      .then(function (result) {
+        if (result && result.warning) {
+          console.warn('[notifications] exact alarm fallback:', result.warning);
+        }
+        writeState({
+          dailyReminder: true,
+          dailyReminderAt: EVENING_REMINDER_HOUR,
+          dailyReminderMorningAt: MORNING_REMINDER_HOUR,
+          dailyReminderEveningAt: EVENING_REMINDER_HOUR
+        });
+        // ⭐ نصّ المسائي يتبع حالة المهام الحقيقية.
+        return refreshDailyReminderContent().then(function () { return true; });
+      })
+      .catch(function (err) {
+        console.warn('[notifications] the daily reminder could not be scheduled:', err);
+        return false;
       });
-      // ⭐ نصّ المسائي يتبع حالة المهام الحقيقية.
-      return refreshDailyReminderContent().then(function () { return true; });
-    }).catch(function (err) {
-      console.warn('[notifications] the daily reminder could not be scheduled:', err);
-      return false;
-    });
   }
 
   /** ⭐ يستعيد جدولة التذكير عند بدء التطبيق */
