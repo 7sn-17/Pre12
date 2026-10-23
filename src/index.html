@@ -422,7 +422,7 @@ sw: true
       align-items: center;
       justify-content: space-between;
       gap: 10px;
-      margin: 18px 0 8px;
+      margin: 18px 0 2px;
     }
 
     .streak-week-label {
@@ -449,7 +449,9 @@ sw: true
       text-align: center;
     }
 
-    /* ⭐ شريط الأيام: قابل للسحب أفقياً إن لم يتسع */
+    /* ⭐ شريط الأيام: قابل للسحب أفقياً إن لم يتسع.
+       ⭐ v5.1.2 — حشوة داخلية تمنح الهالة/الوهج مساحةً قبل حدّ القصّ،
+       فلا يُقتطع أعلى اليوم النشط مع بقاء التمرير الأفقي سليماً. */
     .streak-week {
       display: grid;
       grid-auto-flow: column;
@@ -458,8 +460,9 @@ sw: true
       overflow-x: auto;
       overflow-y: hidden;
       scroll-snap-type: x proximity;
+      scroll-padding-inline: 8px;
       scrollbar-width: none;
-      padding-bottom: 4px;
+      padding: 10px 8px 6px;
       -webkit-overflow-scrolling: touch;
     }
     .streak-week::-webkit-scrollbar { display: none; }
@@ -651,6 +654,9 @@ sw: true
       flex: 1;
       min-height: 0;
       padding-top: 4px;
+      /* ⭐ v5.1.2 — مساحة أسفل المحتوى حتى لا يُقصّ ظلّ زر المشاركة
+         عند حدّ التمرير فيظهر كزوايا مستطيلة. */
+      padding-bottom: 20px;
     }
 
     .streak-panel { display: block; }
@@ -788,8 +794,10 @@ sw: true
       align-items: center;
       justify-content: center;
       gap: 10px;
+      /* ⭐ v5.1.2 — ظلّ ناعم ومضبوط بدل الهالة الكبيرة التي كانت تُقصّ
+         عند حافة التمرير فتظهر كزوايا مستطيلة. */
       box-shadow:
-        0 14px 30px -14px rgba(249, 115, 22, 0.95),
+        0 8px 20px -12px rgba(234, 88, 12, 0.72),
         inset 0 1px 0 rgba(255, 255, 255, 0.28);
       transition: transform var(--transition-fast), box-shadow var(--transition-fast), filter var(--transition-fast);
       position: relative;
@@ -817,9 +825,9 @@ sw: true
 
     .streak-share-btn:hover {
       transform: translateY(-2px);
-      filter: saturate(1.1);
+      filter: saturate(1.08);
       box-shadow:
-        0 18px 38px -14px rgba(249, 115, 22, 1),
+        0 10px 24px -12px rgba(234, 88, 12, 0.82),
         inset 0 1px 0 rgba(255, 255, 255, 0.34);
     }
 
@@ -1735,41 +1743,68 @@ sw: true
       cursor: pointer;
     }
 
-    /* ⭐ v5.1.2 — زر تحويل المهمة إلى هدف / حلقة التقدّم (24×24). */
+    /* ⭐ v5.1.2 — زر تحويل المهمة إلى هدف / حلقة التقدّم (36×36).
+       في الحالة الصفرية نعرض هدفاً/متصفّحاً (crosshair) داخل دائرة
+       زمردية خفيفة، ثم تتحوّل الدائرة إلى حلقة تقدّم حقيقية. */
     .today-goal-btn {
       position: relative;
-      width: 24px;
-      height: 24px;
-      min-width: 24px;
-      margin-top: 3px;
+      width: 36px;
+      height: 36px;
+      min-width: 36px;
+      min-height: 36px;
+      margin-top: -4px;
       padding: 0;
       border-radius: 50%;
-      border: 1px solid rgba(148, 163, 184, 0.35);
-      background: rgba(148, 163, 184, 0.08);
-      color: rgba(148, 163, 184, 0.9);
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      background:
+        radial-gradient(circle at 50% 32%, rgba(52, 211, 153, 0.16), rgba(15, 23, 42, 0.18) 68%),
+        rgba(15, 23, 42, 0.2);
+      color: #6ee7b7;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 2px 8px rgba(0, 0, 0, 0.16);
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
-      transition: transform 0.16s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+      transition: transform 0.16s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
     }
 
     .today-goal-btn:hover {
-      border-color: rgba(52, 211, 153, 0.65);
-      color: #6ee7b7;
-      background: rgba(52, 211, 153, 0.12);
+      border-color: rgba(52, 211, 153, 0.62);
+      color: #a7f3d0;
+      background:
+        radial-gradient(circle at 50% 32%, rgba(52, 211, 153, 0.24), rgba(15, 23, 42, 0.2) 70%),
+        rgba(15, 23, 42, 0.24);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 16px rgba(52, 211, 153, 0.18);
     }
 
-    .today-goal-btn:active { transform: scale(0.88); }
+    .today-goal-btn:active { transform: scale(0.9); }
 
     .today-goal-btn:focus-visible {
       outline: 2px solid var(--accent-light);
       outline-offset: 2px;
     }
 
-    .today-goal-target { width: 13px; height: 13px; }
+    .today-goal-target {
+      width: 19px;
+      height: 19px;
+      overflow: visible;
+      filter: drop-shadow(0 0 3px rgba(52, 211, 153, 0.28));
+    }
+
+    .today-goal-target .today-goal-crosshair {
+      opacity: 0.9;
+      stroke-width: 1.55;
+    }
+
+    .today-goal-target .today-goal-core {
+      filter: drop-shadow(0 0 2px rgba(52, 211, 153, 0.55));
+    }
 
     .today-goal-ring {
       position: absolute;
@@ -1780,35 +1815,43 @@ sw: true
       overflow: visible;
     }
 
-    .today-goal-ring-track { stroke: rgba(148, 163, 184, 0.28); }
+    .today-goal-ring-track { stroke: rgba(148, 163, 184, 0.24); }
     .today-goal-ring-fill {
       stroke: #34d399;
       stroke-linecap: round;
+      filter: drop-shadow(0 0 2px rgba(52, 211, 153, 0.38));
       transition: stroke-dashoffset 0.32s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.2s ease;
     }
 
     .today-goal-label {
       position: relative;
       z-index: 1;
-      font-size: 6.5px;
+      font-size: 9px;
       line-height: 1;
       font-weight: 900;
-      letter-spacing: -0.45px;
+      letter-spacing: -0.55px;
       color: #d1fae5;
       font-family: inherit;
     }
 
     .today-goal-btn.has-goal {
-      border-color: rgba(52, 211, 153, 0.28);
-      background: rgba(6, 78, 59, 0.28);
+      border-color: rgba(52, 211, 153, 0.38);
+      background:
+        radial-gradient(circle at 50% 35%, rgba(6, 78, 59, 0.5), rgba(6, 78, 59, 0.22) 72%),
+        rgba(6, 78, 59, 0.2);
       color: #6ee7b7;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        inset 0 0 12px rgba(16, 185, 129, 0.08);
     }
 
     .today-goal-btn.is-complete {
-      border-color: rgba(52, 211, 153, 0.7);
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(5, 150, 105, 0.95));
+      border-color: rgba(52, 211, 153, 0.72);
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.98), rgba(5, 150, 105, 0.98));
       color: #ecfdf5;
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+      box-shadow:
+        0 5px 16px rgba(16, 185, 129, 0.32),
+        inset 0 1px 0 rgba(255, 255, 255, 0.22);
     }
 
     .today-goal-complete {
@@ -1819,7 +1862,7 @@ sw: true
       height: 100%;
     }
 
-    .today-goal-complete svg { width: 12px; height: 12px; }
+    .today-goal-complete svg { width: 17px; height: 17px; }
 
     @keyframes todayGoalPop {
       0%   { transform: scale(1); }
@@ -1832,19 +1875,43 @@ sw: true
     }
 
     [data-theme="light"] .today-goal-btn {
-      border-color: rgba(100, 116, 139, 0.35);
-      background: rgba(100, 116, 139, 0.06);
-      color: #64748b;
+      border-color: rgba(16, 185, 129, 0.3);
+      background:
+        radial-gradient(circle at 50% 32%, rgba(16, 185, 129, 0.13), rgba(255, 255, 255, 0.82) 70%),
+        rgba(255, 255, 255, 0.72);
+      color: #059669;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+        0 2px 8px rgba(15, 23, 42, 0.06);
+    }
+
+    [data-theme="light"] .today-goal-btn:hover {
+      border-color: rgba(5, 150, 105, 0.55);
+      background:
+        radial-gradient(circle at 50% 32%, rgba(16, 185, 129, 0.2), rgba(255, 255, 255, 0.86) 72%),
+        rgba(255, 255, 255, 0.8);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.95),
+        0 0 14px rgba(16, 185, 129, 0.14);
     }
 
     [data-theme="light"] .today-goal-btn.has-goal {
-      background: rgba(16, 185, 129, 0.08);
+      background:
+        radial-gradient(circle at 50% 35%, rgba(16, 185, 129, 0.18), rgba(236, 253, 245, 0.72) 72%),
+        rgba(236, 253, 245, 0.64);
       color: #059669;
     }
 
-    [data-theme="light"] .today-goal-btn.is-complete { color: #fff; }
+    [data-theme="light"] .today-goal-btn.is-complete {
+      border-color: rgba(5, 150, 105, 0.7);
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+      box-shadow:
+        0 5px 16px rgba(5, 150, 105, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    }
     [data-theme="light"] .today-goal-label { color: #065f46; }
-    [data-theme="light"] .today-goal-ring-track { stroke: rgba(100, 116, 139, 0.25); }
+    [data-theme="light"] .today-goal-ring-track { stroke: rgba(100, 116, 139, 0.22); }
 
     .today-task.is-missed {
       border-inline-start: 3px solid rgba(251, 191, 36, 0.55);
@@ -9360,9 +9427,12 @@ function showAbout() {
 
     function todayGoalButtonInner(goal) {
       if (!goal) {
-        return '<svg class="today-goal-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-          '<circle cx="12" cy="12" r="7.5"></circle>' +
-          '<circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"></circle>' +
+        // ⭐ v5.1.2 — هدف/متصفّح (crosshair) بخطوط أربع ونقطة مركزية:
+        //   يقرأ كـ«حدّد هدفاً» بدل شكل الهدف القديم المزدوج.
+        return '<svg class="today-goal-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+          '<circle cx="12" cy="12" r="7.2" class="today-goal-crosshair"></circle>' +
+          '<path d="M12 2.6v3.1M12 18.3v3.1M2.6 12h3.1M18.3 12h3.1" class="today-goal-crosshair"></path>' +
+          '<circle cx="12" cy="12" r="2.15" fill="currentColor" stroke="none" class="today-goal-core"></circle>' +
         '</svg>';
       }
 
@@ -9375,14 +9445,13 @@ function showAbout() {
         '</span>';
       }
 
-      // ⭐ محيط الدائرة الحقيقي (r=9.5) بدل الاعتماد على pathLength،
-      //   لضمان ظهور الحلقة صحيحة على كل إصدارات WebView.
-      var circumference = 2 * Math.PI * 9.5;
+      // ⭐ v5.1.2 — هندسة الحلقة على مقاس الزرّ الجديد (36×36، r=15).
+      var circumference = 2 * Math.PI * 15;
       var offset = (circumference * (1 - pct / 100)).toFixed(2);
 
-      return '<svg class="today-goal-ring" viewBox="0 0 24 24" aria-hidden="true">' +
-        '<circle class="today-goal-ring-track" cx="12" cy="12" r="9.5" fill="none" stroke-width="2.4"></circle>' +
-        '<circle class="today-goal-ring-fill" cx="12" cy="12" r="9.5" fill="none" stroke-width="2.4" ' +
+      return '<svg class="today-goal-ring" viewBox="0 0 36 36" aria-hidden="true">' +
+        '<circle class="today-goal-ring-track" cx="18" cy="18" r="15" fill="none" stroke-width="2.6"></circle>' +
+        '<circle class="today-goal-ring-fill" cx="18" cy="18" r="15" fill="none" stroke-width="2.6" ' +
           'stroke-dasharray="' + circumference.toFixed(2) + '" stroke-dashoffset="' + offset + '"></circle>' +
       '</svg>' +
       '<span class="today-goal-label">' + pct + '%</span>';
