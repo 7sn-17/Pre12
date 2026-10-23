@@ -45,6 +45,15 @@
 
         </activity>
 
+        <!-- ⭐⭐ v5.1.2 — Foreground Service للتنزيلات.
+             النوع dataSync مطلوب على Android 14+؛ الخدمة تُبقي التطبيق
+             حيّاً أثناء التنزيل وتدير إشعاراً واحداً صامتاً بنسبة تقدّم. -->
+        <service
+            android:name=".downloads.DownloadForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"
+            android:stopWithTask="false" />
+
         <!-- ⭐⭐ Phase W1 — «مهام اليوم» home-screen widget (Jetpack Glance).
              The receiver is not exported: only the system (AppWidgetService)
              sends APPWIDGET_UPDATE. `today_tasks_widget_info.xml` carries the
@@ -151,6 +160,11 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- ⭐ v5.1.2 — تنزيلات في الخلفية عبر Foreground Service -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <!-- ⭐ Android 13+ : إذن عرض الإشعارات (يُطلب من المستخدم) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />

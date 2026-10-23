@@ -50,4 +50,11 @@
     <string name="widget_preview_pct3">85%</string>
 
     <!-- Phase W6 — next-lecture widget -->
+
+    <!-- ⭐ v5.1.2 — silent download foreground service -->
+    <string name="download_channel_name">تنزيل الملفات</string>
+    <string name="download_channel_description">إشعار صامت واحد لكل تنزيل — مع نسبة التقدّم وزر إلغاء</string>
+    <string name="download_default_title">ملف</string>
+    <string name="download_preparing">جارٍ التحميل…</string>
+    <string name="download_cancel">إلغاء</string>
 </resources>

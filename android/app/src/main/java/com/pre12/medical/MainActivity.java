@@ -4,6 +4,7 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 
 import com.getcapacitor.BridgeActivity;
+import com.pre12.medical.downloads.MedDownloadsPlugin;
 import com.pre12.medical.widgets.MedWidgetsPlugin;
 
 import ee.forgr.capacitor.social.login.ModifiedMainActivityForSocialLoginPlugin;
@@ -28,6 +29,8 @@ public class MainActivity extends BridgeActivity
         //    Must be registered before super.onCreate(): BridgeActivity hands the
         //    builder to Capacitor during creation.
         registerPlugin(MedWidgetsPlugin.class);
+        // ⭐ v5.1.2 — local foreground-service bridge for silent downloads.
+        registerPlugin(MedDownloadsPlugin.class);
         super.onCreate(savedInstanceState);
     }
 
