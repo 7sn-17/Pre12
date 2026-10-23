@@ -10,7 +10,7 @@
 
 <br>
 
-![Version](https://img.shields.io/badge/version-5.1.1-10b981?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-5.1.2-10b981?style=for-the-badge)
 ![Android](https://img.shields.io/badge/Android-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 ![Offline](https://img.shields.io/badge/Offline-First-3b82f6?style=for-the-badge)
 ![SPA](https://img.shields.io/badge/SPA-a78bfa?style=for-the-badge)
