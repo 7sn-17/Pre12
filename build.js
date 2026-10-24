@@ -40,7 +40,7 @@ const APP_JS = `app.js?v=${APP_VERSION}`;
 
 // ⭐ v4.2.0 — Supabase Storage: ملف APK ثابت الاسم يُستبدل عند كل إصدار.
 const RELEASE_DOWNLOAD_URL =
-  'https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk';
+  'https://github.com/7sn-17/Pre12/releases/latest/download/Medical_Platform_Latest.apk';
 
 // ------------------------------------------------------------------
 // Registries (single source of truth for shared markup)
