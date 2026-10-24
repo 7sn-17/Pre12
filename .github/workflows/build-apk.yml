@@ -260,6 +260,12 @@ jobs:
           ls -l "$NEW_NAME"
           echo "::notice::the APK is published as $NEW_NAME"
 
+      - name: 📋 Create a fixed-name APK for latest direct download
+        run: |
+          cd android/app/build/outputs/apk/release
+          cp "Medical_Platform_v${{ steps.version.outputs.version }}.apk" "Medical_Platform_Latest.apk"
+          ls -l Medical_Platform_Latest.apk
+
       - name: 🔐 Publish the SHA-256 checksum
         run: |
           cd android/app/build/outputs/apk/release
@@ -288,6 +294,7 @@ jobs:
           files: |
             android/app/build/outputs/apk/release/Medical_Platform_v${{ steps.version.outputs.version }}.apk
             android/app/build/outputs/apk/release/Medical_Platform_v${{ steps.version.outputs.version }}.apk.sha256
+            android/app/build/outputs/apk/release/Medical_Platform_Latest.apk
           name: المنصة الطبية — v${{ steps.version.outputs.version }}
           body_path: ./release-notes.md
           fail_on_unmatched_files: true
