@@ -407,7 +407,7 @@ headerTitle: أهدافي
 .goal-content {
   flex: 1;
   min-width: 0;
-  padding-left: 65px; /* مساحة لأزرار التعديل والحذف */
+  padding-left: 55px; /* مساحة لأزرار التعديل والحذف */
 }
 
 .goal-text {
@@ -415,7 +415,7 @@ headerTitle: أهدافي
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.6;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   word-break: break-word;
   transition: all var(--transition-fast);
   position: relative;
@@ -433,99 +433,47 @@ headerTitle: أهدافي
   color: var(--text-secondary);
 }
 
-/* Meta row */
+/* Meta row (بدون حواف - سطر واحد) */
 .goal-meta {
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
+  gap: 8px;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  margin-bottom: 4px;
 }
 
-.goal-meta-chip {
+.goal-meta-item {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 8px;
-  border-radius: 8px;
-  background: rgba(128, 128, 128, 0.08);
-  border: 1px solid var(--border-card);
-  font-size: 0.68rem;
-  color: var(--text-secondary);
+  font-size: 0.7rem;
   font-weight: 700;
   white-space: nowrap;
-  transition: all var(--transition-fast);
-}
-
-.goal-meta-chip i {
-  width: 12px;
-  height: 12px;
   color: var(--text-muted);
 }
 
-.goal-meta-chip.deadline-soon {
-  background: rgba(245, 158, 11, 0.12);
-  border-color: rgba(245, 158, 11, 0.35);
-  color: var(--warning);
-}
-
-.goal-meta-chip.deadline-soon i {
-  color: var(--warning);
-}
-
-.goal-meta-chip.deadline-overdue {
-  background: rgba(239, 68, 68, 0.12);
-  border-color: rgba(239, 68, 68, 0.35);
-  color: var(--danger);
-}
-
-.goal-meta-chip.deadline-overdue i {
-  color: var(--danger);
-}
-
-/* Status badge */
-.goal-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 8px;
-  font-size: 0.68rem;
-  font-weight: 800;
-  background: rgba(100, 116, 139, 0.15);
-  border: 1px solid rgba(100, 116, 139, 0.3);
-  color: #94a3b8;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.goal-status i {
+.goal-meta-item i {
   width: 12px;
   height: 12px;
 }
 
-.goal-status:hover {
-  background: rgba(100, 116, 139, 0.25);
+/* ألوان الحالة */
+.goal-meta-item.status-progress { color: #60a5fa; }
+.goal-meta-item.status-completed { color: var(--accent-emerald); }
+.goal-meta-item.status-deferred { color: var(--warning); cursor: pointer; }
+
+/* فاصل نقطي */
+.goal-meta-dot {
+  font-size: 1.2rem;
+  color: var(--text-muted);
+  line-height: 1;
+  margin-top: -2px;
 }
 
-.goal-status.completed {
-  background: rgba(16, 185, 129, 0.15);
-  border-color: rgba(16, 185, 129, 0.35);
-  color: var(--accent-light);
-  cursor: default;
-}
-
-.goal-status.deferred {
-  background: rgba(245, 158, 11, 0.15);
-  border-color: rgba(245, 158, 11, 0.35);
-  color: var(--warning);
-}
-
-.goal-status.in-progress {
-  background: rgba(59, 130, 246, 0.15);
-  border-color: rgba(59, 130, 246, 0.35);
-  color: #60a5fa;
-}
+/* ألوان تاريخ الاستحقاق */
+.goal-meta-item.deadline-soon { color: var(--warning); }
+.goal-meta-item.deadline-overdue { color: var(--danger); }
 
 /* Action Buttons (تعديل + حذف) */
 .goal-actions {
@@ -533,53 +481,49 @@ headerTitle: أهدافي
   top: 16px;
   left: 16px;
   display: flex;
-  gap: 6px;
+  gap: 8px;
   z-index: 10;
 }
 
 .action-btn {
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   font-family: inherit;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid transparent;
-  background: rgba(128,128,128,0.06);
+  border: none;
+  background: transparent;
 }
 
 .action-btn i {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   pointer-events: none;
 }
 
 .action-btn.edit {
-  color: var(--text-secondary);
-  border-color: var(--border-card);
+  color: var(--text-muted);
 }
 
 .action-btn.edit:hover {
   color: var(--accent-light);
-  border-color: var(--accent-emerald);
   background: rgba(16, 185, 129, 0.1);
 }
 
 .action-btn.delete {
-  color: var(--text-secondary);
-  border-color: var(--border-card);
+  color: var(--text-muted);
 }
 
 .action-btn.delete:hover {
   color: var(--danger);
-  border-color: var(--danger);
   background: rgba(239, 68, 68, 0.1);
 }
 
-    /* Empty */
+    /* Empty State */
     .empty-state {
       text-align: center;
       padding: 50px 20px;
@@ -587,6 +531,7 @@ headerTitle: أهدافي
       flex-direction: column;
       align-items: center;
       gap: 14px;
+      animation: fadeIn 0.4s ease;
     }
 
     .empty-state.visible { display: flex; }
@@ -602,8 +547,8 @@ headerTitle: أهدافي
 
     .empty-icon i { width: 36px; height: 36px; }
 
-    .empty-state h3 { font-size: 1rem; font-weight: 800; color: var(--text-primary); }
-    .empty-state p { font-size: 0.82rem; color: var(--text-secondary); max-width: 280px; line-height: 1.6; }
+    .empty-state h3 { font-size: 1.1rem; font-weight: 800; color: var(--text-primary); }
+    .empty-state p { font-size: 0.85rem; color: var(--text-secondary); max-width: 280px; line-height: 1.6; }
 
     /* FAB */
     .fab {
@@ -723,7 +668,7 @@ headerTitle: أهدافي
       line-height: 1.6;
     }
 
-    .goal-progress { margin-top: 12px; }
+    .goal-progress { margin-top: 14px; }
     .gp-head {
       display: flex;
       align-items: baseline;
@@ -837,11 +782,23 @@ headerTitle: أهدافي
       box-shadow: 0 0 0 4px rgba(236, 72, 153, 0.2);
     }
     
-    /* إصلاح لون أيقونة التقويم حسب الثيم */
-    input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; opacity: 0.6; }
-    [data-theme="light"] input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0); }
-    input[type="date"] { color-scheme: dark; }
-    [data-theme="light"] input[type="date"] { color-scheme: light; }
+    /* ⭐ إصلاح حقل التاريخ (فرض التنسيق الإنجليزي وإظهار الأيقونة) */
+    input[type="date"] {
+      direction: ltr;
+      text-align: right;
+      color-scheme: dark;
+    }
+    [data-theme="light"] input[type="date"] {
+      color-scheme: light;
+    }
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(1); /* تحويل الأيقونة للون الأبيض في الوضع الليلي */
+      opacity: 0.7;
+      cursor: pointer;
+    }
+    [data-theme="light"] input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(0); /* الأيقونة السوداء في الوضع النهاري */
+    }
 
     .modal-actions {
       display: flex;
@@ -932,8 +889,8 @@ headerTitle: أهدافي
       .stats-progress-circle { width: 80px; height: 80px; }
       .stats-progress-number { font-size: 1.25rem; }
       .stats-title { font-size: 0.98rem; }
-      .goal-card { padding: 14px 16px; border-radius: 16px; gap: 12px; }
-      .goal-content { padding-left: 55px; }
+      .goal-card { padding: 16px 14px; border-radius: 16px; gap: 10px; }
+      .goal-content { padding-left: 50px; }
       .fab { bottom: 20px; left: 16px; width: 54px; height: 54px; }
       .fab i { width: 24px; height: 24px; }
       .modal-card { padding: 20px; border-radius: 20px; }
@@ -982,11 +939,11 @@ headerTitle: أهدافي
     <!-- Goals List -->
     <div class="goals-list" id="goalsList"></div>
 
-    <!-- Empty -->
+    <!-- Empty State (Dynamic) -->
     <div class="empty-state" id="goalsEmpty">
-      <div class="empty-icon"><i data-lucide="target"></i></div>
-      <h3>لا توجد أهداف بعد</h3>
-      <p>حدد أهدافك الدراسية وتابع إنجازها يوماً بيوم</p>
+      <div class="empty-icon" id="emptyIcon"><i data-lucide="target"></i></div>
+      <h3 id="emptyTitle">لا توجد أهداف بعد</h3>
+      <p id="emptyDesc">حدد أهدافك الدراسية وتابع إنجازها يوماً بيوم</p>
     </div>
 
   </div>
@@ -1047,12 +1004,13 @@ headerTitle: أهدافي
 
       <div class="form-group">
         <label class="form-label">تاريخ الاستحقاق (اختياري)</label>
-        <!-- إضافة lang="en" لحل مشكلة التاريخ الغريب -->
+        <!-- إضافة lang و dir لإجبار المتصفح على التنسيق الإنجليزي -->
         <input 
           type="date" 
           id="goalDeadline" 
           class="form-input"
           lang="en"
+          dir="ltr"
         >
       </div>
 
@@ -1209,6 +1167,7 @@ headerTitle: أهدافي
 
       if (filtered.length === 0) {
         empty.classList.add('visible');
+        updateEmptyState();
         return;
       }
       
@@ -1227,6 +1186,32 @@ headerTitle: أهدافي
         list.appendChild(card);
       });
       
+      lucide.createIcons();
+    }
+
+    // تحديث رسالة القائمة الفارغة حسب التبويب
+    function updateEmptyState() {
+      const icon = document.getElementById('emptyIcon');
+      const title = document.getElementById('emptyTitle');
+      const desc = document.getElementById('emptyDesc');
+
+      if (currentFilter === 'completed') {
+        icon.innerHTML = '<i data-lucide="award"></i>';
+        title.textContent = 'لم تكمل أي هدف بعد';
+        desc.textContent = 'أنجز هدفاً واحداً على الأقل لكي يظهر في هذه القائمة. أنت تستطيع!';
+      } else if (currentFilter === 'deferred') {
+        icon.innerHTML = '<i data-lucide="calendar-clock"></i>';
+        title.textContent = 'لا توجد أهداف مؤجلة';
+        desc.textContent = 'أنت منظم جداً! لم تقم بتأجيل أي هدف حتى الآن.';
+      } else if (currentFilter === 'active') {
+        icon.innerHTML = '<i data-lucide="activity"></i>';
+        title.textContent = 'لا توجد أهداف قيد التقدم';
+        desc.textContent = 'أضف هدفاً جديداً وابدأ رحلة الإنجاز الآن.';
+      } else {
+        icon.innerHTML = '<i data-lucide="target"></i>';
+        title.textContent = 'لا توجد أهداف بعد';
+        desc.textContent = 'حدد أهدافك الدراسية وتابع إنجازها يوماً بيوم.';
+      }
       lucide.createIcons();
     }
 
@@ -1251,21 +1236,21 @@ function createGoalCard(goal, index) {
   if (goal.deadline) {
     const deadlineInfo = getDeadlineInfo(goal.deadline);
     deadlineHtml = `
-      <div class="goal-meta-chip ${deadlineInfo.className}">
+      <div class="goal-meta-item ${deadlineInfo.className}">
         <i data-lucide="calendar"></i>
         <span>${deadlineInfo.text}</span>
       </div>
     `;
   }
 
-  // شارة الحالة
+  // شارة الحالة (بدون حواف)
   let statusHtml = '';
   if (goal.completed) {
-    statusHtml = `<span class="goal-status completed"><i data-lucide="check-circle-2"></i> مكتمل</span>`;
+    statusHtml = `<div class="goal-meta-item status-completed"><i data-lucide="check-circle-2"></i> مكتمل</div>`;
   } else if (goal.is_deferred) {
-    statusHtml = `<span class="goal-status deferred" onclick="toggleDefer('${goal.id}')"><i data-lucide="pause-circle"></i> مؤجل</span>`;
+    statusHtml = `<div class="goal-meta-item status-deferred" onclick="toggleDefer('${goal.id}')"><i data-lucide="pause-circle"></i> مؤجل</div>`;
   } else {
-    statusHtml = `<span class="goal-status in-progress" onclick="toggleDefer('${goal.id}')" title="اضغط للتأجيل"><i data-lucide="circle-dashed"></i> قيد التقدم</span>`;
+    statusHtml = `<div class="goal-meta-item status-progress" onclick="toggleDefer('${goal.id}')" title="اضغط للتأجيل"><i data-lucide="circle-dashed"></i> قيد التقدم</div>`;
   }
 
   // الهدف الكمّي
@@ -1323,14 +1308,15 @@ function createGoalCard(goal, index) {
       ${leadingHtml}
       <div class="goal-content">
         <div class="goal-text">${escapeHtml(goal.text)}</div>
+        
         <div class="goal-meta">
           ${statusHtml}
-          <div class="goal-meta-chip">
-            <i data-lucide="clock"></i>
-            <span>${timeText}</span>
-          </div>
+          <span class="goal-meta-dot">•</span>
+          <div class="goal-meta-item"><i data-lucide="clock"></i> ${timeText}</div>
+          ${goal.deadline ? '<span class="goal-meta-dot">•</span>' : ''}
           ${deadlineHtml}
         </div>
+
         ${trackHtml}
       </div>
     </div>
@@ -1464,9 +1450,9 @@ async function syncGoalToCloud(goal) {
       current_value: goal.current_value == null ? null : Number(goal.current_value),
       unit: goal.unit || null,
       deadline: goal.deadline || null,
-      is_deferred: !!goal.is_deferred, // إضافة جديدة
+      is_deferred: !!goal.is_deferred,
       updated_at: new Date().toISOString(),
-      edited_at: goal.edited_at || null // إضافة جديدة
+      edited_at: goal.edited_at || null
     }, { onConflict: 'user_id,goal_id' });
   } catch (e) {
     /* offline-first: the local write has already succeeded */
@@ -1548,28 +1534,6 @@ function getDeadlineInfo(dateString) {
       
       return date.toLocaleDateString('en-GB', { // إنجليزي
         year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
-    }
-
-    function formatDeadline(dateString) {
-      const date = new Date(dateString);
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
-      
-      const deadlineDate = new Date(date);
-      deadlineDate.setHours(0, 0, 0, 0);
-      
-      const diffMs = deadlineDate - now;
-      const diffDays = Math.ceil(diffMs / 86400000);
-      
-      if (diffDays < 0) return `متأخر ${Math.abs(diffDays)} يوم`;
-      if (diffDays === 0) return 'اليوم';
-      if (diffDays === 1) return 'غداً';
-      if (diffDays < 7) return `بعد ${diffDays} أيام`;
-      
-      return date.toLocaleDateString('en-GB', { // إنجليزي
         month: 'short',
         day: 'numeric'
       });
