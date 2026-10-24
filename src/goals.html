@@ -213,6 +213,38 @@ headerTitle: أهدافي
 
     .section-title i { color: var(--accent-emerald); width: 20px; height: 20px; }
 
+    /* ============================================
+       ✨ التبويبات الجديدة (Pills Design)
+       ============================================ */
+    .filter-tabs {
+      display: flex; gap: 6px; padding: 6px; margin-bottom: 20px;
+      background: rgba(16, 34, 27, 0.4); 
+      border: 1px solid var(--border-card); 
+      border-radius: 100px;
+      overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    }
+    [data-theme="light"] .filter-tabs { background: rgba(255, 255, 255, 0.5); }
+    
+    .filter-tabs::-webkit-scrollbar { display: none; }
+    
+    .filter-tab {
+      flex: 1; min-width: max-content; padding: 8px 16px; border-radius: 100px;
+      font-size: 0.8rem; font-weight: 800; color: var(--text-secondary);
+      cursor: pointer; text-align: center; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid transparent; background: transparent; font-family: inherit;
+    }
+    
+    .filter-tab:hover { color: var(--text-primary); background: rgba(128, 128, 128, 0.08); }
+    
+    .filter-tab.active {
+      background: linear-gradient(135deg, var(--pink), #be185d);
+      color: #ffffff;
+      box-shadow: 0 4px 15px -4px rgba(236, 72, 153, 0.5);
+      border-color: rgba(255, 255, 255, 0.15);
+      text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+
     /* Goals List */
     .goals-list {
       display: flex;
@@ -253,7 +285,7 @@ headerTitle: أهدافي
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
-/* شريط جانبي - رمادي للغير مكتمل، أخضر للمكتمل */
+/* شريط جانبي - رمادي للغير مكتمل، أخضر للمكتمل، برتقالي للمؤجل */
 .goal-card::before {
   content: '';
   position: absolute;
@@ -268,6 +300,11 @@ headerTitle: أهدافي
 
 .goal-card.completed::before {
   background: linear-gradient(180deg, var(--accent-emerald), var(--accent-dark));
+  opacity: 1;
+}
+
+.goal-card.deferred::before {
+  background: linear-gradient(180deg, var(--warning), #b45309);
   opacity: 1;
 }
 
@@ -290,11 +327,11 @@ headerTitle: أهدافي
     rgba(248, 250, 252, 0.95));
 }
 
-.goal-card.completed {
+.goal-card.completed, .goal-card.deferred {
   opacity: 0.85;
 }
 
-.goal-card.completed:hover {
+.goal-card.completed:hover, .goal-card.deferred:hover {
   opacity: 1;
 }
 
@@ -303,7 +340,6 @@ headerTitle: أهدافي
   display: flex;
   align-items: flex-start;
   gap: 14px;
-  padding-left: 48px; /* مساحة لزر الحذف */
   position: relative;
   z-index: 1;
 }
@@ -337,7 +373,6 @@ headerTitle: أهدافي
   box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
 }
 
-/* علامة الصح - مخفية افتراضياً (تعمل مع SVG الذي يولّده Lucide) */
 .goal-checkbox svg,
 .goal-checkbox i {
   display: none !important;
@@ -347,7 +382,6 @@ headerTitle: أهدافي
   stroke-width: 3;
 }
 
-/* تظهر فقط عند الإكمال */
 .goal-checkbox.checked {
   background: linear-gradient(135deg, var(--accent-emerald), var(--accent-dark));
   border: 2px solid var(--accent-emerald);
@@ -373,6 +407,7 @@ headerTitle: أهدافي
 .goal-content {
   flex: 1;
   min-width: 0;
+  padding-left: 65px; /* مساحة لأزرار التعديل والحذف */
 }
 
 .goal-text {
@@ -394,25 +429,30 @@ headerTitle: أهدافي
   text-decoration-thickness: 2px;
 }
 
+.goal-card.deferred .goal-text {
+  color: var(--text-secondary);
+}
+
 /* Meta row */
 .goal-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
 .goal-meta-chip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  border-radius: 10px;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 8px;
   background: rgba(128, 128, 128, 0.08);
   border: 1px solid var(--border-card);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   color: var(--text-secondary);
-  font-weight: 600;
+  font-weight: 700;
+  white-space: nowrap;
   transition: all var(--transition-fast);
 }
 
@@ -425,85 +465,118 @@ headerTitle: أهدافي
 .goal-meta-chip.deadline-soon {
   background: rgba(245, 158, 11, 0.12);
   border-color: rgba(245, 158, 11, 0.35);
-  color: var(--medapp-amber);
+  color: var(--warning);
 }
 
 .goal-meta-chip.deadline-soon i {
-  color: var(--medapp-amber);
+  color: var(--warning);
 }
 
 .goal-meta-chip.deadline-overdue {
   background: rgba(239, 68, 68, 0.12);
   border-color: rgba(239, 68, 68, 0.35);
-  color: var(--medapp-red);
+  color: var(--danger);
 }
 
 .goal-meta-chip.deadline-overdue i {
-  color: var(--medapp-red);
+  color: var(--danger);
 }
 
 /* Status badge */
 .goal-status {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   padding: 4px 10px;
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 0.68rem;
   font-weight: 800;
   background: rgba(100, 116, 139, 0.15);
   border: 1px solid rgba(100, 116, 139, 0.3);
   color: #94a3b8;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
 .goal-status i {
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
+}
+
+.goal-status:hover {
+  background: rgba(100, 116, 139, 0.25);
 }
 
 .goal-status.completed {
   background: rgba(16, 185, 129, 0.15);
   border-color: rgba(16, 185, 129, 0.35);
   color: var(--accent-light);
+  cursor: default;
 }
 
-/* Delete Button - أوضح وقابل للنقر */
-.goal-delete {
+.goal-status.deferred {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: var(--warning);
+}
+
+.goal-status.in-progress {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.35);
+  color: #60a5fa;
+}
+
+/* Action Buttons (تعديل + حذف) */
+.goal-actions {
   position: absolute;
-  top: 14px;
-  left: 14px;
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.35);
-  color: var(--medapp-red);
+  top: 16px;
+  left: 16px;
+  display: flex;
+  gap: 6px;
+  z-index: 10;
+}
+
+.action-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  flex-shrink: 0;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   font-family: inherit;
-  z-index: 10;
-  pointer-events: auto;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+  background: rgba(128,128,128,0.06);
 }
 
-.goal-delete:hover {
-  background: rgba(239, 68, 68, 0.25);
-  border-color: var(--danger);
-  transform: scale(1.08);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-}
-
-.goal-delete:active {
-  transform: scale(0.95);
-}
-
-.goal-delete i {
-  width: 17px;
-  height: 17px;
+.action-btn i {
+  width: 14px;
+  height: 14px;
   pointer-events: none;
+}
+
+.action-btn.edit {
+  color: var(--text-secondary);
+  border-color: var(--border-card);
+}
+
+.action-btn.edit:hover {
+  color: var(--accent-light);
+  border-color: var(--accent-emerald);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.action-btn.delete {
+  color: var(--text-secondary);
+  border-color: var(--border-card);
+}
+
+.action-btn.delete:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: rgba(239, 68, 68, 0.1);
 }
 
     /* Empty */
@@ -763,6 +836,12 @@ headerTitle: أهدافي
       border-color: var(--pink);
       box-shadow: 0 0 0 4px rgba(236, 72, 153, 0.2);
     }
+    
+    /* إصلاح لون أيقونة التقويم حسب الثيم */
+    input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; opacity: 0.6; }
+    [data-theme="light"] input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0); }
+    input[type="date"] { color-scheme: dark; }
+    [data-theme="light"] input[type="date"] { color-scheme: light; }
 
     .modal-actions {
       display: flex;
@@ -854,6 +933,7 @@ headerTitle: أهدافي
       .stats-progress-number { font-size: 1.25rem; }
       .stats-title { font-size: 0.98rem; }
       .goal-card { padding: 14px 16px; border-radius: 16px; gap: 12px; }
+      .goal-content { padding-left: 55px; }
       .fab { bottom: 20px; left: 16px; width: 54px; height: 54px; }
       .fab i { width: 24px; height: 24px; }
       .modal-card { padding: 20px; border-radius: 20px; }
@@ -891,6 +971,14 @@ headerTitle: أهدافي
       <span>قائمة الأهداف</span>
     </div>
 
+    <!-- Filter Tabs -->
+    <div class="filter-tabs">
+      <button class="filter-tab active" onclick="changeFilter('all')" id="tab-all">الكل</button>
+      <button class="filter-tab" onclick="changeFilter('active')" id="tab-active">قيد التقدم</button>
+      <button class="filter-tab" onclick="changeFilter('deferred')" id="tab-deferred">المؤجلة</button>
+      <button class="filter-tab" onclick="changeFilter('completed')" id="tab-completed">المكتملة</button>
+    </div>
+
     <!-- Goals List -->
     <div class="goals-list" id="goalsList"></div>
 
@@ -908,13 +996,13 @@ headerTitle: أهدافي
     <i data-lucide="plus"></i>
   </button>
 
-  <!-- Add Goal Modal -->
+  <!-- Add/Edit Goal Modal -->
   <div class="modal-overlay" id="addModal" onclick="closeAddModalIfOutside(event)">
     <div class="modal-card" onclick="event.stopPropagation()">
       <div class="modal-header">
         <div class="modal-title">
           <i data-lucide="target"></i>
-          <span>هدف جديد</span>
+          <span id="modalTitleText">هدف جديد</span>
         </div>
         <button class="modal-close" onclick="closeAddModal()">
           <i data-lucide="x"></i>
@@ -959,10 +1047,12 @@ headerTitle: أهدافي
 
       <div class="form-group">
         <label class="form-label">تاريخ الاستحقاق (اختياري)</label>
+        <!-- إضافة lang="en" لحل مشكلة التاريخ الغريب -->
         <input 
           type="date" 
           id="goalDeadline" 
           class="form-input"
+          lang="en"
         >
       </div>
 
@@ -1028,6 +1118,8 @@ headerTitle: أهدافي
     };
 
     const GOALS_KEY = 'medfav_goals';
+    let currentFilter = 'all';
+    let editingGoalId = null;
 
     // ============================================
     // Toast
@@ -1081,8 +1173,6 @@ headerTitle: أهدافي
       } catch (err) {
         console.error('saveGoals error:', err);
       }
-      // ⭐⭐ Phase W14 — حدّث ودجت «ملاحظاتي وأهدافي» **فوراً** (بلا شبكة):
-      //   pushNotesNow يكتب حمولة الملاحظات والأهداف في prefs ويطلب الرسم.
       try {
         if (window.MedAppWidgets) {
           if (typeof window.MedAppWidgets.pushNotesNow === 'function') {
@@ -1094,6 +1184,14 @@ headerTitle: أهدافي
       } catch (e) {}
     }
 
+    // التبديل بين التبويبات
+    function changeFilter(filter) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-tab').forEach(tab => tab.classList.remove('active'));
+      document.getElementById('tab-' + filter).classList.add('active');
+      renderGoals();
+    }
+
     // ============================================
     // عرض الأهداف
     // ============================================
@@ -1103,7 +1201,13 @@ headerTitle: أهدافي
       
       list.innerHTML = '';
       
-      if (goalsState.goals.length === 0) {
+      // تصفية الأهداف
+      let filtered = goalsState.goals;
+      if (currentFilter === 'active') filtered = filtered.filter(g => !g.completed && !g.is_deferred);
+      else if (currentFilter === 'deferred') filtered = filtered.filter(g => g.is_deferred && !g.completed);
+      else if (currentFilter === 'completed') filtered = filtered.filter(g => g.completed);
+
+      if (filtered.length === 0) {
         empty.classList.add('visible');
         return;
       }
@@ -1111,7 +1215,7 @@ headerTitle: أهدافي
       empty.classList.remove('visible');
       
       // ترتيب: غير المكتملة أولاً، ثم المكتملة
-      const sorted = [...goalsState.goals].sort((a, b) => {
+      const sorted = [...filtered].sort((a, b) => {
         if (a.completed === b.completed) {
           return new Date(b.created_at) - new Date(a.created_at);
         }
@@ -1134,7 +1238,12 @@ function createGoalCard(goal, index) {
   const percent = goalPercent(goal);
   const isTracked = Number(goal.target_value) > 0;
 
-  card.className = 'goal-card' + (goal.completed ? ' completed' : '') + (isTracked ? ' tracked' : '');
+  let cardClass = 'goal-card';
+  if (goal.completed) cardClass += ' completed';
+  else if (goal.is_deferred) cardClass += ' deferred';
+  if (isTracked) cardClass += ' tracked';
+
+  card.className = cardClass;
   card.style.animationDelay = (index * 0.04) + 's';
 
   // شريحة تاريخ الاستحقاق
@@ -1150,17 +1259,16 @@ function createGoalCard(goal, index) {
   }
 
   // شارة الحالة
-  const statusHtml = goal.completed
-    ? `<span class="goal-status completed">
-         <i data-lucide="check-circle-2"></i>
-         مكتمل
-       </span>`
-    : `<span class="goal-status">
-         <i data-lucide="circle-dashed"></i>
-         ${isTracked ? 'قيد التقدم' : 'قيد الإنجاز'}
-       </span>`;
+  let statusHtml = '';
+  if (goal.completed) {
+    statusHtml = `<span class="goal-status completed"><i data-lucide="check-circle-2"></i> مكتمل</span>`;
+  } else if (goal.is_deferred) {
+    statusHtml = `<span class="goal-status deferred" onclick="toggleDefer('${goal.id}')"><i data-lucide="pause-circle"></i> مؤجل</span>`;
+  } else {
+    statusHtml = `<span class="goal-status in-progress" onclick="toggleDefer('${goal.id}')" title="اضغط للتأجيل"><i data-lucide="circle-dashed"></i> قيد التقدم</span>`;
+  }
 
-  // الهدف الكمّي: حلقة نسبة + شريط تقدم + زر «+10 كلمة».
+  // الهدف الكمّي
   const trackHtml = isTracked ? `
     <div class="goal-progress">
       <div class="gp-head">
@@ -1183,7 +1291,6 @@ function createGoalCard(goal, index) {
     </div>
   ` : '';
 
-  // الهدف البسيط يحتفظ بمربّع الاختيار؛ الهدف الكمّي يستبدله بحلقة النسبة.
   const leadingHtml = isTracked ? `
     <div class="goal-track-ring" style="--p:${percent}">
       <span>${percent}%</span>
@@ -1196,10 +1303,21 @@ function createGoalCard(goal, index) {
     </div>
   `;
 
+  // إظهار وقت التعديل أو الإنشاء
+  let timeText = formatGoalDate(goal.created_at);
+  if (goal.edited_at) {
+    timeText = 'تم التعديل ' + formatGoalDate(goal.edited_at);
+  }
+
   card.innerHTML = `
-  <button type="button" class="goal-delete" onclick="event.stopPropagation(); deleteGoal('${goal.id}')" title="حذف">
-    <i data-lucide="trash-2"></i>
-  </button>
+    <div class="goal-actions">
+      <button type="button" class="action-btn edit" onclick="event.stopPropagation(); openEditModal('${goal.id}')" title="تعديل الهدف">
+        <i data-lucide="pencil"></i>
+      </button>
+      <button type="button" class="action-btn delete" onclick="event.stopPropagation(); deleteGoal('${goal.id}')" title="حذف">
+        <i data-lucide="trash-2"></i>
+      </button>
+    </div>
     
     <div class="goal-main">
       ${leadingHtml}
@@ -1209,7 +1327,7 @@ function createGoalCard(goal, index) {
           ${statusHtml}
           <div class="goal-meta-chip">
             <i data-lucide="clock"></i>
-            <span>${formatGoalDate(goal.created_at)}</span>
+            <span>${timeText}</span>
           </div>
           ${deadlineHtml}
         </div>
@@ -1237,9 +1355,10 @@ function progressStep(goal) {
   return Math.max(1, Math.min(10, Math.round(target * 0.05)));
 }
 
+// الأرقام الغربية
 function formatGoalNumber(value) {
   const number = Number(value) || 0;
-  return number.toLocaleString('ar-EG');
+  return number.toLocaleString('en-US');
 }
 
 let progressGoalId = null;
@@ -1327,8 +1446,6 @@ function saveProgressValue() {
 
 /**
  * نسخة احتياطية سحابية غير معطِّلة للعمل دون اتصال.
- * localStorage هو مصدر الحقيقة؛ هذا النداء fire-and-forget يحدّث جدول `goals`
- * في Supabase إن وُجدت جلسة، ويفشل بصمت إن انقطع الشبكة.
  */
 async function syncGoalToCloud(goal) {
   try {
@@ -1347,7 +1464,9 @@ async function syncGoalToCloud(goal) {
       current_value: goal.current_value == null ? null : Number(goal.current_value),
       unit: goal.unit || null,
       deadline: goal.deadline || null,
-      updated_at: new Date().toISOString()
+      is_deferred: !!goal.is_deferred, // إضافة جديدة
+      updated_at: new Date().toISOString(),
+      edited_at: goal.edited_at || null // إضافة جديدة
     }, { onConflict: 'user_id,goal_id' });
   } catch (e) {
     /* offline-first: the local write has already succeeded */
@@ -1402,7 +1521,7 @@ function getDeadlineInfo(dateString) {
   }
   
   return {
-    text: date.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' }),
+    text: date.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' }), // إنجليزي
     className: ''
   };
 }
@@ -1427,7 +1546,7 @@ function getDeadlineInfo(dateString) {
       if (diffHours < 24) return `منذ ${diffHours} ساعة`;
       if (diffDays < 7) return `منذ ${diffDays} يوم`;
       
-      return date.toLocaleDateString('ar-EG', {
+      return date.toLocaleDateString('en-GB', { // إنجليزي
         year: 'numeric',
         month: 'short',
         day: 'numeric'
@@ -1450,7 +1569,7 @@ function getDeadlineInfo(dateString) {
       if (diffDays === 1) return 'غداً';
       if (diffDays < 7) return `بعد ${diffDays} أيام`;
       
-      return date.toLocaleDateString('ar-EG', {
+      return date.toLocaleDateString('en-GB', { // إنجليزي
         month: 'short',
         day: 'numeric'
       });
@@ -1462,8 +1581,6 @@ function getDeadlineInfo(dateString) {
     function updateProgress() {
       const total = goalsState.goals.length;
 
-      // متوسط التقدم: الهدف الكمّي يساهم بنسبته الحقيقية، والبسيط 0 أو 100.
-      // هذا أصدق من «عدد المكتمل / العدد الكلي» عندما تكون الأهداف جزئية.
       const percent = total === 0
         ? 0
         : Math.round(
@@ -1524,6 +1641,8 @@ function getDeadlineInfo(dateString) {
         goal.current_value = goal.completed ? Number(goal.target_value) : 0;
       }
       goal.updated_at = new Date().toISOString();
+      if (goal.completed) goal.is_deferred = false; // إزالة التأجيل إذا اكتمل
+      
       saveGoalsToStorage();
       syncGoalToCloud(goal);
       renderGoals();
@@ -1535,10 +1654,24 @@ function getDeadlineInfo(dateString) {
     }
 
     // ============================================
+    // تأجيل الهدف / إلغاء التأجيل
+    // ============================================
+    function toggleDefer(goalId) {
+      const goal = goalsState.goals.find(g => g.id === goalId);
+      if (!goal || goal.completed) return;
+      goal.is_deferred = !goal.is_deferred;
+      goal.updated_at = new Date().toISOString();
+      
+      saveGoalsToStorage();
+      syncGoalToCloud(goal);
+      renderGoals();
+      showToast(goal.is_deferred ? 'تم تأجيل الهدف' : 'تم إرجاع الهدف للتقدم', 'info');
+    }
+
+    // ============================================
     // حذف الهدف
     // ============================================
     async function deleteGoal(goalId) {
-      // ⭐ نافذة التأكيد المخصّصة (بديل confirm() الأصلي)
       const confirmed = await showCustomConfirm(
         'حذف الهدف',
         'هل تريد حذف هذا الهدف؟',
@@ -1560,6 +1693,8 @@ function getDeadlineInfo(dateString) {
     // Modal
     // ============================================
     function openAddModal() {
+      editingGoalId = null;
+      document.getElementById('modalTitleText').textContent = 'هدف جديد';
       document.getElementById('goalText').value = '';
       document.getElementById('goalDeadline').value = '';
       const targetInput = document.getElementById('goalTarget');
@@ -1577,9 +1712,27 @@ function getDeadlineInfo(dateString) {
       lucide.createIcons();
     }
 
+    function openEditModal(goalId) {
+      const goal = goalsState.goals.find(g => g.id === goalId);
+      if (!goal) return;
+      
+      editingGoalId = goalId;
+      document.getElementById('modalTitleText').textContent = 'تعديل الهدف';
+      document.getElementById('goalText').value = goal.text;
+      document.getElementById('goalDeadline').value = goal.deadline || '';
+      document.getElementById('goalTarget').value = goal.target_value || '';
+      document.getElementById('goalUnit').value = goal.unit || '';
+      
+      document.getElementById('addModal').classList.add('active');
+      document.body.style.overflow = 'hidden';
+      setTimeout(() => document.getElementById('goalText').focus(), 300);
+      lucide.createIcons();
+    }
+
     function closeAddModal() {
       document.getElementById('addModal').classList.remove('active');
       document.body.style.overflow = '';
+      editingGoalId = null;
     }
 
     function closeAddModalIfOutside(event) {
@@ -1604,24 +1757,42 @@ function getDeadlineInfo(dateString) {
         ? Math.round(Math.min(targetRaw, 1000000))
         : null;
 
-      const newGoal = {
-        id: 'goal_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-        text: text,
-        deadline: deadline || null,
-        completed: false,
-        created_at: new Date().toISOString(),
-        target_value: target,
-        current_value: target ? 0 : null,
-        unit: target ? (unit || '') : null
-      };
+      if (editingGoalId) {
+        // تعديل هدف موجود
+        const goal = goalsState.goals.find(g => g.id === editingGoalId);
+        if (goal) {
+          goal.text = text;
+          goal.deadline = deadline || null;
+          goal.target_value = target;
+          goal.unit = target ? (unit || '') : null;
+          goal.edited_at = new Date().toISOString();
+          if (target && goal.current_value > target) goal.current_value = target;
+          
+          saveGoalsToStorage();
+          syncGoalToCloud(goal);
+          showToast('تم تعديل الهدف بنجاح');
+        }
+      } else {
+        // إضافة هدف جديد
+        const newGoal = {
+          id: 'goal_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+          text: text,
+          deadline: deadline || null,
+          completed: false,
+          is_deferred: false,
+          created_at: new Date().toISOString(),
+          target_value: target,
+          current_value: target ? 0 : null,
+          unit: target ? (unit || '') : null
+        };
 
-      goalsState.goals.push(newGoal);
-      saveGoalsToStorage();
-      syncGoalToCloud(newGoal);
+        goalsState.goals.push(newGoal);
+        saveGoalsToStorage();
+        syncGoalToCloud(newGoal);
+        showToast(target ? 'تم إضافة الهدف — ابدأ بتسجيل تقدمك' : 'تم إضافة الهدف');
+      }
 
-      showToast(target ? 'تم إضافة الهدف — ابدأ بتسجيل تقدمك' : 'تم إضافة الهدف');
       closeAddModal();
-
       renderGoals();
       updateProgress();
     }
