@@ -120,7 +120,12 @@
       return result;
     } catch (e) {
       console.warn('[update] Failed to check GitHub Releases:', e);
-      return { updateAvailable: false, error: e.message };
+      return {
+  currentVersion: currentVersion,
+  version: '',
+  updateAvailable: false,
+  error: e.message
+};
     }
   }
 
