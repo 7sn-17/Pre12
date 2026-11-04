@@ -6896,43 +6896,98 @@ function openLastActivity() {
       lucide.createIcons();
     }
 
-    // ============================================
-    // ⭐⭐⭐ التحديث داخل التطبيق
-    // ============================================
-    async function checkForAppUpdateNow(options) {
-      options = options || {};
-      const status = document.getElementById('appUpdateStatus');
-      const btn = document.getElementById('checkUpdateBtn');
+// ============================================
+// ⭐⭐⭐ التحديث داخل التطبيق
+// ============================================
+async function checkForAppUpdateNow(options) {
+  options = options || {};
 
-      if (typeof MedAppUpdate === 'undefined' || typeof MedAppUpdate.check !== 'function') {
-        if (status) status.textContent = 'غير متاح في الويب';
-        showToast('التحديث متاح في التطبيق فقط', 'info');
-        return;
-      }
+  const status = document.getElementById('appUpdateStatus');
+  const btn = document.getElementById('checkUpdateBtn');
 
-      if (btn) { btn.disabled = true; btn.textContent = 'جارٍ الفحص…'; }
-      if (status) status.textContent = 'جارٍ الاتصال بـ GitHub…';
+  if (typeof MedAppUpdate === 'undefined' ||
+      typeof MedAppUpdate.check !== 'function') {
+    if (status) status.textContent = 'غير متاح في الويب';
+    showToast('التحديث متاح في التطبيق فقط', 'info');
+    return null;
+  }
 
-      try {
-        const result = await MedAppUpdate.check({ silent: true });
-        if (result && result.updateAvailable) {
-          if (status) status.textContent = 'إصدار جديد v' + result.version + ' متاح!';
-          showToast('إصدار جديد متاح: v' + result.version, 'success');
-          if (typeof showUpdateModal === 'function') showUpdateModal(result);
-        } else {
-          if (status) status.textContent = 'أنت على أحدث إصدار';
-          showToast('أنت على أحدث إصدار', 'success');
-        }
-        return result;
-      } catch (e) {
-        console.error('[update] the check failed:', e);
-        if (status) status.textContent = 'تعذّر الاتصال بـ GitHub';
-        showToast('تعذّر التحقّق من التحديثات — تحقّق من الاتصال', 'error');
-        return null;
-      } finally {
-        if (btn) { btn.disabled = false; btn.textContent = 'التحقق من التحديثات'; }
-      }
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'جارٍ الفحص…';
+  }
+
+  if (status) {
+    status.textContent = 'جارٍ الاتصال بـ GitHub…';
+  }
+
+  try {
+    const result = await MedAppUpdate.check({ silent: true });
+
+    // التحقق من وجود خطأ أثناء الاتصال
+    if (result && result.error) {
+      if (status) status.textContent = 'تعذّر الاتصال بـ GitHub';
+      showToast(
+        'تعذّر التحقّق من التحديثات — تحقّق من الاتصال',
+        'error'
+      );
+      return result;
     }
+
+    // التأكد من إمكانية قراءة أرقام الإصدارات
+    if (!result || !result.currentVersion || !result.version) {
+      if (status) status.textContent = 'تعذّر التحقّق من الإصدار';
+      showToast(
+        'تعذّر تحديد إصدار التطبيق أو الإصدار المتاح',
+        'error'
+      );
+      return result;
+    }
+
+    // يوجد إصدار جديد
+    if (result.updateAvailable) {
+      if (status) {
+        status.textContent = 'إصدار جديد v' + result.version + ' متاح!';
+      }
+
+      showToast(
+        'إصدار جديد متاح: v' + result.version,
+        'success'
+      );
+
+      if (typeof showUpdateModal === 'function') {
+        showUpdateModal(result);
+      }
+
+    } else {
+      // التطبيق محدّث بالفعل
+      if (status) status.textContent = 'أنت على أحدث إصدار';
+      showToast('أنت على أحدث إصدار', 'success');
+    }
+
+    return result;
+
+  } catch (e) {
+    console.error('[update] the check failed:', e);
+
+    if (status) {
+      status.textContent = 'تعذّر الاتصال بـ GitHub';
+    }
+
+    showToast(
+      'تعذّر التحقّق من التحديثات — تحقّق من الاتصال',
+      'error'
+    );
+
+    return null;
+
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'التحقق من التحديثات';
+    }
+  }
+}
 
     // ============================================
     // ⭐⭐⭐ التذكير اليومي (8 مساءً)
