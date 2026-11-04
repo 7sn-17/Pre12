@@ -2,9 +2,13 @@
 
 **التطبيق الرسمي لطلاب الطب في سوريا**
 
-⬇️ **[تحميل الإصدار الرسمي v5.1.2](https://github.com/7sn-17/Pre12/releases/download/v5.1.2/Medical_Platform_v5.1.2.apk)**
+⬇️ **[تحميل الإصدار الرسمي v5.1.3](https://github.com/7sn-17/Pre12/releases/download/v5.1.3/Medical_Platform_v5.1.3.apk)**
 
 ⬇️ [تحميل الإصدار المستقر v4.6.7](https://pfjpeqhevegivjmyjvux.supabase.co/storage/v1/object/public/releases/Medical_Platform_Latest.apk)
+
+## ✨ v5.1.3 — تحديث الخطة الدراسية
+
+- تحديث بيانات الخطة الدراسية ومواعيد المهام.
 
 ## ✨ v5.1.2 — تحسينات وتجربة أفضل
 
